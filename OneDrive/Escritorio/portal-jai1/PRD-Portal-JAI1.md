@@ -6,9 +6,9 @@
 
 ---
 
-| **Versión**                    | 1.0 - Production Launch |
+| **Versión**                    | 1.1 - Monitoring Fixes |
 | ------------------------------ | ----------------------------------------- |
-| **Fecha Última Actualización** | 9 de Febrero, 2026                        |
+| **Fecha Última Actualización** | 7 de Marzo, 2026                          |
 | **Fecha Creación**             | 27 de Diciembre, 2024                    |
 | **Deadline MVP**               | 10 de Enero, 2025                        |
 | **Inicio Temporada**           | 28 de Enero, 2025 (Temporada Fiscal USA) |
@@ -195,6 +195,31 @@ Portal JAI1 es una aplicación web full-stack diseñada para gestionar el servic
     - All sensitive data encrypted (AES-256-GCM): SSN, TurboTax creds, bank info, addresses
     - Admin account created: jai@memas.agency
     - All clients have temporary password for first login
+
+### ✅ Sesión 7-Mar-2026 — Monitoring Fixes & UX:
+
+42. ✅ **PrismaService Global Singleton (v1.1)** - COMPLETADO
+    - Created `PrismaModule` with `@Global()` decorator
+    - Removed duplicate `PrismaService` provider declarations from all 17 feature modules
+    - Backend now logs exactly one "Database connected successfully" on startup
+    - Eliminates multiple PostgreSQL connection pools per process
+
+43. ✅ **IRS & Colorado Monitor — Admin Approval Flow Restored (v1.1)** - COMPLETADO
+    - Fixed: `handleCheckResult` was pre-updating local `federalStatusNew`/`stateStatusNew`,
+      causing approve/dismiss recommendation buttons to never appear
+    - Fixed: empty white toast square during batch monitoring (Angular `[class]` binding
+      was replacing base `toast` CSS class — changed to `[ngClass]`)
+    - Status changes now require explicit admin approval via ✓/✕ buttons
+    - Toast wording changed to "recomendación → X (pendiente de aprobación)"
+
+44. ✅ **Monitor UX Improvements (v1.1)** - COMPLETADO
+    - "Ocultar completados" toggle (default ON) hides taxes_completados,
+      deposito_directo, cheque_en_camino clients from both monitor tables
+    - Fixed horizontal scroll on desktop (overflow: hidden → overflow-x: auto)
+    - CO Monitor: "X de Y clientes filed" counter in header — turns amber
+      if any taxes_filed clients have non-Colorado workState
+    - CO Monitor getStats() now returns coloradoFiledCount + totalFiledCount
+      via parallel Promise.all queries
 
 ### ⏳ Pendiente (Próximas prioridades):
 
