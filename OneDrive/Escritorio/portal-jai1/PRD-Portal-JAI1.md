@@ -6,9 +6,9 @@
 
 ---
 
-| **Versión**                    | 1.1 - Monitoring Fixes |
+| **Versión**                    | 1.2 - Statistics & Earnings Fix |
 | ------------------------------ | ----------------------------------------- |
-| **Fecha Última Actualización** | 7 de Marzo, 2026                          |
+| **Fecha Última Actualización** | 9 de Marzo, 2026                          |
 | **Fecha Creación**             | 27 de Diciembre, 2024                    |
 | **Deadline MVP**               | 10 de Enero, 2025                        |
 | **Inicio Temporada**           | 28 de Enero, 2025 (Temporada Fiscal USA) |
@@ -221,15 +221,39 @@ Portal JAI1 es una aplicación web full-stack diseñada para gestionar el servic
     - CO Monitor getStats() now returns coloradoFiledCount + totalFiledCount
       via parallel Promise.all queries
 
+### ✅ Sesión 9-Mar-2026 — Statistics & Earnings Fix:
+
+45. ✅ **Fix Ganancias Realizadas (v1.2)** - COMPLETADO
+    - Bug: raw SQL in `getSeasonStats()` was summing both federal + state commission
+      whenever EITHER deposit date was set — overstating earnings
+    - Fix: per-track `CASE WHEN` logic — federal commission only when
+      `federal_deposit_date IS NOT NULL`, state only when `state_deposit_date IS NOT NULL`
+
+46. ✅ **Dashboard Stats Endpoint (v1.2)** - COMPLETADO
+    - New `GET /admin/stats/dashboard` endpoint with DB-aggregate counts
+    - Returns groupStats (pending/inReview/completed/needsAttention/total),
+      caseStatusBreakdown, federalStatusBreakdown, stateStatusBreakdown, financials
+    - Replaces client-side calculation from first 500 loaded clients — now always accurate
+    - Admin dashboard quick-stat cards now use backend counts
+
+47. ✅ **Admin Statistics Page (v1.2)** - COMPLETADO
+    - New route `/admin/statistics` with full sidebar layout
+    - Season summary cards (total, % completados, earnings realized/projected)
+    - Pipeline funnel — 4 cards with animated progress bars + % per group
+    - 3 horizontal bar charts: Case Status / Federal Status / State Status distributions
+    - Financial breakdown: federal/state refund totals, client counts, averages
+    - Dark mode supported, fully responsive
+    - Added "📈 Estadísticas" nav item to admin dashboard sidebar
+    - No external chart library — pure CSS gradients
+
 ### ⏳ Pendiente (Próximas prioridades):
 
 1. **Admin Panel Polish** (Prioridad Media)
    - ✅ Visual review system implemented
    - ✅ Status system improvements implemented
    - ✅ Commission tracking implemented
+   - ✅ Dashboard de métricas admin (Statistics page con charts CSS)
    - ☐ Bulk actions para operaciones masivas
-   - ☐ Filtros avanzados en lista de clientes
-   - ☐ Dashboard de métricas admin (charts, KPIs)
    - ☐ Export reports (CSV/PDF)
 
 2. **Testing** (Prioridad Alta)
