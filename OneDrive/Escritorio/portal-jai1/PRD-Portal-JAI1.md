@@ -6,9 +6,9 @@
 
 ---
 
-| **Versión**                    | 1.2 - Statistics & Earnings Fix |
+| **Versión**                    | 1.3 - Referral Program Fixes |
 | ------------------------------ | ----------------------------------------- |
-| **Fecha Última Actualización** | 9 de Marzo, 2026                          |
+| **Fecha Última Actualización** | 10 de Marzo, 2026                          |
 | **Fecha Creación**             | 27 de Diciembre, 2024                    |
 | **Deadline MVP**               | 10 de Enero, 2025                        |
 | **Inicio Temporada**           | 28 de Enero, 2025 (Temporada Fiscal USA) |
@@ -3075,8 +3075,40 @@ Admin dropdowns show helpful descriptions:
 
 ---
 
+---
+
+## 23. SESIÓN 10 DE MARZO 2026 — REFERRAL PROGRAM FIXES
+
+### Problemas encontrados y resueltos
+
+#### Bug 1 — Columna `referral_onboarding_completed` faltante en producción
+- La columna existía en el schema de Prisma pero no tenía migración
+- Los endpoints `/referrals/onboarding-status` y `/referrals/mark-onboarding-complete` fallaban silenciosamente con error 500
+- **Fix**: Se corrió manualmente en Supabase: `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "referral_onboarding_completed" BOOLEAN NOT NULL DEFAULT false`
+
+#### Bug 2 — Tabla `referrals` vacía (0 registros)
+- El engineer estaba seteando `referred_by_code` directamente en Supabase sin crear los registros en la tabla `referrals`
+- 9 usuarios tenían `referred_by_code` seteado pero 0 referral records
+- Adicionalmente, 4 de esos usuarios tenían `\r\n` al final del código (copy/paste del engineer)
+- **Fix**: Se limpió el whitespace con `REGEXP_REPLACE` y se hizo backfill de los 9 registros
+
+### Estado actual del programa de referidos
+- ✅ 9 referral records creados en producción
+- ✅ Admin panel muestra referrers correctamente
+- ✅ Columna `referral_onboarding_completed` presente en DB
+
+### Procedimiento correcto para el engineer
+Para registrar un referido manualmente, usar el endpoint:
+`POST /v1/referrals/apply-code` con el JWT del usuario y `{ "code": "REFERRALCODE" }`
+NO editar Supabase directamente.
+
+### Pendiente
+- Agregar FK constraint `users_referred_by_code_fkey` para bloquear códigos inválidos (script listo, no aplicado aún)
+
+---
+
 **FIN DEL DOCUMENTO**
 
 _Este PRD debe ser usado como referencia única para el desarrollo del Portal JAI1. Cualquier cambio debe ser documentado y versionado._
 
-_Versión 0.9 - Última actualización: 27 de Enero, 2026_
+_Versión 1.3 - Última actualización: 10 de Marzo, 2026_
