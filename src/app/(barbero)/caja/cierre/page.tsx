@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import CerrarCajaButton from "@/components/caja/CerrarCajaButton";
+import EfectivoChecker from "@/components/caja/EfectivoChecker";
 import { cerrarCaja } from "../actions";
 
 export default async function CierrePage() {
@@ -55,6 +56,11 @@ export default async function CierrePage() {
     totalesPorMedio[nombre].bruto += Number(a.precioCobrado ?? 0);
     totalesPorMedio[nombre].comision += Number(a.comisionMedioPagoMonto ?? 0);
   }
+
+  // Total efectivo (medio de pago "Efectivo")
+  const totalEfectivo = Object.entries(totalesPorMedio)
+    .filter(([nombre]) => nombre.toLowerCase().includes("efectivo"))
+    .reduce((s, [, datos]) => s + datos.bruto - datos.comision, 0);
 
   // Por barbero
   const barberosMap = new Map((await db.select().from(barberos)).map((b) => [b.id, b]));
@@ -182,6 +188,11 @@ export default async function CierrePage() {
           </span>
         )}
       </div>
+
+      {/* Verificación efectivo físico vs sistema */}
+      {totalEfectivo > 0 && (
+        <EfectivoChecker totalEfectivoSistema={totalEfectivo} />
+      )}
 
       {/* Botón de confirmación */}
       <CerrarCajaButton cerrarAction={cerrarCaja} />

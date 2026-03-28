@@ -8,6 +8,7 @@ const navItems = [
   { href: "/configuracion/servicios", label: "Servicios" },
   { href: "/configuracion/medios-de-pago", label: "Medios de Pago" },
   { href: "/configuracion/gastos-fijos", label: "Gastos Fijos" },
+  { href: "/configuracion/temporadas", label: "Temporadas" },
 ];
 
 export default function ConfNavBar() {

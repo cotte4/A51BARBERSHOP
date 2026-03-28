@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { marcarPagada } from "../actions";
 import MarcarPagadaButton from "./_MarcarPagadaButton";
+import PrintButton from "./_PrintButton";
 
 function formatARS(val: string | number | null | undefined): string {
   if (!val) return "$0";
@@ -53,10 +54,10 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="max-w-2xl mx-auto">
-          <Link href="/liquidaciones" className="text-gray-400 hover:text-gray-600 text-sm mb-2 block">← Liquidaciones</Link>
+          <Link href="/liquidaciones" className="print:hidden text-gray-400 hover:text-gray-600 text-sm mb-2 block">← Liquidaciones</Link>
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h1 className="text-xl font-bold text-gray-900">
-              {barbero?.nombre ?? "—"}
+              Liquidación — {barbero?.nombre ?? "—"}
             </h1>
             <span className={`text-xs px-2 py-0.5 rounded-full ${liq.pagado ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"}`}>
               {liq.pagado ? "Pagado" : "Pendiente"}
@@ -69,6 +70,11 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4">
+        {/* Botón imprimir */}
+        <div className="print:hidden">
+          <PrintButton />
+        </div>
+
         {/* Resumen de pago */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <h2 className="text-sm font-semibold text-gray-700 mb-3">Resumen</h2>
@@ -119,7 +125,7 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 print:hidden">
             <h2 className="text-sm font-semibold text-gray-700 mb-3">Registrar pago</h2>
             <MarcarPagadaButton marcarAction={marcarConId} />
           </div>
@@ -156,6 +162,13 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
           </div>
         </div>
       </main>
+
+      <style>{`
+        @media print {
+          body { background: white; }
+          @page { margin: 1.5cm; }
+        }
+      `}</style>
     </div>
   );
 }

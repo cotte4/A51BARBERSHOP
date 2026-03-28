@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { atenciones, barberos, servicios, mediosPago, cierresCaja } from "@/db/schema";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { atenciones, barberos, servicios, mediosPago, cierresCaja, stockMovimientos, productos } from "@/db/schema";
+import { count, eq, and, gte, lte } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -124,6 +124,37 @@ export default async function CajaPage() {
       )
     : [];
 
+  // Ventas de productos del día
+  const inicioDia = new Date(fechaHoy + "T00:00:00-03:00");
+  const finDia = new Date(fechaHoy + "T23:59:59-03:00");
+  const ventasProductosDia = await db
+    .select({
+      id: stockMovimientos.id,
+      productoId: stockMovimientos.productoId,
+      cantidad: stockMovimientos.cantidad,
+      precioUnitario: stockMovimientos.precioUnitario,
+      fecha: stockMovimientos.fecha,
+    })
+    .from(stockMovimientos)
+    .where(
+      and(
+        eq(stockMovimientos.tipo, "venta"),
+        gte(stockMovimientos.fecha, inicioDia),
+        lte(stockMovimientos.fecha, finDia)
+      )
+    );
+
+  const productosMap = ventasProductosDia.length > 0
+    ? new Map(
+        (await db.select().from(productos)).map((p) => [p.id, p])
+      )
+    : new Map();
+
+  const totalProductos = ventasProductosDia.reduce(
+    (sum, v) => sum + Math.abs(Number(v.cantidad ?? 0)) * Number(v.precioUnitario ?? 0),
+    0
+  );
+
   // Ordenar atenciones: más recientes primero
   const atencionesOrdenadas = [...atencionesDelDia].sort((a, b) => {
     if (!a.creadoEn || !b.creadoEn) return 0;
@@ -143,6 +174,8 @@ export default async function CajaPage() {
   let comisionDelMes = 0;
   let alquilerMensual = 0;
   let netoProyectado = 0;
+  let posicionRanking = 0;
+  let totalBarberosRanking = 0;
 
   if (!isAdmin && barberoDelUsuario) {
     const atencionesDelMes = await db
@@ -171,6 +204,27 @@ export default async function CajaPage() {
         ? Number(barberoDelUsuario.alquilerBancoMensual ?? 0)
         : 0;
     netoProyectado = comisionDelMes - alquilerMensual;
+
+    // Ranking del mes — una sola query con count() y groupBy
+    const cortesPorBarberoRaw = await db
+      .select({
+        barberoId: atenciones.barberoId,
+        cortes: count(atenciones.id),
+      })
+      .from(atenciones)
+      .where(
+        and(
+          eq(atenciones.anulado, false),
+          gte(atenciones.fecha, inicioDeMes),
+          lte(atenciones.fecha, finDeMes)
+        )
+      )
+      .groupBy(atenciones.barberoId);
+
+    cortesPorBarberoRaw.sort((a, b) => b.cortes - a.cortes);
+    posicionRanking =
+      cortesPorBarberoRaw.findIndex((b) => b.barberoId === barberoDelUsuario.id) + 1;
+    totalBarberosRanking = cortesPorBarberoRaw.length;
   }
 
   return (
@@ -227,6 +281,14 @@ export default async function CajaPage() {
               {formatARS(totalComisionesMp)}
             </p>
           </div>
+          {totalProductos > 0 && (
+            <div>
+              <p className="text-xs text-gray-500">Productos</p>
+              <p className="text-lg font-semibold text-gray-700">
+                {formatARS(totalProductos)}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Desglose por barbero (solo admin) */}
@@ -261,14 +323,22 @@ export default async function CajaPage() {
         )}
       </div>
 
-      {/* Botón nueva atención — oculto si la caja ya está cerrada */}
+      {/* Botones acción — ocultos si la caja ya está cerrada */}
       {!cierreHoy && (
-        <Link
-          href="/caja/nueva"
-          className="flex items-center justify-center w-full min-h-[52px] bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-700 transition-colors mb-5"
-        >
-          + Nueva atención
-        </Link>
+        <div className="flex gap-3 mb-5">
+          <Link
+            href="/caja/nueva"
+            className="flex-1 flex items-center justify-center min-h-[52px] bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-700 transition-colors"
+          >
+            + Nueva atención
+          </Link>
+          <Link
+            href="/caja/vender"
+            className="flex items-center justify-center px-4 min-h-[52px] bg-white border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors whitespace-nowrap"
+          >
+            Vender producto
+          </Link>
+        </div>
       )}
 
       {/* Lista de atenciones */}
@@ -369,6 +439,40 @@ export default async function CajaPage() {
         )}
       </div>
 
+      {/* Productos vendidos hoy */}
+      {ventasProductosDia.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            Productos vendidos hoy
+          </h2>
+          <div className="flex flex-col gap-3">
+            {ventasProductosDia.map((venta) => {
+              const producto = productosMap.get(venta.productoId ?? "");
+              const cantAbs = Math.abs(venta.cantidad ?? 0);
+              const total = cantAbs * Number(venta.precioUnitario ?? 0);
+              return (
+                <div
+                  key={venta.id}
+                  className="bg-white rounded-xl border border-gray-200 p-4"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-gray-900">
+                      {producto?.nombre ?? "Producto"}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {formatARS(total)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {cantAbs} × {formatARS(Number(venta.precioUnitario ?? 0))}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Sección Mi Mes — solo para barbero */}
       {!isAdmin && barberoDelUsuario && (
         <div className="mt-6">
@@ -385,6 +489,15 @@ export default async function CajaPage() {
               <span className="text-gray-500">Cortes este mes</span>
               <span className="font-medium text-gray-900">{cortesDelMes}</span>
             </div>
+            {posicionRanking > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Ranking del mes</span>
+                <span className="font-medium text-gray-900">
+                  #{posicionRanking} de {totalBarberosRanking}
+                  {posicionRanking === 1 && " 🥇"}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Bruto acumulado</span>
               <span className="font-medium text-gray-900">

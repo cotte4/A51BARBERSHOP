@@ -9,8 +9,10 @@ import {
   mediosPago,
   serviciosAdicionales,
   cierresCaja,
+  stockMovimientos,
+  productos,
 } from "@/db/schema";
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, inArray, and, gte, lte, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -400,14 +402,28 @@ export async function cerrarCaja(
       resumenBarberos[a.barberoId].comisionCalculada += Number(a.comisionBarberoMonto ?? 0);
     }
 
-    // 7. Obtener barbero del admin que cierra (para cerradoPor)
+    // 7. Calcular total productos vendidos en el día
+    const fechaHoyDate = new Date(fechaHoy + "T00:00:00-03:00");
+    const finDia = new Date(fechaHoy + "T23:59:59-03:00");
+    const ventasProductos = await db.select().from(stockMovimientos)
+      .where(and(
+        eq(stockMovimientos.tipo, "venta"),
+        gte(stockMovimientos.fecha, fechaHoyDate),
+        lte(stockMovimientos.fecha, finDia)
+      ));
+    const totalProdVenta = ventasProductos.reduce(
+      (sum, v) => sum + Math.abs(Number(v.cantidad ?? 0)) * Number(v.precioUnitario ?? 0),
+      0
+    );
+
+    // 9. Obtener barbero del admin que cierra (para cerradoPor)
     const [barberoAdmin] = await db
       .select({ id: barberos.id })
       .from(barberos)
       .where(eq(barberos.userId, session!.user.id))
       .limit(1);
 
-    // 8. Insertar cierre
+    // 10. Insertar cierre
     const [nuevoCierre] = await db
       .insert(cierresCaja)
       .values({
@@ -419,8 +435,8 @@ export async function cerrarCaja(
         totalBruto: String(totalBruto.toFixed(2)),
         totalComisionesMedios: String(totalComisionesMedios.toFixed(2)),
         totalNeto: String(totalNeto.toFixed(2)),
-        totalCortesBruto: String(totalBruto.toFixed(2)), // en Fase 1D = totalBruto (sin productos)
-        totalProductos: "0",
+        totalCortesBruto: String(totalBruto.toFixed(2)),
+        totalProductos: String(totalProdVenta.toFixed(2)),
         resumenBarberos,
         cantidadAtenciones,
         cerradoPor: barberoAdmin?.id ?? null,
@@ -428,7 +444,7 @@ export async function cerrarCaja(
       })
       .returning();
 
-    // 9. Vincular atenciones al cierre
+    // 11. Vincular atenciones al cierre
     if (atencionesDelDia.length > 0) {
       await db
         .update(atenciones)
@@ -442,4 +458,101 @@ export async function cerrarCaja(
 
   revalidatePath("/caja");
   redirect(`/caja/cierre/${getFechaHoy()}`);
+}
+
+// ─── registrarVentaProducto ───────────────────────────
+
+export type VentaProductoFormState = {
+  error?: string;
+  fieldErrors?: {
+    productoId?: string;
+    cantidad?: string;
+    precioCobrado?: string;
+    medioPagoId?: string;
+  };
+};
+
+export async function registrarVentaProducto(
+  prevState: VentaProductoFormState,
+  formData: FormData
+): Promise<VentaProductoFormState> {
+  // Leer campos
+  const productoId = formData.get("productoId") as string;
+  const cantidadStr = formData.get("cantidad") as string;
+  const precioCobradoStr = formData.get("precioCobrado") as string;
+  const medioPagoId = formData.get("medioPagoId") as string;
+
+  // Validaciones
+  const fieldErrors: VentaProductoFormState["fieldErrors"] = {};
+  if (!productoId) fieldErrors.productoId = "Seleccioná un producto";
+  if (!cantidadStr || isNaN(Number(cantidadStr)) || Number(cantidadStr) < 1) {
+    fieldErrors.cantidad = "La cantidad debe ser al menos 1";
+  }
+  if (precioCobradoStr === "" || precioCobradoStr === null || isNaN(Number(precioCobradoStr))) {
+    fieldErrors.precioCobrado = "El precio es requerido";
+  } else if (Number(precioCobradoStr) < 0) {
+    fieldErrors.precioCobrado = "El precio no puede ser negativo";
+  }
+  if (!medioPagoId) fieldErrors.medioPagoId = "Seleccioná un medio de pago";
+
+  if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
+
+  // Verificar sesión
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) {
+    return { error: "Debés iniciar sesión para realizar esta operación." };
+  }
+
+  // Verificar que no hay cierre para hoy
+  const fechaHoy = getFechaHoy();
+  const [cierreExistente] = await db
+    .select({ id: cierresCaja.id })
+    .from(cierresCaja)
+    .where(eq(cierresCaja.fecha, fechaHoy))
+    .limit(1);
+
+  if (cierreExistente) {
+    return { error: "La caja ya fue cerrada. No se pueden registrar nuevas ventas." };
+  }
+
+  const cantidad = parseInt(cantidadStr, 10);
+  const precioCobrado = Number(precioCobradoStr);
+
+  // Verificar que el producto exista, esté activo y tenga stock suficiente
+  const [producto] = await db
+    .select()
+    .from(productos)
+    .where(eq(productos.id, productoId))
+    .limit(1);
+
+  if (!producto) return { fieldErrors: { productoId: "Producto no encontrado" } };
+  if (!producto.activo) return { fieldErrors: { productoId: "El producto no está activo" } };
+  if ((producto.stockActual ?? 0) < cantidad) {
+    return { error: `Sin stock disponible. Stock actual: ${producto.stockActual ?? 0}` };
+  }
+
+  try {
+    // Decrementar stock
+    await db
+      .update(productos)
+      .set({ stockActual: sql`${productos.stockActual} - ${cantidad}` })
+      .where(eq(productos.id, productoId));
+
+    // Insertar movimiento de stock
+    const precioUnitario = precioCobrado / cantidad;
+    await db.insert(stockMovimientos).values({
+      productoId,
+      tipo: "venta",
+      cantidad: -cantidad,
+      precioUnitario: String(precioUnitario.toFixed(2)),
+      notas: medioPagoId,
+    });
+  } catch (e) {
+    console.error("Error registrando venta de producto:", e);
+    return { error: "No se pudo registrar la venta. Intentá de nuevo." };
+  }
+
+  revalidatePath("/caja");
+  revalidatePath("/inventario");
+  redirect("/caja");
 }

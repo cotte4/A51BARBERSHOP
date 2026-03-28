@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import PrintButton from "./_PrintButton";
 
 type ResumenBarbero = {
   nombre: string;
@@ -74,12 +75,17 @@ export default async function CierreDetallePage({
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <Link href="/caja" className="text-gray-400 hover:text-gray-600 text-sm">
+        <Link href="/caja" className="print:hidden text-gray-400 hover:text-gray-600 text-sm">
           ← Caja
         </Link>
         <h2 className="text-lg font-semibold text-gray-900 mt-1 capitalize">
-          {formatFechaLarga(fecha)}
+          Cierre de caja — {formatFechaLarga(fecha)}
         </h2>
+      </div>
+
+      {/* Botón imprimir */}
+      <div className="print:hidden">
+        <PrintButton />
       </div>
 
       {/* Banner cierre */}
@@ -155,6 +161,13 @@ export default async function CierreDetallePage({
         Atenciones:{" "}
         <strong className="text-gray-900">{cierre.cantidadAtenciones ?? 0}</strong>
       </div>
+
+      <style>{`
+        @media print {
+          body { background: white; }
+          @page { margin: 1.5cm; }
+        }
+      `}</style>
     </div>
   );
 }

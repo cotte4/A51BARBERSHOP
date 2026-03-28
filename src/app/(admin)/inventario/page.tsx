@@ -22,12 +22,20 @@ export default async function InventarioPage() {
           <Link href="/dashboard" className="text-gray-400 hover:text-gray-600 text-sm mb-2 block">← Dashboard</Link>
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold text-gray-900">Inventario</h1>
-            <Link
-              href="/inventario/nuevo"
-              className="min-h-[44px] inline-flex items-center bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-700"
-            >
-              + Nuevo producto
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/inventario/rotacion"
+                className="min-h-[44px] inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+              >
+                Ver rotación →
+              </Link>
+              <Link
+                href="/inventario/nuevo"
+                className="min-h-[44px] inline-flex items-center bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-700"
+              >
+                + Nuevo producto
+              </Link>
+            </div>
           </div>
         </div>
       </header>
