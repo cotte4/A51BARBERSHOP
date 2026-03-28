@@ -1,6 +1,9 @@
+import { config } from "dotenv";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import * as schema from "./schema";
+
+config({ path: ".env.local" });
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL no está configurada en las variables de entorno");

@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin } from "better-auth/plugins/admin";
 import { createAccessControl } from "better-auth/plugins";
 import { db } from "@/db";
+import * as schema from "@/db/schema";
 
 // Definir los statements y roles del sistema A51 Barber
 const ac = createAccessControl({
@@ -25,6 +26,7 @@ const barberoRole = ac.newRole({
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
+    schema,
   }),
   emailAndPassword: {
     enabled: true,
