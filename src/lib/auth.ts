@@ -28,6 +28,10 @@ export const auth = betterAuth({
     provider: "pg",
     schema,
   }),
+  trustedOrigins: [
+    "http://localhost:3000",
+    process.env.BETTER_AUTH_URL ?? "",
+  ].filter(Boolean),
   emailAndPassword: {
     enabled: true,
   },
