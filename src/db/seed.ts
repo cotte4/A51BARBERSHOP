@@ -19,6 +19,7 @@ dotenv.config({ path: ".env.local" });
 
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
+import { eq } from "drizzle-orm";
 import * as schema from "./schema";
 import { auth } from "../lib/auth";
 
@@ -56,12 +57,13 @@ async function seed() {
       e instanceof Error &&
       e.message.toLowerCase().includes("already exists")
     ) {
-      console.log("  ~ Pinky ya existe, saltando...");
-      // Obtener el ID del usuario existente
-      const existing = await db.query.barberos.findFirst({
-        where: (b, { eq }) => eq(b.nombre, "Pinky"),
+      console.log("  ~ Pinky ya existe, obteniendo user.id desde tabla user...");
+      const existingUser = await db.query.user.findFirst({
+        where: (u, { eq }) => eq(u.email, "pinky@a51barber.com"),
       });
-      pinkyUserId = existing?.id ?? "pinky-placeholder";
+      if (!existingUser) throw new Error("No se encontró el usuario Pinky en la tabla user");
+      pinkyUserId = existingUser.id;
+      console.log(`  ~ Pinky user.id: ${pinkyUserId}`);
     } else {
       throw e;
     }
@@ -83,11 +85,13 @@ async function seed() {
       e instanceof Error &&
       e.message.toLowerCase().includes("already exists")
     ) {
-      console.log("  ~ Gabote ya existe, saltando...");
-      const existing = await db.query.barberos.findFirst({
-        where: (b, { eq }) => eq(b.nombre, "Gabote"),
+      console.log("  ~ Gabote ya existe, obteniendo user.id desde tabla user...");
+      const existingUser = await db.query.user.findFirst({
+        where: (u, { eq }) => eq(u.email, "gabote@a51barber.com"),
       });
-      gaboteUserId = existing?.id ?? "gabote-placeholder";
+      if (!existingUser) throw new Error("No se encontró el usuario Gabote en la tabla user");
+      gaboteUserId = existingUser.id;
+      console.log(`  ~ Gabote user.id: ${gaboteUserId}`);
     } else {
       throw e;
     }
@@ -129,31 +133,42 @@ async function seed() {
   if (pinky) console.log(`  ✓ Barbero Pinky (ID: ${pinky.id})`);
   if (gabote) console.log(`  ✓ Barbero Gabote (ID: ${gabote.id})`);
 
+  // Siempre actualizar userId en barberos — así funciona tanto en primera ejecución
+  // como en re-ejecuciones donde el insert fue ignorado por onConflictDoNothing
+  console.log("\nVinculando barberos con usuarios Better Auth...");
+
+  await db
+    .update(schema.barberos)
+    .set({ userId: pinkyUserId })
+    .where(eq(schema.barberos.nombre, "Pinky"));
+  console.log(`  ✓ Pinky.userId = ${pinkyUserId}`);
+
+  await db
+    .update(schema.barberos)
+    .set({ userId: gaboteUserId })
+    .where(eq(schema.barberos.nombre, "Gabote"));
+  console.log(`  ✓ Gabote.userId = ${gaboteUserId}`);
+
   // ————————————————————————————
   // 3. Insertar servicios
   // ————————————————————————————
   console.log("\nInsertando servicios...");
 
-  const [corte] = await db
-    .insert(schema.servicios)
-    .values({
-      nombre: "Corte",
-      precioBase: "13000.00",
-      activo: true,
-    })
-    .returning();
+  let corte = await db.query.servicios.findFirst({ where: (s, { eq }) => eq(s.nombre, "Corte") });
+  if (!corte) {
+    [corte] = await db.insert(schema.servicios).values({ nombre: "Corte", precioBase: "13000.00", activo: true }).returning();
+    console.log(`  ✓ Servicio "Corte" creado (ID: ${corte!.id})`);
+  } else {
+    console.log(`  ~ Servicio "Corte" ya existe (ID: ${corte.id})`);
+  }
 
-  const [corteBarba] = await db
-    .insert(schema.servicios)
-    .values({
-      nombre: "Corte y Barba",
-      precioBase: "16000.00",
-      activo: true,
-    })
-    .returning();
-
-  console.log(`  ✓ Servicio "Corte" a $13.000 (ID: ${corte.id})`);
-  console.log(`  ✓ Servicio "Corte y Barba" a $16.000 (ID: ${corteBarba.id})`);
+  let corteBarba = await db.query.servicios.findFirst({ where: (s, { eq }) => eq(s.nombre, "Corte y Barba") });
+  if (!corteBarba) {
+    [corteBarba] = await db.insert(schema.servicios).values({ nombre: "Corte y Barba", precioBase: "16000.00", activo: true }).returning();
+    console.log(`  ✓ Servicio "Corte y Barba" creado (ID: ${corteBarba!.id})`);
+  } else {
+    console.log(`  ~ Servicio "Corte y Barba" ya existe (ID: ${corteBarba.id})`);
+  }
 
   // ————————————————————————————
   // 4. Historial de precios (vigente desde inicio Otoño 2026)
@@ -162,24 +177,29 @@ async function seed() {
 
   const barberoRef = pinky ?? (await db.query.barberos.findFirst({ where: (b, { eq }) => eq(b.nombre, "Pinky") }));
 
-  if (barberoRef) {
-    await db.insert(schema.serviciosPreciosHistorial).values({
-      servicioId: corte.id,
-      precio: "13000.00",
-      vigenteDesdе: "2026-05-01",
-      motivo: "Precio inicial Otoño 2026",
-      creadoPor: barberoRef.id,
+  if (barberoRef && corte && corteBarba) {
+    const historialCorte = await db.query.serviciosPreciosHistorial.findFirst({
+      where: (h, { eq }) => eq(h.servicioId, corte!.id),
     });
-
-    await db.insert(schema.serviciosPreciosHistorial).values({
-      servicioId: corteBarba.id,
-      precio: "16000.00",
-      vigenteDesdе: "2026-05-01",
-      motivo: "Precio inicial Otoño 2026",
-      creadoPor: barberoRef.id,
-    });
-
-    console.log("  ✓ Historial de precios registrado");
+    if (!historialCorte) {
+      await db.insert(schema.serviciosPreciosHistorial).values({
+        servicioId: corte.id,
+        precio: "13000.00",
+        vigenteDesdе: "2026-05-01",
+        motivo: "Precio inicial Otoño 2026",
+        creadoPor: barberoRef.id,
+      });
+      await db.insert(schema.serviciosPreciosHistorial).values({
+        servicioId: corteBarba.id,
+        precio: "16000.00",
+        vigenteDesdе: "2026-05-01",
+        motivo: "Precio inicial Otoño 2026",
+        creadoPor: barberoRef.id,
+      });
+      console.log("  ✓ Historial de precios registrado");
+    } else {
+      console.log("  ~ Historial de precios ya existe, saltando...");
+    }
   }
 
   // ————————————————————————————
@@ -187,7 +207,7 @@ async function seed() {
   // ————————————————————————————
   console.log("\nInsertando medios de pago...");
 
-  const mediosPago = [
+  const mediosPagoData = [
     { nombre: "Efectivo", comisionPorcentaje: "0.00" },
     { nombre: "MP QR", comisionPorcentaje: "6.00" },
     { nombre: "Transferencia", comisionPorcentaje: "0.00" },
@@ -195,12 +215,14 @@ async function seed() {
     { nombre: "Posnet crédito", comisionPorcentaje: "3.50" },
   ];
 
-  for (const medio of mediosPago) {
-    await db
-      .insert(schema.mediosPago)
-      .values({ ...medio, activo: true })
-      .returning();
-    console.log(`  ✓ ${medio.nombre} (${medio.comisionPorcentaje}%)`);
+  for (const medio of mediosPagoData) {
+    const existing = await db.query.mediosPago.findFirst({ where: (m, { eq }) => eq(m.nombre, medio.nombre) });
+    if (!existing) {
+      await db.insert(schema.mediosPago).values({ ...medio, activo: true });
+      console.log(`  ✓ ${medio.nombre} (${medio.comisionPorcentaje}%)`);
+    } else {
+      console.log(`  ~ ${medio.nombre} ya existe, saltando...`);
+    }
   }
 
   // ————————————————————————————
@@ -208,15 +230,39 @@ async function seed() {
   // ————————————————————————————
   console.log("\nInsertando temporada Otoño 2026...");
 
-  await db.insert(schema.temporadas).values({
-    nombre: "Otoño 2026",
-    fechaInicio: "2026-05-01",
-    fechaFin: "2026-06-30",
-    cortesDiaProyectados: 15,
-    precioBaseProyectado: "13000.00",
-  });
+  const temporadaExisting = await db.query.temporadas.findFirst({ where: (t, { eq }) => eq(t.nombre, "Otoño 2026") });
+  if (!temporadaExisting) {
+    await db.insert(schema.temporadas).values({
+      nombre: "Otoño 2026",
+      fechaInicio: "2026-05-01",
+      fechaFin: "2026-06-30",
+      cortesDiaProyectados: 15,
+      precioBaseProyectado: "13000.00",
+    });
+    console.log("  ✓ Temporada Otoño 2026 (01/05/2026 – 30/06/2026, 15 cortes/día proyectados)");
+  } else {
+    console.log("  ~ Temporada Otoño 2026 ya existe, saltando...");
+  }
 
-  console.log("  ✓ Temporada Otoño 2026 (01/05/2026 – 30/06/2026, 15 cortes/día proyectados)");
+  // ————————————————————————————
+  // 7. Repago Memas (deuda llave)
+  // ————————————————————————————
+  console.log("\nInsertando repago Memas...");
+
+  const repagoExisting = await db.query.repagoMemas.findFirst();
+  if (!repagoExisting) {
+    await db.insert(schema.repagoMemas).values({
+      valorLlaveTotal: "2384571.00",
+      cuotaMensual: "400000.00",
+      cuotasPagadas: 0,
+      saldoPendiente: "2384571.00",
+      fechaInicio: "2026-05-01",
+      pagadoCompleto: false,
+    });
+    console.log("  ✓ Deuda llave: $2.384.571 en cuotas de $400.000/mes");
+  } else {
+    console.log("  ~ Repago Memas ya configurado, saltando...");
+  }
 
   console.log("\n✓ Seed completado exitosamente.\n");
   console.log("Usuarios creados:");

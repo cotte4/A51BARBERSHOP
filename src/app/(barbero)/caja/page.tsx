@@ -261,13 +261,15 @@ export default async function CajaPage() {
         )}
       </div>
 
-      {/* Botón nueva atención */}
-      <Link
-        href="/caja/nueva"
-        className="flex items-center justify-center w-full min-h-[52px] bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-700 transition-colors mb-5"
-      >
-        + Nueva atención
-      </Link>
+      {/* Botón nueva atención — oculto si la caja ya está cerrada */}
+      {!cierreHoy && (
+        <Link
+          href="/caja/nueva"
+          className="flex items-center justify-center w-full min-h-[52px] bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-700 transition-colors mb-5"
+        >
+          + Nueva atención
+        </Link>
+      )}
 
       {/* Lista de atenciones */}
       <div>
