@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { barberos } from "@/db/schema";
+import { barberos, mediosPago, servicios } from "@/db/schema";
 import { requireAdminSession } from "@/lib/admin-action";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -30,6 +30,8 @@ export type BarberoFormState = {
     porcentajeComision?: string;
     alquilerBancoMensual?: string;
     sueldoMinimoGarantizado?: string;
+    servicioDefectoId?: string;
+    medioPagoDefectoId?: string;
   };
 };
 
@@ -42,6 +44,8 @@ function validarBarbero(formData: FormData): {
     porcentajeComisionStr: string;
     alquilerBancoStr: string;
     sueldoMinimoStr: string;
+    servicioDefectoId: string;
+    medioPagoDefectoId: string;
   };
 } {
   const nombre = (formData.get("nombre") as string) ?? "";
@@ -50,6 +54,8 @@ function validarBarbero(formData: FormData): {
   const porcentajeComisionStr = (formData.get("porcentajeComision") as string) ?? "";
   const alquilerBancoStr = (formData.get("alquilerBancoMensual") as string) ?? "";
   const sueldoMinimoStr = (formData.get("sueldoMinimoGarantizado") as string) ?? "";
+  const servicioDefectoId = (formData.get("servicioDefectoId") as string) ?? "";
+  const medioPagoDefectoId = (formData.get("medioPagoDefectoId") as string) ?? "";
 
   const fieldErrors: BarberoFormState["fieldErrors"] = {};
 
@@ -86,6 +92,8 @@ function validarBarbero(formData: FormData): {
       porcentajeComisionStr,
       alquilerBancoStr,
       sueldoMinimoStr,
+      servicioDefectoId,
+      medioPagoDefectoId,
     },
   };
 }
@@ -104,8 +112,31 @@ export async function crearBarbero(
     return { fieldErrors: resultado.fieldErrors };
   }
 
-  const { nombre, rol, tipoModelo, porcentajeComisionStr, alquilerBancoStr, sueldoMinimoStr } =
+  const {
+    nombre,
+    rol,
+    tipoModelo,
+    porcentajeComisionStr,
+    alquilerBancoStr,
+    sueldoMinimoStr,
+    servicioDefectoId,
+    medioPagoDefectoId,
+  } =
     resultado.values!;
+
+  if (servicioDefectoId) {
+    const [servicio] = await db.select({ id: servicios.id }).from(servicios).where(eq(servicios.id, servicioDefectoId)).limit(1);
+    if (!servicio) {
+      return { fieldErrors: { servicioDefectoId: "Servicio por defecto invÃ¡lido" } };
+    }
+  }
+
+  if (medioPagoDefectoId) {
+    const [medioPago] = await db.select({ id: mediosPago.id }).from(mediosPago).where(eq(mediosPago.id, medioPagoDefectoId)).limit(1);
+    if (!medioPago) {
+      return { fieldErrors: { medioPagoDefectoId: "Medio de pago por defecto invÃ¡lido" } };
+    }
+  }
 
   try {
     await db.insert(barberos).values({
@@ -115,6 +146,8 @@ export async function crearBarbero(
       porcentajeComision: porcentajeComisionStr,
       alquilerBancoMensual: alquilerBancoStr !== "" ? alquilerBancoStr : null,
       sueldoMinimoGarantizado: sueldoMinimoStr !== "" ? sueldoMinimoStr : null,
+      servicioDefectoId: servicioDefectoId || null,
+      medioPagoDefectoId: medioPagoDefectoId || null,
       activo: true,
     });
   } catch {
@@ -140,8 +173,31 @@ export async function editarBarbero(
     return { fieldErrors: resultado.fieldErrors };
   }
 
-  const { nombre, rol, tipoModelo, porcentajeComisionStr, alquilerBancoStr, sueldoMinimoStr } =
+  const {
+    nombre,
+    rol,
+    tipoModelo,
+    porcentajeComisionStr,
+    alquilerBancoStr,
+    sueldoMinimoStr,
+    servicioDefectoId,
+    medioPagoDefectoId,
+  } =
     resultado.values!;
+
+  if (servicioDefectoId) {
+    const [servicio] = await db.select({ id: servicios.id }).from(servicios).where(eq(servicios.id, servicioDefectoId)).limit(1);
+    if (!servicio) {
+      return { fieldErrors: { servicioDefectoId: "Servicio por defecto invÃ¡lido" } };
+    }
+  }
+
+  if (medioPagoDefectoId) {
+    const [medioPago] = await db.select({ id: mediosPago.id }).from(mediosPago).where(eq(mediosPago.id, medioPagoDefectoId)).limit(1);
+    if (!medioPago) {
+      return { fieldErrors: { medioPagoDefectoId: "Medio de pago por defecto invÃ¡lido" } };
+    }
+  }
 
   try {
     await db
@@ -153,6 +209,8 @@ export async function editarBarbero(
         porcentajeComision: porcentajeComisionStr,
         alquilerBancoMensual: alquilerBancoStr !== "" ? alquilerBancoStr : null,
         sueldoMinimoGarantizado: sueldoMinimoStr !== "" ? sueldoMinimoStr : null,
+        servicioDefectoId: servicioDefectoId || null,
+        medioPagoDefectoId: medioPagoDefectoId || null,
       })
       .where(eq(barberos.id, id));
   } catch {

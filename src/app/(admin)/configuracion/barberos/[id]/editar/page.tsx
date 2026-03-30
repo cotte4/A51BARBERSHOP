@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { barberos } from "@/db/schema";
+import { barberos, mediosPago, servicios } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import BarberoForm from "@/components/configuracion/BarberoForm";
@@ -13,11 +13,11 @@ interface EditarBarberoPageProps {
 export default async function EditarBarberoPage({ params }: EditarBarberoPageProps) {
   const { id } = await params;
 
-  const [barbero] = await db
-    .select()
-    .from(barberos)
-    .where(eq(barberos.id, id))
-    .limit(1);
+  const [[barbero], serviciosActivos, mediosPagoActivos] = await Promise.all([
+    db.select().from(barberos).where(eq(barberos.id, id)).limit(1),
+    db.select({ id: servicios.id, nombre: servicios.nombre }).from(servicios).where(eq(servicios.activo, true)),
+    db.select({ id: mediosPago.id, nombre: mediosPago.nombre }).from(mediosPago).where(eq(mediosPago.activo, true)),
+  ]);
 
   if (!barbero) {
     notFound();
@@ -49,7 +49,11 @@ export default async function EditarBarberoPage({ params }: EditarBarberoPagePro
             porcentajeComision: barbero.porcentajeComision,
             alquilerBancoMensual: barbero.alquilerBancoMensual,
             sueldoMinimoGarantizado: barbero.sueldoMinimoGarantizado,
+            servicioDefectoId: barbero.servicioDefectoId,
+            medioPagoDefectoId: barbero.medioPagoDefectoId,
           }}
+          serviciosOptions={serviciosActivos}
+          mediosPagoOptions={mediosPagoActivos}
           submitLabel="Guardar cambios"
         />
       </div>

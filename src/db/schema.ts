@@ -96,6 +96,8 @@ export const barberos = pgTable(
       precision: 12,
       scale: 2,
     }),
+    servicioDefectoId: uuid("servicio_defecto_id").references(() => servicios.id),
+    medioPagoDefectoId: uuid("medio_pago_defecto_id").references(() => mediosPago.id),
     activo: boolean("activo").default(true),
     creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
     userId: text("user_id"),
@@ -315,6 +317,8 @@ export const gastos = pgTable(
     descripcion: text("descripcion"),
     monto: numeric("monto", { precision: 12, scale: 2 }),
     fecha: date("fecha"),
+    tipo: text("tipo").default("fijo"),
+    categoriaVisual: text("categoria_visual"),
     esRecurrente: boolean("es_recurrente").default(false),
     frecuencia: text("frecuencia"),
     comprobanteUrl: text("comprobante_url"),
@@ -326,7 +330,9 @@ export const gastos = pgTable(
       "gastos_frecuencia_check",
       sql`${table.frecuencia} IN ('mensual', 'trimestral', 'anual', 'unica')`
     ),
+    check("gastos_tipo_check", sql`${table.tipo} IN ('fijo', 'rapido')`),
     index("gastos_fecha_idx").on(table.fecha),
+    index("gastos_tipo_fecha_idx").on(table.tipo, table.fecha),
   ]
 );
 
@@ -444,6 +450,100 @@ export const clients = pgTable(
     ),
     index("clients_created_by_barbero_id_idx").on(table.createdByBarberoId),
   ]
+);
+
+export const turnos = pgTable(
+  "turnos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    barberoId: uuid("barbero_id")
+      .notNull()
+      .references(() => barberos.id),
+    clienteNombre: text("cliente_nombre").notNull(),
+    clienteTelefonoRaw: text("cliente_telefono_raw"),
+    clienteTelefonoNormalizado: text("cliente_telefono_normalizado"),
+    clientId: uuid("client_id").references(() => clients.id),
+    fecha: date("fecha").notNull(),
+    horaInicio: time("hora_inicio").notNull(),
+    duracionMinutos: integer("duracion_minutos").notNull(),
+    estado: text("estado").notNull().default("pendiente"),
+    notaCliente: text("nota_cliente"),
+    sugerenciaCancion: text("sugerencia_cancion"),
+    motivoCancelacion: text("motivo_cancelacion"),
+    esMarcianoSnapshot: boolean("es_marciano_snapshot").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "turnos_estado_check",
+      sql`${table.estado} IN ('pendiente', 'confirmado', 'completado', 'cancelado')`
+    ),
+    check(
+      "turnos_duracion_minutos_check",
+      sql`${table.duracionMinutos} IN (45, 60)`
+    ),
+    index("turnos_barbero_fecha_idx").on(table.barberoId, table.fecha),
+    index("turnos_estado_fecha_idx").on(table.estado, table.fecha),
+    index("turnos_cliente_telefono_normalizado_idx").on(table.clienteTelefonoNormalizado),
+    uniqueIndex("turnos_slot_activo_unico_idx")
+      .on(table.barberoId, table.fecha, table.horaInicio)
+      .where(sql`${table.estado} IN ('pendiente', 'confirmado')`),
+  ]
+);
+
+export const turnosExtras = pgTable(
+  "turnos_extras",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    turnoId: uuid("turno_id")
+      .notNull()
+      .references(() => turnos.id, { onDelete: "cascade" }),
+    productoId: uuid("producto_id")
+      .notNull()
+      .references(() => productos.id),
+    cantidad: integer("cantidad").notNull().default(1),
+  },
+  (table) => [
+    check("turnos_extras_cantidad_check", sql`${table.cantidad} > 0`),
+    index("turnos_extras_turno_idx").on(table.turnoId),
+  ]
+);
+
+export const turnosDisponibilidad = pgTable(
+  "turnos_disponibilidad",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    barberoId: uuid("barbero_id")
+      .notNull()
+      .references(() => barberos.id),
+    fecha: date("fecha").notNull(),
+    horaInicio: time("hora_inicio").notNull(),
+    duracionMinutos: integer("duracion_minutos").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "turnos_disponibilidad_duracion_minutos_check",
+      sql`${table.duracionMinutos} IN (45, 60)`
+    ),
+    uniqueIndex("turnos_disponibilidad_slot_unico_idx").on(
+      table.barberoId,
+      table.fecha,
+      table.horaInicio
+    ),
+    index("turnos_disponibilidad_barbero_fecha_idx").on(table.barberoId, table.fecha),
+  ]
+);
+
+export const turnosReservaIntentos = pgTable(
+  "turnos_reserva_intentos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    ipHash: text("ip_hash").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("turnos_reserva_intentos_ip_created_idx").on(table.ipHash, table.createdAt)]
 );
 
 export const visitLogs = pgTable(

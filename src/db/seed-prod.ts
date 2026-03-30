@@ -257,6 +257,7 @@ async function run() {
       descripcion: "Alquiler",
       monto: "1200000.00",
       fecha: "2026-05-01",
+      tipo: "fijo",
       esRecurrente: true,
       frecuencia: "mensual",
       notas: "Alquiler mensual del local",
@@ -264,6 +265,33 @@ async function run() {
     console.log("  ✓ Alquiler — $1.200.000/mes (recurrente)");
   } else {
     console.log("  — Alquiler ya existe");
+  }
+
+  for (const descripcion of [
+    "Filo de navajas",
+    "Alcohol",
+    "Papel cuello",
+    "Gel de afeitar",
+    "Desinfectante 5 en 1",
+    "Kit basico (comprar x2 cada vez)",
+    "Gastos de limpieza iniciales",
+    "Gastos de limpieza periodicos",
+  ]) {
+    const existe = existingGastos.find((g) => g.descripcion === descripcion);
+    if (!existe) {
+      await db.insert(schema.gastos).values({
+        descripcion,
+        monto: "0.00",
+        fecha: hoy,
+        tipo: "fijo",
+        esRecurrente: true,
+        frecuencia: "mensual",
+        notas: "Sugerido por seed. Completar monto real cuando corresponda.",
+      });
+      console.log(`  âœ“ Sugerido: ${descripcion}`);
+    } else {
+      console.log(`  â€” Sugerido ya existe: ${descripcion}`);
+    }
   }
 
   console.log("\n=== Seed completado ===");

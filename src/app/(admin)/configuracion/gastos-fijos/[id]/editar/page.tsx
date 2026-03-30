@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { gastos, categoriasGasto } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { hasGastosRapidosSchema } from "@/lib/gastos-rapidos";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { editarGasto } from "../../actions";
@@ -10,13 +11,31 @@ interface EditarGastoPageProps {
   params: Promise<{ id: string }>;
 }
 
+const gastoLegacySelect = {
+  id: gastos.id,
+  categoriaId: gastos.categoriaId,
+  descripcion: gastos.descripcion,
+  monto: gastos.monto,
+  fecha: gastos.fecha,
+  esRecurrente: gastos.esRecurrente,
+  frecuencia: gastos.frecuencia,
+  notas: gastos.notas,
+};
+
 export default async function EditarGastoPage({
   params,
 }: EditarGastoPageProps) {
   const { id } = await params;
+  const hasQuickExpenseColumns = await hasGastosRapidosSchema();
 
   const [[gasto], categorias] = await Promise.all([
-    db.select().from(gastos).where(eq(gastos.id, id)).limit(1),
+    hasQuickExpenseColumns
+      ? db
+          .select()
+          .from(gastos)
+          .where(and(eq(gastos.id, id), or(eq(gastos.tipo, "fijo"), isNull(gastos.tipo))))
+          .limit(1)
+      : db.select(gastoLegacySelect).from(gastos).where(eq(gastos.id, id)).limit(1),
     db.select().from(categoriasGasto).orderBy(categoriasGasto.nombre),
   ]);
 

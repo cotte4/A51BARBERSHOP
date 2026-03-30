@@ -15,6 +15,15 @@ export type TipoMovimientoStock =
   | "ajuste";
 
 export type FrecuenciaGasto = "mensual" | "trimestral" | "anual" | "unica";
+export type TipoGasto = "fijo" | "rapido";
+export type CategoriaGastoRapidoKey =
+  | "cafe"
+  | "bebida"
+  | "comida"
+  | "barber"
+  | "limpieza"
+  | "compras"
+  | "otros";
 
 // ————————————————————————————
 // Cálculos financieros (siempre en servidor)
@@ -111,3 +120,62 @@ export interface VisitLogInput {
 }
 
 export type ClientBriefingScope = "admin" | "barbero";
+
+export type TurnoEstado = "pendiente" | "confirmado" | "completado" | "cancelado";
+
+export interface TurnoExtraInput {
+  productoId: string;
+  cantidad: number;
+}
+
+export interface DisponibilidadSlot {
+  id: string;
+  fecha: string;
+  horaInicio: string;
+  duracionMinutos: number;
+}
+
+export interface TurnoSummary {
+  id: string;
+  clienteNombre: string;
+  clienteTelefonoRaw: string | null;
+  fecha: string;
+  horaInicio: string;
+  duracionMinutos: number;
+  estado: TurnoEstado;
+  notaCliente: string | null;
+  sugerenciaCancion: string | null;
+  motivoCancelacion: string | null;
+  esMarcianoSnapshot: boolean;
+  extras: Array<{
+    id: string;
+    nombre: string;
+    cantidad: number;
+  }>;
+}
+
+export interface TurnoDetalle extends TurnoSummary {
+  barberoId: string;
+  clientId: string | null;
+}
+
+export interface ReservaPublicInput {
+  slug: string;
+  fecha: string;
+  horaInicio: string;
+  duracionMinutos: number;
+  clienteNombre: string;
+  clienteTelefonoRaw?: string;
+  notaCliente?: string;
+  sugerenciaCancion?: string;
+  extras?: TurnoExtraInput[];
+}
+
+export interface QuickActionDefaults {
+  servicioId: string;
+  servicioNombre: string;
+  precioBase: number;
+  medioPagoId: string;
+  medioPagoNombre: string;
+  comisionMedioPagoPct: number;
+}

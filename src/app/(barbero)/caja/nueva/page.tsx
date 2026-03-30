@@ -6,9 +6,20 @@ import Link from "next/link";
 import AtencionForm from "@/components/caja/AtencionForm";
 import { registrarAtencion } from "../actions";
 
-export default async function NuevaAtencionPage() {
+type NuevaAtencionPageProps = {
+  searchParams: Promise<{
+    barberoId?: string;
+    servicioId?: string;
+    medioPagoId?: string;
+    precioCobrado?: string;
+    fromQuickAction?: string;
+  }>;
+};
+
+export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionPageProps) {
   const actor = await getCajaActorContext();
   const isAdmin = actor?.isAdmin ?? false;
+  const params = await searchParams;
 
   // Verificar cierre del día
   const fechaHoy = new Date().toLocaleDateString("en-CA", {
@@ -88,6 +99,11 @@ export default async function NuevaAtencionPage() {
         Nueva atención
       </h2>
       <div className="bg-white rounded-xl border border-gray-200 p-5">
+        {params.fromQuickAction ? (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            ConfigurÃ¡ el servicio y medio de pago por defecto del barbero para usar la acciÃ³n rÃ¡pida sin pasar por este formulario.
+          </div>
+        ) : null}
         <AtencionForm
           action={registrarAtencion}
           barberosList={barberosActivos.map((b) => ({
@@ -113,6 +129,12 @@ export default async function NuevaAtencionPage() {
           }))}
           preselectedBarberoId={preselectedBarberoId}
           isAdmin={isAdmin}
+          initialData={{
+            barberoId: params.barberoId,
+            servicioId: params.servicioId,
+            medioPagoId: params.medioPagoId,
+            precioCobrado: params.precioCobrado,
+          }}
           submitLabel="Registrar atención"
           cancelHref="/caja"
         />

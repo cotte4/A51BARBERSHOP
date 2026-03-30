@@ -15,7 +15,11 @@ interface BarberoFormProps {
     porcentajeComision?: string | null;
     alquilerBancoMensual?: string | null;
     sueldoMinimoGarantizado?: string | null;
+    servicioDefectoId?: string | null;
+    medioPagoDefectoId?: string | null;
   };
+  serviciosOptions: Array<{ id: string; nombre: string }>;
+  mediosPagoOptions: Array<{ id: string; nombre: string | null }>;
   submitLabel?: string;
   cancelHref?: string;
 }
@@ -25,6 +29,8 @@ const initialState: BarberoFormState = {};
 export default function BarberoForm({
   action,
   initialData,
+  serviciosOptions,
+  mediosPagoOptions,
   submitLabel = "Guardar",
   cancelHref = "/configuracion/barberos",
 }: BarberoFormProps) {
@@ -186,6 +192,50 @@ export default function BarberoForm({
             {state.fieldErrors.sueldoMinimoGarantizado}
           </p>
         )}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="servicioDefectoId" className="text-sm font-medium text-gray-700">
+          Servicio por defecto <span className="text-gray-400 text-xs">(acciÃ³n rÃ¡pida)</span>
+        </label>
+        <select
+          id="servicioDefectoId"
+          name="servicioDefectoId"
+          defaultValue={initialData?.servicioDefectoId ?? ""}
+          className="min-h-[44px] px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
+        >
+          <option value="">Sin configurar</option>
+          {serviciosOptions.map((servicio) => (
+            <option key={servicio.id} value={servicio.id}>
+              {servicio.nombre}
+            </option>
+          ))}
+        </select>
+        {state.fieldErrors?.servicioDefectoId ? (
+          <p className="text-red-500 text-xs">{state.fieldErrors.servicioDefectoId}</p>
+        ) : null}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="medioPagoDefectoId" className="text-sm font-medium text-gray-700">
+          Medio de pago por defecto <span className="text-gray-400 text-xs">(acciÃ³n rÃ¡pida)</span>
+        </label>
+        <select
+          id="medioPagoDefectoId"
+          name="medioPagoDefectoId"
+          defaultValue={initialData?.medioPagoDefectoId ?? ""}
+          className="min-h-[44px] px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
+        >
+          <option value="">Sin configurar</option>
+          {mediosPagoOptions.map((medio) => (
+            <option key={medio.id} value={medio.id}>
+              {medio.nombre ?? "—"}
+            </option>
+          ))}
+        </select>
+        {state.fieldErrors?.medioPagoDefectoId ? (
+          <p className="text-red-500 text-xs">{state.fieldErrors.medioPagoDefectoId}</p>
+        ) : null}
       </div>
 
       {/* Acciones */}

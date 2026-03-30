@@ -40,7 +40,10 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/configuracion") ||
     pathname.startsWith("/liquidaciones") ||
     pathname.startsWith("/inventario") ||
-    pathname.startsWith("/repago")
+    pathname.startsWith("/repago") ||
+    pathname.startsWith("/turnos") ||
+    pathname.startsWith("/mi-resultado") ||
+    pathname.startsWith("/gastos-rapidos")
   ) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
@@ -77,6 +80,9 @@ export const config = {
     "/liquidaciones/:path*",
     "/inventario/:path*",
     "/repago/:path*",
+    "/turnos/:path*",
+    "/mi-resultado/:path*",
+    "/gastos-rapidos/:path*",
     "/caja/:path*",
     "/clientes/:path*",
   ],

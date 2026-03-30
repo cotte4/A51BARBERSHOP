@@ -28,6 +28,11 @@ export default async function BarberoLayout({ children }: { children: React.Reac
                 <Link href="/clientes" className="hover:text-gray-900">
                   Clientes
                 </Link>
+                {isAdmin ? (
+                  <Link href="/turnos" className="hover:text-gray-900">
+                    Turnos
+                  </Link>
+                ) : null}
               </nav>
             </div>
           </div>

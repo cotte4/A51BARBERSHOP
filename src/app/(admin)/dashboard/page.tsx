@@ -9,6 +9,8 @@ import { redirect } from "next/navigation";
 import { getKpisDia, getKpisMes } from "@/lib/dashboard-queries";
 import { getDatosBep } from "@/lib/dashboard-queries";
 import { calcularBep } from "@/lib/bep";
+import GastoRapidoFAB from "@/components/gastos-rapidos/GastoRapidoFAB";
+import { registrarGastoRapidoAction } from "@/app/(admin)/gastos-rapidos/actions";
 
 function formatARS(val: number): string {
   return new Intl.NumberFormat("es-AR", {
@@ -217,6 +219,16 @@ export default async function DashboardPage() {
           </h2>
           <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
             <Link
+              href="/mi-resultado"
+              className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+            >
+              <div>
+                <span className="text-gray-900 font-medium">Mi Resultado</span>
+                <p className="text-xs text-gray-400">Vista personal diaria y mensual</p>
+              </div>
+              <span className="text-gray-400">→</span>
+            </Link>
+            <Link
               href="/dashboard/pl"
               className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
             >
@@ -285,10 +297,17 @@ export default async function DashboardPage() {
               <span className="text-gray-900 font-medium">Repago Memas</span>
               <span className="text-gray-400">→</span>
             </Link>
-            <Link
-              href="/configuracion"
-              className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
-            >
+              <Link
+                href="/gastos-rapidos"
+                className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+              >
+                <span className="text-gray-900 font-medium">Gastos rapidos</span>
+                <span className="text-gray-400">→</span>
+              </Link>
+              <Link
+                href="/configuracion"
+                className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+              >
               <span className="text-gray-900 font-medium">Configuración</span>
               <span className="text-gray-400">→</span>
             </Link>
@@ -343,6 +362,12 @@ export default async function DashboardPage() {
           </div>
         )}
       </main>
+
+      <GastoRapidoFAB
+        action={registrarGastoRapidoAction}
+        returnTo="/dashboard"
+        historyHref="/gastos-rapidos"
+      />
     </div>
   );
 }

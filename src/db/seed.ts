@@ -279,6 +279,45 @@ async function seed() {
   console.log("  ✓ Presupuesto mensual: $1.956.686 (actualizado_por: seed)");
 
   console.log("\n✓ Seed completado exitosamente.\n");
+  console.log("\nInsertando gastos fijos sugeridos...");
+
+  const sugeridos = [
+    "Filo de navajas",
+    "Alcohol",
+    "Papel cuello",
+    "Gel de afeitar",
+    "Desinfectante 5 en 1",
+    "Kit basico (comprar x2 cada vez)",
+    "Gastos de limpieza iniciales",
+    "Gastos de limpieza periodicos",
+  ];
+
+  const fechaReferencia = new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+  });
+
+  for (const descripcion of sugeridos) {
+    const existente = await db.query.gastos.findFirst({
+      where: (g, { and, eq, isNull, or }) =>
+        and(eq(g.descripcion, descripcion), or(eq(g.tipo, "fijo"), isNull(g.tipo))),
+    });
+
+    if (!existente) {
+      await db.insert(schema.gastos).values({
+        descripcion,
+        monto: "0.00",
+        fecha: fechaReferencia,
+        tipo: "fijo",
+        esRecurrente: true,
+        frecuencia: "mensual",
+        notas: "Sugerido por seed. Completar monto real cuando corresponda.",
+      });
+      console.log(`  âœ“ Sugerido: ${descripcion}`);
+    } else {
+      console.log(`  ~ Sugerido ya existe: ${descripcion}`);
+    }
+  }
+
   console.log("Usuarios creados:");
   console.log("  Admin:   pinky@a51barber.com  / pinky1234");
   console.log("  Barbero: gabote@a51barber.com / gabote1234");

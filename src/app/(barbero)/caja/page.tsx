@@ -5,7 +5,11 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import Link from "next/link";
 import AnularButton from "@/components/caja/AnularButton";
-import { anularAtencion } from "./actions";
+import QuickActionButton from "@/components/turnos/QuickActionButton";
+import { anularAtencion, registrarAtencionRapidaAction } from "./actions";
+import { getQuickActionDefaultsForBarbero, resolveCajaActorBarberoId } from "@/lib/caja-atencion";
+import GastoRapidoFAB from "@/components/gastos-rapidos/GastoRapidoFAB";
+import { registrarGastoRapidoAction } from "@/app/(admin)/gastos-rapidos/actions";
 
 function formatARS(val: string | number | null | undefined): string {
   if (val === null || val === undefined) return "—";
@@ -46,6 +50,20 @@ export default async function CajaPage() {
   const userId = session?.user?.id;
 
   const fechaHoy = getFechaHoy();
+  const quickActionBarberoId = userId
+    ? await resolveCajaActorBarberoId(userId, isAdmin)
+    : null;
+  const quickDefaults = quickActionBarberoId
+    ? await getQuickActionDefaultsForBarbero(quickActionBarberoId)
+    : null;
+  const quickEditHref =
+    quickDefaults && quickActionBarberoId
+      ? `/caja/nueva?barberoId=${encodeURIComponent(quickActionBarberoId)}&servicioId=${encodeURIComponent(
+          quickDefaults.servicioId
+        )}&medioPagoId=${encodeURIComponent(quickDefaults.medioPagoId)}&precioCobrado=${encodeURIComponent(
+          String(quickDefaults.precioBase)
+        )}&fromQuickAction=1`
+      : "/caja/nueva?fromQuickAction=1";
 
   // Verificar cierre del día
   const [cierreHoy] = await db
@@ -252,6 +270,12 @@ export default async function CajaPage() {
           {formatFechaLarga(fechaHoy)}
         </h1>
       </div>
+
+      <QuickActionButton
+        defaults={quickDefaults}
+        action={registrarAtencionRapidaAction}
+        editHref={quickEditHref}
+      />
 
       {/* Resumen del día */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
@@ -531,6 +555,14 @@ export default async function CajaPage() {
           </div>
         </div>
       )}
+
+      {isAdmin ? (
+        <GastoRapidoFAB
+          action={registrarGastoRapidoAction}
+          returnTo="/caja"
+          historyHref="/gastos-rapidos"
+        />
+      ) : null}
     </main>
   );
 }

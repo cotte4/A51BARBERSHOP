@@ -16,6 +16,13 @@ import { eq, inArray, and, gte, lte, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { buildCierreResumen } from "@/lib/caja-finance";
 import { getCajaActorContext } from "@/lib/caja-access";
+import {
+  crearAtencionDesdeInput,
+  getFechaHoyArgentina,
+  getQuickActionDefaultsForBarbero,
+  resolveCajaActorBarberoId,
+  hasCajaCerradaHoy,
+} from "@/lib/caja-atencion";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -40,19 +47,7 @@ export type AtencionFormState = {
 // ─── Helpers ─────────────────────────────────────────
 
 function getFechaHoy(): string {
-  // Fecha en timezone Argentina (UTC-3)
-  return new Date().toLocaleDateString("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires",
-  }); // formato YYYY-MM-DD
-}
-
-function getHoraAhora(): string {
-  return new Date().toLocaleTimeString("en-GB", {
-    timeZone: "America/Argentina/Buenos_Aires",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }); // formato HH:MM:SS
+  return getFechaHoyArgentina();
 }
 
 // ─── registrarAtencion ────────────────────────────────
@@ -97,72 +92,21 @@ export async function registrarAtencion(
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
   // Verificar que no hay cierre para hoy
-  const [cierreExistente] = await db
-    .select({ id: cierresCaja.id })
-    .from(cierresCaja)
-    .where(eq(cierresCaja.fecha, getFechaHoy()))
-    .limit(1);
-
-  if (cierreExistente) {
+  if (await hasCajaCerradaHoy()) {
     const d = new Date(getFechaHoy() + "T12:00:00");
     const fechaFormateada = d.toLocaleDateString("es-AR", { day: "numeric", month: "long", timeZone: "America/Argentina/Buenos_Aires" });
     return { error: `La caja del ${fechaFormateada} ya fue cerrada. No se pueden registrar nuevas atenciones.` };
   }
 
   try {
-    // Verificar que barbero, servicio y medio de pago existen
-    const [barbero] = await db.select().from(barberos).where(eq(barberos.id, barberoId)).limit(1);
-    const [medioPago] = await db.select().from(mediosPago).where(eq(mediosPago.id, medioPagoId)).limit(1);
-    const [servicio] = await db.select().from(servicios).where(eq(servicios.id, servicioId)).limit(1);
-
-    if (!barbero) return { fieldErrors: { barberoId: "Barbero no encontrado" } };
-    if (!medioPago) return { fieldErrors: { medioPagoId: "Medio de pago no encontrado" } };
-    if (!servicio) return { fieldErrors: { servicioId: "Servicio no encontrado" } };
-
-    // Re-calcular server-side (no confiar en cliente)
-    const precioCobrado = Number(precioCobradoStr);
-    const comisionMpPct = Number(medioPago.comisionPorcentaje ?? 0);
-    const comisionMpMonto = precioCobrado * comisionMpPct / 100;
-    const montoNeto = precioCobrado - comisionMpMonto;
-    const comisionBarberoPct = Number(barbero.porcentajeComision ?? 0);
-    const comisionBarberoMonto = precioCobrado * comisionBarberoPct / 100;
-
-    // Insertar atencion
-    const [nuevaAtencion] = await db
-      .insert(atenciones)
-      .values({
-        barberoId,
-        servicioId,
-        fecha: getFechaHoy(),
-        hora: getHoraAhora(),
-        precioBase: servicio.precioBase,
-        precioCobrado: String(precioCobrado),
-        medioPagoId,
-        comisionMedioPagoPct: String(comisionMpPct),
-        comisionMedioPagoMonto: String(comisionMpMonto.toFixed(2)),
-        montoNeto: String(montoNeto.toFixed(2)),
-        comisionBarberoPct: String(comisionBarberoPct),
-        comisionBarberoMonto: String(comisionBarberoMonto.toFixed(2)),
-        notas: notas?.trim() || null,
-        anulado: false,
-      })
-      .returning();
-
-    // Insertar adicionales
-    if (adicionalesIds.length > 0) {
-      const adicionalesData = await db
-        .select()
-        .from(serviciosAdicionales)
-        .where(inArray(serviciosAdicionales.id, adicionalesIds));
-
-      await db.insert(atencionesAdicionales).values(
-        adicionalesData.map((a) => ({
-          atencionId: nuevaAtencion.id,
-          adicionalId: a.id,
-          precioCobrado: a.precioExtra ?? "0",
-        }))
-      );
-    }
+    await crearAtencionDesdeInput({
+      barberoId,
+      servicioId,
+      medioPagoId,
+      precioCobrado: Number(precioCobradoStr),
+      adicionalesIds,
+      notas,
+    });
   } catch (e) {
     console.error("Error registrando atencion:", e);
     return { error: "No se pudo registrar la atención. Intentá de nuevo." };
@@ -173,6 +117,51 @@ export async function registrarAtencion(
 }
 
 // ─── editarAtencion ───────────────────────────────────
+
+export type AtencionRapidaState = {
+  error?: string;
+};
+
+export async function registrarAtencionRapidaAction(
+  prevState: AtencionRapidaState
+): Promise<AtencionRapidaState> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const userId = session?.user?.id;
+  const userRole = (session?.user as { role?: string } | undefined)?.role;
+
+  if (!userId) {
+    return { error: "DebÃ©s iniciar sesiÃ³n para registrar una atenciÃ³n." };
+  }
+
+  if (await hasCajaCerradaHoy()) {
+    return { error: "La caja del dÃ­a ya fue cerrada. No se pueden registrar nuevas atenciones." };
+  }
+
+  const barberoId = await resolveCajaActorBarberoId(userId, userRole === "admin");
+  if (!barberoId) {
+    return { error: "No encontrÃ© un barbero activo vinculado para usar la acciÃ³n rÃ¡pida." };
+  }
+
+  const defaults = await getQuickActionDefaultsForBarbero(barberoId);
+  if (!defaults) {
+    return { error: "Faltan el servicio o medio de pago por defecto del barbero." };
+  }
+
+  try {
+    await crearAtencionDesdeInput({
+      barberoId,
+      servicioId: defaults.servicioId,
+      medioPagoId: defaults.medioPagoId,
+      precioCobrado: defaults.precioBase,
+    });
+  } catch (error) {
+    console.error("Error registrando atencion rapida:", error);
+    return { error: "No se pudo registrar la atenciÃ³n rÃ¡pida. IntentÃ¡ de nuevo." };
+  }
+
+  revalidatePath("/caja");
+  redirect("/caja");
+}
 
 export async function editarAtencion(
   id: string,

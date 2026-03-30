@@ -3,7 +3,8 @@
 import { db } from "@/db";
 import { gastos } from "@/db/schema";
 import { requireAdminSession } from "@/lib/admin-action";
-import { eq } from "drizzle-orm";
+import { hasGastosRapidosSchema } from "@/lib/gastos-rapidos";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -51,6 +52,7 @@ export async function crearGasto(
   }
 
   const esRecurrente = esRecurrenteRaw === "on";
+  const hasQuickExpenseColumns = await hasGastosRapidosSchema();
 
   if (esRecurrente && (!frecuencia || frecuencia.trim() === "")) {
     fieldErrors.frecuencia = "La frecuencia es requerida si el gasto es recurrente";
@@ -69,6 +71,7 @@ export async function crearGasto(
       esRecurrente,
       frecuencia: esRecurrente && frecuencia ? frecuencia : null,
       notas: notas.trim() !== "" ? notas.trim() : null,
+      ...(hasQuickExpenseColumns ? { tipo: "fijo" as const, categoriaVisual: null } : {}),
     });
   } catch {
     return { error: "No se pudo guardar el gasto. Intentá de nuevo." };
@@ -115,6 +118,7 @@ export async function editarGasto(
   }
 
   const esRecurrente = esRecurrenteRaw === "on";
+  const hasQuickExpenseColumns = await hasGastosRapidosSchema();
 
   if (esRecurrente && (!frecuencia || frecuencia.trim() === "")) {
     fieldErrors.frecuencia = "La frecuencia es requerida si el gasto es recurrente";
@@ -135,8 +139,13 @@ export async function editarGasto(
         esRecurrente,
         frecuencia: esRecurrente && frecuencia ? frecuencia : null,
         notas: notas.trim() !== "" ? notas.trim() : null,
+        ...(hasQuickExpenseColumns ? { tipo: "fijo" as const, categoriaVisual: null } : {}),
       })
-      .where(eq(gastos.id, id));
+      .where(
+        hasQuickExpenseColumns
+          ? and(eq(gastos.id, id), or(eq(gastos.tipo, "fijo"), isNull(gastos.tipo)))
+          : eq(gastos.id, id)
+      );
   } catch {
     return { error: "No se pudo actualizar el gasto. Intentá de nuevo." };
   }
@@ -153,7 +162,15 @@ export async function eliminarGasto(id: string): Promise<void> {
     redirect("/configuracion/gastos-fijos");
   }
 
-  await db.delete(gastos).where(eq(gastos.id, id));
+  const hasQuickExpenseColumns = await hasGastosRapidosSchema();
+
+  await db
+    .delete(gastos)
+    .where(
+      hasQuickExpenseColumns
+        ? and(eq(gastos.id, id), or(eq(gastos.tipo, "fijo"), isNull(gastos.tipo)))
+        : eq(gastos.id, id)
+    );
 
   revalidatePath("/configuracion/gastos-fijos");
   revalidatePath("/dashboard");

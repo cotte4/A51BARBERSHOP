@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { gastos, categoriasGasto } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { hasGastosRapidosSchema } from "@/lib/gastos-rapidos";
+import { desc, eq, isNull, or } from "drizzle-orm";
 import Link from "next/link";
 import GastoDeleteButton from "./_GastoDeleteButton";
 
@@ -30,9 +31,27 @@ function frecuenciaLabel(frecuencia: string | null) {
   return map[frecuencia] ?? frecuencia;
 }
 
+const gastoLegacySelect = {
+  id: gastos.id,
+  categoriaId: gastos.categoriaId,
+  descripcion: gastos.descripcion,
+  monto: gastos.monto,
+  fecha: gastos.fecha,
+  esRecurrente: gastos.esRecurrente,
+  frecuencia: gastos.frecuencia,
+  notas: gastos.notas,
+};
+
 export default async function GastosFijosPage() {
+  const hasQuickExpenseColumns = await hasGastosRapidosSchema();
   const [listaGastos, listaCategorias] = await Promise.all([
-    db.select().from(gastos).orderBy(desc(gastos.fecha)),
+    hasQuickExpenseColumns
+      ? db
+          .select()
+          .from(gastos)
+          .where(or(eq(gastos.tipo, "fijo"), isNull(gastos.tipo)))
+          .orderBy(desc(gastos.fecha))
+      : db.select(gastoLegacySelect).from(gastos).orderBy(desc(gastos.fecha)),
     db.select().from(categoriasGasto).orderBy(categoriasGasto.nombre),
   ]);
 
