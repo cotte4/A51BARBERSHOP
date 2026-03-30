@@ -2,9 +2,24 @@
 
 import { db } from "@/db";
 import { barberos } from "@/db/schema";
+import { requireAdminSession } from "@/lib/admin-action";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+
+const rolesValidos = ["admin", "barbero"] as const;
+const tiposModeloValidos = ["variable", "hibrido", "fijo"] as const;
+
+type RolBarbero = (typeof rolesValidos)[number];
+type TipoModeloBarbero = (typeof tiposModeloValidos)[number];
+
+function esRolBarbero(value: string): value is RolBarbero {
+  return rolesValidos.includes(value as RolBarbero);
+}
+
+function esTipoModeloBarbero(value: string): value is TipoModeloBarbero {
+  return tiposModeloValidos.includes(value as TipoModeloBarbero);
+}
 
 export type BarberoFormState = {
   error?: string;
@@ -18,31 +33,40 @@ export type BarberoFormState = {
   };
 };
 
-export async function crearBarbero(
-  prevState: BarberoFormState,
-  formData: FormData
-): Promise<BarberoFormState> {
-  const nombre = formData.get("nombre") as string;
-  const rol = formData.get("rol") as string;
-  const tipoModelo = formData.get("tipoModelo") as string;
-  const porcentajeComisionStr = formData.get("porcentajeComision") as string;
-  const alquilerBancoStr = formData.get("alquilerBancoMensual") as string;
-  const sueldoMinimoStr = formData.get("sueldoMinimoGarantizado") as string;
+function validarBarbero(formData: FormData): {
+  fieldErrors?: BarberoFormState["fieldErrors"];
+  values?: {
+    nombre: string;
+    rol: RolBarbero;
+    tipoModelo: TipoModeloBarbero;
+    porcentajeComisionStr: string;
+    alquilerBancoStr: string;
+    sueldoMinimoStr: string;
+  };
+} {
+  const nombre = (formData.get("nombre") as string) ?? "";
+  const rol = (formData.get("rol") as string) ?? "";
+  const tipoModelo = (formData.get("tipoModelo") as string) ?? "";
+  const porcentajeComisionStr = (formData.get("porcentajeComision") as string) ?? "";
+  const alquilerBancoStr = (formData.get("alquilerBancoMensual") as string) ?? "";
+  const sueldoMinimoStr = (formData.get("sueldoMinimoGarantizado") as string) ?? "";
 
-  // Validaciones
   const fieldErrors: BarberoFormState["fieldErrors"] = {};
 
-  if (!nombre || nombre.trim() === "") {
+  if (!nombre.trim()) {
     fieldErrors.nombre = "El nombre es requerido";
   }
-  if (!rol || !["admin", "barbero"].includes(rol)) {
+
+  if (!esRolBarbero(rol)) {
     fieldErrors.rol = "El rol es requerido";
   }
-  if (!tipoModelo || !["variable", "hibrido", "fijo"].includes(tipoModelo)) {
+
+  if (!esTipoModeloBarbero(tipoModelo)) {
     fieldErrors.tipoModelo = "El tipo de modelo es requerido";
   }
+
   if (!porcentajeComisionStr || isNaN(Number(porcentajeComisionStr))) {
-    fieldErrors.porcentajeComision = "El porcentaje de comisión es requerido";
+    fieldErrors.porcentajeComision = "El porcentaje de comision es requerido";
   } else if (Number(porcentajeComisionStr) < 0 || Number(porcentajeComisionStr) > 100) {
     fieldErrors.porcentajeComision = "Debe ser entre 0 y 100";
   }
@@ -51,18 +75,50 @@ export async function crearBarbero(
     return { fieldErrors };
   }
 
+  const rolTipado = rol as RolBarbero;
+  const tipoModeloTipado = tipoModelo as TipoModeloBarbero;
+
+  return {
+    values: {
+      nombre: nombre.trim(),
+      rol: rolTipado,
+      tipoModelo: tipoModeloTipado,
+      porcentajeComisionStr,
+      alquilerBancoStr,
+      sueldoMinimoStr,
+    },
+  };
+}
+
+export async function crearBarbero(
+  prevState: BarberoFormState,
+  formData: FormData
+): Promise<BarberoFormState> {
+  if (!(await requireAdminSession())) {
+    return { error: "Solo el administrador puede gestionar barberos." };
+  }
+
+  const resultado = validarBarbero(formData);
+
+  if (resultado.fieldErrors) {
+    return { fieldErrors: resultado.fieldErrors };
+  }
+
+  const { nombre, rol, tipoModelo, porcentajeComisionStr, alquilerBancoStr, sueldoMinimoStr } =
+    resultado.values!;
+
   try {
     await db.insert(barberos).values({
-      nombre: nombre.trim(),
+      nombre,
       rol,
       tipoModelo,
       porcentajeComision: porcentajeComisionStr,
-      alquilerBancoMensual: alquilerBancoStr && alquilerBancoStr !== "" ? alquilerBancoStr : null,
-      sueldoMinimoGarantizado: sueldoMinimoStr && sueldoMinimoStr !== "" ? sueldoMinimoStr : null,
+      alquilerBancoMensual: alquilerBancoStr !== "" ? alquilerBancoStr : null,
+      sueldoMinimoGarantizado: sueldoMinimoStr !== "" ? sueldoMinimoStr : null,
       activo: true,
     });
   } catch {
-    return { error: "No se pudo guardar el barbero. Revisá los datos e intentá de nuevo." };
+    return { error: "No se pudo guardar el barbero. Revisa los datos e intenta de nuevo." };
   }
 
   revalidatePath("/configuracion/barberos");
@@ -74,48 +130,33 @@ export async function editarBarbero(
   prevState: BarberoFormState,
   formData: FormData
 ): Promise<BarberoFormState> {
-  const nombre = formData.get("nombre") as string;
-  const rol = formData.get("rol") as string;
-  const tipoModelo = formData.get("tipoModelo") as string;
-  const porcentajeComisionStr = formData.get("porcentajeComision") as string;
-  const alquilerBancoStr = formData.get("alquilerBancoMensual") as string;
-  const sueldoMinimoStr = formData.get("sueldoMinimoGarantizado") as string;
-
-  const fieldErrors: BarberoFormState["fieldErrors"] = {};
-
-  if (!nombre || nombre.trim() === "") {
-    fieldErrors.nombre = "El nombre es requerido";
-  }
-  if (!rol || !["admin", "barbero"].includes(rol)) {
-    fieldErrors.rol = "El rol es requerido";
-  }
-  if (!tipoModelo || !["variable", "hibrido", "fijo"].includes(tipoModelo)) {
-    fieldErrors.tipoModelo = "El tipo de modelo es requerido";
-  }
-  if (!porcentajeComisionStr || isNaN(Number(porcentajeComisionStr))) {
-    fieldErrors.porcentajeComision = "El porcentaje de comisión es requerido";
-  } else if (Number(porcentajeComisionStr) < 0 || Number(porcentajeComisionStr) > 100) {
-    fieldErrors.porcentajeComision = "Debe ser entre 0 y 100";
+  if (!(await requireAdminSession())) {
+    return { error: "Solo el administrador puede gestionar barberos." };
   }
 
-  if (Object.keys(fieldErrors).length > 0) {
-    return { fieldErrors };
+  const resultado = validarBarbero(formData);
+
+  if (resultado.fieldErrors) {
+    return { fieldErrors: resultado.fieldErrors };
   }
+
+  const { nombre, rol, tipoModelo, porcentajeComisionStr, alquilerBancoStr, sueldoMinimoStr } =
+    resultado.values!;
 
   try {
     await db
       .update(barberos)
       .set({
-        nombre: nombre.trim(),
+        nombre,
         rol,
         tipoModelo,
         porcentajeComision: porcentajeComisionStr,
-        alquilerBancoMensual: alquilerBancoStr && alquilerBancoStr !== "" ? alquilerBancoStr : null,
-        sueldoMinimoGarantizado: sueldoMinimoStr && sueldoMinimoStr !== "" ? sueldoMinimoStr : null,
+        alquilerBancoMensual: alquilerBancoStr !== "" ? alquilerBancoStr : null,
+        sueldoMinimoGarantizado: sueldoMinimoStr !== "" ? sueldoMinimoStr : null,
       })
       .where(eq(barberos.id, id));
   } catch {
-    return { error: "No se pudo actualizar el barbero. Intentá de nuevo." };
+    return { error: "No se pudo actualizar el barbero. Intenta de nuevo." };
   }
 
   revalidatePath("/configuracion/barberos");
@@ -123,10 +164,13 @@ export async function editarBarbero(
 }
 
 export async function toggleActivoBarbero(id: string, activo: boolean) {
-  await db
-    .update(barberos)
-    .set({ activo: !activo })
-    .where(eq(barberos.id, id));
+  if (!(await requireAdminSession())) {
+    return;
+  }
+
+  await db.update(barberos).set({ activo: !activo }).where(eq(barberos.id, id));
 
   revalidatePath("/configuracion/barberos");
+  revalidatePath("/caja/nueva");
+  revalidatePath("/liquidaciones/nueva");
 }

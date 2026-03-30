@@ -8,8 +8,7 @@ import {
   mediosPago,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { getCajaActorContext } from "@/lib/caja-access";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import AtencionForm from "@/components/caja/AtencionForm";
@@ -54,10 +53,8 @@ export default async function EditarAtencionPage({
     );
   }
 
-  const session = await auth.api.getSession({ headers: await headers() });
-  const userRole = (session?.user as { role?: string })?.role;
-  const userId = session?.user?.id;
-  const isAdmin = userRole === "admin";
+  const actor = await getCajaActorContext();
+  const isAdmin = actor?.isAdmin ?? false;
 
   const [
     barberosActivos,
@@ -76,10 +73,28 @@ export default async function EditarAtencionPage({
       .where(eq(atencionesAdicionales.atencionId, id)),
   ]);
 
-  let preselectedBarberoId: string | undefined;
-  if (!isAdmin && userId) {
-    const barberoDelUsuario = barberosActivos.find((b) => b.userId === userId);
-    preselectedBarberoId = barberoDelUsuario?.id;
+  const preselectedBarberoId = actor?.barberoId;
+
+  if (!isAdmin && !preselectedBarberoId) {
+    return (
+      <main className="min-h-screen p-4 max-w-2xl mx-auto">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <p className="text-gray-600 text-sm mb-3">
+            Tu usuario no tiene un barbero activo vinculado.
+          </p>
+          <Link
+            href="/caja"
+            className="text-sm text-gray-500 underline hover:text-gray-700 transition-colors"
+          >
+            {"<- Volver a caja"}
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (!isAdmin && atencion.barberoId !== preselectedBarberoId) {
+    redirect("/caja");
   }
 
   const editarConId = editarAtencion.bind(null, id);

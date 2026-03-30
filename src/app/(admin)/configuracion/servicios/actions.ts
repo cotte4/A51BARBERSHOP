@@ -2,6 +2,7 @@
 
 import { db } from "@/db";
 import { servicios, serviciosAdicionales, serviciosPreciosHistorial } from "@/db/schema";
+import { requireAdminSession } from "@/lib/admin-action";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -18,6 +19,10 @@ export async function crearServicio(
   prevState: ServicioFormState,
   formData: FormData
 ): Promise<ServicioFormState> {
+  if (!(await requireAdminSession())) {
+    return { error: "Solo el administrador puede gestionar servicios." };
+  }
+
   const nombre = formData.get("nombre") as string;
   const precioBaseStr = formData.get("precioBase") as string;
 
@@ -66,6 +71,10 @@ export async function editarServicio(
   prevState: ServicioFormState,
   formData: FormData
 ): Promise<ServicioFormState> {
+  if (!(await requireAdminSession())) {
+    return { error: "Solo el administrador puede gestionar servicios." };
+  }
+
   const nombre = formData.get("nombre") as string;
   const precioBaseStr = formData.get("precioBase") as string;
   const motivoCambioPrecio = formData.get("motivoCambioPrecio") as string;
@@ -121,12 +130,17 @@ export async function editarServicio(
 }
 
 export async function toggleActivoServicio(id: string, activo: boolean) {
+  if (!(await requireAdminSession())) {
+    return;
+  }
+
   await db
     .update(servicios)
     .set({ activo: !activo })
     .where(eq(servicios.id, id));
 
   revalidatePath("/configuracion/servicios");
+  revalidatePath("/caja/nueva");
 }
 
 // Acciones para adicionales
@@ -140,6 +154,10 @@ export async function crearAdicional(
   prevState: AdicionalFormState,
   formData: FormData
 ): Promise<AdicionalFormState> {
+  if (!(await requireAdminSession())) {
+    return { error: "Solo el administrador puede gestionar servicios." };
+  }
+
   const nombre = formData.get("nombre") as string;
   const precioExtraStr = formData.get("precioExtra") as string;
 
@@ -165,9 +183,14 @@ export async function crearAdicional(
 }
 
 export async function eliminarAdicional(id: string, servicioId: string) {
+  if (!(await requireAdminSession())) {
+    return;
+  }
+
   await db
     .delete(serviciosAdicionales)
     .where(eq(serviciosAdicionales.id, id));
 
   revalidatePath(`/configuracion/servicios/${servicioId}/editar`);
+  revalidatePath("/caja/nueva");
 }

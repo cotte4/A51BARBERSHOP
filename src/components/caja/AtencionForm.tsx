@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import type { AtencionFormState } from "@/app/(barbero)/caja/actions";
 
 interface AtencionFormProps {
@@ -80,6 +80,9 @@ export default function AtencionForm({
   );
 
   const [state, formAction, isPending] = useActionState(action, {});
+  const shouldSkipInitialAutofill = useRef(
+    initialData?.precioCobrado !== undefined && initialData?.precioCobrado !== ""
+  );
 
   const adicionalesDelServicio = adicionalesList.filter(
     (a) => a.servicioId === servicioId
@@ -88,6 +91,10 @@ export default function AtencionForm({
   // Auto-fill del precio al cambiar servicio o adicionales
   useEffect(() => {
     if (!servicioId) return;
+    if (shouldSkipInitialAutofill.current) {
+      shouldSkipInitialAutofill.current = false;
+      return;
+    }
     const servicio = serviciosList.find((s) => s.id === servicioId);
     const sumAdicionales = adicionalesSeleccionados.reduce((sum, aid) => {
       const a = adicionalesList.find((x) => x.id === aid);

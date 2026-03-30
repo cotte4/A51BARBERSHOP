@@ -82,6 +82,7 @@ export function toNumber(value: NumericLike): number {
 
 export function getDaysInMonth(fecha: string): number {
   const [year, month] = fecha.split("-").map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return 30;
   return new Date(year, month, 0).getDate();
 }
 
@@ -154,6 +155,9 @@ export function buildCierreResumen(args: {
       continue;
     }
 
+    // If commission is null the record is incomplete — skip aporte to avoid overstating casa income.
+    if (atencion.comisionBarberoMonto == null) continue;
+
     const aporteServicio = precioCobrado - comisionBarberoMonto - comisionMedioPagoMonto;
     resumen.aporteCasaServicios += aporteServicio;
     aporteCasaServicios += aporteServicio;
@@ -220,6 +224,7 @@ export function normalizeCierreResumen({
     resumenBarberos &&
     typeof resumenBarberos === "object" &&
     "version" in resumenBarberos &&
+    (resumenBarberos as { version: unknown }).version === 2 &&
     "barberos" in resumenBarberos &&
     "totales" in resumenBarberos
   ) {

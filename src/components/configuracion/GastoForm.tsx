@@ -171,6 +171,11 @@ export default function GastoForm({
               <option value="anual">Anual</option>
               <option value="unica">Única vez</option>
             </select>
+            {state.fieldErrors?.frecuencia && (
+              <p className="text-red-500 text-xs">
+                {state.fieldErrors.frecuencia}
+              </p>
+            )}
           </div>
         )}
       </div>

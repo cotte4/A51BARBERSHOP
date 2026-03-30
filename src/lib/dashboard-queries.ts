@@ -483,6 +483,45 @@ export async function getComparativaTemporadas(): Promise<
   const listaBarberos = await db.select({ id: barberos.id, rol: barberos.rol }).from(barberos);
   const gaboteIds = listaBarberos.filter((b) => b.rol === "barbero").map((b) => b.id);
 
+  // Pre-fetch all atenciones for non-future seasons in a single query to avoid N+1.
+  const temporadasActivas = listaTemporadas.filter(
+    (t) => (t.fechaInicio ?? "") <= hoy
+  );
+  let todasAtenciones: Array<{
+    fecha: string | null;
+    precioCobrado: string | null;
+    comisionBarberoMonto: string | null;
+    comisionMedioPagoMonto: string | null;
+    barberoId: string | null;
+  }> = [];
+  if (temporadasActivas.length > 0) {
+    const globalStart = temporadasActivas
+      .map((t) => t.fechaInicio ?? "")
+      .filter(Boolean)
+      .sort()[0];
+    const globalEnd = temporadasActivas
+      .map((t) => t.fechaFin ?? "")
+      .filter(Boolean)
+      .sort()
+      .at(-1) ?? hoy;
+    todasAtenciones = await db
+      .select({
+        fecha: atenciones.fecha,
+        precioCobrado: atenciones.precioCobrado,
+        comisionBarberoMonto: atenciones.comisionBarberoMonto,
+        comisionMedioPagoMonto: atenciones.comisionMedioPagoMonto,
+        barberoId: atenciones.barberoId,
+      })
+      .from(atenciones)
+      .where(
+        and(
+          gte(atenciones.fecha, globalStart),
+          lte(atenciones.fecha, globalEnd),
+          eq(atenciones.anulado, false)
+        )
+      );
+  }
+
   const resultado = [];
 
   for (const temp of listaTemporadas) {
@@ -529,23 +568,10 @@ export async function getComparativaTemporadas(): Promise<
       continue;
     }
 
-    // Atenciones de Gabote en el período
-    const atencionesPeriodo = await db
-      .select({
-        fecha: atenciones.fecha,
-        precioCobrado: atenciones.precioCobrado,
-        comisionBarberoMonto: atenciones.comisionBarberoMonto,
-        comisionMedioPagoMonto: atenciones.comisionMedioPagoMonto,
-        barberoId: atenciones.barberoId,
-      })
-      .from(atenciones)
-      .where(
-        and(
-          gte(atenciones.fecha, fechaInicio),
-          lte(atenciones.fecha, fechaFin),
-          eq(atenciones.anulado, false)
-        )
-      );
+    // Filter from the pre-fetched set — no extra DB query per season.
+    const atencionesPeriodo = todasAtenciones.filter(
+      (a) => a.fecha && a.fecha >= fechaInicio && a.fecha <= fechaFin
+    );
 
     const atencionesGabote = atencionesPeriodo.filter(
       (a) => a.barberoId && gaboteIds.includes(a.barberoId)

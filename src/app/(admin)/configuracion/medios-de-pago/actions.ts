@@ -2,6 +2,7 @@
 
 import { db } from "@/db";
 import { mediosPago } from "@/db/schema";
+import { requireAdminSession } from "@/lib/admin-action";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -18,6 +19,10 @@ export async function crearMedioPago(
   prevState: MedioPagoFormState,
   formData: FormData
 ): Promise<MedioPagoFormState> {
+  if (!(await requireAdminSession())) {
+    return { error: "Solo el administrador puede gestionar medios de pago." };
+  }
+
   const nombre = formData.get("nombre") as string;
   const comisionStr = (formData.get("comisionPorcentaje") as string) || "0";
 
@@ -59,6 +64,10 @@ export async function editarMedioPago(
   prevState: MedioPagoFormState,
   formData: FormData
 ): Promise<MedioPagoFormState> {
+  if (!(await requireAdminSession())) {
+    return { error: "Solo el administrador puede gestionar medios de pago." };
+  }
+
   const nombre = formData.get("nombre") as string;
   const comisionStr = (formData.get("comisionPorcentaje") as string) || "0";
 
@@ -98,10 +107,16 @@ export async function editarMedioPago(
 }
 
 export async function toggleActivoMedioPago(id: string, activo: boolean) {
+  if (!(await requireAdminSession())) {
+    return;
+  }
+
   await db
     .update(mediosPago)
     .set({ activo: !activo })
     .where(eq(mediosPago.id, id));
 
   revalidatePath("/configuracion/medios-de-pago");
+  revalidatePath("/caja/nueva");
+  revalidatePath("/caja/vender");
 }

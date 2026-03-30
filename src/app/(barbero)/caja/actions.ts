@@ -15,6 +15,7 @@ import {
 import { eq, inArray, and, gte, lte, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { buildCierreResumen } from "@/lib/caja-finance";
+import { getCajaActorContext } from "@/lib/caja-access";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -60,6 +61,11 @@ export async function registrarAtencion(
   prevState: AtencionFormState,
   formData: FormData
 ): Promise<AtencionFormState> {
+  const actor = await getCajaActorContext();
+  if (!actor) {
+    return { error: "Debés iniciar sesión para registrar atenciones." };
+  }
+
   // Leer campos
   const barberoId = formData.get("barberoId") as string;
   const servicioId = formData.get("servicioId") as string;
@@ -77,6 +83,15 @@ export async function registrarAtencion(
     fieldErrors.precioCobrado = "El precio es requerido";
   } else if (Number(precioCobradoStr) < 0) {
     fieldErrors.precioCobrado = "El precio no puede ser negativo";
+  }
+
+  if (!actor.isAdmin) {
+    if (!actor.barberoId) {
+      return { error: "Tu usuario no tiene un barbero activo vinculado." };
+    }
+    if (barberoId && barberoId !== actor.barberoId) {
+      fieldErrors.barberoId = "Solo podés registrar atenciones para tu perfil.";
+    }
   }
 
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
@@ -164,12 +179,29 @@ export async function editarAtencion(
   prevState: AtencionFormState,
   formData: FormData
 ): Promise<AtencionFormState> {
+  const actor = await getCajaActorContext();
+  if (!actor) {
+    return { error: "Debés iniciar sesión para editar atenciones." };
+  }
+
   const barberoId = formData.get("barberoId") as string;
   const servicioId = formData.get("servicioId") as string;
   const medioPagoId = formData.get("medioPagoId") as string;
   const precioCobradoStr = formData.get("precioCobrado") as string;
   const adicionalesIds = formData.getAll("adicionalesIds") as string[];
   const notas = formData.get("notas") as string | null;
+
+  const [atencionExistente] = await db
+    .select()
+    .from(atenciones)
+    .where(eq(atenciones.id, id))
+    .limit(1);
+
+  if (!atencionExistente) return { error: "Atención no encontrada." };
+  if (atencionExistente.anulado) return { error: "No se puede editar una atención anulada." };
+  if (atencionExistente.fecha !== getFechaHoy()) {
+    return { error: "Solo se pueden editar atenciones del día de hoy." };
+  }
 
   const fieldErrors: AtencionFormState["fieldErrors"] = {};
   if (!barberoId) fieldErrors.barberoId = "Seleccioná un barbero";
@@ -179,6 +211,17 @@ export async function editarAtencion(
     fieldErrors.precioCobrado = "El precio es requerido";
   } else if (Number(precioCobradoStr) < 0) {
     fieldErrors.precioCobrado = "El precio no puede ser negativo";
+  }
+  if (!actor.isAdmin) {
+    if (!actor.barberoId) {
+      return { error: "Tu usuario no tiene un barbero activo vinculado." };
+    }
+    if (atencionExistente.barberoId !== actor.barberoId) {
+      return { error: "Solo podés editar atenciones de tu perfil." };
+    }
+    if (barberoId && barberoId !== actor.barberoId) {
+      fieldErrors.barberoId = "Solo podés editar atenciones de tu perfil.";
+    }
   }
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
@@ -546,5 +589,8 @@ export async function registrarVentaProducto(
 
   revalidatePath("/caja");
   revalidatePath("/inventario");
+  revalidatePath(`/inventario/${productoId}`);
+  revalidatePath("/inventario/rotacion");
+  revalidatePath("/dashboard");
   redirect("/caja");
 }

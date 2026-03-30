@@ -2,6 +2,7 @@
 
 import { db } from "@/db";
 import { temporadas } from "@/db/schema";
+import { requireAdminSession } from "@/lib/admin-action";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -19,6 +20,10 @@ export async function crearTemporada(
   prevState: TemporadaFormState,
   formData: FormData
 ): Promise<TemporadaFormState> {
+  if (!(await requireAdminSession())) {
+    return { error: "Solo el administrador puede gestionar temporadas." };
+  }
+
   const nombre = formData.get("nombre") as string;
   const fechaInicio = formData.get("fechaInicio") as string;
   const fechaFin = (formData.get("fechaFin") as string) || "";
@@ -65,6 +70,7 @@ export async function crearTemporada(
   }
 
   revalidatePath("/configuracion/temporadas");
+  revalidatePath("/dashboard/temporadas");
   redirect("/configuracion/temporadas");
 }
 
@@ -73,6 +79,10 @@ export async function actualizarTemporada(
   prevState: TemporadaFormState,
   formData: FormData
 ): Promise<TemporadaFormState> {
+  if (!(await requireAdminSession())) {
+    return { error: "Solo el administrador puede gestionar temporadas." };
+  }
+
   const nombre = formData.get("nombre") as string;
   const fechaInicio = formData.get("fechaInicio") as string;
   const fechaFin = (formData.get("fechaFin") as string) || "";
@@ -122,12 +132,18 @@ export async function actualizarTemporada(
   }
 
   revalidatePath("/configuracion/temporadas");
+  revalidatePath("/dashboard/temporadas");
   redirect("/configuracion/temporadas");
 }
 
 export async function eliminarTemporada(id: string): Promise<void> {
+  if (!(await requireAdminSession())) {
+    redirect("/configuracion/temporadas");
+  }
+
   await db.delete(temporadas).where(eq(temporadas.id, id));
 
   revalidatePath("/configuracion/temporadas");
+  revalidatePath("/dashboard/temporadas");
   redirect("/configuracion/temporadas");
 }

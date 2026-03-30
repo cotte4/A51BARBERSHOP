@@ -1,17 +1,14 @@
 import { db } from "@/db";
 import { barberos, servicios, serviciosAdicionales, mediosPago, cierresCaja } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { getCajaActorContext } from "@/lib/caja-access";
 import Link from "next/link";
 import AtencionForm from "@/components/caja/AtencionForm";
 import { registrarAtencion } from "../actions";
 
 export default async function NuevaAtencionPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  const userId = session?.user?.id;
-  const userRole = (session?.user as { role?: string })?.role;
-  const isAdmin = userRole === "admin";
+  const actor = await getCajaActorContext();
+  const isAdmin = actor?.isAdmin ?? false;
 
   // Verificar cierre del día
   const fechaHoy = new Date().toLocaleDateString("en-CA", {
@@ -52,11 +49,29 @@ export default async function NuevaAtencionPage() {
       db.select().from(mediosPago).where(eq(mediosPago.activo, true)),
     ]);
 
-  // Pre-seleccionar barbero si el usuario logueado es barbero
-  let preselectedBarberoId: string | undefined;
-  if (!isAdmin && userId) {
-    const barberoDelUsuario = barberosActivos.find((b) => b.userId === userId);
-    preselectedBarberoId = barberoDelUsuario?.id;
+  const preselectedBarberoId = actor?.barberoId;
+
+  if (!isAdmin && !preselectedBarberoId) {
+    return (
+      <main className="min-h-screen p-4 max-w-2xl mx-auto pb-16">
+        <div className="flex items-center gap-3 mb-5">
+          <Link
+            href="/caja"
+            className="text-gray-400 hover:text-gray-600 text-sm transition-colors"
+          >
+            {"<- Caja"}
+          </Link>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
+          <p className="text-gray-700 font-medium">
+            Tu usuario no tiene un barbero activo vinculado.
+          </p>
+          <p className="text-gray-500 text-sm mt-1">
+            Vincula el usuario desde configuracion antes de registrar atenciones.
+          </p>
+        </div>
+      </main>
+    );
   }
 
   return (

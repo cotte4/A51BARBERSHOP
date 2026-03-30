@@ -69,6 +69,9 @@ export async function crearProducto(
     return { error: "No se pudo crear el producto. Intentá de nuevo." };
   }
 
+  revalidatePath("/inventario");
+  revalidatePath("/inventario/rotacion");
+  revalidatePath("/dashboard");
   redirect("/inventario");
 }
 
@@ -129,6 +132,8 @@ export async function editarProducto(
 
   revalidatePath(`/inventario/${id}`);
   revalidatePath("/inventario");
+  revalidatePath("/inventario/rotacion");
+  revalidatePath("/dashboard");
   redirect(`/inventario/${id}`);
 }
 
@@ -210,5 +215,7 @@ export async function registrarMovimiento(
 
   revalidatePath(`/inventario/${productoId}`);
   revalidatePath("/inventario");
+  revalidatePath("/inventario/rotacion");
+  revalidatePath("/dashboard");
   return { success: true };
 }

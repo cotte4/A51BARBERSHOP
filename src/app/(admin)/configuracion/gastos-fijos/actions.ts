@@ -2,6 +2,7 @@
 
 import { db } from "@/db";
 import { gastos } from "@/db/schema";
+import { requireAdminSession } from "@/lib/admin-action";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -13,6 +14,7 @@ export type GastoFormState = {
     monto?: string;
     fecha?: string;
     categoriaId?: string;
+    frecuencia?: string;
   };
 };
 
@@ -20,6 +22,10 @@ export async function crearGasto(
   prevState: GastoFormState,
   formData: FormData
 ): Promise<GastoFormState> {
+  if (!(await requireAdminSession())) {
+    return { error: "Solo el administrador puede gestionar gastos." };
+  }
+
   const descripcion = formData.get("descripcion") as string;
   const montoStr = formData.get("monto") as string;
   const fecha = formData.get("fecha") as string;
@@ -47,7 +53,7 @@ export async function crearGasto(
   const esRecurrente = esRecurrenteRaw === "on";
 
   if (esRecurrente && (!frecuencia || frecuencia.trim() === "")) {
-    fieldErrors.fecha = "La frecuencia es requerida si el gasto es recurrente";
+    fieldErrors.frecuencia = "La frecuencia es requerida si el gasto es recurrente";
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -69,6 +75,9 @@ export async function crearGasto(
   }
 
   revalidatePath("/configuracion/gastos-fijos");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/flujo");
+  revalidatePath("/dashboard/pl");
   redirect("/configuracion/gastos-fijos");
 }
 
@@ -77,6 +86,10 @@ export async function editarGasto(
   prevState: GastoFormState,
   formData: FormData
 ): Promise<GastoFormState> {
+  if (!(await requireAdminSession())) {
+    return { error: "Solo el administrador puede gestionar gastos." };
+  }
+
   const descripcion = formData.get("descripcion") as string;
   const montoStr = formData.get("monto") as string;
   const fecha = formData.get("fecha") as string;
@@ -104,7 +117,7 @@ export async function editarGasto(
   const esRecurrente = esRecurrenteRaw === "on";
 
   if (esRecurrente && (!frecuencia || frecuencia.trim() === "")) {
-    fieldErrors.fecha = "La frecuencia es requerida si el gasto es recurrente";
+    fieldErrors.frecuencia = "La frecuencia es requerida si el gasto es recurrente";
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -129,12 +142,22 @@ export async function editarGasto(
   }
 
   revalidatePath("/configuracion/gastos-fijos");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/flujo");
+  revalidatePath("/dashboard/pl");
   redirect("/configuracion/gastos-fijos");
 }
 
 export async function eliminarGasto(id: string): Promise<void> {
+  if (!(await requireAdminSession())) {
+    redirect("/configuracion/gastos-fijos");
+  }
+
   await db.delete(gastos).where(eq(gastos.id, id));
 
   revalidatePath("/configuracion/gastos-fijos");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/flujo");
+  revalidatePath("/dashboard/pl");
   redirect("/configuracion/gastos-fijos");
 }

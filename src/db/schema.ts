@@ -10,6 +10,7 @@ import {
   time,
   jsonb,
   check,
+  index,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -81,7 +82,7 @@ export const barberos = pgTable(
     nombre: text("nombre").notNull(),
     rol: text("rol").notNull(),
     // Modelo de compensación
-    tipoModelo: text("tipo_modelo"),
+    tipoModelo: text("tipo_modelo").$type<"variable" | "hibrido" | "fijo">(),
     porcentajeComision: numeric("porcentaje_comision", {
       precision: 5,
       scale: 2,
@@ -206,7 +207,11 @@ export const atenciones = pgTable("atenciones", {
   notas: text("notas"),
   cierreCajaId: uuid("cierre_caja_id"), // FK se agrega después de cierres_caja
   creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
-});
+},
+(table) => [
+  index("atenciones_fecha_idx").on(table.fecha),
+  index("atenciones_barbero_id_idx").on(table.barberoId),
+]);
 
 export const atencionesAdicionales = pgTable("atenciones_adicionales", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -247,6 +252,7 @@ export const stockMovimientos = pgTable(
       "stock_movimientos_tipo_check",
       sql`${table.tipo} IN ('entrada', 'venta', 'uso_interno', 'ajuste')`
     ),
+    index("stock_movimientos_tipo_idx").on(table.tipo),
   ]
 );
 
@@ -319,6 +325,7 @@ export const gastos = pgTable(
       "gastos_frecuencia_check",
       sql`${table.frecuencia} IN ('mensual', 'trimestral', 'anual', 'unica')`
     ),
+    index("gastos_fecha_idx").on(table.fecha),
   ]
 );
 
@@ -349,7 +356,10 @@ export const liquidaciones = pgTable("liquidaciones", {
   fechaPago: date("fecha_pago"),
   notas: text("notas"),
   creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
-});
+},
+(table) => [
+  index("liquidaciones_barbero_id_idx").on(table.barberoId),
+]);
 
 // ————————————————————————————
 // REPAGO A MEMAS
