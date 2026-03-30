@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { gastos, categoriasGasto } from "@/db/schema";
-import { hasGastosRapidosSchema } from "@/lib/gastos-rapidos";
+import { hasGastosRapidosSchema } from "@/lib/gastos-rapidos-server";
 import { desc, eq, isNull, or } from "drizzle-orm";
 import Link from "next/link";
 import GastoDeleteButton from "./_GastoDeleteButton";

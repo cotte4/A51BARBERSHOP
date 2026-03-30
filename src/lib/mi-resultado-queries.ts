@@ -3,7 +3,8 @@ import { atenciones, barberos, gastos, productos, stockMovimientos } from "@/db/
 import { and, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
 import { getDaysInMonth, toNumber } from "@/lib/caja-finance";
 import { getPL } from "@/lib/dashboard-queries";
-import { getCategoriaGastoRapidoByEmoji, hasGastosRapidosSchema } from "@/lib/gastos-rapidos";
+import { getCategoriaGastoRapidoByEmoji } from "@/lib/gastos-rapidos";
+import { hasGastosRapidosSchema } from "@/lib/gastos-rapidos-server";
 
 function getFechaHoyArgentina(): string {
   return new Date().toLocaleDateString("en-CA", {

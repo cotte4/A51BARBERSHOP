@@ -6,8 +6,8 @@ import { requireAdminSession } from "@/lib/admin-action";
 import {
   GASTO_RAPIDO_EMOJIS,
   getCategoriaGastoRapidoByEmoji,
-  hasGastosRapidosSchema,
 } from "@/lib/gastos-rapidos";
+import { hasGastosRapidosSchema } from "@/lib/gastos-rapidos-server";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";

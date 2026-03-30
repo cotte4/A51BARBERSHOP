@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { gastos, categoriasGasto } from "@/db/schema";
-import { hasGastosRapidosSchema } from "@/lib/gastos-rapidos";
+import { hasGastosRapidosSchema } from "@/lib/gastos-rapidos-server";
 import { and, eq, isNull, or } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
