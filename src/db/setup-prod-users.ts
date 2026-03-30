@@ -15,8 +15,7 @@
  *   npx tsx src/db/setup-prod-users.ts
  */
 
-import * as dotenv from "dotenv";
-dotenv.config({ path: ".env.local" });
+import "./load-env";
 
 import { db } from "@/db";
 import { auth } from "@/lib/auth";

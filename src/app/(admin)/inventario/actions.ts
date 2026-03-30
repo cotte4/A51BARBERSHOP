@@ -8,10 +8,6 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-// ─────────────────────────────────────────────
-// CREAR PRODUCTO
-// ─────────────────────────────────────────────
-
 export type ProductoFormState = {
   error?: string;
   fieldErrors?: {
@@ -40,16 +36,16 @@ export async function crearProducto(
   if (!nombre) fieldErrors.nombre = "El nombre es requerido";
 
   const stockMinimo = stockMinimoRaw !== "" ? parseInt(stockMinimoRaw, 10) : 5;
-  if (isNaN(stockMinimo) || stockMinimo < 0) fieldErrors.stockMinimo = "El stock mínimo debe ser 0 o mayor";
+  if (isNaN(stockMinimo) || stockMinimo < 0) fieldErrors.stockMinimo = "El stock minimo debe ser 0 o mayor";
 
   const precioVenta = precioVentaRaw !== "" ? parseFloat(precioVentaRaw) : null;
   if (precioVentaRaw !== "" && (precioVenta === null || isNaN(precioVenta))) {
-    fieldErrors.precioVenta = "Ingresá un precio válido";
+    fieldErrors.precioVenta = "Ingresa un precio valido";
   }
 
   const costoCompra = costoCompraRaw !== "" ? parseFloat(costoCompraRaw) : null;
   if (costoCompraRaw !== "" && (costoCompra === null || isNaN(costoCompra))) {
-    fieldErrors.costoCompra = "Ingresá un costo válido";
+    fieldErrors.costoCompra = "Ingresa un costo valido";
   }
 
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
@@ -64,9 +60,9 @@ export async function crearProducto(
       stockMinimo,
       activo: true,
     });
-  } catch (e) {
-    console.error("Error creando producto:", e);
-    return { error: "No se pudo crear el producto. Intentá de nuevo." };
+  } catch (error) {
+    console.error("Error creando producto:", error);
+    return { error: "No se pudo crear el producto. Intenta de nuevo." };
   }
 
   revalidatePath("/inventario");
@@ -74,10 +70,6 @@ export async function crearProducto(
   revalidatePath("/dashboard");
   redirect("/inventario");
 }
-
-// ─────────────────────────────────────────────
-// EDITAR PRODUCTO
-// ─────────────────────────────────────────────
 
 export async function editarProducto(
   id: string,
@@ -98,25 +90,31 @@ export async function editarProducto(
   if (!nombre) fieldErrors.nombre = "El nombre es requerido";
 
   const stockMinimo = stockMinimoRaw !== "" ? parseInt(stockMinimoRaw, 10) : 5;
-  if (isNaN(stockMinimo) || stockMinimo < 0) fieldErrors.stockMinimo = "El stock mínimo debe ser 0 o mayor";
+  if (isNaN(stockMinimo) || stockMinimo < 0) fieldErrors.stockMinimo = "El stock minimo debe ser 0 o mayor";
 
   const precioVenta = precioVentaRaw !== "" ? parseFloat(precioVentaRaw) : null;
   if (precioVentaRaw !== "" && (precioVenta === null || isNaN(precioVenta))) {
-    fieldErrors.precioVenta = "Ingresá un precio válido";
+    fieldErrors.precioVenta = "Ingresa un precio valido";
   }
 
   const costoCompra = costoCompraRaw !== "" ? parseFloat(costoCompraRaw) : null;
   if (costoCompraRaw !== "" && (costoCompra === null || isNaN(costoCompra))) {
-    fieldErrors.costoCompra = "Ingresá un costo válido";
+    fieldErrors.costoCompra = "Ingresa un costo valido";
   }
 
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
   try {
-    const [existing] = await db.select({ id: productos.id }).from(productos).where(eq(productos.id, id)).limit(1);
+    const [existing] = await db
+      .select({ id: productos.id })
+      .from(productos)
+      .where(eq(productos.id, id))
+      .limit(1);
+
     if (!existing) return { error: "Producto no encontrado." };
 
-    await db.update(productos)
+    await db
+      .update(productos)
       .set({
         nombre,
         descripcion,
@@ -125,9 +123,9 @@ export async function editarProducto(
         stockMinimo,
       })
       .where(eq(productos.id, id));
-  } catch (e) {
-    console.error("Error editando producto:", e);
-    return { error: "No se pudo actualizar el producto. Intentá de nuevo." };
+  } catch (error) {
+    console.error("Error editando producto:", error);
+    return { error: "No se pudo actualizar el producto. Intenta de nuevo." };
   }
 
   revalidatePath(`/inventario/${id}`);
@@ -136,10 +134,6 @@ export async function editarProducto(
   revalidatePath("/dashboard");
   redirect(`/inventario/${id}`);
 }
-
-// ─────────────────────────────────────────────
-// REGISTRAR MOVIMIENTO
-// ─────────────────────────────────────────────
 
 export type MovimientoFormState = {
   error?: string;
@@ -165,24 +159,23 @@ export async function registrarMovimiento(
   const notas = (formData.get("notas") as string)?.trim() || null;
 
   const fieldErrors: MovimientoFormState["fieldErrors"] = {};
-
   const tiposValidos = ["entrada", "uso_interno", "ajuste"];
-  if (!tipo || !tiposValidos.includes(tipo)) fieldErrors.tipo = "Seleccioná un tipo válido";
 
-  const cantidadInput = cantidadRaw !== "" ? parseInt(cantidadRaw, 10) : NaN;
-  if (isNaN(cantidadInput) || cantidadInput === 0) {
-    fieldErrors.cantidad = "La cantidad debe ser un número entero distinto de cero";
+  if (!tipo || !tiposValidos.includes(tipo)) {
+    fieldErrors.tipo = "Selecciona un tipo valido";
   }
 
-  if (tipo === "entrada" && !isNaN(cantidadInput) && cantidadInput < 0) {
-    fieldErrors.cantidad = "Para entrada la cantidad debe ser positiva";
+  const cantidadInput = cantidadRaw !== "" ? parseInt(cantidadRaw, 10) : NaN;
+  if (isNaN(cantidadInput) || cantidadInput <= 0) {
+    fieldErrors.cantidad = "La cantidad debe ser un numero entero mayor a cero";
   }
 
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
-  // Para uso_interno: si el usuario ingresó positivo, negarlo
   let cantidad = cantidadInput;
-  if (tipo === "uso_interno" && cantidad > 0) cantidad = -cantidad;
+  if (tipo === "uso_interno") {
+    cantidad = -cantidadInput;
+  }
 
   try {
     const [producto] = await db
@@ -195,10 +188,13 @@ export async function registrarMovimiento(
 
     const stockResultante = (producto.stockActual ?? 0) + cantidad;
     if (stockResultante < 0) {
-      return { error: `Stock insuficiente. Stock actual: ${producto.stockActual ?? 0}. No puede quedar negativo.` };
+      return {
+        error: `Stock insuficiente. Stock actual: ${producto.stockActual ?? 0}. No puede quedar negativo.`,
+      };
     }
 
-    await db.update(productos)
+    await db
+      .update(productos)
       .set({ stockActual: sql`${productos.stockActual} + ${cantidad}` })
       .where(eq(productos.id, productoId));
 
@@ -208,9 +204,9 @@ export async function registrarMovimiento(
       cantidad,
       notas,
     });
-  } catch (e) {
-    console.error("Error registrando movimiento:", e);
-    return { error: "No se pudo registrar el movimiento. Intentá de nuevo." };
+  } catch (error) {
+    console.error("Error registrando movimiento:", error);
+    return { error: "No se pudo registrar el movimiento. Intenta de nuevo." };
   }
 
   revalidatePath(`/inventario/${productoId}`);

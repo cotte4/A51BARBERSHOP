@@ -55,7 +55,7 @@ export default function TurnoCard({
             ) : null}
           </div>
           <p className="mt-1 text-sm text-gray-600">
-            {turno.fecha} · {turno.horaInicio} · {turno.duracionMinutos} min
+            {turno.horaInicio} · {turno.duracionMinutos} min · {turno.barberoNombre}
           </p>
           {turno.clienteTelefonoRaw ? (
             <p className="mt-1 text-sm text-gray-500">{turno.clienteTelefonoRaw}</p>
@@ -68,7 +68,7 @@ export default function TurnoCard({
       ) : null}
 
       {turno.sugerenciaCancion ? (
-        <p className="mt-3 text-sm text-gray-600">CanciÃ³n sugerida: {turno.sugerenciaCancion}</p>
+        <p className="mt-3 text-sm text-gray-600">Cancion sugerida: {turno.sugerenciaCancion}</p>
       ) : null}
 
       {turno.extras.length > 0 ? (
@@ -132,7 +132,7 @@ export default function TurnoCard({
           <textarea
             name="motivoCancelacion"
             rows={2}
-            placeholder="Motivo del rechazo o cancelaciÃ³n"
+            placeholder="Motivo del rechazo o cancelacion"
             className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none focus:border-gray-900"
           />
           <button

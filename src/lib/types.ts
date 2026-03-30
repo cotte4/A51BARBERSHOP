@@ -65,6 +65,7 @@ export interface ClientSummary {
   totalVisits: number;
   lastVisitAt: Date | null;
   lastVisitBarberoNombre?: string | null;
+  lastVisitNote?: string | null;
 }
 
 export interface VisitLogSummary {
@@ -137,6 +138,8 @@ export interface DisponibilidadSlot {
 
 export interface TurnoSummary {
   id: string;
+  barberoId: string;
+  barberoNombre: string;
   clienteNombre: string;
   clienteTelefonoRaw: string | null;
   fecha: string;
@@ -177,5 +180,12 @@ export interface QuickActionDefaults {
   precioBase: number;
   medioPagoId: string;
   medioPagoNombre: string;
+  comisionMedioPagoPct: number;
+}
+
+export interface QuickActionOption {
+  medioPagoId: string;
+  medioPagoNombre: string;
+  precioBase: number;
   comisionMedioPagoPct: number;
 }

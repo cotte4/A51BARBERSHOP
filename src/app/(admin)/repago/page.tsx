@@ -2,6 +2,8 @@ import { db } from "@/db";
 import { repagoMemas, repagoMemasCuotas } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import Link from "next/link";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import {
   generarCronograma,
   calcularCuotaSiguiente,
@@ -9,6 +11,7 @@ import {
   calcularPorcentajeAvance,
   formatUSD,
 } from "@/lib/amortizacion";
+import { auth } from "@/lib/auth";
 import { registrarCuota } from "./actions";
 import RegistrarPagoForm from "./_RegistrarPagoForm";
 
@@ -36,6 +39,13 @@ function formatFecha(fecha: string | null): string {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function RepagoPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const userRole = (session?.user as { role?: string })?.role;
+
+  if (userRole !== "admin") {
+    redirect("/caja");
+  }
+
   const [repago] = await db.select().from(repagoMemas).limit(1);
   const cuotas = await db
     .select()

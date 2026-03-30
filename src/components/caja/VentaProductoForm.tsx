@@ -44,64 +44,94 @@ export default function VentaProductoForm({
   const productoSeleccionado = productosList.find((p) => p.id === productoId);
   const medioPago = mediosPagoList.find((m) => m.id === medioPagoId);
 
-  // Auto-fill precio cuando cambia el producto o la cantidad
   useEffect(() => {
     if (!productoId) return;
     const producto = productosList.find((p) => p.id === productoId);
     const precioBase = Number(producto?.precioVenta ?? 0);
     const cant = parseInt(cantidad, 10) || 1;
     setPrecioCobrado(String(precioBase * cant));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productoId, cantidad]);
+  }, [cantidad, productoId, productosList]);
 
-  // Cálculo en tiempo real
   const precio = Number(precioCobrado) || 0;
   const comisionMpPct = Number(medioPago?.comisionPorcentaje ?? 0);
-  const comisionMpMonto = precio * comisionMpPct / 100;
+  const comisionMpMonto = (precio * comisionMpPct) / 100;
   const montoNeto = precio - comisionMpMonto;
-
   const mostrarPreview = precio > 0 && medioPagoId !== "";
+  const cantidadesSugeridas = [1, 2, 3];
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
       {state.error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {state.error}
         </div>
       )}
 
-      {/* Producto */}
-      <div className="flex flex-col gap-1">
-        <label htmlFor="productoId" className="text-sm font-medium text-gray-700">
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-gray-700">
           Producto <span className="text-red-500">*</span>
         </label>
-        <select
-          id="productoId"
-          name="productoId"
-          value={productoId}
-          onChange={(e) => {
-            setProductoId(e.target.value);
-            setCantidad("1");
-          }}
-          className="min-h-[44px] w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
-        >
-          <option value="">Seleccioná un producto...</option>
-          {productosList.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nombre} — Stock: {p.stockActual ?? 0} — {formatARS(Number(p.precioVenta ?? 0))}
-            </option>
+        <input type="hidden" name="productoId" value={productoId} readOnly />
+        <div className="grid gap-3 sm:grid-cols-2">
+          {productosList.map((producto) => (
+            <button
+              key={producto.id}
+              type="button"
+              onClick={() => {
+                setProductoId(producto.id);
+                setCantidad("1");
+              }}
+              className={`rounded-xl border px-4 py-3 text-left transition ${
+                productoId === producto.id
+                  ? "border-gray-900 bg-gray-900 text-white"
+                  : "border-gray-200 bg-gray-50 text-gray-900 hover:border-gray-300 hover:bg-white"
+              }`}
+            >
+              <span className="block text-sm font-semibold">{producto.nombre}</span>
+              <span
+                className={`mt-1 block text-xs ${
+                  productoId === producto.id ? "text-gray-300" : "text-gray-500"
+                }`}
+              >
+                Stock: {producto.stockActual ?? 0}
+              </span>
+              <span className="mt-2 block text-sm font-bold">
+                {formatARS(Number(producto.precioVenta ?? 0))}
+              </span>
+            </button>
           ))}
-        </select>
+        </div>
         {state.fieldErrors?.productoId && (
-          <p className="text-red-500 text-xs">{state.fieldErrors.productoId}</p>
+          <p className="text-xs text-red-500">{state.fieldErrors.productoId}</p>
         )}
       </div>
 
-      {/* Cantidad */}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         <label htmlFor="cantidad" className="text-sm font-medium text-gray-700">
           Cantidad <span className="text-red-500">*</span>
         </label>
+        <div className="flex flex-wrap gap-2">
+          {cantidadesSugeridas.map((value) => {
+            const stockActual = productoSeleccionado?.stockActual ?? null;
+            const exceedsStock = stockActual !== null && value > stockActual;
+
+            return (
+              <button
+                key={value}
+                type="button"
+                disabled={exceedsStock}
+                onClick={() => setCantidad(String(value))}
+                className={`min-h-[44px] min-w-[52px] rounded-xl border px-4 text-sm font-medium transition ${
+                  cantidad === String(value)
+                    ? "border-gray-900 bg-gray-900 text-white"
+                    : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                } disabled:cursor-not-allowed disabled:opacity-40`}
+              >
+                {value}
+              </button>
+            );
+          })}
+        </div>
         <input
           id="cantidad"
           name="cantidad"
@@ -109,9 +139,9 @@ export default function VentaProductoForm({
           min="1"
           max={productoSeleccionado?.stockActual ?? undefined}
           value={cantidad}
-          onChange={(e) => setCantidad(e.target.value)}
+          onChange={(event) => setCantidad(event.target.value)}
           placeholder="1"
-          className="min-h-[44px] w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          className="min-h-[44px] w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
         />
         {productoSeleccionado && (
           <p className="text-xs text-gray-400">
@@ -119,19 +149,16 @@ export default function VentaProductoForm({
           </p>
         )}
         {state.fieldErrors?.cantidad && (
-          <p className="text-red-500 text-xs">{state.fieldErrors.cantidad}</p>
+          <p className="text-xs text-red-500">{state.fieldErrors.cantidad}</p>
         )}
       </div>
 
-      {/* Precio cobrado */}
       <div className="flex flex-col gap-1">
         <label htmlFor="precioCobrado" className="text-sm font-medium text-gray-700">
           Precio cobrado <span className="text-red-500">*</span>
         </label>
         <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-            $
-          </span>
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
           <input
             id="precioCobrado"
             name="precioCobrado"
@@ -139,47 +166,56 @@ export default function VentaProductoForm({
             min="0"
             step="1"
             value={precioCobrado}
-            onChange={(e) => setPrecioCobrado(e.target.value)}
+            onChange={(event) => setPrecioCobrado(event.target.value)}
             placeholder="0"
-            className="min-h-[44px] w-full px-4 py-2 pl-8 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="min-h-[44px] w-full rounded-lg border border-gray-300 px-4 py-2 pl-8 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
           />
         </div>
-        <p className="text-xs text-gray-400">Podés modificarlo para aplicar descuentos</p>
+        <p className="text-xs text-gray-400">
+          Se completa automático y podés editarlo si querés aplicar un descuento.
+        </p>
         {state.fieldErrors?.precioCobrado && (
-          <p className="text-red-500 text-xs">{state.fieldErrors.precioCobrado}</p>
+          <p className="text-xs text-red-500">{state.fieldErrors.precioCobrado}</p>
         )}
       </div>
 
-      {/* Medio de pago */}
-      <div className="flex flex-col gap-1">
-        <label htmlFor="medioPagoId" className="text-sm font-medium text-gray-700">
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-gray-700">
           Medio de pago <span className="text-red-500">*</span>
         </label>
-        <select
-          id="medioPagoId"
-          name="medioPagoId"
-          value={medioPagoId}
-          onChange={(e) => setMedioPagoId(e.target.value)}
-          className="min-h-[44px] w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
-        >
-          <option value="">Seleccioná medio de pago...</option>
-          {mediosPagoList.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.nombre ?? "—"}
-              {Number(m.comisionPorcentaje ?? 0) > 0
-                ? ` (${m.comisionPorcentaje}%)`
-                : ""}
-            </option>
+        <input type="hidden" name="medioPagoId" value={medioPagoId} readOnly />
+        <div className="grid gap-3 sm:grid-cols-3">
+          {mediosPagoList.map((medio) => (
+            <button
+              key={medio.id}
+              type="button"
+              onClick={() => setMedioPagoId(medio.id)}
+              className={`min-h-[68px] rounded-xl border px-4 py-3 text-left transition ${
+                medioPagoId === medio.id
+                  ? "border-gray-900 bg-gray-900 text-white"
+                  : "border-gray-200 bg-gray-50 text-gray-900 hover:border-gray-300 hover:bg-white"
+              }`}
+            >
+              <span className="block text-sm font-semibold">{medio.nombre ?? "-"}</span>
+              <span
+                className={`mt-1 block text-xs ${
+                  medioPagoId === medio.id ? "text-gray-300" : "text-gray-500"
+                }`}
+              >
+                {Number(medio.comisionPorcentaje ?? 0) > 0
+                  ? `Comisión ${medio.comisionPorcentaje}%`
+                  : "Sin comisión"}
+              </span>
+            </button>
           ))}
-        </select>
+        </div>
         {state.fieldErrors?.medioPagoId && (
-          <p className="text-red-500 text-xs">{state.fieldErrors.medioPagoId}</p>
+          <p className="text-xs text-red-500">{state.fieldErrors.medioPagoId}</p>
         )}
       </div>
 
-      {/* Preview de cálculo */}
       {mostrarPreview && (
-        <div className="bg-gray-50 rounded-lg p-3 text-sm flex flex-col gap-1">
+        <div className="flex flex-col gap-1 rounded-lg bg-gray-50 p-3 text-sm">
           <div className="flex justify-between text-gray-700">
             <span>Precio cobrado</span>
             <span className="font-medium">{formatARS(precio)}</span>
@@ -189,10 +225,10 @@ export default function VentaProductoForm({
               <span>
                 Comisión {medioPago?.nombre ?? ""} ({comisionMpPct}%)
               </span>
-              <span>−{formatARS(comisionMpMonto)}</span>
+              <span>-{formatARS(comisionMpMonto)}</span>
             </div>
           )}
-          <div className="border-t border-gray-200 my-1" />
+          <div className="my-1 border-t border-gray-200" />
           <div className="flex justify-between font-semibold text-gray-900">
             <span>Neto</span>
             <span>{formatARS(montoNeto)}</span>
@@ -200,18 +236,17 @@ export default function VentaProductoForm({
         </div>
       )}
 
-      {/* Botones */}
       <div className="flex gap-3 pt-2">
         <button
           type="submit"
           disabled={isPending}
-          className="flex-1 min-h-[44px] bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
+          className="min-h-[44px] flex-1 rounded-lg bg-gray-900 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
         >
           {isPending ? "Guardando..." : "Confirmar venta"}
         </button>
         <a
           href="/caja"
-          className="min-h-[44px] px-6 flex items-center justify-center bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+          className="flex min-h-[44px] items-center justify-center rounded-lg bg-gray-100 px-6 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
         >
           Cancelar
         </a>

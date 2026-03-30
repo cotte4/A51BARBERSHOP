@@ -9,6 +9,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/db/seed.ts",
+    "db:seed:golive": "tsx src/db/seed-go-live.ts",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {

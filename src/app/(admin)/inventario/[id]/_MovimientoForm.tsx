@@ -14,81 +14,72 @@ export default function MovimientoForm({ registrarAction }: Props) {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      {state.error && (
-        <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-lg">
-          {state.error}
-        </div>
-      )}
-      {state.success && (
-        <div className="bg-green-50 text-green-700 text-sm px-4 py-3 rounded-lg">
+      {state.error ? (
+        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{state.error}</div>
+      ) : null}
+
+      {state.success ? (
+        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
           Movimiento registrado correctamente.
         </div>
-      )}
+      ) : null}
 
-      {/* Tipo */}
       <div>
-        <label htmlFor="tipo" className="block text-sm font-medium text-gray-700 mb-1">
-          Tipo <span className="text-red-500">*</span>
-        </label>
-        <select
-          id="tipo"
-          name="tipo"
-          required
-          defaultValue=""
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
-        >
-          <option value="" disabled>Seleccioná un tipo</option>
-          <option value="entrada">Entrada (reposición)</option>
-          <option value="uso_interno">Uso interno (consumo del salón)</option>
-          <option value="ajuste">Ajuste (corrección manual)</option>
-        </select>
-        {state.fieldErrors?.tipo && (
-          <p className="text-red-500 text-xs mt-1">{state.fieldErrors.tipo}</p>
-        )}
-      </div>
-
-      {/* Cantidad */}
-      <div>
-        <label htmlFor="cantidad" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="cantidad" className="mb-1 block text-sm font-medium text-gray-700">
           Cantidad <span className="text-red-500">*</span>
         </label>
         <input
           id="cantidad"
           name="cantidad"
           type="number"
+          min="1"
           step="1"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-          placeholder="Ej: 3 (o -2 para reducir)"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          placeholder="Ej: 3"
         />
-        <p className="text-xs text-gray-400 mt-1">
-          Positivo para sumar, negativo para restar (solo en ajuste). Para uso interno ingresá positivo, se descuenta automáticamente.
+        <p className="mt-1 text-xs text-gray-400">
+          Carga siempre un numero positivo. El boton define si entra stock o si se descuenta.
         </p>
-        {state.fieldErrors?.cantidad && (
-          <p className="text-red-500 text-xs mt-1">{state.fieldErrors.cantidad}</p>
-        )}
+        {state.fieldErrors?.cantidad ? (
+          <p className="mt-1 text-xs text-red-500">{state.fieldErrors.cantidad}</p>
+        ) : null}
       </div>
 
-      {/* Notas */}
       <div>
-        <label htmlFor="notas" className="block text-sm font-medium text-gray-700 mb-1">
-          Notas <span className="text-gray-400 font-normal">(opcional)</span>
+        <label htmlFor="notas" className="mb-1 block text-sm font-medium text-gray-700">
+          Notas <span className="font-normal text-gray-400">(opcional)</span>
         </label>
         <textarea
           id="notas"
           name="notas"
           rows={2}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+          className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
           placeholder="Motivo del movimiento"
         />
       </div>
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="min-h-[44px] w-full bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-700 disabled:opacity-50"
-      >
-        {isPending ? "Registrando..." : "Confirmar movimiento"}
-      </button>
+      {state.fieldErrors?.tipo ? <p className="text-xs text-red-500">{state.fieldErrors.tipo}</p> : null}
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <button
+          type="submit"
+          name="tipo"
+          value="entrada"
+          disabled={isPending}
+          className="min-h-[48px] rounded-xl bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+        >
+          {isPending ? "Registrando..." : "+ Ingresar stock"}
+        </button>
+        <button
+          type="submit"
+          name="tipo"
+          value="uso_interno"
+          disabled={isPending}
+          className="min-h-[48px] rounded-xl bg-rose-600 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-50"
+        >
+          {isPending ? "Registrando..." : "- Restar stock"}
+        </button>
+      </div>
     </form>
   );
 }

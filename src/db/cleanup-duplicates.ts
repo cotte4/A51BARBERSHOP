@@ -14,8 +14,7 @@
  *   npx tsx src/db/cleanup-duplicates.ts
  */
 
-import * as dotenv from "dotenv";
-dotenv.config({ path: ".env.local" });
+import "./load-env";
 
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";

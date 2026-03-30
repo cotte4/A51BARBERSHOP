@@ -1,21 +1,19 @@
 import { db } from "@/db";
 import { barberos } from "@/db/schema";
 import Link from "next/link";
-import { toggleActivoBarbero } from "./actions";
-import ToggleActivoButton from "@/components/configuracion/ToggleActivoButton";
 
-function formatPct(val: string | null) {
-  if (!val) return "—";
-  return `${Number(val).toFixed(0)}%`;
+function formatPct(value: string | null) {
+  if (!value) return "—";
+  return `${Number(value).toFixed(0)}%`;
 }
 
-function formatARS(val: string | null) {
-  if (!val) return "—";
+function formatARS(value: string | null) {
+  if (!value) return "—";
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency: "ARS",
     minimumFractionDigits: 0,
-  }).format(Number(val));
+  }).format(Number(value));
 }
 
 function modeloLabel(tipo: string | null) {
@@ -25,23 +23,37 @@ function modeloLabel(tipo: string | null) {
   return "—";
 }
 
+function initials(name: string | null) {
+  const parts = (name ?? "Barbero")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "");
+  return parts.join("") || "B";
+}
+
 export default async function BarberosPage() {
   const lista = await db.select().from(barberos).orderBy(barberos.nombre);
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-gray-900">Barberos</h2>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Barberos</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Solo el admin puede editar comisiones, modelo y activación.
+          </p>
+        </div>
         <Link
           href="/configuracion/barberos/nuevo"
-          className="min-h-[44px] inline-flex items-center bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors"
+          className="inline-flex min-h-[44px] items-center rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700"
         >
           + Nuevo
         </Link>
       </div>
 
       {lista.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
           <p className="text-gray-500">No hay barberos cargados todavía.</p>
           <Link
             href="/configuracion/barberos/nuevo"
@@ -52,50 +64,55 @@ export default async function BarberosPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {lista.map((b) => (
+          {lista.map((barbero) => (
             <div
-              key={b.id}
-              className={`bg-white rounded-xl border p-4 ${
-                !b.activo ? "opacity-60 border-gray-200" : "border-gray-200"
+              key={barbero.id}
+              className={`rounded-2xl border bg-white p-4 ${
+                !barbero.activo ? "border-gray-200 opacity-70" : "border-gray-200"
               }`}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-gray-900">{b.nombre}</span>
-                    {!b.activo && (
-                      <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                        Inactivo
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex min-w-0 flex-1 gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-900 text-sm font-bold text-white">
+                    {initials(barbero.nombre)}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-gray-900">{barbero.nombre}</span>
+                      {!barbero.activo ? (
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                          Inactivo
+                        </span>
+                      ) : null}
+                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs capitalize text-blue-700">
+                        {barbero.rol}
                       </span>
-                    )}
-                    <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full capitalize">
-                      {b.rol}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-sm text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
-                    <span>Modelo: {modeloLabel(b.tipoModelo)}</span>
-                    <span>Comisión: {formatPct(b.porcentajeComision)}</span>
-                    {b.alquilerBancoMensual && (
-                      <span>Alquiler banco: {formatARS(b.alquilerBancoMensual)}/mes</span>
-                    )}
-                    {b.sueldoMinimoGarantizado && (
-                      <span>Mínimo: {formatARS(b.sueldoMinimoGarantizado)}</span>
-                    )}
+                    </div>
+
+                    <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
+                      <span>Modelo: {modeloLabel(barbero.tipoModelo)}</span>
+                      <span>Comisión: {formatPct(barbero.porcentajeComision)}</span>
+                      {barbero.alquilerBancoMensual ? (
+                        <span>Alquiler banco: {formatARS(barbero.alquilerBancoMensual)}/mes</span>
+                      ) : null}
+                      {barbero.sueldoMinimoGarantizado ? (
+                        <span>Mínimo: {formatARS(barbero.sueldoMinimoGarantizado)}</span>
+                      ) : null}
+                    </div>
+
+                    <p className="mt-2 text-xs text-gray-400">
+                      La activación y desactivación se gestiona dentro de la edición para evitar clics accidentales.
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Link
-                    href={`/configuracion/barberos/${b.id}/editar`}
-                    className="min-h-[44px] inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    Editar
-                  </Link>
-                  <ToggleActivoButton
-                    id={b.id}
-                    activo={b.activo ?? true}
-                    toggleAction={toggleActivoBarbero}
-                  />
-                </div>
+
+                <Link
+                  href={`/configuracion/barberos/${barbero.id}/editar`}
+                  className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+                >
+                  Editar
+                </Link>
               </div>
             </div>
           ))}

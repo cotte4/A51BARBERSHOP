@@ -14,8 +14,7 @@
  * Requiere DATABASE_URL en .env.local
  */
 
-import * as dotenv from "dotenv";
-dotenv.config({ path: ".env.local" });
+import "./load-env";
 
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";

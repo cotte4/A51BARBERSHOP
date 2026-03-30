@@ -11,13 +11,12 @@ export default async function VenderProductoPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     return (
-      <main className="min-h-screen p-4 max-w-2xl mx-auto pb-16">
-        <p className="text-gray-500 text-sm">Debés iniciar sesión para acceder a esta página.</p>
+      <main className="mx-auto min-h-screen max-w-2xl p-4 pb-16">
+        <p className="text-sm text-gray-500">Debés iniciar sesión para acceder a esta página.</p>
       </main>
     );
   }
 
-  // Verificar cierre del día
   const fechaHoy = new Date().toLocaleDateString("en-CA", {
     timeZone: "America/Argentina/Buenos_Aires",
   });
@@ -29,15 +28,15 @@ export default async function VenderProductoPage() {
 
   if (cierreExistente) {
     return (
-      <main className="min-h-screen p-4 max-w-2xl mx-auto pb-16">
-        <div className="flex items-center gap-3 mb-5">
-          <Link href="/caja" className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
+      <main className="mx-auto min-h-screen max-w-2xl p-4 pb-16">
+        <div className="mb-5 flex items-center gap-3">
+          <Link href="/caja" className="text-sm text-gray-400 transition-colors hover:text-gray-600">
             ← Caja
           </Link>
         </div>
-        <div className="bg-gray-50 rounded-xl border border-gray-200 p-6 text-center">
-          <p className="text-gray-700 font-medium">La caja ya está cerrada.</p>
-          <p className="text-gray-500 text-sm mt-1">No se pueden registrar nuevas ventas.</p>
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center">
+          <p className="font-medium text-gray-700">La caja ya está cerrada.</p>
+          <p className="mt-1 text-sm text-gray-500">No se pueden registrar nuevas ventas.</p>
           <Link
             href={`/caja/cierre/${fechaHoy}`}
             className="mt-4 inline-block text-sm text-gray-900 underline"
@@ -49,7 +48,6 @@ export default async function VenderProductoPage() {
     );
   }
 
-  // Cargar productos activos con stock > 0, ordenados por nombre
   const [productosActivos, mediosPagoActivos] = await Promise.all([
     db
       .select()
@@ -59,52 +57,42 @@ export default async function VenderProductoPage() {
     db.select().from(mediosPago).where(eq(mediosPago.activo, true)),
   ]);
 
-  // Filtrar los que tienen stock > 0
-  const productosConStock = productosActivos.filter(
-    (p) => (p.stockActual ?? 0) > 0
-  );
+  const productosConStock = productosActivos.filter((producto) => (producto.stockActual ?? 0) > 0);
 
   return (
-    <main className="min-h-screen p-4 max-w-2xl mx-auto pb-16">
-      <div className="flex items-center gap-3 mb-5">
-        <Link
-          href="/caja"
-          className="text-gray-400 hover:text-gray-600 text-sm transition-colors"
-        >
+    <main className="mx-auto min-h-screen max-w-2xl p-4 pb-16">
+      <div className="mb-5 flex items-center gap-3">
+        <Link href="/caja" className="text-sm text-gray-400 transition-colors hover:text-gray-600">
           ← Caja
         </Link>
       </div>
-      <h2 className="text-lg font-semibold text-gray-900 mb-5">
-        Vender producto
-      </h2>
+      <h2 className="mb-2 text-lg font-semibold text-gray-900">Vender producto</h2>
+      <p className="mb-5 text-sm text-gray-500">
+        Elegí el producto y el medio de pago con toques rápidos. El precio se completa solo.
+      </p>
 
       {productosConStock.length === 0 ? (
-        <div className="bg-gray-50 rounded-xl border border-gray-200 p-6 text-center">
-          <p className="text-gray-700 font-medium">Sin productos con stock disponible.</p>
-          <p className="text-gray-500 text-sm mt-1">
-            Ingresá stock en el módulo de inventario.
-          </p>
-          <Link
-            href="/inventario"
-            className="mt-4 inline-block text-sm text-gray-900 underline"
-          >
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center">
+          <p className="font-medium text-gray-700">Sin productos con stock disponible.</p>
+          <p className="mt-1 text-sm text-gray-500">Ingresá stock en el módulo de inventario.</p>
+          <Link href="/inventario" className="mt-4 inline-block text-sm text-gray-900 underline">
             Ir a inventario →
           </Link>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
           <VentaProductoForm
             action={registrarVentaProducto}
-            productosList={productosConStock.map((p) => ({
-              id: p.id,
-              nombre: p.nombre,
-              precioVenta: p.precioVenta,
-              stockActual: p.stockActual,
+            productosList={productosConStock.map((producto) => ({
+              id: producto.id,
+              nombre: producto.nombre,
+              precioVenta: producto.precioVenta,
+              stockActual: producto.stockActual,
             }))}
-            mediosPagoList={mediosPagoActivos.map((m) => ({
-              id: m.id,
-              nombre: m.nombre,
-              comisionPorcentaje: m.comisionPorcentaje,
+            mediosPagoList={mediosPagoActivos.map((medio) => ({
+              id: medio.id,
+              nombre: medio.nombre,
+              comisionPorcentaje: medio.comisionPorcentaje,
             }))}
           />
         </div>

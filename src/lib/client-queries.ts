@@ -57,7 +57,7 @@ export async function searchVisibleClients(
           normalizedPhone ? like(clients.phoneNormalized, `${normalizedPhone}%`) : undefined,
           like(clients.phoneRaw, `%${trimmedQuery}%`)
         )
-      : eq(clients.esMarciano, true),
+      : undefined,
   ].filter(Boolean);
 
   const rows = await db
@@ -70,6 +70,14 @@ export async function searchVisibleClients(
       totalVisits: clients.totalVisits,
       lastVisitAt: clients.lastVisitAt,
       lastVisitBarberoNombre: barberos.nombre,
+      lastVisitNote: sql<string | null>`(
+        select ${visitLogs.barberNotes}
+        from ${visitLogs}
+        where ${visitLogs.clientId} = ${clients.id}
+        and ${visitLogs.barberNotes} is not null
+        order by ${visitLogs.visitedAt} desc
+        limit 1
+      )`,
     })
     .from(clients)
     .leftJoin(barberos, eq(barberos.id, clients.lastVisitBarberoId))
@@ -86,6 +94,7 @@ export async function searchVisibleClients(
     totalVisits: row.totalVisits ?? 0,
     lastVisitAt: row.lastVisitAt,
     lastVisitBarberoNombre: row.lastVisitBarberoNombre,
+    lastVisitNote: row.lastVisitNote,
   }));
 }
 
@@ -110,6 +119,14 @@ export async function getClientProfileForActor(
       totalVisits: clients.totalVisits,
       lastVisitAt: clients.lastVisitAt,
       lastVisitBarberoNombre: barberos.nombre,
+      lastVisitNote: sql<string | null>`(
+        select ${visitLogs.barberNotes}
+        from ${visitLogs}
+        where ${visitLogs.clientId} = ${clients.id}
+        and ${visitLogs.barberNotes} is not null
+        order by ${visitLogs.visitedAt} desc
+        limit 1
+      )`,
       archivedAt: clients.archivedAt,
     })
     .from(clients)
@@ -275,6 +292,14 @@ export async function getRetentionCandidates(): Promise<ClientSummary[]> {
       totalVisits: clients.totalVisits,
       lastVisitAt: clients.lastVisitAt,
       lastVisitBarberoNombre: barberos.nombre,
+      lastVisitNote: sql<string | null>`(
+        select ${visitLogs.barberNotes}
+        from ${visitLogs}
+        where ${visitLogs.clientId} = ${clients.id}
+        and ${visitLogs.barberNotes} is not null
+        order by ${visitLogs.visitedAt} desc
+        limit 1
+      )`,
     })
     .from(clients)
     .leftJoin(barberos, eq(barberos.id, clients.lastVisitBarberoId))
@@ -298,5 +323,6 @@ export async function getRetentionCandidates(): Promise<ClientSummary[]> {
     totalVisits: row.totalVisits ?? 0,
     lastVisitAt: row.lastVisitAt,
     lastVisitBarberoNombre: row.lastVisitBarberoNombre,
+    lastVisitNote: row.lastVisitNote,
   }));
 }

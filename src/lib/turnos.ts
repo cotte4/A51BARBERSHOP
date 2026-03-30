@@ -158,6 +158,8 @@ export async function getTurnosAdminList(fecha: string, estado?: string) {
   const rows = await db
     .select({
       id: turnos.id,
+      barberoId: turnos.barberoId,
+      barberoNombre: barberos.nombre,
       clienteNombre: turnos.clienteNombre,
       clienteTelefonoRaw: turnos.clienteTelefonoRaw,
       fecha: turnos.fecha,
@@ -170,6 +172,7 @@ export async function getTurnosAdminList(fecha: string, estado?: string) {
       esMarcianoSnapshot: turnos.esMarcianoSnapshot,
     })
     .from(turnos)
+    .innerJoin(barberos, eq(barberos.id, turnos.barberoId))
     .where(
       estado
         ? and(eq(turnos.fecha, fecha), eq(turnos.estado, estado))
@@ -224,6 +227,17 @@ export async function getDisponibilidadAdminList(barberoId: string, fromFecha: s
     .orderBy(turnosDisponibilidad.fecha, turnosDisponibilidad.horaInicio);
 }
 
+export async function getBarberosActivosTurnos() {
+  return db
+    .select({
+      id: barberos.id,
+      nombre: barberos.nombre,
+    })
+    .from(barberos)
+    .where(eq(barberos.activo, true))
+    .orderBy(barberos.nombre);
+}
+
 export async function getTurnosOcupadosDesde(barberoId: string, fromFecha: string) {
   return db
     .select({
@@ -242,4 +256,3 @@ export async function getTurnosOcupadosDesde(barberoId: string, fromFecha: strin
     )
     .orderBy(desc(turnos.fecha), desc(turnos.horaInicio));
 }
-

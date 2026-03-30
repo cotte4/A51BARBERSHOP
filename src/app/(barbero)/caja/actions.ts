@@ -122,8 +122,8 @@ export type AtencionRapidaState = {
   error?: string;
 };
 
-export async function registrarAtencionRapidaAction(
-  prevState: AtencionRapidaState
+async function registrarAtencionRapidaInterna(
+  medioPagoIdOverride?: string
 ): Promise<AtencionRapidaState> {
   const session = await auth.api.getSession({ headers: await headers() });
   const userId = session?.user?.id;
@@ -151,7 +151,7 @@ export async function registrarAtencionRapidaAction(
     await crearAtencionDesdeInput({
       barberoId,
       servicioId: defaults.servicioId,
-      medioPagoId: defaults.medioPagoId,
+      medioPagoId: medioPagoIdOverride ?? defaults.medioPagoId,
       precioCobrado: defaults.precioBase,
     });
   } catch (error) {
@@ -161,6 +161,27 @@ export async function registrarAtencionRapidaAction(
 
   revalidatePath("/caja");
   redirect("/caja");
+}
+
+export async function registrarAtencionRapidaAction(
+  prevState: AtencionRapidaState
+): Promise<AtencionRapidaState> {
+  return registrarAtencionRapidaInterna();
+}
+
+export async function registrarAtencionRapidaSeleccionadaAction(
+  prevState: AtencionRapidaState,
+  formData: FormData
+): Promise<AtencionRapidaState> {
+  const medioPagoId = (formData.get("medioPagoId") as string | null) || undefined;
+  return registrarAtencionRapidaInterna(medioPagoId);
+}
+
+export async function registrarAtencionRapidaConMedioAction(
+  medioPagoId: string,
+  prevState: AtencionRapidaState
+): Promise<AtencionRapidaState> {
+  return registrarAtencionRapidaInterna(medioPagoId);
 }
 
 export async function editarAtencion(

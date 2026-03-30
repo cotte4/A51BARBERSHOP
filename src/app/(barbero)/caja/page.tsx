@@ -1,23 +1,35 @@
-import { db } from "@/db";
-import { atenciones, barberos, servicios, mediosPago, cierresCaja, stockMovimientos, productos } from "@/db/schema";
-import { count, eq, and, gte, lte } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import Link from "next/link";
+import { and, count, eq, gte, lte } from "drizzle-orm";
 import AnularButton from "@/components/caja/AnularButton";
-import QuickActionButton from "@/components/turnos/QuickActionButton";
-import { anularAtencion, registrarAtencionRapidaAction } from "./actions";
-import { getQuickActionDefaultsForBarbero, resolveCajaActorBarberoId } from "@/lib/caja-atencion";
 import GastoRapidoFAB from "@/components/gastos-rapidos/GastoRapidoFAB";
+import QuickActionButton from "@/components/turnos/QuickActionButton";
 import { registrarGastoRapidoAction } from "@/app/(admin)/gastos-rapidos/actions";
+import { db } from "@/db";
+import {
+  atenciones,
+  barberos,
+  cierresCaja,
+  mediosPago,
+  productos,
+  servicios,
+  stockMovimientos,
+} from "@/db/schema";
+import { auth } from "@/lib/auth";
+import { getQuickActionDefaultsForBarbero, resolveCajaActorBarberoId } from "@/lib/caja-atencion";
+import { headers } from "next/headers";
+import type { QuickActionOption } from "@/lib/types";
+import {
+  anularAtencion,
+  registrarAtencionRapidaSeleccionadaAction,
+} from "./actions";
 
-function formatARS(val: string | number | null | undefined): string {
-  if (val === null || val === undefined) return "—";
+function formatARS(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency: "ARS",
     minimumFractionDigits: 0,
-  }).format(Number(val));
+  }).format(Number(value));
 }
 
 function getFechaHoy(): string {
@@ -39,8 +51,18 @@ function formatFechaLarga(fechaISO: string): string {
 
 function formatHora(hora: string | null): string {
   if (!hora) return "—";
-  // hora viene como "HH:MM:SS+tz" o "HH:MM:SS"
   return hora.slice(0, 5);
+}
+
+function normalizeLabel(text: string): string {
+  return text
+    .replaceAll("â€”", "-")
+    .replaceAll("â†’", "→")
+    .replaceAll("Â·", "·")
+    .replaceAll("Ã—", "x")
+    .replaceAll("âˆ’", "-")
+    .replaceAll("âœ“", "✓")
+    .replaceAll("Mi mes â€”", "Mi mes -");
 }
 
 export default async function CajaPage() {
@@ -65,14 +87,12 @@ export default async function CajaPage() {
         )}&fromQuickAction=1`
       : "/caja/nueva?fromQuickAction=1";
 
-  // Verificar cierre del día
   const [cierreHoy] = await db
     .select({ id: cierresCaja.id })
     .from(cierresCaja)
     .where(eq(cierresCaja.fecha, fechaHoy))
     .limit(1);
 
-  // Obtener barbero vinculado al usuario logueado (si no es admin)
   const [barberoDelUsuario] = isAdmin
     ? [null]
     : await db
@@ -81,12 +101,8 @@ export default async function CajaPage() {
         .where(eq(barberos.userId, userId!))
         .limit(1);
 
-  // Atenciones del día
   const atencionesDelDia = isAdmin
-    ? await db
-        .select()
-        .from(atenciones)
-        .where(eq(atenciones.fecha, fechaHoy))
+    ? await db.select().from(atenciones).where(eq(atenciones.fecha, fechaHoy))
     : await db
         .select()
         .from(atenciones)
@@ -97,54 +113,61 @@ export default async function CajaPage() {
           )
         );
 
-  // Datos relacionados
-  const barberosMap = new Map(
-    (await db.select().from(barberos)).map((b) => [b.id, b])
-  );
-  const serviciosMap = new Map(
-    (await db.select().from(servicios)).map((s) => [s.id, s])
-  );
-  const mediosPagoMap = new Map(
-    (await db.select().from(mediosPago)).map((m) => [m.id, m])
-  );
+  const barberosMap = new Map((await db.select().from(barberos)).map((barbero) => [barbero.id, barbero]));
+  const serviciosMap = new Map((await db.select().from(servicios)).map((servicio) => [servicio.id, servicio]));
+  const mediosPagoMap = new Map((await db.select().from(mediosPago)).map((medio) => [medio.id, medio]));
+  const quickActionOptions: QuickActionOption[] = quickDefaults
+    ? [
+        quickDefaults,
+        ...Array.from(mediosPagoMap.values())
+          .filter((medio) => {
+            const nombre = (medio.nombre ?? "").toLowerCase();
+            return (
+              medio.id !== quickDefaults.medioPagoId &&
+              (nombre.includes("efectivo") || nombre.includes("transfer"))
+            );
+          })
+          .slice(0, 2)
+          .map((medio) => ({
+            medioPagoId: medio.id,
+            medioPagoNombre: medio.nombre ?? "-",
+            precioBase: quickDefaults.precioBase,
+            comisionMedioPagoPct: Number(medio.comisionPorcentaje ?? 0),
+          })),
+      ].slice(0, 2)
+    : [];
 
-  // Totales del día (solo atenciones activas)
-  const atencionesActivas = atencionesDelDia.filter((a) => !a.anulado);
+  const atencionesActivas = atencionesDelDia.filter((atencion) => !atencion.anulado);
   const totalBruto = atencionesActivas.reduce(
-    (sum, a) => sum + Number(a.precioCobrado ?? 0),
+    (sum, atencion) => sum + Number(atencion.precioCobrado ?? 0),
     0
   );
   const totalComisionesMp = atencionesActivas.reduce(
-    (sum, a) => sum + Number(a.comisionMedioPagoMonto ?? 0),
+    (sum, atencion) => sum + Number(atencion.comisionMedioPagoMonto ?? 0),
     0
   );
   const totalNeto = atencionesActivas.reduce(
-    (sum, a) => sum + Number(a.montoNeto ?? 0),
+    (sum, atencion) => sum + Number(atencion.montoNeto ?? 0),
     0
   );
   const totalAtenciones = atencionesActivas.length;
 
-  // Desglose por barbero (solo admin)
   const desglosePorBarbero = isAdmin
     ? Array.from(
-        atencionesActivas.reduce(
-          (map, a) => {
-            if (!a.barberoId) return map;
-            const prev = map.get(a.barberoId) ?? { cortes: 0, bruto: 0 };
-            map.set(a.barberoId, {
-              cortes: prev.cortes + 1,
-              bruto: prev.bruto + Number(a.precioCobrado ?? 0),
-            });
-            return map;
-          },
-          new Map<string, { cortes: number; bruto: number }>()
-        )
+        atencionesActivas.reduce((map, atencion) => {
+          if (!atencion.barberoId) return map;
+          const prev = map.get(atencion.barberoId) ?? { cortes: 0, bruto: 0 };
+          map.set(atencion.barberoId, {
+            cortes: prev.cortes + 1,
+            bruto: prev.bruto + Number(atencion.precioCobrado ?? 0),
+          });
+          return map;
+        }, new Map<string, { cortes: number; bruto: number }>())
       )
     : [];
 
-  // Ventas de productos del día
-  const inicioDia = new Date(fechaHoy + "T00:00:00-03:00");
-  const finDia = new Date(fechaHoy + "T23:59:59-03:00");
+  const inicioDia = new Date(`${fechaHoy}T00:00:00-03:00`);
+  const finDia = new Date(`${fechaHoy}T23:59:59-03:00`);
   const ventasProductosDia = await db
     .select({
       id: stockMovimientos.id,
@@ -162,24 +185,21 @@ export default async function CajaPage() {
       )
     );
 
-  const productosMap = ventasProductosDia.length > 0
-    ? new Map(
-        (await db.select().from(productos)).map((p) => [p.id, p])
-      )
-    : new Map();
+  const productosMap =
+    ventasProductosDia.length > 0
+      ? new Map((await db.select().from(productos)).map((producto) => [producto.id, producto]))
+      : new Map();
 
   const totalProductos = ventasProductosDia.reduce(
-    (sum, v) => sum + Math.abs(Number(v.cantidad ?? 0)) * Number(v.precioUnitario ?? 0),
+    (sum, venta) => sum + Math.abs(Number(venta.cantidad ?? 0)) * Number(venta.precioUnitario ?? 0),
     0
   );
 
-  // Ordenar atenciones: más recientes primero
   const atencionesOrdenadas = [...atencionesDelDia].sort((a, b) => {
     if (!a.creadoEn || !b.creadoEn) return 0;
     return new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime();
   });
 
-  // Datos del mes — solo para barberos (no admin)
   const hoyStr = new Date().toLocaleDateString("en-CA", {
     timeZone: "America/Argentina/Buenos_Aires",
   });
@@ -210,11 +230,11 @@ export default async function CajaPage() {
 
     cortesDelMes = atencionesDelMes.length;
     brutoDelMes = atencionesDelMes.reduce(
-      (s, a) => s + Number(a.precioCobrado ?? 0),
+      (sum, atencion) => sum + Number(atencion.precioCobrado ?? 0),
       0
     );
     comisionDelMes = atencionesDelMes.reduce(
-      (s, a) => s + Number(a.comisionBarberoMonto ?? 0),
+      (sum, atencion) => sum + Number(atencion.comisionBarberoMonto ?? 0),
       0
     );
     alquilerMensual =
@@ -223,7 +243,6 @@ export default async function CajaPage() {
         : 0;
     netoProyectado = comisionDelMes - alquilerMensual;
 
-    // Ranking del mes — una sola query con count() y groupBy
     const cortesPorBarberoRaw = await db
       .select({
         barberoId: atenciones.barberoId,
@@ -241,138 +260,113 @@ export default async function CajaPage() {
 
     cortesPorBarberoRaw.sort((a, b) => b.cortes - a.cortes);
     posicionRanking =
-      cortesPorBarberoRaw.findIndex((b) => b.barberoId === barberoDelUsuario.id) + 1;
+      cortesPorBarberoRaw.findIndex((item) => item.barberoId === barberoDelUsuario.id) + 1;
     totalBarberosRanking = cortesPorBarberoRaw.length;
   }
 
   return (
-    <main className="min-h-screen p-4 max-w-2xl mx-auto pb-16">
-      {/* Banner cierre */}
+    <main className="mx-auto min-h-screen max-w-2xl p-4 pb-16">
       {cierreHoy ? (
-        <div className="bg-gray-900 text-white rounded-xl p-4 mb-4 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between rounded-xl bg-gray-900 p-4 text-white">
           <span className="text-sm font-medium">✓ Caja cerrada</span>
-          <Link href={`/caja/cierre/${fechaHoy}`} className="text-sm text-gray-300 hover:text-white underline">
+          <Link
+            href={`/caja/cierre/${fechaHoy}`}
+            className="text-sm text-gray-300 underline hover:text-white"
+          >
             Ver resumen →
           </Link>
         </div>
-      ) : isAdmin ? (
-        <Link
-          href="/caja/cierre"
-          className="block bg-white border border-gray-200 rounded-xl p-4 mb-4 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-center"
-        >
-          Cerrar caja del día →
-        </Link>
       ) : null}
 
-      {/* Encabezado */}
       <div className="mb-5">
-        <h1 className="text-2xl font-bold text-gray-900 capitalize">
+        <h1 className="text-2xl font-bold capitalize text-gray-900">
           {formatFechaLarga(fechaHoy)}
         </h1>
       </div>
 
+      {!cierreHoy ? (
+        <div className="mb-5 grid gap-3 sm:grid-cols-[1fr_auto]">
+          <Link
+            href="/caja/nueva"
+            className="flex min-h-[56px] items-center justify-center rounded-xl bg-gray-900 text-sm font-semibold text-white transition-colors hover:bg-gray-700"
+          >
+            + Nueva atención
+          </Link>
+          <Link
+            href="/caja/vender"
+            className="flex min-h-[56px] items-center justify-center rounded-xl border border-gray-300 bg-white px-5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+          >
+            Vender producto
+          </Link>
+        </div>
+      ) : null}
+
       <QuickActionButton
         defaults={quickDefaults}
-        action={registrarAtencionRapidaAction}
+        options={quickActionOptions}
+        action={registrarAtencionRapidaSeleccionadaAction}
         editHref={quickEditHref}
       />
 
-      {/* Resumen del día */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+      <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
           Resumen del día
         </h2>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-5">
+          <div className="rounded-xl bg-gray-50 px-3 py-2">
             <p className="text-xs text-gray-500">Atenciones</p>
             <p className="text-xl font-bold text-gray-900">{totalAtenciones}</p>
           </div>
-          <div>
+          <div className="rounded-xl bg-gray-50 px-3 py-2">
             <p className="text-xs text-gray-500">Bruto</p>
-            <p className="text-xl font-bold text-gray-900">
-              {formatARS(totalBruto)}
-            </p>
+            <p className="text-xl font-bold text-gray-900">{formatARS(totalBruto)}</p>
           </div>
-          <div>
+          <div className="rounded-xl bg-gray-50 px-3 py-2">
             <p className="text-xs text-gray-500">Neto</p>
-            <p className="text-lg font-semibold text-gray-700">
-              {formatARS(totalNeto)}
-            </p>
+            <p className="text-lg font-semibold text-gray-700">{formatARS(totalNeto)}</p>
           </div>
-          <div>
+          <div className="rounded-xl bg-gray-50 px-3 py-2">
             <p className="text-xs text-gray-500">Comis. cobradas</p>
-            <p className="text-lg font-semibold text-gray-700">
-              {formatARS(totalComisionesMp)}
-            </p>
+            <p className="text-lg font-semibold text-gray-700">{formatARS(totalComisionesMp)}</p>
           </div>
-          {totalProductos > 0 && (
-            <div>
+          {totalProductos > 0 ? (
+            <div className="rounded-xl bg-gray-50 px-3 py-2">
               <p className="text-xs text-gray-500">Productos</p>
-              <p className="text-lg font-semibold text-gray-700">
-                {formatARS(totalProductos)}
-              </p>
+              <p className="text-lg font-semibold text-gray-700">{formatARS(totalProductos)}</p>
             </div>
-          )}
+          ) : null}
         </div>
 
-        {/* Desglose por barbero (solo admin) */}
-        {isAdmin && desglosePorBarbero.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-gray-100">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+        {isAdmin && desglosePorBarbero.length > 0 ? (
+          <div className="mt-4 border-t border-gray-100 pt-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
               Por barbero
             </p>
             <div className="flex flex-col gap-1">
               {desglosePorBarbero.map(([barberoId, datos]) => {
                 const barbero = barberosMap.get(barberoId);
                 return (
-                  <div
-                    key={barberoId}
-                    className="flex justify-between text-sm"
-                  >
-                    <span className="text-gray-700">
-                      {barbero?.nombre ?? "—"}
-                    </span>
+                  <div key={barberoId} className="flex justify-between text-sm">
+                    <span className="text-gray-700">{barbero?.nombre ?? "—"}</span>
                     <span className="text-gray-500">
-                      {datos.cortes} corte{datos.cortes !== 1 ? "s" : ""}{" "}
-                      →{" "}
-                      <span className="font-medium text-gray-900">
-                        {formatARS(datos.bruto)}
-                      </span>
+                      {datos.cortes} corte{datos.cortes !== 1 ? "s" : ""} →{" "}
+                      <span className="font-medium text-gray-900">{formatARS(datos.bruto)}</span>
                     </span>
                   </div>
                 );
               })}
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
-      {/* Botones acción — ocultos si la caja ya está cerrada */}
-      {!cierreHoy && (
-        <div className="flex gap-3 mb-5">
-          <Link
-            href="/caja/nueva"
-            className="flex-1 flex items-center justify-center min-h-[52px] bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-700 transition-colors"
-          >
-            + Nueva atención
-          </Link>
-          <Link
-            href="/caja/vender"
-            className="flex items-center justify-center px-4 min-h-[52px] bg-white border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors whitespace-nowrap"
-          >
-            Vender producto
-          </Link>
-        </div>
-      )}
-
-      {/* Lista de atenciones */}
       <div>
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
           Atenciones de hoy
         </h2>
 
         {atencionesOrdenadas.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-gray-400 text-sm">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-400">
             No hay atenciones registradas hoy.
           </div>
         ) : (
@@ -385,32 +379,28 @@ export default async function CajaPage() {
               return (
                 <div
                   key={atencion.id}
-                  className={`bg-white rounded-xl border border-gray-200 p-4 ${
+                  className={`rounded-xl border border-gray-200 bg-white p-4 ${
                     atencion.anulado ? "opacity-50" : ""
                   }`}
                 >
-                  {/* Encabezado de la card */}
-                  <div className="flex items-start justify-between gap-2 mb-1">
+                  <div className="mb-1 flex items-start justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-1 text-sm font-medium text-gray-900">
-                      <span className="text-gray-400">
-                        {formatHora(atencion.hora)}
-                      </span>
+                      <span className="text-gray-400">{formatHora(atencion.hora)}</span>
                       <span className="text-gray-300">—</span>
                       <span>{barbero?.nombre ?? "—"}</span>
                       <span className="text-gray-300">—</span>
                       <span>{servicio?.nombre ?? "—"}</span>
                     </div>
-                    {atencion.anulado && (
-                      <span className="shrink-0 bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+                    {atencion.anulado ? (
+                      <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-600">
                         Anulada
                       </span>
-                    )}
+                    ) : null}
                   </div>
 
-                  {/* Precios */}
-                  <div className="text-sm text-gray-500 mb-1">
+                  <div className="mb-1 text-sm text-gray-500">
                     {formatARS(atencion.precioCobrado)}
-                    {mp && (
+                    {mp ? (
                       <>
                         {" · "}
                         {mp.nombre ?? "—"}
@@ -418,44 +408,32 @@ export default async function CajaPage() {
                           ? ` (${mp.comisionPorcentaje}%)`
                           : ""}
                       </>
-                    )}
+                    ) : null}
                     {" · Neto: "}
-                    <span className="font-medium text-gray-700">
-                      {formatARS(atencion.montoNeto)}
-                    </span>
+                    <span className="font-medium text-gray-700">{formatARS(atencion.montoNeto)}</span>
                   </div>
 
-                  {/* Motivo anulación */}
-                  {atencion.anulado && atencion.motivoAnulacion && (
-                    <p className="text-xs text-gray-400 mb-2">
-                      Motivo: {atencion.motivoAnulacion}
-                    </p>
-                  )}
+                  {atencion.anulado && atencion.motivoAnulacion ? (
+                    <p className="mb-2 text-xs text-gray-400">Motivo: {atencion.motivoAnulacion}</p>
+                  ) : null}
 
-                  {/* Notas */}
-                  {atencion.notas && !atencion.anulado && (
-                    <p className="text-xs text-gray-400 mb-2">
-                      {atencion.notas}
-                    </p>
-                  )}
+                  {atencion.notas && !atencion.anulado ? (
+                    <p className="mb-2 text-xs text-gray-400">{atencion.notas}</p>
+                  ) : null}
 
-                  {/* Acciones */}
-                  {!atencion.anulado && (
-                    <div className="flex gap-2 mt-2">
+                  {!atencion.anulado ? (
+                    <div className="mt-2 flex gap-2">
                       <Link
                         href={`/caja/${atencion.id}/editar`}
-                        className="min-h-[44px] px-4 flex items-center justify-center bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                        className="flex min-h-[44px] items-center justify-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
                       >
                         Editar
                       </Link>
-                      {isAdmin && (
-                        <AnularButton
-                          atencionId={atencion.id}
-                          anularAction={anularAtencion}
-                        />
-                      )}
+                      {isAdmin ? (
+                        <AnularButton atencionId={atencion.id} anularAction={anularAtencion} />
+                      ) : null}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               );
             })}
@@ -463,98 +441,99 @@ export default async function CajaPage() {
         )}
       </div>
 
-      {/* Productos vendidos hoy */}
-      {ventasProductosDia.length > 0 && (
+      {ventasProductosDia.length > 0 ? (
         <div className="mt-6">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
             Productos vendidos hoy
           </h2>
           <div className="flex flex-col gap-3">
             {ventasProductosDia.map((venta) => {
               const producto = productosMap.get(venta.productoId ?? "");
-              const cantAbs = Math.abs(venta.cantidad ?? 0);
-              const total = cantAbs * Number(venta.precioUnitario ?? 0);
+              const cantidadAbs = Math.abs(venta.cantidad ?? 0);
+              const total = cantidadAbs * Number(venta.precioUnitario ?? 0);
+
               return (
-                <div
-                  key={venta.id}
-                  className="bg-white rounded-xl border border-gray-200 p-4"
-                >
+                <div key={venta.id} className="rounded-xl border border-gray-200 bg-white p-4">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-gray-900">
                       {producto?.nombre ?? "Producto"}
                     </span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {formatARS(total)}
-                    </span>
+                    <span className="text-sm font-semibold text-gray-900">{formatARS(total)}</span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {cantAbs} × {formatARS(Number(venta.precioUnitario ?? 0))}
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    {cantidadAbs} × {formatARS(Number(venta.precioUnitario ?? 0))}
                   </p>
                 </div>
               );
             })}
           </div>
         </div>
-      )}
+      ) : null}
 
-      {/* Sección Mi Mes — solo para barbero */}
-      {!isAdmin && barberoDelUsuario && (
+      {!isAdmin && barberoDelUsuario ? (
         <div className="mt-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+          <h3 className="mb-3 text-sm font-semibold text-gray-700">
             Mi mes —{" "}
-            {new Date(inicioDeMes + "T12:00:00").toLocaleDateString("es-AR", {
+            {new Date(`${inicioDeMes}T12:00:00`).toLocaleDateString("es-AR", {
               month: "long",
               year: "numeric",
               timeZone: "America/Argentina/Buenos_Aires",
             })}
           </h3>
-          <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2">
+          <div className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-4">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Cortes este mes</span>
               <span className="font-medium text-gray-900">{cortesDelMes}</span>
             </div>
-            {posicionRanking > 0 && (
+            {posicionRanking > 0 ? (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Ranking del mes</span>
                 <span className="font-medium text-gray-900">
                   #{posicionRanking} de {totalBarberosRanking}
-                  {posicionRanking === 1 && " 🥇"}
+                  {posicionRanking === 1 ? " 🥇" : ""}
                 </span>
               </div>
-            )}
+            ) : null}
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Bruto acumulado</span>
-              <span className="font-medium text-gray-900">
-                {formatARS(brutoDelMes)}
-              </span>
+              <span className="font-medium text-gray-900">{formatARS(brutoDelMes)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">
                 Mi comisión ({barberoDelUsuario.porcentajeComision ?? 0}%)
               </span>
-              <span className="font-medium text-gray-900">
-                {formatARS(comisionDelMes)}
-              </span>
+              <span className="font-medium text-gray-900">{formatARS(comisionDelMes)}</span>
             </div>
-            {alquilerMensual > 0 && (
+            {alquilerMensual > 0 ? (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Alquiler banco (mes)</span>
-                <span className="text-red-600">
-                  −{formatARS(alquilerMensual)}
-                </span>
+                <span className="text-red-600">−{formatARS(alquilerMensual)}</span>
               </div>
-            )}
-            <div className="border-t border-gray-100 pt-2 flex justify-between text-sm">
-              <span className="text-gray-700 font-medium">
-                Mi neto proyectado
-              </span>
-              <span className="font-bold text-gray-900">
-                {formatARS(Math.max(0, netoProyectado))}
-              </span>
+            ) : null}
+            <div className="flex justify-between border-t border-gray-100 pt-2 text-sm">
+              <span className="font-medium text-gray-700">Mi neto proyectado</span>
+              <span className="font-bold text-gray-900">{formatARS(Math.max(0, netoProyectado))}</span>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
+
+      {!cierreHoy && isAdmin ? (
+        <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+            Cierre de caja
+          </p>
+          <p className="mt-2 text-sm text-amber-900">
+            Usá este botón solo cuando realmente terminó la jornada y ya no se van a cargar más ventas.
+          </p>
+          <Link
+            href="/caja/cierre"
+            className="mt-4 inline-flex min-h-[52px] items-center justify-center rounded-xl bg-amber-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-amber-700"
+          >
+            Cerrar caja y finalizar día
+          </Link>
+        </div>
+      ) : null}
 
       {isAdmin ? (
         <GastoRapidoFAB
