@@ -1,10 +1,13 @@
-import { db } from "@/db";
-import { barberos, servicios, serviciosAdicionales, mediosPago, cierresCaja } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import { getCajaActorContext } from "@/lib/caja-access";
 import Link from "next/link";
+import { eq } from "drizzle-orm";
 import AtencionForm from "@/components/caja/AtencionForm";
-import { registrarAtencion } from "../actions";
+import QuickCheckoutPanel from "@/components/caja/QuickCheckoutPanel";
+import { db } from "@/db";
+import { barberos, cierresCaja, mediosPago, servicios, serviciosAdicionales } from "@/db/schema";
+import { getQuickActionDefaultsForBarbero } from "@/lib/caja-atencion";
+import { getCajaActorContext } from "@/lib/caja-access";
+import type { QuickActionOption } from "@/lib/types";
+import { registrarAtencion, registrarAtencionRapidaSeleccionadaAction } from "../actions";
 
 type NuevaAtencionPageProps = {
   searchParams: Promise<{
@@ -21,7 +24,6 @@ export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionP
   const isAdmin = actor?.isAdmin ?? false;
   const params = await searchParams;
 
-  // Verificar cierre del día
   const fechaHoy = new Date().toLocaleDateString("en-CA", {
     timeZone: "America/Argentina/Buenos_Aires",
   });
@@ -33,51 +35,70 @@ export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionP
 
   if (cierreExistente) {
     return (
-      <div className="flex flex-col gap-4">
-        <Link href="/caja" className="text-gray-400 hover:text-gray-600 text-sm">
-          ← Caja
+      <div className="space-y-4">
+        <Link href="/caja" className="text-sm text-zinc-400 hover:text-[#8cff59]">
+          Volver a caja
         </Link>
-        <div className="bg-gray-50 rounded-xl border border-gray-200 p-6 text-center">
-          <p className="text-gray-700 font-medium">La caja del día ya fue cerrada.</p>
-          <p className="text-gray-500 text-sm mt-1">No se pueden registrar nuevas atenciones.</p>
+        <div className="panel-card rounded-[28px] p-6 text-center">
+          <p className="font-medium text-white">La caja del dia ya fue cerrada.</p>
+          <p className="mt-1 text-sm text-zinc-400">No se pueden registrar nuevas atenciones.</p>
           <Link
             href={`/caja/cierre/${fechaHoy}`}
-            className="mt-4 inline-block text-sm text-gray-900 underline"
+            className="mt-4 inline-block text-sm font-medium text-[#8cff59] underline"
           >
-            Ver resumen del cierre →
+            Ver resumen del cierre
           </Link>
         </div>
       </div>
     );
   }
 
-  // Cargar datos en paralelo
-  const [barberosActivos, serviciosActivos, adicionalesAll, mediosPagoActivos] =
-    await Promise.all([
-      db.select().from(barberos).where(eq(barberos.activo, true)),
-      db.select().from(servicios).where(eq(servicios.activo, true)),
-      db.select().from(serviciosAdicionales),
-      db.select().from(mediosPago).where(eq(mediosPago.activo, true)),
-    ]);
+  const [barberosActivos, serviciosActivos, adicionalesAll, mediosPagoActivos] = await Promise.all([
+    db.select().from(barberos).where(eq(barberos.activo, true)),
+    db.select().from(servicios).where(eq(servicios.activo, true)),
+    db.select().from(serviciosAdicionales),
+    db.select().from(mediosPago).where(eq(mediosPago.activo, true)),
+  ]);
 
   const preselectedBarberoId = actor?.barberoId;
+  const quickDefaults = preselectedBarberoId
+    ? await getQuickActionDefaultsForBarbero(preselectedBarberoId)
+    : null;
+  const quickActionOptions: QuickActionOption[] = quickDefaults
+    ? [
+        quickDefaults,
+        ...mediosPagoActivos
+          .filter((medio) => {
+            const nombre = (medio.nombre ?? "").toLowerCase();
+            return (
+              medio.id !== quickDefaults.medioPagoId &&
+              (nombre.includes("efectivo") ||
+                nombre.includes("transf") ||
+                nombre.includes("posnet") ||
+                nombre.includes("tarjeta"))
+            );
+          })
+          .slice(0, 2)
+          .map((medio) => ({
+            medioPagoId: medio.id,
+            medioPagoNombre: medio.nombre ?? "-",
+            precioBase: quickDefaults.precioBase,
+            comisionMedioPagoPct: Number(medio.comisionPorcentaje ?? 0),
+          })),
+      ].slice(0, 2)
+    : [];
 
   if (!isAdmin && !preselectedBarberoId) {
     return (
-      <main className="min-h-screen p-4 max-w-2xl mx-auto pb-16">
-        <div className="flex items-center gap-3 mb-5">
-          <Link
-            href="/caja"
-            className="text-gray-400 hover:text-gray-600 text-sm transition-colors"
-          >
-            {"<- Caja"}
+      <main className="app-shell mx-auto min-h-screen max-w-4xl px-4 py-6 pb-16">
+        <div className="mb-5 flex items-center gap-3">
+          <Link href="/caja" className="text-sm text-zinc-400 transition-colors hover:text-[#8cff59]">
+            Volver a caja
           </Link>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-          <p className="text-gray-700 font-medium">
-            Tu usuario no tiene un barbero activo vinculado.
-          </p>
-          <p className="text-gray-500 text-sm mt-1">
+        <div className="panel-card rounded-[28px] p-6 text-center">
+          <p className="font-medium text-white">Tu usuario no tiene un barbero activo vinculado.</p>
+          <p className="mt-1 text-sm text-zinc-400">
             Vincula el usuario desde configuracion antes de registrar atenciones.
           </p>
         </div>
@@ -86,58 +107,74 @@ export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionP
   }
 
   return (
-    <main className="min-h-screen p-4 max-w-2xl mx-auto pb-16">
-      <div className="flex items-center gap-3 mb-5">
-        <Link
-          href="/caja"
-          className="text-gray-400 hover:text-gray-600 text-sm transition-colors"
-        >
-          ← Caja
-        </Link>
-      </div>
-      <h2 className="text-lg font-semibold text-gray-900 mb-5">
-        Nueva atención
-      </h2>
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        {params.fromQuickAction ? (
-          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            ConfigurÃ¡ el servicio y medio de pago por defecto del barbero para usar la acciÃ³n rÃ¡pida sin pasar por este formulario.
+    <main className="app-shell min-h-screen px-4 py-6 pb-16">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-5 flex items-center gap-3">
+          <Link href="/caja" className="text-sm text-zinc-400 transition-colors hover:text-[#8cff59]">
+            Volver a caja
+          </Link>
+        </div>
+
+        <section className="mb-6 overflow-hidden rounded-[30px] bg-stone-950 text-stone-50 shadow-[0_24px_80px_rgba(28,25,23,0.18)]">
+          <div className="bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.22),_transparent_35%),radial-gradient(circle_at_bottom_left,_rgba(14,165,233,0.18),_transparent_30%)] p-6 sm:p-7">
+            <p className="eyebrow text-xs font-semibold">Caja</p>
+            <h2 className="font-display mt-2 text-3xl font-semibold tracking-tight">Nueva atencion</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-300">
+              Pantalla rapida para cobrar como POS: seleccion visual, precio automatico y guardado express.
+            </p>
           </div>
-        ) : null}
-        <AtencionForm
-          action={registrarAtencion}
-          barberosList={barberosActivos.map((b) => ({
-            id: b.id,
-            nombre: b.nombre,
-            porcentajeComision: b.porcentajeComision,
-          }))}
-          serviciosList={serviciosActivos.map((s) => ({
-            id: s.id,
-            nombre: s.nombre,
-            precioBase: s.precioBase,
-          }))}
-          adicionalesList={adicionalesAll.map((a) => ({
-            id: a.id,
-            servicioId: a.servicioId,
-            nombre: a.nombre,
-            precioExtra: a.precioExtra,
-          }))}
-          mediosPagoList={mediosPagoActivos.map((m) => ({
-            id: m.id,
-            nombre: m.nombre,
-            comisionPorcentaje: m.comisionPorcentaje,
-          }))}
-          preselectedBarberoId={preselectedBarberoId}
-          isAdmin={isAdmin}
-          initialData={{
-            barberoId: params.barberoId,
-            servicioId: params.servicioId,
-            medioPagoId: params.medioPagoId,
-            precioCobrado: params.precioCobrado,
-          }}
-          submitLabel="Registrar atención"
-          cancelHref="/caja"
-        />
+        </section>
+
+        <div className="space-y-6">
+          <QuickCheckoutPanel
+            defaults={quickDefaults}
+            options={quickActionOptions}
+            action={registrarAtencionRapidaSeleccionadaAction}
+          />
+
+          <div className="panel-card rounded-[30px] p-5 sm:p-6">
+            {params.fromQuickAction ? (
+              <div className="mb-5 rounded-[22px] border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-zinc-200">
+                Configura el servicio y medio de pago por defecto del barbero para usar la accion rapida sin pasar por este formulario.
+              </div>
+            ) : null}
+
+            <AtencionForm
+              action={registrarAtencion}
+              barberosList={barberosActivos.map((barbero) => ({
+                id: barbero.id,
+                nombre: barbero.nombre,
+                porcentajeComision: barbero.porcentajeComision,
+              }))}
+              serviciosList={serviciosActivos.map((servicio) => ({
+                id: servicio.id,
+                nombre: servicio.nombre,
+                precioBase: servicio.precioBase,
+              }))}
+              adicionalesList={adicionalesAll.map((adicional) => ({
+                id: adicional.id,
+                servicioId: adicional.servicioId,
+                nombre: adicional.nombre,
+                precioExtra: adicional.precioExtra,
+              }))}
+              mediosPagoList={mediosPagoActivos.map((medio) => ({
+                id: medio.id,
+                nombre: medio.nombre,
+                comisionPorcentaje: medio.comisionPorcentaje,
+              }))}
+              preselectedBarberoId={preselectedBarberoId}
+              isAdmin={isAdmin}
+              initialData={{
+                barberoId: params.barberoId,
+                servicioId: params.servicioId,
+                medioPagoId: params.medioPagoId,
+                precioCobrado: params.precioCobrado,
+              }}
+              submitLabel="Registrar atencion"
+              cancelHref="/caja"
+            />
+          </div>
+        </div>
       </div>
     </main>
   );

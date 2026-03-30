@@ -37,10 +37,10 @@ function getOptionLabel(name: string): string {
 function getOptionIcon(name: string): string {
   const normalized = name.trim().toLowerCase();
 
-  if (normalized.includes("efectivo")) return "💵";
-  if (normalized.includes("transfer")) return "📱";
-  if (normalized.includes("tarjeta")) return "💳";
-  return "⚡";
+  if (normalized.includes("efectivo")) return "E";
+  if (normalized.includes("transfer")) return "T";
+  if (normalized.includes("tarjeta")) return "M";
+  return "Q";
 }
 
 export default function QuickActionButton({
@@ -53,12 +53,12 @@ export default function QuickActionButton({
 
   if (!defaults) {
     return (
-      <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-        <p className="text-sm font-medium text-amber-900">Acción rápida no configurada</p>
-        <p className="mt-1 text-sm text-amber-800">
-          Configurá el servicio y medio de pago por defecto del barbero para usarla.
+      <div className="mb-4 rounded-2xl border border-amber-500/35 bg-amber-500/10 p-4">
+        <p className="text-sm font-medium text-amber-300">Accion rapida no configurada</p>
+        <p className="mt-1 text-sm text-zinc-300">
+          Configura el servicio y medio de pago por defecto del barbero para usarla.
         </p>
-        <Link href={editHref} className="mt-3 inline-block text-sm font-medium text-amber-900 underline">
+        <Link href={editHref} className="mt-3 inline-block text-sm font-medium text-amber-300 underline">
           Ir al formulario completo
         </Link>
       </div>
@@ -70,18 +70,16 @@ export default function QuickActionButton({
   const quickOptions = options.length > 0 ? options : [defaults];
 
   return (
-    <div className="mb-5 rounded-2xl bg-gray-900 p-4 text-white shadow-sm">
+    <div className="mb-5 overflow-hidden rounded-[28px] bg-zinc-950 p-4 text-white shadow-[0_22px_60px_rgba(0,0,0,0.28)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <span className="block text-xs uppercase tracking-[0.2em] text-gray-300">
-            Acción rápida
-          </span>
-          <h2 className="mt-1 text-lg font-semibold">Cobrar corte común</h2>
-          <p className="mt-1 text-sm text-gray-300">
-            Registrá el servicio más usado sin pasar por el formulario completo.
+          <span className="eyebrow block text-xs font-semibold">Accion rapida</span>
+          <h2 className="font-display mt-1 text-2xl font-semibold">Cobrar corte comun</h2>
+          <p className="mt-1 text-sm text-zinc-300">
+            Registra el servicio mas usado sin pasar por el formulario completo.
           </p>
         </div>
-        <div className="rounded-xl bg-white/10 px-3 py-2 text-right text-xs text-gray-200">
+        <div className="rounded-xl bg-white/10 px-3 py-2 text-right text-xs text-zinc-200">
           <div>{defaults.servicioNombre}</div>
           <div className="mt-1 font-semibold text-white">{formatARS(defaults.precioBase)}</div>
         </div>
@@ -95,12 +93,12 @@ export default function QuickActionButton({
               <button
                 type="submit"
                 disabled={isPending}
-                className="flex min-h-[72px] w-full flex-col items-start justify-center rounded-2xl border border-white/15 bg-white/8 px-4 py-3 text-left transition hover:bg-white/14 disabled:opacity-50"
+                className="flex min-h-[72px] w-full flex-col items-start justify-center rounded-2xl border border-[#8cff59]/20 bg-white/8 px-4 py-3 text-left transition hover:border-[#8cff59]/45 hover:bg-white/14 disabled:opacity-50"
               >
                 <span className="text-sm font-semibold text-white">
                   {getOptionIcon(option.medioPagoNombre)} {getOptionLabel(option.medioPagoNombre)}
                 </span>
-                <span className="mt-1 text-xs text-gray-300">{option.medioPagoNombre}</span>
+                <span className="mt-1 text-xs text-zinc-300">{option.medioPagoNombre}</span>
                 <span className="mt-2 text-base font-bold text-white">
                   {formatARS(option.precioBase)}
                 </span>
@@ -111,10 +109,10 @@ export default function QuickActionButton({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-        <div className="text-gray-300">
+        <div className="text-zinc-300">
           Neto estimado: <span className="font-semibold text-white">{formatARS(montoNeto)}</span>
         </div>
-        <Link href={editHref} className="font-medium text-white underline underline-offset-4">
+        <Link href={editHref} className="font-medium text-[#8cff59] underline underline-offset-4">
           Ir al formulario completo
         </Link>
       </div>

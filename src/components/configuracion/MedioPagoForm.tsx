@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import Link from "next/link";
+import { useActionState, useState } from "react";
 import type { MedioPagoFormState } from "@/app/(admin)/configuracion/medios-de-pago/actions";
 
 interface MedioPagoFormProps {
@@ -25,81 +26,129 @@ export default function MedioPagoForm({
   cancelHref = "/configuracion/medios-de-pago",
 }: MedioPagoFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
+  const [nombre, setNombre] = useState(initialData?.nombre ?? "");
+  const [comisionPorcentaje, setComisionPorcentaje] = useState(
+    initialData?.comisionPorcentaje ?? "0"
+  );
+  const comisionNumero = Number(comisionPorcentaje) || 0;
 
   return (
-    <form action={formAction} className="flex flex-col gap-5">
-      {state.error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+    <form action={formAction} className="flex flex-col gap-6">
+      {state.error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {state.error}
         </div>
-      )}
+      ) : null}
 
-      {/* Nombre */}
-      <div className="flex flex-col gap-1">
-        <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
-          Nombre <span className="text-red-500">*</span>
-        </label>
-        <input
-          id="nombre"
-          name="nombre"
-          type="text"
-          defaultValue={initialData?.nombre ?? ""}
-          placeholder="Ej: Mercado Pago QR"
-          className="min-h-[44px] px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-        />
-        {state.fieldErrors?.nombre && (
-          <p className="text-red-500 text-xs">{state.fieldErrors.nombre}</p>
-        )}
-      </div>
+      <section className="rounded-[28px] border border-stone-200 bg-white p-5 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-400">
+          Configuracion del medio
+        </p>
+        <div className="mt-4 grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+          <div className="space-y-4">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="nombre" className="text-sm font-medium text-stone-700">
+                Nombre <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="nombre"
+                name="nombre"
+                type="text"
+                value={nombre}
+                onChange={(event) => setNombre(event.target.value)}
+                placeholder="Ej: Mercado Pago QR"
+                className="min-h-[48px] rounded-xl border border-stone-300 px-4 text-sm text-stone-900 outline-none focus:border-stone-900"
+              />
+              {state.fieldErrors?.nombre ? (
+                <p className="text-xs text-red-500">{state.fieldErrors.nombre}</p>
+              ) : null}
+            </div>
 
-      {/* Comisión */}
-      <div className="flex flex-col gap-1">
-        <label
-          htmlFor="comisionPorcentaje"
-          className="text-sm font-medium text-gray-700"
-        >
-          Comisión{" "}
-          <span className="text-gray-400 text-xs">(0 si no aplica)</span>
-        </label>
-        <div className="relative">
-          <input
-            id="comisionPorcentaje"
-            name="comisionPorcentaje"
-            type="number"
-            min="0"
-            max="100"
-            step="0.01"
-            defaultValue={initialData?.comisionPorcentaje ?? "0"}
-            placeholder="Ej: 6"
-            className="min-h-[44px] w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-          />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-            %
-          </span>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="comisionPorcentaje" className="text-sm font-medium text-stone-700">
+                Comision <span className="text-xs text-stone-400">(0 si no aplica)</span>
+              </label>
+              <div className="relative">
+                <input
+                  id="comisionPorcentaje"
+                  name="comisionPorcentaje"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={comisionPorcentaje}
+                  onChange={(event) => setComisionPorcentaje(event.target.value)}
+                  placeholder="Ej: 6"
+                  className="min-h-[48px] w-full rounded-xl border border-stone-300 px-4 pr-10 text-sm text-stone-900 outline-none focus:border-stone-900"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-stone-400">
+                  %
+                </span>
+              </div>
+              {state.fieldErrors?.comisionPorcentaje ? (
+                <p className="text-xs text-red-500">{state.fieldErrors.comisionPorcentaje}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="rounded-[24px] bg-stone-50 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-400">
+              Impacto en caja
+            </p>
+            <div className="mt-4 space-y-3">
+              <PreviewPill label="Medio" value={nombre.trim() || "Pendiente"} />
+              <PreviewPill
+                label="Comision"
+                value={comisionNumero > 0 ? `${comisionNumero}%` : "Sin comision"}
+                strong={comisionNumero > 0}
+              />
+              <PreviewPill
+                label="Lectura operativa"
+                value={
+                  comisionNumero > 0
+                    ? "Descuenta neto al cobrar"
+                    : "Impacta limpio en caja"
+                }
+              />
+            </div>
+          </div>
         </div>
-        {state.fieldErrors?.comisionPorcentaje && (
-          <p className="text-red-500 text-xs">
-            {state.fieldErrors.comisionPorcentaje}
-          </p>
-        )}
-      </div>
+      </section>
 
-      {/* Acciones */}
-      <div className="flex gap-3 pt-2">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <button
           type="submit"
           disabled={isPending}
-          className="flex-1 min-h-[44px] bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
+          className="inline-flex min-h-[52px] flex-1 items-center justify-center rounded-2xl bg-stone-900 px-5 text-sm font-semibold text-white transition hover:bg-stone-700 disabled:opacity-50"
         >
           {isPending ? "Guardando..." : submitLabel}
         </button>
-        <a
+        <Link
           href={cancelHref}
-          className="min-h-[44px] px-6 flex items-center justify-center bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+          className="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-stone-100 px-5 text-sm font-medium text-stone-700 transition hover:bg-stone-200"
         >
           Cancelar
-        </a>
+        </Link>
       </div>
     </form>
+  );
+}
+
+function PreviewPill({
+  label,
+  value,
+  strong,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
+  return (
+    <div className={`rounded-[18px] px-4 py-3 ${strong ? "bg-stone-900 text-white" : "bg-white ring-1 ring-stone-200"}`}>
+      <p className={`text-xs uppercase tracking-[0.16em] ${strong ? "text-stone-300" : "text-stone-400"}`}>
+        {label}
+      </p>
+      <p className={`mt-2 font-medium ${strong ? "text-white" : "text-stone-900"}`}>{value}</p>
+    </div>
   );
 }

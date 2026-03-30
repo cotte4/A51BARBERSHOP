@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
@@ -22,79 +23,123 @@ export default function LoginPage() {
     });
 
     if (authError) {
-      setError("Email o contraseña incorrectos. Revisá los datos e intentá de nuevo.");
+      setError("Email o contrasena incorrectos. Revisa los datos e intenta de nuevo.");
       setLoading(false);
       return;
     }
 
-    // Redirigir a raíz, el middleware maneja el redirect según rol
     router.push("/");
     router.refresh();
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm">
-        {/* Logo / Título */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">A51 Barber</h1>
-          <p className="text-gray-500 mt-1">Sistema de gestión interno</p>
-        </div>
+    <div className="app-shell min-h-screen px-4">
+      <div className="mx-auto flex min-h-screen max-w-6xl items-center justify-center py-10">
+        <div className="grid w-full max-w-5xl gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+          <section className="panel-card hidden overflow-hidden rounded-[32px] p-8 text-white lg:block">
+            <div className="flex h-full flex-col justify-between">
+              <div>
+                <p className="eyebrow text-xs font-semibold">A51 Barber Shop</p>
+                <h1 className="font-display mt-4 max-w-md text-5xl font-bold leading-none">
+                  Nave madre para cobrar, coordinar y operar sin friccion.
+                </h1>
+                <p className="mt-5 max-w-lg text-base text-zinc-300">
+                  Tema nocturno, acciones rapidas y foco total en caja, agenda y clientes.
+                </p>
+              </div>
 
-        {/* Formulario */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              className="w-full h-12 px-4 rounded-lg border border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-              placeholder="tu@email.com"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Contraseña
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-              className="w-full h-12 px-4 rounded-lg border border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-              placeholder="••••••••"
-            />
-          </div>
-
-          {error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 p-3">
-              <p className="text-sm text-red-700">{error}</p>
+              <div className="panel-soft rounded-[28px] p-5">
+                <div className="flex items-center gap-4">
+                  <Image
+                    src="/a51barbershop.jpeg"
+                    alt="A51 Barber Shop"
+                    width={84}
+                    height={84}
+                    className="rounded-3xl object-cover ring-1 ring-[#8cff59]/25"
+                    priority
+                  />
+                  <div>
+                    <p className="eyebrow text-[11px] font-semibold">Modo nocturno activo</p>
+                    <p className="font-display mt-2 text-2xl font-semibold text-[#8cff59]">
+                      Base de control
+                    </p>
+                    <p className="mt-2 text-sm text-zinc-300">
+                      Entra y sigue la jornada desde el centro de comando.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
+          </section>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full h-12 bg-gray-900 text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Ingresando..." : "Ingresar"}
-          </button>
-        </form>
+          <div className="panel-card w-full rounded-[32px] p-6 sm:p-8">
+            <div className="mb-8 text-center">
+              <div className="mx-auto mb-4 flex justify-center lg:hidden">
+                <Image
+                  src="/a51barbershop.jpeg"
+                  alt="A51 Barber Shop"
+                  width={72}
+                  height={72}
+                  className="rounded-3xl object-cover ring-1 ring-[#8cff59]/25"
+                  priority
+                />
+              </div>
+              <h1 className="font-display text-4xl font-bold text-white">Ingreso de agentes</h1>
+              <p className="mt-2 text-sm text-zinc-400">Sistema interno de gestion A51</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label htmlFor="email" className="mb-2 block text-sm font-medium text-zinc-300">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                  className="h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-950/75 px-4 text-zinc-50 outline-none focus:border-[#8cff59] focus:ring-2 focus:ring-[#8cff59]/20"
+                  placeholder="tu@email.com"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="password"
+                  className="mb-2 block text-sm font-medium text-zinc-300"
+                >
+                  Contrasena
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  className="h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-950/75 px-4 text-zinc-50 outline-none focus:border-[#8cff59] focus:ring-2 focus:ring-[#8cff59]/20"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              {error && (
+                <div className="rounded-2xl border border-rose-500/35 bg-rose-500/10 p-3">
+                  <p className="text-sm text-rose-200">{error}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="neon-button h-12 w-full rounded-2xl text-base font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? "Ingresando..." : "Entrar a la base"}
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   );

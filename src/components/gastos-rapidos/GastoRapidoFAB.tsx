@@ -22,7 +22,7 @@ export default function GastoRapidoFAB({
   action,
   returnTo,
   historyHref = "/gastos-rapidos",
-  buttonLabel = "+ Gasto rápido",
+  buttonLabel = "+ Gasto rapido",
   buttonClassName,
   fixed = true,
   showHistoryLink = true,
@@ -36,8 +36,8 @@ export default function GastoRapidoFAB({
   const resolvedButtonClassName =
     buttonClassName ??
     (fixed
-      ? "min-h-[56px] rounded-full bg-gray-900 px-5 text-sm font-semibold text-white shadow-xl transition hover:bg-gray-700"
-      : "inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-gray-900 px-5 text-sm font-semibold text-white transition hover:bg-gray-700");
+      ? "neon-button min-h-[56px] rounded-full px-5 text-sm font-semibold shadow-xl"
+      : "neon-button inline-flex min-h-[52px] items-center justify-center rounded-2xl px-5 text-sm font-semibold");
 
   return (
     <>
@@ -45,7 +45,7 @@ export default function GastoRapidoFAB({
         {showHistoryLink ? (
           <Link
             href={historyHref}
-            className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-gray-600 shadow-lg ring-1 ring-gray-200 transition hover:bg-gray-50"
+            className="rounded-full bg-zinc-950 px-4 py-2 text-xs font-semibold text-zinc-300 shadow-lg ring-1 ring-zinc-800 transition hover:border-[#8cff59]/35 hover:text-[#8cff59]"
           >
             Ver gastos
           </Link>

@@ -238,6 +238,51 @@ export async function getBarberosActivosTurnos() {
     .orderBy(barberos.nombre);
 }
 
+export async function getDisponibilidadLibrePorFecha(fecha: string) {
+  if (await isFechaCerrada(fecha)) {
+    return [];
+  }
+
+  const [slots, ocupados] = await Promise.all([
+    db
+      .select({
+        id: turnosDisponibilidad.id,
+        barberoId: turnosDisponibilidad.barberoId,
+        barberoNombre: barberos.nombre,
+        fecha: turnosDisponibilidad.fecha,
+        horaInicio: turnosDisponibilidad.horaInicio,
+        duracionMinutos: turnosDisponibilidad.duracionMinutos,
+      })
+      .from(turnosDisponibilidad)
+      .innerJoin(barberos, eq(barberos.id, turnosDisponibilidad.barberoId))
+      .where(and(eq(turnosDisponibilidad.fecha, fecha), eq(barberos.activo, true)))
+      .orderBy(turnosDisponibilidad.horaInicio, barberos.nombre),
+    db
+      .select({
+        barberoId: turnos.barberoId,
+        horaInicio: turnos.horaInicio,
+      })
+      .from(turnos)
+      .where(
+        and(
+          eq(turnos.fecha, fecha),
+          inArray(turnos.estado, ["pendiente", "confirmado"])
+        )
+      ),
+  ]);
+
+  const ocupadas = new Set(
+    ocupados.map((slot) => `${slot.barberoId}:${normalizeHora(slot.horaInicio)}`)
+  );
+
+  return slots
+    .filter((slot) => !ocupadas.has(`${slot.barberoId}:${normalizeHora(slot.horaInicio)}`))
+    .map((slot) => ({
+      ...slot,
+      horaInicio: normalizeHora(slot.horaInicio),
+    }));
+}
+
 export async function getTurnosOcupadosDesde(barberoId: string, fromFecha: string) {
   return db
     .select({

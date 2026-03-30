@@ -17,19 +17,16 @@ export default function ToggleActivoButton({
 
   return (
     <button
+      type="button"
       onClick={() => startTransition(() => toggleAction(id, activo))}
       disabled={isPending}
-      className={`
-        min-h-[44px] px-4 py-2 rounded-lg text-sm font-medium transition-colors
-        ${
-          activo
-            ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            : "bg-green-50 text-green-700 hover:bg-green-100"
-        }
-        disabled:opacity-50
-      `}
+      className={`inline-flex min-h-[46px] items-center justify-center rounded-2xl px-4 text-sm font-semibold transition ${
+        activo
+          ? "bg-stone-900 text-white hover:bg-stone-700"
+          : "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
+      } disabled:opacity-50`}
     >
-      {isPending ? "..." : activo ? "Desactivar" : "Activar"}
+      {isPending ? "Actualizando..." : activo ? "Desactivar" : "Activar"}
     </button>
   );
 }

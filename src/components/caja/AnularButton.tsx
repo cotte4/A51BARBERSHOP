@@ -27,47 +27,40 @@ export default function AnularButton({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="min-h-[44px] px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors"
+          className="min-h-[44px] rounded-lg border border-rose-500/35 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-200 transition-colors hover:bg-rose-500/15"
         >
           Anular
         </button>
       ) : (
-        <div className="mt-2 border border-red-200 rounded-lg p-3 bg-red-50">
-          {state.error && (
-            <p className="text-red-600 text-xs mb-2">{state.error}</p>
-          )}
+        <div className="mt-2 rounded-lg border border-rose-500/35 bg-zinc-950/80 p-3">
+          {state.error && <p className="mb-2 text-xs text-rose-300">{state.error}</p>}
           <form action={formAction} className="flex flex-col gap-2">
-            <label
-              htmlFor={`motivo-${atencionId}`}
-              className="text-sm font-medium text-gray-700"
-            >
-              Motivo de anulación <span className="text-red-500">*</span>
+            <label htmlFor={`motivo-${atencionId}`} className="text-sm font-medium text-zinc-200">
+              Motivo de anulacion <span className="text-rose-300">*</span>
             </label>
             <input
               id={`motivo-${atencionId}`}
               name="motivoAnulacion"
               type="text"
               required
-              placeholder="Ingresá el motivo..."
-              className="min-h-[44px] w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
+              placeholder="Ingresa el motivo..."
+              className="min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-rose-500/40"
             />
             {state.fieldErrors?.motivoAnulacion && (
-              <p className="text-red-500 text-xs">
-                {state.fieldErrors.motivoAnulacion}
-              </p>
+              <p className="text-xs text-rose-300">{state.fieldErrors.motivoAnulacion}</p>
             )}
-            <div className="flex gap-2 mt-1">
+            <div className="mt-1 flex gap-2">
               <button
                 type="submit"
                 disabled={isPending}
-                className="flex-1 min-h-[44px] bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                className="flex-1 min-h-[44px] rounded-lg bg-rose-600 text-sm font-medium text-white transition-colors hover:bg-rose-500 disabled:opacity-50"
               >
-                {isPending ? "Anulando..." : "Confirmar anulación"}
+                {isPending ? "Anulando..." : "Confirmar anulacion"}
               </button>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="min-h-[44px] px-4 bg-white text-gray-600 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                className="min-h-[44px] rounded-lg border border-zinc-700 bg-zinc-900 px-4 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800"
               >
                 Cancelar
               </button>

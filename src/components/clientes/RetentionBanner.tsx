@@ -30,22 +30,22 @@ export default function RetentionBanner({ candidates }: RetentionBannerProps) {
   }
 
   return (
-    <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+    <div className="rounded-3xl border border-amber-500/35 bg-amber-500/10 p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-amber-900">
-            Marcianos sin visitar en más de 42 días
+          <p className="text-sm font-semibold text-amber-300">
+            Marcianos sin visitar en mas de 42 dias
           </p>
-          <p className="mt-1 text-xs text-amber-700">
+          <p className="mt-1 text-xs text-zinc-300">
             {candidates.length} cliente{candidates.length !== 1 ? "s" : ""} en riesgo de no volver.
           </p>
         </div>
         <button
           onClick={dismiss}
           aria-label="Cerrar aviso"
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-amber-700 hover:bg-amber-100"
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-amber-300 hover:bg-amber-500/10"
         >
-          ✕
+          ×
         </button>
       </div>
 
@@ -59,11 +59,11 @@ export default function RetentionBanner({ candidates }: RetentionBannerProps) {
             <li key={client.id}>
               <Link
                 href={`/clientes/${client.id}`}
-                className="flex items-center justify-between rounded-xl border border-amber-200 bg-white px-4 py-3 text-sm hover:border-amber-300"
+                className="flex items-center justify-between rounded-xl border border-amber-500/30 bg-zinc-950/40 px-4 py-3 text-sm hover:border-amber-400/55"
               >
-                <span className="font-medium text-gray-900">{client.name}</span>
-                <span className="text-xs text-amber-700">
-                  {daysSince !== null ? `${daysSince} días` : "Sin fecha"}
+                <span className="font-medium text-white">{client.name}</span>
+                <span className="text-xs text-amber-300">
+                  {daysSince !== null ? `${daysSince} dias` : "Sin fecha"}
                 </span>
               </Link>
             </li>

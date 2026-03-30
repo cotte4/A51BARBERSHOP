@@ -22,8 +22,8 @@ function statusLabel(estado: TurnoSummary["estado"]) {
 
 function statusClasses(estado: TurnoSummary["estado"]) {
   if (estado === "pendiente") return "bg-amber-50 text-amber-700";
-  if (estado === "confirmado") return "bg-blue-50 text-blue-700";
-  if (estado === "completado") return "bg-green-50 text-green-700";
+  if (estado === "confirmado") return "bg-emerald-50 text-emerald-700";
+  if (estado === "completado") return "bg-sky-50 text-sky-700";
   return "bg-red-50 text-red-700";
 }
 
@@ -40,11 +40,11 @@ export default function TurnoCard({
   const actionError = confirmState.error ?? completeState.error ?? rejectState.error;
 
   return (
-    <article className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+    <article className="rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-gray-900">{turno.clienteNombre}</h3>
+            <h3 className="text-base font-semibold text-stone-900">{turno.clienteNombre}</h3>
             <span className={`rounded-full px-2 py-1 text-xs font-medium ${statusClasses(turno.estado)}`}>
               {statusLabel(turno.estado)}
             </span>
@@ -54,27 +54,27 @@ export default function TurnoCard({
               </span>
             ) : null}
           </div>
-          <p className="mt-1 text-sm text-gray-600">
+          <p className="mt-1 text-sm text-stone-600">
             {turno.horaInicio} · {turno.duracionMinutos} min · {turno.barberoNombre}
           </p>
           {turno.clienteTelefonoRaw ? (
-            <p className="mt-1 text-sm text-gray-500">{turno.clienteTelefonoRaw}</p>
+            <p className="mt-1 text-sm text-stone-500">{turno.clienteTelefonoRaw}</p>
           ) : null}
         </div>
       </div>
 
       {turno.notaCliente ? (
-        <p className="mt-4 rounded-xl bg-gray-50 px-3 py-2 text-sm text-gray-700">{turno.notaCliente}</p>
+        <p className="mt-4 rounded-xl bg-stone-50 px-3 py-2 text-sm text-stone-700">{turno.notaCliente}</p>
       ) : null}
 
       {turno.sugerenciaCancion ? (
-        <p className="mt-3 text-sm text-gray-600">Cancion sugerida: {turno.sugerenciaCancion}</p>
+        <p className="mt-3 text-sm text-stone-600">Canción sugerida: {turno.sugerenciaCancion}</p>
       ) : null}
 
       {turno.extras.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2">
           {turno.extras.map((extra) => (
-            <span key={extra.id} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">
+            <span key={extra.id} className="rounded-full bg-stone-100 px-3 py-1 text-xs text-stone-700">
               {extra.nombre} x{extra.cantidad}
             </span>
           ))}
@@ -98,7 +98,7 @@ export default function TurnoCard({
               <button
                 type="submit"
                 disabled={confirmPending}
-                className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+                className="rounded-xl bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-50"
               >
                 {confirmPending ? "Confirmando..." : "Confirmar"}
               </button>
@@ -107,7 +107,7 @@ export default function TurnoCard({
             <button
               type="button"
               onClick={() => setShowReject((current) => !current)}
-              className="rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+              className="rounded-xl bg-stone-100 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-200"
             >
               Rechazar
             </button>
@@ -119,7 +119,7 @@ export default function TurnoCard({
             <button
               type="submit"
               disabled={completePending}
-              className="rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50"
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
             >
               {completePending ? "Completando..." : "Completar"}
             </button>
@@ -132,8 +132,8 @@ export default function TurnoCard({
           <textarea
             name="motivoCancelacion"
             rows={2}
-            placeholder="Motivo del rechazo o cancelacion"
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none focus:border-gray-900"
+            placeholder="Motivo del rechazo o cancelación"
+            className="w-full rounded-xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none focus:border-stone-900"
           />
           <button
             type="submit"

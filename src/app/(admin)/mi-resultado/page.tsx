@@ -20,7 +20,7 @@ export default async function MiResultadoPage() {
   const data = await getMiResultadoData();
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-28">
+    <div className="min-h-screen bg-gray-50">
       <header className="border-b border-gray-200 bg-white px-4 py-4">
         <div className="mx-auto max-w-4xl">
           <Link href="/dashboard" className="text-sm text-gray-400 hover:text-gray-600">

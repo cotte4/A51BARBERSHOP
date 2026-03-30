@@ -145,6 +145,11 @@ export type MovimientoFormState = {
   success?: boolean;
 };
 
+export type QuickStockAdjustState = {
+  error?: string;
+  success?: boolean;
+};
+
 export async function registrarMovimiento(
   productoId: string,
   prevState: MovimientoFormState,
@@ -207,6 +212,58 @@ export async function registrarMovimiento(
   } catch (error) {
     console.error("Error registrando movimiento:", error);
     return { error: "No se pudo registrar el movimiento. Intenta de nuevo." };
+  }
+
+  revalidatePath(`/inventario/${productoId}`);
+  revalidatePath("/inventario");
+  revalidatePath("/inventario/rotacion");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function ajustarStockRapido(
+  productoId: string,
+  delta: number,
+  prevState: QuickStockAdjustState
+): Promise<QuickStockAdjustState> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const userRole = (session?.user as { role?: string })?.role;
+  if (userRole !== "admin") return { error: "Solo el administrador puede ajustar stock." };
+
+  if (!Number.isInteger(delta) || delta === 0) {
+    return { error: "El ajuste rápido es inválido." };
+  }
+
+  try {
+    const [producto] = await db
+      .select({ stockActual: productos.stockActual })
+      .from(productos)
+      .where(eq(productos.id, productoId))
+      .limit(1);
+
+    if (!producto) {
+      return { error: "Producto no encontrado." };
+    }
+
+    const stockResultante = (producto.stockActual ?? 0) + delta;
+    if (stockResultante < 0) {
+      return { error: "No hay stock suficiente para descontar." };
+    }
+
+    await db
+      .update(productos)
+      .set({ stockActual: sql`${productos.stockActual} + ${delta}` })
+      .where(eq(productos.id, productoId));
+
+    await db.insert(stockMovimientos).values({
+      productoId,
+      tipo: delta > 0 ? "ajuste" : "uso_interno",
+      cantidad: delta,
+      notas: delta > 0 ? "Ajuste rápido desde inventario" : "Descuento rápido desde inventario",
+    });
+  } catch (error) {
+    console.error("Error ajustando stock rápido:", error);
+    return { error: "No se pudo actualizar el stock." };
   }
 
   revalidatePath(`/inventario/${productoId}`);

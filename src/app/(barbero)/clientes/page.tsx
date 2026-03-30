@@ -20,12 +20,12 @@ export default async function ClientesPage() {
     <div className="space-y-4">
       <section className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
-          <p className="text-sm text-gray-500">Directorio interno y memoria operativa del equipo.</p>
+          <h1 className="font-display text-3xl font-bold text-white">Marcianos</h1>
+          <p className="text-sm text-zinc-400">Directorio interno y memoria operativa del equipo.</p>
         </div>
         <Link
           href="/clientes/nuevo"
-          className="rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white"
+          className="neon-button rounded-xl px-4 py-3 text-sm font-semibold"
         >
           Nuevo cliente
         </Link>
