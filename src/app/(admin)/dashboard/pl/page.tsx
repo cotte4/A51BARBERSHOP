@@ -66,7 +66,7 @@ function PLRow({ label, valor, indent, negativo, subtotal, total, signo }: PLRow
             : "text-red-600"
         }`}
       >
-        {formatARS(Math.abs(valor))}
+        {negativo ? formatARS(Math.abs(valor)) : formatARS(valorNum)}
       </span>
     </div>
   );
@@ -178,7 +178,7 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
               signo="+"
             />
             <PLRow
-              label="Comisión Gabote (75%)"
+              label={`Comisión Gabote (${pl.comisionGabotePct}%)`}
               valor={pl.comisionesGabote}
               negativo
               signo="-"

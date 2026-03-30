@@ -251,6 +251,7 @@ export async function getPL(
 ): Promise<{
   ingresosGaboteBruto: number;
   comisionesGabote: number;
+  comisionGabotePct: number;
   feesMedioPagoGabote: number;
   alquilerBancoMes: number;
   margenProductosMes: number;
@@ -266,6 +267,10 @@ export async function getPL(
   const listaBarberos = await db.select().from(barberos);
   const gaboteIds = listaBarberos.filter((b) => b.rol === "barbero").map((b) => b.id);
   const pinkyIds = listaBarberos.filter((b) => b.rol === "admin").map((b) => b.id);
+
+  const comisionGabotePct = listaBarberos
+    .filter((b) => b.rol === "barbero")
+    .reduce((max, b) => Math.max(max, toNumber(b.porcentajeComision)), 0);
 
   const alquilerBancoMes = listaBarberos
     .filter((b) => b.rol === "barbero")
@@ -369,6 +374,7 @@ export async function getPL(
   return {
     ingresosGaboteBruto,
     comisionesGabote,
+    comisionGabotePct,
     feesMedioPagoGabote,
     alquilerBancoMes,
     margenProductosMes,
