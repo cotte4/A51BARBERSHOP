@@ -11,6 +11,7 @@ import {
   jsonb,
   check,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -401,3 +402,140 @@ export const configuracionNegocio = pgTable("configuracion_negocio", {
   actualizadoEn: timestamp("actualizado_en", { withTimezone: true }).defaultNow(),
   actualizadoPor: text("actualizado_por"),
 });
+
+// ————————————————————————————————————————————————————————
+// CLIENTES / MARCIANOS
+// ————————————————————————————————————————————————————————
+export const clients = pgTable(
+  "clients",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    phoneRaw: text("phone_raw"),
+    phoneNormalized: text("phone_normalized"),
+    avatarUrl: text("avatar_url"),
+    esMarciano: boolean("es_marciano").notNull().default(false),
+    marcianoDesde: timestamp("marciano_desde", { withTimezone: true }),
+    tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
+    preferences: jsonb("preferences"),
+    notes: text("notes"),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => user.id),
+    createdByBarberoId: uuid("created_by_barbero_id").references(() => barberos.id),
+    totalVisits: integer("total_visits").notNull().default(0),
+    lastVisitAt: timestamp("last_visit_at", { withTimezone: true }),
+    lastVisitBarberoId: uuid("last_visit_barbero_id").references(() => barberos.id),
+    avgDaysBetweenVisits: numeric("avg_days_between_visits", {
+      precision: 8,
+      scale: 2,
+    }),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("clients_phone_normalized_idx").on(table.phoneNormalized),
+    index("clients_name_idx").on(table.name),
+    index("clients_last_visit_at_idx").on(table.lastVisitAt),
+    index("clients_es_marciano_last_visit_at_idx").on(
+      table.esMarciano,
+      table.lastVisitAt
+    ),
+    index("clients_created_by_barbero_id_idx").on(table.createdByBarberoId),
+  ]
+);
+
+export const visitLogs = pgTable(
+  "visit_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    visitedAt: timestamp("visited_at", { withTimezone: true }).notNull().defaultNow(),
+    createdByBarberoId: uuid("created_by_barbero_id")
+      .notNull()
+      .references(() => barberos.id),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => user.id),
+    barberNotes: text("barber_notes"),
+    tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
+    photoUrls: text("photo_urls").array().notNull().default(sql`'{}'::text[]`),
+    propinaEstrellas: integer("propina_estrellas").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "visit_logs_propina_estrellas_check",
+      sql`${table.propinaEstrellas} >= 0 AND ${table.propinaEstrellas} <= 5`
+    ),
+    index("visit_logs_client_visited_at_idx").on(table.clientId, table.visitedAt),
+    index("visit_logs_created_by_barbero_id_idx").on(table.createdByBarberoId),
+    index("visit_logs_tags_idx").using("gin", table.tags),
+  ]
+);
+
+export const clientProfileEvents = pgTable(
+  "client_profile_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    fieldName: text("field_name").notNull(),
+    oldValue: text("old_value"),
+    newValue: text("new_value"),
+    changedByUserId: text("changed_by_user_id")
+      .notNull()
+      .references(() => user.id),
+    changedByBarberoId: uuid("changed_by_barbero_id").references(() => barberos.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("client_profile_events_client_created_at_idx").on(table.clientId, table.createdAt)]
+);
+
+export const marcianoBeneficiosUso = pgTable(
+  "marciano_beneficios_uso",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    mes: text("mes").notNull(),
+    cortesUsados: integer("cortes_usados").notNull().default(0),
+    consumicionesUsadas: integer("consumiciones_usadas").notNull().default(0),
+    sorteosParticipados: integer("sorteos_participados").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("marciano_beneficios_uso_client_mes_idx").on(table.clientId, table.mes)]
+);
+
+export const clientBriefingCache = pgTable(
+  "client_briefing_cache",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    viewerScope: text("viewer_scope").notNull(),
+    viewerBarberoId: uuid("viewer_barbero_id").references(() => barberos.id),
+    cacheKey: text("cache_key").notNull(),
+    briefingText: text("briefing_text").notNull(),
+    generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "client_briefing_cache_scope_check",
+      sql`${table.viewerScope} IN ('admin', 'barbero')`
+    ),
+    index("client_briefing_cache_client_scope_idx").on(
+      table.clientId,
+      table.viewerScope,
+      table.viewerBarberoId
+    ),
+  ]
+);

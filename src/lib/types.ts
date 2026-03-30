@@ -38,3 +38,76 @@ export interface ResumenBarberoCierre {
   totalBruto: number;
   totalComision: number;
 }
+
+export interface ClientPreferences {
+  allergies?: string;
+  productPreferences?: string;
+  extraNotes?: string;
+}
+
+export type ClientVipTag = string;
+
+export interface ClientSummary {
+  id: string;
+  name: string;
+  phoneRaw: string | null;
+  esMarciano: boolean;
+  archivedAt: Date | null;
+  totalVisits: number;
+  lastVisitAt: Date | null;
+  lastVisitBarberoNombre?: string | null;
+}
+
+export interface VisitLogSummary {
+  id: string;
+  visitedAt: Date;
+  barberNotes: string | null;
+  tags: string[];
+  photoUrls: string[];
+  propinaEstrellas: number;
+  authorBarberoName?: string | null;
+}
+
+export interface ClientProfileEvent {
+  id: string;
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+  createdAt: Date;
+  changedByName?: string | null;
+}
+
+export interface MarcianoUsage {
+  mes: string;
+  cortesUsados: number;
+  consumicionesUsadas: number;
+  sorteosParticipados: number;
+}
+
+export interface MarcianoBeneficiosConfig {
+  cortesPorMes: number | null;
+  consumicionesPorMes: number | null;
+  sorteosPorMes: number | null;
+}
+
+export interface ClientProfile extends ClientSummary {
+  avatarUrl: string | null;
+  tags: string[];
+  notes: string | null;
+  preferences: ClientPreferences | null;
+  marcianoDesde: Date | null;
+  createdByUserId: string;
+  createdByBarberoId: string | null;
+  visits: VisitLogSummary[];
+  auditEvents: ClientProfileEvent[];
+  marcianoUsage: MarcianoUsage | null;
+}
+
+export interface VisitLogInput {
+  barberNotes?: string;
+  tags?: string[];
+  photoUrls?: string[];
+  propinaEstrellas?: number;
+}
+
+export type ClientBriefingScope = "admin" | "barbero";

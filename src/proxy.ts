@@ -58,6 +58,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname.startsWith("/clientes")) {
+    if (!isAuthenticated) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    return NextResponse.next();
+  }
+
   return NextResponse.next();
 }
 
@@ -71,5 +78,6 @@ export const config = {
     "/inventario/:path*",
     "/repago/:path*",
     "/caja/:path*",
+    "/clientes/:path*",
   ],
 };
