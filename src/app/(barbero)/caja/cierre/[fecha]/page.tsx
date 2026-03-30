@@ -2,18 +2,11 @@ import { db } from "@/db";
 import { barberos, cierresCaja } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { normalizeCierreResumen, type ResumenBarberoCierre } from "@/lib/caja-finance";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import PrintButton from "./_PrintButton";
-
-type ResumenBarbero = {
-  nombre: string;
-  cortes: number;
-  totalBruto: number;
-  comisionCalculada: number;
-  alquilerBancoDiario: number;
-};
 
 export default async function CierreDetallePage({
   params,
@@ -35,15 +28,12 @@ export default async function CierreDetallePage({
 
   if (!cierre) notFound();
 
-  const resumen = cierre.resumenBarberos as Record<string, ResumenBarbero> | null;
+  const resumen = normalizeCierreResumen({
+    resumenBarberos: cierre.resumenBarberos,
+    totalNeto: cierre.totalNeto,
+    totalProductos: cierre.totalProductos,
+  });
 
-  // Para la casa: neto − suma comisiones barberos
-  const totalComisionesBarberos = resumen
-    ? Object.values(resumen).reduce((s, b) => s + Number(b.comisionCalculada ?? 0), 0)
-    : 0;
-  const paraLaCasa = Number(cierre.totalNeto ?? 0) - totalComisionesBarberos;
-
-  // Si es barbero, buscar su barberoId para filtrar
   let barberoIdDelUsuario: string | null = null;
   if (!isAdmin && userId) {
     const [barberoDelUsuario] = await db
@@ -54,16 +44,12 @@ export default async function CierreDetallePage({
     barberoIdDelUsuario = barberoDelUsuario?.id ?? null;
   }
 
-  // Filtrar resumen para mostrar
-  const resumenFiltrado: Record<string, ResumenBarbero> = resumen
-    ? isAdmin
-      ? resumen
-      : barberoIdDelUsuario && resumen[barberoIdDelUsuario]
-        ? { [barberoIdDelUsuario]: resumen[barberoIdDelUsuario] }
-        : {}
-    : {};
+  const resumenFiltrado: Record<string, ResumenBarberoCierre> = isAdmin
+    ? resumen.barberos
+    : barberoIdDelUsuario && resumen.barberos[barberoIdDelUsuario]
+      ? { [barberoIdDelUsuario]: resumen.barberos[barberoIdDelUsuario] }
+      : {};
 
-  // Formatear hora del cierre
   const horaCierre = cierre.cerradoEn
     ? new Date(cierre.cerradoEn).toLocaleTimeString("es-AR", {
         hour: "2-digit",
@@ -75,67 +61,96 @@ export default async function CierreDetallePage({
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <Link href="/caja" className="print:hidden text-gray-400 hover:text-gray-600 text-sm">
-          ← Caja
+        <Link href="/caja" className="print:hidden text-sm text-gray-400 hover:text-gray-600">
+          {"<- Caja"}
         </Link>
-        <h2 className="text-lg font-semibold text-gray-900 mt-1 capitalize">
-          Cierre de caja — {formatFechaLarga(fecha)}
+        <h2 className="mt-1 text-lg font-semibold text-gray-900 capitalize">
+          Cierre de caja - {formatFechaLarga(fecha)}
         </h2>
       </div>
 
-      {/* Botón imprimir */}
-      <div className="print:hidden">
+      <div className="print:hidden flex flex-wrap gap-2">
         <PrintButton />
+        {isAdmin && (
+          <a
+            href={`/api/pdf/cierre/${fecha}`}
+            download
+            className="min-h-[44px] inline-flex items-center px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
+            Descargar PDF
+          </a>
+        )}
       </div>
 
-      {/* Banner cierre */}
-      <div className="bg-gray-900 text-white rounded-xl p-4">
+      <div className="rounded-xl bg-gray-900 p-4 text-white">
         <div className="text-sm font-semibold">
-          ✓ Caja cerrada{horaCierre ? ` a las ${horaCierre}` : ""}
+          Caja cerrada{horaCierre ? ` a las ${horaCierre}` : ""}
         </div>
       </div>
 
-      {/* Totales */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Totales</h3>
+      <div className="rounded-xl border border-gray-200 bg-white p-4">
+        <h3 className="mb-3 text-sm font-semibold text-gray-700">Totales del dia</h3>
         <div className="flex flex-col gap-2">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Total bruto</span>
-            <span className="text-gray-900 font-medium">{formatARS(cierre.totalBruto)}</span>
+            <span className="text-gray-500">Total bruto del dia</span>
+            <span className="font-medium text-gray-900">{formatARS(cierre.totalBruto)}</span>
           </div>
           {Number(cierre.totalComisionesMedios ?? 0) > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Comisiones cobradas</span>
-              <span className="text-red-600">−{formatARS(cierre.totalComisionesMedios)}</span>
+              <span className="text-gray-500">Comisiones medios de pago</span>
+              <span className="text-red-600">-{formatARS(cierre.totalComisionesMedios)}</span>
             </div>
           )}
-          <div className="flex justify-between text-sm border-t border-gray-100 pt-2 mt-1">
-            <span className="text-gray-500">Total neto</span>
-            <span className="text-gray-900 font-bold">{formatARS(cierre.totalNeto)}</span>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">Caja neta del dia</span>
+            <span className="font-bold text-gray-900">{formatARS(cierre.totalNeto)}</span>
           </div>
+          <div className="mt-1 flex justify-between border-t border-gray-100 pt-2 text-sm">
+            <span className="text-gray-500">Servicios netos</span>
+            <span className="font-medium text-gray-900">
+              {formatARS(resumen.totales.cajaNetaServicios)}
+            </span>
+          </div>
+          {Number(cierre.totalProductos ?? 0) > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Productos brutos</span>
+              <span className="font-medium text-gray-900">
+                {formatARS(cierre.totalProductos)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Por barbero */}
       {Object.keys(resumenFiltrado).length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Por barbero</h3>
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <h3 className="mb-3 text-sm font-semibold text-gray-700">Por barbero</h3>
           <div className="flex flex-col gap-3">
-            {Object.values(resumenFiltrado).map((b) => (
-              <div key={b.nombre} className="text-sm">
+            {Object.values(resumenFiltrado).map((barbero) => (
+              <div key={barbero.nombre} className="text-sm">
                 <div className="flex justify-between">
-                  <span className="font-medium text-gray-900">{b.nombre}</span>
+                  <span className="font-medium text-gray-900">{barbero.nombre}</span>
                   <span className="text-gray-500">
-                    {b.cortes} {b.cortes === 1 ? "corte" : "cortes"}
+                    {barbero.cortes} {barbero.cortes === 1 ? "corte" : "cortes"}
                   </span>
                 </div>
-                <div className="flex justify-between text-gray-500 mt-0.5">
-                  <span>Bruto: {formatARS(b.totalBruto)}</span>
-                  <span>Comisión: {formatARS(b.comisionCalculada)}</span>
+                <div className="mt-0.5 flex justify-between text-gray-500">
+                  <span>Bruto: {formatARS(barbero.totalBruto)}</span>
+                  <span>Comision: {formatARS(barbero.comisionCalculada)}</span>
                 </div>
-                {b.alquilerBancoDiario > 0 && (
-                  <div className="text-gray-400 text-xs mt-0.5">
-                    Alquiler banco/día (referencia): {formatARS(b.alquilerBancoDiario)}
+                {barbero.aporteCasaServicios > 0 && (
+                  <div className="mt-0.5 text-xs text-gray-400">
+                    Aporte casa por servicios: {formatARS(barbero.aporteCasaServicios)}
+                  </div>
+                )}
+                {barbero.ingresoNetoServicios > 0 && (
+                  <div className="mt-0.5 text-xs text-gray-400">
+                    Ingreso neto propio: {formatARS(barbero.ingresoNetoServicios)}
+                  </div>
+                )}
+                {barbero.alquilerBancoDiario > 0 && (
+                  <div className="mt-0.5 text-xs text-gray-400">
+                    Alquiler banco/dia devengado: {formatARS(barbero.alquilerBancoDiario)}
                   </div>
                 )}
               </div>
@@ -144,22 +159,38 @@ export default async function CierreDetallePage({
         </div>
       )}
 
-      {/* Para la casa (solo admin) */}
-      {isAdmin && (
-        <div className="bg-gray-900 text-white rounded-xl p-4">
-          <div className="text-sm text-gray-400 mb-1">Para la casa</div>
-          <div className="text-2xl font-bold">{formatARS(paraLaCasa)}</div>
-          <div className="text-xs text-gray-400 mt-1">
-            Neto {formatARS(cierre.totalNeto)} − comisiones barberos{" "}
-            {formatARS(totalComisionesBarberos)}
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <div className="mb-1 text-sm text-gray-500">Caja neta del dia</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {formatARS(resumen.totales.cajaNetaDia)}
+          </div>
+          <div className="mt-1 text-xs text-gray-400">
+            Servicios {formatARS(resumen.totales.cajaNetaServicios)}
+            {" · "}
+            Productos {formatARS(resumen.totales.cajaNetaProductos)}
           </div>
         </div>
-      )}
 
-      {/* Atenciones */}
+        {isAdmin && (
+          <div className="rounded-xl bg-gray-900 p-4 text-white">
+            <div className="mb-1 text-sm text-gray-400">Aporte economico casa</div>
+            <div className="text-2xl font-bold">
+              {formatARS(resumen.totales.aporteEconomicoCasaDia)}
+            </div>
+            <div className="mt-1 text-xs text-gray-400">
+              Servicios {formatARS(resumen.totales.aporteCasaServicios)}
+              {" · "}
+              Productos {formatARS(resumen.totales.margenProductos)}
+              {" · "}
+              Alquiler devengado {formatARS(resumen.totales.alquilerBancoDevengadoDia)}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="text-sm text-gray-500">
-        Atenciones:{" "}
-        <strong className="text-gray-900">{cierre.cantidadAtenciones ?? 0}</strong>
+        Atenciones: <strong className="text-gray-900">{cierre.cantidadAtenciones ?? 0}</strong>
       </div>
 
       <style>{`
@@ -171,8 +202,6 @@ export default async function CierreDetallePage({
     </div>
   );
 }
-
-// ─── Helpers ─────────────────────────────────────────
 
 function formatARS(val: string | number | null | undefined): string {
   if (val === null || val === undefined || val === "") return "$0";

@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { liquidaciones, barberos } from "@/db/schema";
+import { barberos, liquidaciones } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -8,12 +8,16 @@ import MarcarPagadaButton from "./_MarcarPagadaButton";
 import PrintButton from "./_PrintButton";
 
 function formatARS(val: string | number | null | undefined): string {
-  if (!val) return "$0";
-  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 }).format(Number(val));
+  if (val === null || val === undefined || val === "") return "$0";
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    minimumFractionDigits: 0,
+  }).format(Number(val));
 }
 
 function formatFecha(val: string | null | undefined): string {
-  if (!val) return "—";
+  if (!val) return "-";
   return new Date(val + "T12:00:00").toLocaleDateString("es-AR", {
     day: "numeric",
     month: "long",
@@ -44,119 +48,155 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
     .limit(1);
 
   const comision = Number(liq.totalComisionCalculada ?? 0);
-  const sueldoMin = Number(liq.sueldoMinimo ?? 0);
-  const seAplicoMinimo = sueldoMin > 0 && comision < sueldoMin;
+  const sueldoMinimo = Number(liq.sueldoMinimo ?? 0);
+  const alquilerBanco = Number(liq.alquilerBancoCobrado ?? 0);
+  const baseLiquidable = Math.max(comision, sueldoMinimo);
+  const resultadoPeriodo = baseLiquidable - alquilerBanco;
+  const montoAPagar = Number(liq.montoAPagar ?? 0);
+  const seAplicoMinimo = sueldoMinimo > 0 && comision < sueldoMinimo;
+  const mesNegativo = resultadoPeriodo < 0;
 
-  // Bind el id al server action
   const marcarConId = marcarPagada.bind(null, id);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-4">
-        <div className="max-w-2xl mx-auto">
-          <Link href="/liquidaciones" className="print:hidden text-gray-400 hover:text-gray-600 text-sm mb-2 block">← Liquidaciones</Link>
-          <div className="flex items-center justify-between gap-3 flex-wrap">
+      <header className="border-b border-gray-200 bg-white px-4 py-4">
+        <div className="mx-auto max-w-2xl">
+          <Link
+            href="/liquidaciones"
+            className="print:hidden mb-2 block text-sm text-gray-400 hover:text-gray-600"
+          >
+            {"<- Liquidaciones"}
+          </Link>
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-xl font-bold text-gray-900">
-              Liquidación — {barbero?.nombre ?? "—"}
+              Liquidacion - {barbero?.nombre ?? "-"}
             </h1>
-            <span className={`text-xs px-2 py-0.5 rounded-full ${liq.pagado ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"}`}>
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs ${
+                liq.pagado ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"
+              }`}
+            >
               {liq.pagado ? "Pagado" : "Pendiente"}
             </span>
           </div>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {formatFecha(liq.periodoInicio)} — {formatFecha(liq.periodoFin)}
+          <p className="mt-0.5 text-sm text-gray-500">
+            {formatFecha(liq.periodoInicio)} - {formatFecha(liq.periodoFin)}
           </p>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4">
-        {/* Botón imprimir */}
-        <div className="print:hidden">
+      <main className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-6">
+        <div className="print:hidden flex flex-wrap gap-2">
           <PrintButton />
+          <a
+            href={`/api/pdf/liquidacion/${id}`}
+            download
+            className="min-h-[44px] inline-flex items-center px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
+            Descargar PDF
+          </a>
         </div>
 
-        {/* Resumen de pago */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">Resumen</h2>
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold text-gray-700">Resumen</h2>
           <div className="flex flex-col gap-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Cortes realizados</span>
-              <span className="text-gray-900 font-medium">{liq.totalCortes ?? 0}</span>
+              <span className="font-medium text-gray-900">{liq.totalCortes ?? 0}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Total bruto cortes</span>
-              <span className="text-gray-900 font-medium">{formatARS(liq.totalBrutoCortes)}</span>
+              <span className="font-medium text-gray-900">{formatARS(liq.totalBrutoCortes)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Comisión calculada</span>
-              <span className="text-gray-900 font-medium">{formatARS(liq.totalComisionCalculada)}</span>
+              <span className="text-gray-500">Comision calculada</span>
+              <span className="font-medium text-gray-900">{formatARS(liq.totalComisionCalculada)}</span>
             </div>
-            {sueldoMin > 0 && (
+            {sueldoMinimo > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Sueldo mínimo garantizado</span>
-                <span className="text-gray-900 font-medium">{formatARS(liq.sueldoMinimo)}</span>
+                <span className="text-gray-500">Sueldo minimo garantizado</span>
+                <span className="font-medium text-gray-900">{formatARS(liq.sueldoMinimo)}</span>
               </div>
             )}
-            {liq.alquilerBancoCobrado && Number(liq.alquilerBancoCobrado) > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Base liquidable</span>
+              <span className="font-medium text-gray-900">{formatARS(baseLiquidable)}</span>
+            </div>
+            {alquilerBanco > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Alquiler banco cobrado</span>
-                <span className="text-gray-900 font-medium">{formatARS(liq.alquilerBancoCobrado)}</span>
+                <span className="text-gray-500">Alquiler banco del periodo</span>
+                <span className="text-red-600">-{formatARS(liq.alquilerBancoCobrado)}</span>
               </div>
             )}
             {seAplicoMinimo && (
-              <div className="mt-1 text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg">
-                Se aplicó sueldo mínimo garantizado (comisión fue menor)
+              <div className="mt-1 rounded-lg bg-blue-50 px-3 py-1.5 text-xs text-blue-600">
+                Se aplico sueldo minimo garantizado porque la comision fue menor.
               </div>
             )}
-            <div className="border-t border-gray-100 pt-2 mt-1 flex justify-between text-sm">
-              <span className="text-gray-700 font-semibold">Monto a pagar</span>
-              <span className="text-gray-900 font-bold text-base">{formatARS(liq.montoAPagar)}</span>
+            {mesNegativo && (
+              <div className="rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
+                El periodo dio negativo. Se registra como resultado negativo del mes, sin deuda
+                ni arrastre.
+              </div>
+            )}
+            <div className="mt-1 flex justify-between border-t border-gray-100 pt-2 text-sm">
+              <span className="font-medium text-gray-700">Resultado neto del periodo</span>
+              <span className={resultadoPeriodo < 0 ? "font-bold text-red-600" : "font-bold text-gray-900"}>
+                {formatARS(resultadoPeriodo)}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="font-semibold text-gray-700">Monto a pagar</span>
+              <span className="text-base font-bold text-gray-900">{formatARS(montoAPagar)}</span>
             </div>
           </div>
         </div>
 
-        {/* Estado de pago */}
         {liq.pagado ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <h2 className="text-sm font-semibold text-gray-700 mb-2">Pago</h2>
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <h2 className="mb-2 text-sm font-semibold text-gray-700">Pago</h2>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Fecha de pago</span>
-              <span className="text-gray-900 font-medium">{formatFecha(liq.fechaPago)}</span>
+              <span className="font-medium text-gray-900">{formatFecha(liq.fechaPago)}</span>
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 p-4 print:hidden">
-            <h2 className="text-sm font-semibold text-gray-700 mb-3">Registrar pago</h2>
+          <div className="print:hidden rounded-xl border border-gray-200 bg-white p-4">
+            <h2 className="mb-3 text-sm font-semibold text-gray-700">Registrar pago</h2>
             <MarcarPagadaButton marcarAction={marcarConId} />
           </div>
         )}
 
-        {/* Notas */}
         {liq.notas && (
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <h2 className="text-sm font-semibold text-gray-700 mb-1">Notas</h2>
-            <p className="text-sm text-gray-600 whitespace-pre-line">{liq.notas}</p>
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <h2 className="mb-1 text-sm font-semibold text-gray-700">Notas</h2>
+            <p className="whitespace-pre-line text-sm text-gray-600">{liq.notas}</p>
           </div>
         )}
 
-        {/* Metadatos */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h2 className="text-sm font-semibold text-gray-700 mb-2">Detalles</h2>
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <h2 className="mb-2 text-sm font-semibold text-gray-700">Detalles</h2>
           <div className="flex flex-col gap-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Barbero</span>
-              <span className="text-gray-900 font-medium">{barbero?.nombre ?? "—"}</span>
+              <span className="font-medium text-gray-900">{barbero?.nombre ?? "-"}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Modelo</span>
-              <span className="text-gray-900 font-medium capitalize">{barbero?.tipoModelo ?? "—"}</span>
+              <span className="font-medium capitalize text-gray-900">{barbero?.tipoModelo ?? "-"}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Generada</span>
-              <span className="text-gray-900 font-medium">
+              <span className="font-medium text-gray-900">
                 {liq.creadoEn
-                  ? new Date(liq.creadoEn).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" })
-                  : "—"}
+                  ? new Date(liq.creadoEn).toLocaleDateString("es-AR", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      timeZone: "America/Argentina/Buenos_Aires",
+                    })
+                  : "-"}
               </span>
             </div>
           </div>

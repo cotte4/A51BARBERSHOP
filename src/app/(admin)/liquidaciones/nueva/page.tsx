@@ -6,6 +6,7 @@ import NuevaLiquidacionForm from "./_NuevaLiquidacionForm";
 
 export default async function NuevaLiquidacionPage() {
   const barberosActivos = await db.select().from(barberos).where(eq(barberos.activo, true));
+  const barberosLiquidables = barberosActivos.filter((barbero) => barbero.rol !== "admin");
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -18,7 +19,7 @@ export default async function NuevaLiquidacionPage() {
       <main className="max-w-2xl mx-auto px-4 py-6">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <NuevaLiquidacionForm
-            barberosList={barberosActivos.map(b => ({ id: b.id, nombre: b.nombre }))}
+            barberosList={barberosLiquidables.map(b => ({ id: b.id, nombre: b.nombre }))}
           />
         </div>
       </main>

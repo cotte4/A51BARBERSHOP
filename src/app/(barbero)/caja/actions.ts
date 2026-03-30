@@ -14,6 +14,7 @@ import {
 } from "@/db/schema";
 import { eq, inArray, and, gte, lte, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { buildCierreResumen } from "@/lib/caja-finance";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -341,14 +342,40 @@ export async function cerrarCaja(
       .from(atenciones)
       .where(and(eq(atenciones.fecha, fechaHoy), eq(atenciones.anulado, false)));
 
-    // 4. Calcular totales generales
-    const totalBruto = atencionesDelDia.reduce((sum, a) => sum + Number(a.precioCobrado ?? 0), 0);
-    const totalComisionesMedios = atencionesDelDia.reduce((sum, a) => sum + Number(a.comisionMedioPagoMonto ?? 0), 0);
-    const totalNeto = atencionesDelDia.reduce((sum, a) => sum + Number(a.montoNeto ?? 0), 0);
+    const barberosList = await db.select().from(barberos);
+    const mediosPagoList = await db.select().from(mediosPago);
     const cantidadAtenciones = atencionesDelDia.length;
 
-    // 5. Totales por medio de pago — necesitamos los nombres de medios de pago
-    const mediosPagoList = await db.select().from(mediosPago);
+    // 4. Calcular totales generales y caja neta real del día
+    const fechaHoyDate = new Date(fechaHoy + "T00:00:00-03:00");
+    const finDia = new Date(fechaHoy + "T23:59:59-03:00");
+    const ventasProductos = await db.select().from(stockMovimientos)
+      .where(and(
+        eq(stockMovimientos.tipo, "venta"),
+        gte(stockMovimientos.fecha, fechaHoyDate),
+        lte(stockMovimientos.fecha, finDia)
+      ));
+    const productosList = ventasProductos.length > 0 ? await db.select().from(productos) : [];
+
+    const cierreResumen = buildCierreResumen({
+      fecha: fechaHoy,
+      atenciones: atencionesDelDia,
+      barberos: barberosList,
+      ventasProductos: ventasProductos.map((venta) => ({
+        productoId: venta.productoId,
+        cantidad: venta.cantidad,
+        precioUnitario: venta.precioUnitario,
+        medioPagoId: venta.notas,
+      })),
+      productos: productosList,
+      mediosPago: mediosPagoList,
+    });
+
+    const totalBruto = cierreResumen.totales.totalBrutoDia;
+    const totalComisionesMedios = cierreResumen.totales.totalComisionesMediosDia;
+    const totalNeto = cierreResumen.totales.cajaNetaDia;
+
+    // 5. Totales por medio de pago — servicios + productos
     const mediosPagoMap = new Map(mediosPagoList.map(m => [m.id, m]));
 
     // Acumular por nombre de medio de pago
@@ -358,6 +385,13 @@ export async function cerrarCaja(
       const mp = mediosPagoMap.get(a.medioPagoId);
       const nombre = (mp?.nombre ?? "otro").toLowerCase();
       totalesPorMedio[nombre] = (totalesPorMedio[nombre] ?? 0) + Number(a.precioCobrado ?? 0);
+    }
+    for (const venta of ventasProductos) {
+      if (!venta.notas) continue;
+      const mp = mediosPagoMap.get(venta.notas);
+      const nombre = (mp?.nombre ?? "otro").toLowerCase();
+      const totalVenta = Math.abs(Number(venta.cantidad ?? 0)) * Number(venta.precioUnitario ?? 0);
+      totalesPorMedio[nombre] = (totalesPorMedio[nombre] ?? 0) + totalVenta;
     }
 
     // Mapear a campos del schema
@@ -372,58 +406,14 @@ export async function cerrarCaja(
       .filter(([k]) => k.includes("posnet"))
       .reduce((sum, [, v]) => sum + v, 0);
 
-    // 6. Resumen por barbero
-    const barberosMap = new Map((await db.select().from(barberos)).map(b => [b.id, b]));
-    const resumenBarberos: Record<string, {
-      nombre: string;
-      cortes: number;
-      totalBruto: number;
-      comisionCalculada: number;
-      alquilerBancoDiario: number;
-    }> = {};
-
-    for (const a of atencionesDelDia) {
-      if (!a.barberoId) continue;
-      const barbero = barberosMap.get(a.barberoId);
-      if (!barbero) continue;
-      if (!resumenBarberos[a.barberoId]) {
-        resumenBarberos[a.barberoId] = {
-          nombre: barbero.nombre,
-          cortes: 0,
-          totalBruto: 0,
-          comisionCalculada: 0,
-          alquilerBancoDiario: barbero.tipoModelo === "hibrido"
-            ? Number(barbero.alquilerBancoMensual ?? 0) / 30
-            : 0,
-        };
-      }
-      resumenBarberos[a.barberoId].cortes += 1;
-      resumenBarberos[a.barberoId].totalBruto += Number(a.precioCobrado ?? 0);
-      resumenBarberos[a.barberoId].comisionCalculada += Number(a.comisionBarberoMonto ?? 0);
-    }
-
-    // 7. Calcular total productos vendidos en el día
-    const fechaHoyDate = new Date(fechaHoy + "T00:00:00-03:00");
-    const finDia = new Date(fechaHoy + "T23:59:59-03:00");
-    const ventasProductos = await db.select().from(stockMovimientos)
-      .where(and(
-        eq(stockMovimientos.tipo, "venta"),
-        gte(stockMovimientos.fecha, fechaHoyDate),
-        lte(stockMovimientos.fecha, finDia)
-      ));
-    const totalProdVenta = ventasProductos.reduce(
-      (sum, v) => sum + Math.abs(Number(v.cantidad ?? 0)) * Number(v.precioUnitario ?? 0),
-      0
-    );
-
-    // 9. Obtener barbero del admin que cierra (para cerradoPor)
+    // 6. Obtener barbero del admin que cierra (para cerradoPor)
     const [barberoAdmin] = await db
       .select({ id: barberos.id })
       .from(barberos)
       .where(eq(barberos.userId, session!.user.id))
       .limit(1);
 
-    // 10. Insertar cierre
+    // 7. Insertar cierre
     const [nuevoCierre] = await db
       .insert(cierresCaja)
       .values({
@@ -435,16 +425,16 @@ export async function cerrarCaja(
         totalBruto: String(totalBruto.toFixed(2)),
         totalComisionesMedios: String(totalComisionesMedios.toFixed(2)),
         totalNeto: String(totalNeto.toFixed(2)),
-        totalCortesBruto: String(totalBruto.toFixed(2)),
-        totalProductos: String(totalProdVenta.toFixed(2)),
-        resumenBarberos,
+        totalCortesBruto: String(cierreResumen.totales.totalServiciosBruto.toFixed(2)),
+        totalProductos: String(cierreResumen.totales.totalProductosBruto.toFixed(2)),
+        resumenBarberos: cierreResumen,
         cantidadAtenciones,
         cerradoPor: barberoAdmin?.id ?? null,
         cerradoEn: new Date(),
       })
       .returning();
 
-    // 11. Vincular atenciones al cierre
+    // 8. Vincular atenciones al cierre
     if (atencionesDelDia.length > 0) {
       await db
         .update(atenciones)
@@ -540,11 +530,13 @@ export async function registrarVentaProducto(
 
     // Insertar movimiento de stock
     const precioUnitario = precioCobrado / cantidad;
+    const costoUnitarioSnapshot = Number(producto.costoCompra ?? 0);
     await db.insert(stockMovimientos).values({
       productoId,
       tipo: "venta",
       cantidad: -cantidad,
       precioUnitario: String(precioUnitario.toFixed(2)),
+      costoUnitarioSnapshot: String(costoUnitarioSnapshot.toFixed(2)),
       notas: medioPagoId,
     });
   } catch (e) {

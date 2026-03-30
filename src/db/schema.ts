@@ -237,6 +237,7 @@ export const stockMovimientos = pgTable(
     tipo: text("tipo").notNull(),
     cantidad: integer("cantidad"),
     precioUnitario: numeric("precio_unitario", { precision: 12, scale: 2 }),
+    costoUnitarioSnapshot: numeric("costo_unitario_snapshot", { precision: 12, scale: 2 }),
     referenciaId: uuid("referencia_id"),
     notas: text("notas"),
     fecha: timestamp("fecha", { withTimezone: true }).defaultNow(),
@@ -361,6 +362,9 @@ export const repagoMemas = pgTable("repago_memas", {
   saldoPendiente: numeric("saldo_pendiente", { precision: 12, scale: 2 }),
   fechaInicio: date("fecha_inicio"),
   pagadoCompleto: boolean("pagado_completo").default(false),
+  deudaUsd: numeric("deuda_usd", { precision: 10, scale: 2 }),
+  tasaAnualUsd: numeric("tasa_anual_usd", { precision: 5, scale: 4 }),
+  cantidadCuotasPactadas: integer("cantidad_cuotas_pactadas"),
 });
 
 export const repagoMemasCuotas = pgTable("repago_memas_cuotas", {
@@ -369,4 +373,21 @@ export const repagoMemasCuotas = pgTable("repago_memas_cuotas", {
   fechaPago: date("fecha_pago"),
   montoPagado: numeric("monto_pagado", { precision: 12, scale: 2 }),
   comprobanteUrl: text("comprobante_url"),
+  repagoId: uuid("repago_id").references(() => repagoMemas.id),
+  capitalPagado: numeric("capital_pagado", { precision: 12, scale: 2 }),
+  interesPagado: numeric("interes_pagado", { precision: 12, scale: 2 }),
+  tcDia: numeric("tc_dia", { precision: 10, scale: 2 }),
+  notas: text("notas"),
+});
+
+// ————————————————————————————
+// CONFIGURACIÓN DEL NEGOCIO
+// ————————————————————————————
+export const configuracionNegocio = pgTable("configuracion_negocio", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  presupuestoMensualGastos: integer("presupuesto_mensual_gastos")
+    .notNull()
+    .default(1956686),
+  actualizadoEn: timestamp("actualizado_en", { withTimezone: true }).defaultNow(),
+  actualizadoPor: text("actualizado_por"),
 });

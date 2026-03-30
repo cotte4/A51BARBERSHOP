@@ -258,11 +258,25 @@ async function seed() {
       saldoPendiente: "2384571.00",
       fechaInicio: "2026-05-01",
       pagadoCompleto: false,
+      deudaUsd: "1500.00",
+      tasaAnualUsd: "0.1000",
+      cantidadCuotasPactadas: 12,
     });
-    console.log("  ✓ Deuda llave: $2.384.571 en cuotas de $400.000/mes");
+    console.log("  ✓ Deuda llave: $2.384.571 / u$d 1.500 en 12 cuotas (10% anual)");
   } else {
     console.log("  ~ Repago Memas ya configurado, saltando...");
   }
+
+  // ————————————————————————————
+  // 8. Configuración del negocio (singleton)
+  // ————————————————————————————
+  console.log("\nInsertando configuracion_negocio...");
+
+  await db.insert(schema.configuracionNegocio).values({
+    presupuestoMensualGastos: 1956686,
+    actualizadoPor: "seed",
+  }).onConflictDoNothing();
+  console.log("  ✓ Presupuesto mensual: $1.956.686 (actualizado_por: seed)");
 
   console.log("\n✓ Seed completado exitosamente.\n");
   console.log("Usuarios creados:");

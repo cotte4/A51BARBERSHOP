@@ -4,6 +4,7 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import Link from "next/link";
+import LogoutButton from "@/components/LogoutButton";
 
 export default async function BarberoLayout({ children }: { children: React.ReactNode }) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -33,6 +34,7 @@ export default async function BarberoLayout({ children }: { children: React.Reac
                 Config
               </Link>
             )}
+            <LogoutButton />
           </div>
         </div>
       </header>

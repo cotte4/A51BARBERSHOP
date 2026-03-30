@@ -62,6 +62,9 @@ export async function generarLiquidacion(
     // 4. Obtener datos del barbero
     const [barbero] = await db.select().from(barberos).where(eq(barberos.id, barberoId)).limit(1);
     if (!barbero) return { error: "Barbero no encontrado." };
+    if (barbero.rol === "admin") {
+      return { error: "Pinky no se liquida como empleado. Elegi un barbero liquidable." };
+    }
 
     // 5. Calcular desde atenciones del período
     const atencionesDelPeriodo = await db
@@ -85,7 +88,9 @@ export async function generarLiquidacion(
       ? Number(barbero.alquilerBancoMensual ?? 0)
       : 0;
 
-    const montoAPagar = Math.max(totalComisionCalculada, sueldoMinimo);
+    const baseLiquidable = Math.max(totalComisionCalculada, sueldoMinimo);
+    const resultadoPeriodo = baseLiquidable - alquilerBancoCobrado;
+    const montoAPagar = Math.max(0, resultadoPeriodo);
 
     // 6. Insertar liquidación
     await db.insert(liquidaciones).values({
