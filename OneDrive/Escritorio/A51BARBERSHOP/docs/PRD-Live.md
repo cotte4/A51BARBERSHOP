@@ -343,6 +343,7 @@ Documentos que ya existen y siguen siendo utiles:
 - `docs/plans/vip-clients.md` - Fase 4 (VIP Clients + Marcianos), implementada y verificada
 - `docs/plans/fase-5-turnos.md` - Fase 5 (Turnos + One-click), implementada en codigo
 - `docs/plans/fase-6-mi-resultado.md` - Fase 6 (Mi Resultado + Gastos Rapidos), draft
+- `docs/plans/go-live-seed-capacitacion.md` - preparacion operativa pre go-live (seed real + validacion + capacitacion)
 - `docs/qa/*.md`
 - `docs/research/backend-stack.md`
 - `docs/research/pdf-y-blob.md`
@@ -384,6 +385,7 @@ No agregar aqui:
 - Fase 6 implementada, verificada por build y QA en produccion (sesion 13, 30/03/2026)
 - **TODAS LAS FASES COMPLETAS** — sistema listo para operacion (deadline: mayo 2026)
 - proximos pasos: seed de datos reales, capacitacion de usuarios (Pinky/Gabote), go-live
+- siguiente plan operativo: `docs/plans/go-live-seed-capacitacion.md`
 
 ### Decisiones tomadas sobre Fase 3 (29/03/2026)
 
