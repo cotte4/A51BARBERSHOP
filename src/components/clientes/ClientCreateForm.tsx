@@ -1,10 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useActionState, useEffect, useState } from "react";
 import {
   createClientAction,
   type ClientFormState,
 } from "@/app/(barbero)/clientes/actions";
+import ClientAvatarUploader from "@/components/clientes/ClientAvatarUploader";
 
 const initialState: ClientFormState = {};
 
@@ -28,6 +29,8 @@ export default function ClientCreateForm({ isAdmin }: ClientCreateFormProps) {
 
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="space-y-4">
+          <ClientAvatarUploader />
+
           <div>
             <label htmlFor="name" className="mb-1 block text-sm font-medium text-gray-700">
               Nombre

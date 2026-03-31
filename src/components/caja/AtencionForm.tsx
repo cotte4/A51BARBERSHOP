@@ -722,10 +722,15 @@ export default function AtencionForm({
                 min="0"
                 step="1"
                 value={precioCobrado}
-                disabled={!allowManualPrice}
+                readOnly={!allowManualPrice}
+                aria-readonly={!allowManualPrice}
                 onChange={(event) => setPrecioCobrado(event.target.value)}
                 placeholder="0"
-                className="h-14 w-full rounded-2xl border border-zinc-700 bg-zinc-950 pl-8 pr-4 text-lg font-semibold text-white outline-none transition disabled:cursor-not-allowed disabled:bg-zinc-900 disabled:text-zinc-500 focus:border-[#8cff59]"
+                className={`h-14 w-full rounded-2xl border border-zinc-700 pl-8 pr-4 text-lg font-semibold outline-none transition focus:border-[#8cff59] ${
+                  allowManualPrice
+                    ? "bg-zinc-950 text-white"
+                    : "cursor-not-allowed bg-zinc-900 text-zinc-500"
+                }`}
               />
             </div>
 

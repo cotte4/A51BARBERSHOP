@@ -1,3 +1,4 @@
+﻿import Image from "next/image";
 import Link from "next/link";
 import type { ClientSummary } from "@/lib/types";
 
@@ -23,16 +24,18 @@ export default function ClientCard({ client }: ClientCardProps) {
     .join("");
 
   const barberMemory = client.lastVisitNote?.trim() || "Sin nota del ultimo corte";
-  const relativeLastVisit = client.lastVisitAt
-    ? formatRelativeVisit(client.lastVisitAt)
-    : "Todavia no vino";
+  const relativeLastVisit = client.lastVisitAt ? formatRelativeVisit(client.lastVisitAt) : "Todavia no vino";
 
   return (
     <article className="panel-card rounded-3xl p-4 transition hover:border-[#8cff59]/25">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#8cff59] text-sm font-semibold text-[#07130a]">
-            {initials || "CL"}
+          <div className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#8cff59] text-sm font-semibold text-[#07130a] ring-1 ring-[#8cff59]/20">
+            {client.avatarUrl ? (
+              <Image src={client.avatarUrl} alt={client.name} fill sizes="56px" className="object-cover" />
+            ) : (
+              initials || "CL"
+            )}
           </div>
 
           <div>
@@ -81,7 +84,7 @@ export default function ClientCard({ client }: ClientCardProps) {
 
       <div className="mt-4 flex flex-wrap gap-3">
         <Link
-          href="/reservar/pinky"
+          href="/turnos"
           className="ghost-button inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 text-sm font-semibold"
         >
           Agendar turno
@@ -103,7 +106,7 @@ export default function ClientCard({ client }: ClientCardProps) {
   );
 }
 
-function formatRelativeVisit(date: Date): string {
+function formatRelativeVisit(date: Date) {
   const diffMs = Date.now() - new Date(date).getTime();
   const diffDays = Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
 

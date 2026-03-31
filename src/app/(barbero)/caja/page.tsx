@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, count, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import AnularButton from "@/components/caja/AnularButton";
 import GastoRapidoFAB from "@/components/gastos-rapidos/GastoRapidoFAB";
 import QuickActionButton from "@/components/turnos/QuickActionButton";
@@ -23,6 +23,22 @@ import {
   anularAtencion,
   registrarAtencionRapidaSeleccionadaAction,
 } from "./actions";
+
+type CajaPageProps = {
+  searchParams: Promise<{ vista?: string }>;
+};
+
+type MovementItem = {
+  id: string;
+  timestamp: Date | null;
+  timeLabel: string;
+  title: string;
+  subtitle: string;
+  amount: number;
+  tone: string;
+  badge: string;
+  detail: string;
+};
 
 function formatARS(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return "-";
@@ -53,6 +69,15 @@ function formatFechaLarga(fechaISO: string): string {
 function formatHora(hora: string | null): string {
   if (!hora) return "--:--";
   return hora.slice(0, 5);
+}
+
+function formatHoraDate(date: Date | null | undefined): string {
+  if (!date) return "--:--";
+  return new Intl.DateTimeFormat("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Argentina/Buenos_Aires",
+  }).format(date);
 }
 
 function getPaymentAccent(nombre: string | null | undefined) {
@@ -119,11 +144,13 @@ function getProductoEmoji(nombre: string | undefined) {
   return "PR";
 }
 
-export default async function CajaPage() {
+export default async function CajaPage({ searchParams }: CajaPageProps) {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
   const isAdmin = userRole === "admin";
   const userId = session?.user?.id;
+  const params = await searchParams;
+  const vista = params.vista === "detalle" ? "detalle" : "simple";
 
   const fechaHoy = getFechaHoy();
   const quickActionBarberoId = userId
@@ -142,8 +169,15 @@ export default async function CajaPage() {
       : "/caja/nueva?fromQuickAction=1";
 
   const [cierreHoy] = await db
-    .select({ id: cierresCaja.id })
+    .select({
+      id: cierresCaja.id,
+      totalNeto: cierresCaja.totalNeto,
+      totalBruto: cierresCaja.totalBruto,
+      cerradoEn: cierresCaja.cerradoEn,
+      cerradoPorNombre: barberos.nombre,
+    })
     .from(cierresCaja)
+    .leftJoin(barberos, eq(barberos.id, cierresCaja.cerradoPor))
     .where(eq(cierresCaja.fecha, fechaHoy))
     .limit(1);
 
@@ -230,6 +264,7 @@ export default async function CajaPage() {
       cantidad: stockMovimientos.cantidad,
       precioUnitario: stockMovimientos.precioUnitario,
       fecha: stockMovimientos.fecha,
+      notas: stockMovimientos.notas,
     })
     .from(stockMovimientos)
     .where(
@@ -238,7 +273,8 @@ export default async function CajaPage() {
         gte(stockMovimientos.fecha, inicioDia),
         lte(stockMovimientos.fecha, finDia)
       )
-    );
+    )
+    .orderBy(desc(stockMovimientos.fecha));
 
   const productosMap = new Map(
     (await db.select().from(productos)).map((producto) => [producto.id, producto])
@@ -272,6 +308,79 @@ export default async function CajaPage() {
     },
     new Map<string, string[]>()
   );
+
+  const paymentTotals = new Map<
+    string,
+    { label: string; amount: number; className: string }
+  >();
+
+  for (const atencion of atencionesActivas) {
+    const medio = mediosPagoMap.get(atencion.medioPagoId ?? "");
+    const accent = getPaymentAccent(medio?.nombre);
+    const current = paymentTotals.get(accent.label) ?? {
+      label: accent.label,
+      amount: 0,
+      className: accent.className,
+    };
+    current.amount += Number(atencion.montoNeto ?? 0);
+    paymentTotals.set(accent.label, current);
+  }
+
+  for (const venta of ventasProductosDia) {
+    const medio = mediosPagoMap.get(venta.notas ?? "");
+    const accent = getPaymentAccent(medio?.nombre);
+    const current = paymentTotals.get(accent.label) ?? {
+      label: accent.label,
+      amount: 0,
+      className: accent.className,
+    };
+    current.amount +=
+      Math.abs(Number(venta.cantidad ?? 0)) * Number(venta.precioUnitario ?? 0);
+    paymentTotals.set(accent.label, current);
+  }
+
+  const paymentBreakdown = [...paymentTotals.values()].sort((a, b) => b.amount - a.amount);
+
+  const mixedMovement: MovementItem[] = [
+    ...atencionesOrdenadas.map((atencion) => {
+      const servicio = serviciosMap.get(atencion.servicioId ?? "");
+      const barbero = barberosMap.get(atencion.barberoId ?? "");
+      const medio = mediosPagoMap.get(atencion.medioPagoId ?? "");
+      const accent = getPaymentAccent(medio?.nombre);
+
+      return {
+        id: `atencion-${atencion.id}`,
+        timestamp: atencion.creadoEn,
+        timeLabel: formatHora(atencion.hora),
+        title: servicio?.nombre ?? "Servicio",
+        subtitle: barbero?.nombre ?? "Sin barbero",
+        amount: Number(atencion.anulado ? atencion.precioCobrado : atencion.montoNeto ?? 0),
+        tone: atencion.anulado
+          ? "border-red-200 bg-red-50/80 text-red-700"
+          : "border-stone-200 bg-white text-stone-900",
+        badge: atencion.anulado ? "Anulada" : "Servicio",
+        detail: `${accent.label} · ${atencion.anulado ? "fuera de caja" : "entra al neto"}`,
+      };
+    }),
+    ...ventasProductosDia.map((venta) => {
+      const producto = productosMap.get(venta.productoId ?? "");
+      const medio = mediosPagoMap.get(venta.notas ?? "");
+      const accent = getPaymentAccent(medio?.nombre);
+      const cantidadAbs = Math.abs(Number(venta.cantidad ?? 0));
+
+      return {
+        id: `producto-${venta.id}`,
+        timestamp: venta.fecha,
+        timeLabel: formatHoraDate(venta.fecha),
+        title: producto?.nombre ?? "Producto",
+        subtitle: `${cantidadAbs} x ${formatARS(Number(venta.precioUnitario ?? 0))}`,
+        amount: cantidadAbs * Number(venta.precioUnitario ?? 0),
+        tone: "border-sky-200 bg-sky-50/70 text-sky-900",
+        badge: "Producto",
+        detail: accent.label,
+      };
+    }),
+  ].sort((a, b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0));
 
   const hoyStr = new Date().toLocaleDateString("en-CA", {
     timeZone: "America/Argentina/Buenos_Aires",
@@ -405,21 +514,21 @@ export default async function CajaPage() {
   ];
 
   return (
-    <main className="app-shell min-h-screen px-4 py-6">
+    <main className="app-shell min-h-screen px-4 py-6 pb-28">
       <div className="mx-auto max-w-6xl space-y-6">
         <section className="overflow-hidden rounded-[32px] bg-stone-950 text-stone-50 shadow-[0_24px_80px_rgba(28,25,23,0.22)]">
           <div className="bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.28),_transparent_32%),radial-gradient(circle_at_bottom_left,_rgba(245,158,11,0.18),_transparent_34%)] p-6 sm:p-7">
             <div className="flex flex-wrap items-start justify-between gap-5">
               <div className="max-w-3xl">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-300">
-                  Caja del dia
+                  Caja
                 </p>
                 <h1 className="mt-3 text-3xl font-semibold capitalize tracking-tight">
                   {formatFechaLarga(fechaHoy)}
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm text-stone-300">
-                  Prioriza registrar rapido, ver el impacto de caja al instante y mantener la jornada
-                  escaneable incluso cuando sube el volumen.
+                  Esta vista ahora es para plata y control: cuanto entro, por donde entro y
+                  como viene el dia.
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -433,7 +542,7 @@ export default async function CajaPage() {
                     {cierreHoy ? "Caja cerrada" : "Caja abierta"}
                   </span>
                   <span className="inline-flex min-h-[36px] items-center rounded-full bg-white/10 px-3 text-sm text-stone-200 ring-1 ring-white/10">
-                    {totalAtenciones} atenciones
+                    {totalAtenciones} servicios
                   </span>
                   <span className="inline-flex min-h-[36px] items-center rounded-full bg-white/10 px-3 text-sm text-stone-200 ring-1 ring-white/10">
                     Neto actual {formatARS(totalNeto + totalProductos)}
@@ -457,6 +566,37 @@ export default async function CajaPage() {
           </div>
         </section>
 
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-[28px] border border-zinc-800 bg-zinc-950/60 px-4 py-4">
+          <div>
+            <p className="text-sm font-semibold text-white">Como mirar esta caja</p>
+            <p className="mt-1 text-sm text-zinc-400">
+              Simple mezcla servicios y productos. Detalle los separa para revisar fino.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/caja"
+              className={`inline-flex min-h-[44px] items-center rounded-full px-4 text-sm font-semibold ${
+                vista === "simple"
+                  ? "bg-[#8cff59] text-[#07130a]"
+                  : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
+              }`}
+            >
+              Simple
+            </Link>
+            <Link
+              href="/caja?vista=detalle"
+              className={`inline-flex min-h-[44px] items-center rounded-full px-4 text-sm font-semibold ${
+                vista === "detalle"
+                  ? "bg-[#8cff59] text-[#07130a]"
+                  : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
+              }`}
+            >
+              Detalle
+            </Link>
+          </div>
+        </section>
+
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {cardsResumen.map((card) => (
             <div
@@ -475,6 +615,48 @@ export default async function CajaPage() {
           ))}
         </section>
 
+        <section className="panel-card rounded-[30px] p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="eyebrow text-xs font-semibold">Medios</p>
+              <h2 className="font-display mt-2 text-2xl font-semibold text-white">
+                Por donde entro la plata
+              </h2>
+              <p className="mt-1 text-sm text-zinc-400">
+                Servicios y productos juntos, como realmente impactan en la caja.
+              </p>
+            </div>
+            <div className="panel-soft rounded-2xl px-4 py-3 text-sm text-zinc-300">
+              {paymentBreakdown.length} medios activos hoy
+            </div>
+          </div>
+
+          {paymentBreakdown.length === 0 ? (
+            <div className="mt-5 rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/25 p-8 text-center text-sm text-zinc-400">
+              Todavia no hay cobros registrados hoy.
+            </div>
+          ) : (
+            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {paymentBreakdown.map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-[24px] border border-zinc-800 bg-zinc-950/25 p-4"
+                >
+                  <span
+                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${item.className}`}
+                  >
+                    {item.label}
+                  </span>
+                  <p className="mt-4 text-2xl font-semibold text-white">
+                    {formatARS(item.amount)}
+                  </p>
+                  <p className="mt-2 text-sm text-zinc-400">Neto del dia por este medio</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
         <section className="grid gap-6 xl:grid-cols-[1.55fr_1fr]">
           <div className="space-y-6">
             <QuickActionButton
@@ -484,6 +666,65 @@ export default async function CajaPage() {
               editHref={quickEditHref}
             />
 
+            {vista === "simple" ? (
+              <section className="panel-card rounded-[30px] p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="eyebrow text-xs font-semibold">Movimiento mezclado</p>
+                    <h2 className="font-display mt-2 text-2xl font-semibold text-white">
+                      Servicios y productos, en una sola linea
+                    </h2>
+                    <p className="mt-1 text-sm text-zinc-400">
+                      La forma mas simple de leer el dia sin cambiar de contexto.
+                    </p>
+                  </div>
+                  <div className="panel-soft rounded-2xl px-4 py-3 text-sm text-zinc-300">
+                    {mixedMovement.length > 0
+                      ? `${mixedMovement.length} movimientos hoy`
+                      : "Sin movimientos"}
+                  </div>
+                </div>
+
+                {mixedMovement.length === 0 ? (
+                  <div className="mt-5 rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/25 p-10 text-center text-sm text-zinc-400">
+                    No hay movimiento registrado hoy.
+                  </div>
+                ) : (
+                  <div className="mt-5 space-y-3">
+                    {mixedMovement.map((item) => (
+                      <article
+                        key={item.id}
+                        className={`rounded-[24px] border px-4 py-4 ${item.tone}`}
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-stone-950 px-3 py-1 text-xs font-semibold text-white">
+                                {item.timeLabel}
+                              </span>
+                              <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-stone-800">
+                                {item.badge}
+                              </span>
+                            </div>
+                            <p className="mt-3 text-lg font-semibold">{item.title}</p>
+                            <p className="mt-1 text-sm opacity-80">{item.subtitle}</p>
+                            <p className="mt-2 text-sm opacity-75">{item.detail}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm uppercase tracking-[0.18em] opacity-55">
+                              Impacto
+                            </p>
+                            <p className="mt-2 text-xl font-semibold">{formatARS(item.amount)}</p>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+            ) : null}
+
+            {vista === "detalle" ? (
             <section className="panel-card rounded-[30px] p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -622,6 +863,7 @@ export default async function CajaPage() {
                 </div>
               )}
             </section>
+            ) : null}
           </div>
 
           <div className="space-y-6">
@@ -657,7 +899,7 @@ export default async function CajaPage() {
               </section>
             ) : null}
 
-            {ventasProductosDia.length > 0 ? (
+            {vista === "detalle" && ventasProductosDia.length > 0 ? (
               <section className="panel-card rounded-[30px] p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -750,26 +992,63 @@ export default async function CajaPage() {
               </section>
             ) : null}
 
-            {!cierreHoy && isAdmin ? (
-              <section className="rounded-[30px] border border-amber-500/35 bg-amber-500/10 p-5 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-300">
-                  Cierre de caja
-                </p>
-                <h2 className="font-display mt-2 text-xl font-semibold text-white">
-                  Ultimo paso de la jornada
-                </h2>
-                <p className="mt-2 text-sm text-zinc-300">
-                  Cerrala solo cuando el dia este realmente terminado y ya no vayan a entrar mas
-                  servicios ni ventas.
-                </p>
-                <Link
-                  href="/caja/cierre"
-                  className="mt-4 inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-amber-400 px-5 text-sm font-semibold text-amber-950 transition hover:bg-amber-300"
-                >
-                  Cerrar caja y finalizar dia
-                </Link>
-              </section>
-            ) : null}
+            <section
+              className={`rounded-[30px] border p-5 shadow-sm ${
+                cierreHoy
+                  ? "border-emerald-500/30 bg-emerald-500/10"
+                  : "border-amber-500/35 bg-amber-500/10"
+              }`}
+            >
+              <p
+                className={`text-xs font-semibold uppercase tracking-[0.22em] ${
+                  cierreHoy ? "text-emerald-200" : "text-amber-300"
+                }`}
+              >
+                Cierre
+              </p>
+              <h2 className="font-display mt-2 text-xl font-semibold text-white">
+                {cierreHoy ? "Caja cerrada y logueada" : "Ultimo paso de la jornada"}
+              </h2>
+              <p className="mt-2 text-sm text-zinc-300">
+                {cierreHoy
+                  ? `La cerro ${cierreHoy.cerradoPorNombre ?? "el responsable"} a las ${formatHoraDate(cierreHoy.cerradoEn)}.`
+                  : "Cerrala solo cuando el dia este realmente terminado y ya no vayan a entrar mas servicios ni ventas."}
+              </p>
+
+              <div className="mt-4 space-y-3">
+                <MetricRow
+                  label={cierreHoy ? "Neto cerrado" : "Neto actual"}
+                  value={formatARS(cierreHoy ? cierreHoy.totalNeto : totalNeto + totalProductos)}
+                  strong={Boolean(cierreHoy)}
+                />
+                <MetricRow
+                  label={cierreHoy ? "Bruto cerrado" : "Estado"}
+                  value={cierreHoy ? formatARS(cierreHoy.totalBruto) : "Esperando cierre"}
+                />
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {cierreHoy ? (
+                  <Link
+                    href={`/caja/cierre/${fechaHoy}`}
+                    className="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-white px-4 text-sm font-semibold text-stone-950 hover:bg-stone-100"
+                  >
+                    Ver resumen final
+                  </Link>
+                ) : isAdmin ? (
+                  <Link
+                    href="/caja/cierre"
+                    className="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-amber-400 px-4 text-sm font-semibold text-amber-950 transition hover:bg-amber-300"
+                  >
+                    Ir al cierre
+                  </Link>
+                ) : (
+                  <div className="inline-flex min-h-[48px] items-center rounded-2xl border border-white/10 px-4 text-sm text-zinc-300">
+                    El cierre lo hace el owner
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
         </section>
 

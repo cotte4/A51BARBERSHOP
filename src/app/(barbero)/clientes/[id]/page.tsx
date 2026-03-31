@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import ClientProfileAuditLog from "@/components/clientes/ClientProfileAuditLog";
+import ClientAvatarUploader from "@/components/clientes/ClientAvatarUploader";
 import ClientProfileHeader from "@/components/clientes/ClientProfileHeader";
 import MarcianosBriefing from "@/components/clientes/MarcianosBriefing";
 import VisitHistory from "@/components/clientes/VisitHistory";
@@ -37,7 +38,7 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
         <Link href="/clientes" className="text-sm text-gray-500 underline">
-          ← Volver a clientes
+          {"<- Volver a clientes"}
         </Link>
         <div className="flex gap-2">
           {actor.isAdmin ? (
@@ -70,6 +71,7 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
           <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">Perfil compartido</h2>
             <form action={updateAction} className="mt-4 space-y-4">
+              <ClientAvatarUploader initialValue={client.avatarUrl} clientId={client.id} />
               <div>
                 <label htmlFor="name" className="mb-1 block text-sm font-medium text-gray-700">
                   Nombre
@@ -83,7 +85,7 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
               </div>
               <div>
                 <label htmlFor="phoneRaw" className="mb-1 block text-sm font-medium text-gray-700">
-                  Teléfono
+                  Telefono
                 </label>
                 <input
                   id="phoneRaw"
@@ -205,7 +207,7 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
                         year: "numeric",
                         timeZone: "America/Argentina/Buenos_Aires",
                       }).format(new Date(client.marcianoDesde))
-                    : "—"}
+                    : "-"}
                 </span>
               </p>
               <p>

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { turnos, turnosDisponibilidad } from "@/db/schema";
 import { requireAdminSession } from "@/lib/admin-action";
+import { getTurnosActorContext } from "@/lib/turnos-access";
 import {
   TURNO_DURACIONES,
   findClientByPhone,
@@ -33,17 +34,34 @@ async function loadTurno(turnoId: string) {
   return turno ?? null;
 }
 
-export async function confirmarTurnoAction(
-  turnoId: string,
-  prevState: TurnoActionState
-): Promise<TurnoActionState> {
-  if (!(await requireAdminSession())) {
-    return { error: "Solo el admin puede gestionar turnos." };
+async function getManagedTurno(turnoId: string) {
+  const actor = await getTurnosActorContext();
+  if (!actor) {
+    return { actor: null, turno: null, allowed: false };
   }
 
   const turno = await loadTurno(turnoId);
   if (!turno) {
+    return { actor, turno: null, allowed: false };
+  }
+
+  return {
+    actor,
+    turno,
+    allowed: actor.isAdmin || actor.barberoId === turno.barberoId,
+  };
+}
+
+export async function confirmarTurnoAction(
+  turnoId: string,
+  _prevState: TurnoActionState
+): Promise<TurnoActionState> {
+  const { turno, allowed } = await getManagedTurno(turnoId);
+  if (!turno) {
     return { error: "Turno no encontrado." };
+  }
+  if (!allowed) {
+    return { error: "Solo podes gestionar tus propios turnos." };
   }
   if (turno.estado !== "pendiente") {
     return { error: "Solo se pueden confirmar turnos pendientes." };
@@ -55,27 +73,27 @@ export async function confirmarTurnoAction(
     .where(eq(turnos.id, turnoId));
 
   revalidatePath("/turnos");
+  revalidatePath("/hoy");
   revalidatePath("/turnos/disponibilidad");
   return {};
 }
 
 export async function rechazarTurnoAction(
   turnoId: string,
-  prevState: TurnoActionState,
+  _prevState: TurnoActionState,
   formData: FormData
 ): Promise<TurnoActionState> {
-  if (!(await requireAdminSession())) {
-    return { error: "Solo el admin puede gestionar turnos." };
-  }
-
   const motivo = String(formData.get("motivoCancelacion") ?? "").trim();
   if (!motivo) {
     return { error: "El motivo de rechazo es obligatorio." };
   }
 
-  const turno = await loadTurno(turnoId);
+  const { turno, allowed } = await getManagedTurno(turnoId);
   if (!turno) {
     return { error: "Turno no encontrado." };
+  }
+  if (!allowed) {
+    return { error: "Solo podes gestionar tus propios turnos." };
   }
   if (turno.estado === "cancelado" || turno.estado === "completado") {
     return { error: "Ese turno ya no puede rechazarse." };
@@ -87,21 +105,21 @@ export async function rechazarTurnoAction(
     .where(eq(turnos.id, turnoId));
 
   revalidatePath("/turnos");
+  revalidatePath("/hoy");
   revalidatePath("/turnos/disponibilidad");
   return {};
 }
 
 export async function completarTurnoAction(
   turnoId: string,
-  prevState: TurnoActionState
+  _prevState: TurnoActionState
 ): Promise<TurnoActionState> {
-  if (!(await requireAdminSession())) {
-    return { error: "Solo el admin puede gestionar turnos." };
-  }
-
-  const turno = await loadTurno(turnoId);
+  const { turno, allowed } = await getManagedTurno(turnoId);
   if (!turno) {
     return { error: "Turno no encontrado." };
+  }
+  if (!allowed) {
+    return { error: "Solo podes gestionar tus propios turnos." };
   }
   if (turno.estado !== "confirmado") {
     return { error: "Solo se pueden completar turnos confirmados." };
@@ -113,13 +131,14 @@ export async function completarTurnoAction(
     .where(eq(turnos.id, turnoId));
 
   revalidatePath("/turnos");
+  revalidatePath("/hoy");
   revalidatePath("/turnos/disponibilidad");
   return {};
 }
 
 export async function crearDisponibilidadAction(
   barberoId: string,
-  prevState: TurnoActionState,
+  _prevState: TurnoActionState,
   formData: FormData
 ): Promise<TurnoActionState> {
   if (!(await requireAdminSession())) {
@@ -131,13 +150,13 @@ export async function crearDisponibilidadAction(
   const duracionMinutos = Number(formData.get("duracionMinutos") ?? 0);
 
   if (!fecha || !horaInicio || !TURNO_DURACIONES.includes(duracionMinutos as 45 | 60)) {
-    return { error: "CompletÃ¡ fecha, hora y duraciÃ³n vÃ¡lidas." };
+    return { error: "Completa fecha, hora y duracion validas." };
   }
   if (fecha < getFechaHoyArgentina()) {
-    return { error: "No podÃ©s crear disponibilidad en fechas pasadas." };
+    return { error: "No podes crear disponibilidad en fechas pasadas." };
   }
   if (await isFechaCerrada(fecha)) {
-    return { error: "Ese dÃ­a ya tiene cierre y no admite nuevos turnos." };
+    return { error: "Ese dia ya tiene cierre y no admite nuevos turnos." };
   }
 
   try {
@@ -195,11 +214,15 @@ export async function crearTurnoRapidoAction(
   fecha: string,
   horaInicio: string,
   duracionMinutos: number,
-  prevState: QuickTurnoCreateState,
+  _prevState: QuickTurnoCreateState,
   formData: FormData
 ): Promise<QuickTurnoCreateState> {
-  if (!(await requireAdminSession())) {
-    return { error: "Solo el admin puede crear turnos rápidos." };
+  const actor = await getTurnosActorContext();
+  if (!actor) {
+    return { error: "Debes iniciar sesion para crear turnos." };
+  }
+  if (!actor.isAdmin && actor.barberoId !== barberoId) {
+    return { error: "Solo podes crear turnos para tu propia agenda." };
   }
 
   const clienteNombre = String(formData.get("clienteNombre") ?? "").trim();
@@ -214,11 +237,11 @@ export async function crearTurnoRapidoAction(
   }
 
   if (fecha < getFechaHoyArgentina()) {
-    return { error: "No podés cargar turnos en fechas pasadas." };
+    return { error: "No podes cargar turnos en fechas pasadas." };
   }
 
   if (await isFechaCerrada(fecha)) {
-    return { error: "Ese día ya fue cerrado y no admite nuevos turnos." };
+    return { error: "Ese dia ya fue cerrado y no admite nuevos turnos." };
   }
 
   const horaNormalizada = normalizeTimeInput(horaInicio);
@@ -252,7 +275,7 @@ export async function crearTurnoRapidoAction(
   ]);
 
   if (!slotDisponible[0]) {
-    return { error: "Ese hueco libre ya no está disponible." };
+    return { error: "Ese hueco libre ya no esta disponible." };
   }
 
   if (ocupado[0]) {
@@ -273,11 +296,12 @@ export async function crearTurnoRapidoAction(
       esMarcianoSnapshot: clientMatch?.esMarciano ?? false,
     });
   } catch (error) {
-    console.error("Error creando turno rápido:", error);
-    return { error: "No se pudo guardar el turno rápido." };
+    console.error("Error creando turno rapido:", error);
+    return { error: "No se pudo guardar el turno rapido." };
   }
 
   revalidatePath("/turnos");
+  revalidatePath("/hoy");
   revalidatePath("/turnos/disponibilidad");
   return { success: true };
 }

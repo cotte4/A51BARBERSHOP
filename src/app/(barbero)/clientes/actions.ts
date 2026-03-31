@@ -80,6 +80,7 @@ export async function createClientAction(
 
   const name = String(formData.get("name") ?? "").trim();
   const phoneRaw = String(formData.get("phoneRaw") ?? "").trim() || null;
+  const avatarUrl = String(formData.get("avatarUrl") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
   const confirmDuplicate = String(formData.get("confirmDuplicate") ?? "") === "true";
   const tags = parseTags(formData.get("tags"));
@@ -150,6 +151,7 @@ export async function createClientAction(
       name,
       phoneRaw,
       phoneNormalized,
+      avatarUrl,
       esMarciano: isMarciano,
       marcianoDesde: isMarciano ? new Date() : null,
       tags,
@@ -182,6 +184,7 @@ export async function updateClientAction(clientId: string, formData: FormData) {
 
   const name = String(formData.get("name") ?? "").trim();
   const phoneRaw = String(formData.get("phoneRaw") ?? "").trim() || null;
+  const avatarUrl = String(formData.get("avatarUrl") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
   const tags = parseTags(formData.get("tags"));
   const preferences = normalizeClientPreferences({
@@ -216,6 +219,7 @@ export async function updateClientAction(clientId: string, formData: FormData) {
       name,
       phoneRaw,
       phoneNormalized,
+      avatarUrl,
       notes,
       tags,
       preferences,
@@ -237,6 +241,7 @@ export async function updateClientAction(clientId: string, formData: FormData) {
     changes: [
       { fieldName: "name", oldValue: existing.name, newValue: name },
       { fieldName: "phone_raw", oldValue: existing.phoneRaw, newValue: phoneRaw },
+      { fieldName: "avatar_url", oldValue: existing.avatarUrl, newValue: avatarUrl },
       { fieldName: "notes", oldValue: existing.notes, newValue: notes },
       { fieldName: "tags", oldValue: existing.tags, newValue: tags },
       { fieldName: "preferences", oldValue: existing.preferences, newValue: preferences },

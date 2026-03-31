@@ -19,29 +19,23 @@ export async function proxy(request: NextRequest) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    if (userRole === "admin") {
-      return NextResponse.redirect(new URL("/caja", request.url));
-    }
-    return NextResponse.redirect(new URL("/caja", request.url));
+    return NextResponse.redirect(new URL("/hoy", request.url));
   }
 
   if (pathname === "/login" || pathname.startsWith("/login")) {
     if (isAuthenticated) {
-      if (userRole === "admin") {
-        return NextResponse.redirect(new URL("/caja", request.url));
-      }
-      return NextResponse.redirect(new URL("/caja", request.url));
+      return NextResponse.redirect(new URL("/hoy", request.url));
     }
     return NextResponse.next();
   }
 
   if (
+    pathname.startsWith("/negocio") ||
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/configuracion") ||
     pathname.startsWith("/liquidaciones") ||
     pathname.startsWith("/inventario") ||
     pathname.startsWith("/repago") ||
-    pathname.startsWith("/turnos") ||
     pathname.startsWith("/mi-resultado") ||
     pathname.startsWith("/gastos-rapidos")
   ) {
@@ -50,6 +44,20 @@ export async function proxy(request: NextRequest) {
     }
     if (userRole !== "admin") {
       return NextResponse.redirect(new URL("/caja", request.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/hoy")) {
+    if (!isAuthenticated) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/turnos")) {
+    if (!isAuthenticated) {
+      return NextResponse.redirect(new URL("/login", request.url));
     }
     return NextResponse.next();
   }
@@ -74,6 +82,8 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/",
+    "/hoy/:path*",
+    "/negocio/:path*",
     "/login",
     "/dashboard/:path*",
     "/configuracion/:path*",

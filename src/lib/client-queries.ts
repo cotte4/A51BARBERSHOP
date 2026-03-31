@@ -44,7 +44,8 @@ function getClientVisibilityFilter(actor: SearchActor) {
 
 export async function searchVisibleClients(
   actor: SearchActor,
-  query: string
+  query: string,
+  options?: { limit?: number }
 ): Promise<ClientSummary[]> {
   const trimmedQuery = query.trim();
   const normalizedPhone = normalizePhone(trimmedQuery);
@@ -65,6 +66,7 @@ export async function searchVisibleClients(
       id: clients.id,
       name: clients.name,
       phoneRaw: clients.phoneRaw,
+      avatarUrl: clients.avatarUrl,
       esMarciano: clients.esMarciano,
       archivedAt: clients.archivedAt,
       totalVisits: clients.totalVisits,
@@ -83,12 +85,13 @@ export async function searchVisibleClients(
     .leftJoin(barberos, eq(barberos.id, clients.lastVisitBarberoId))
     .where(and(...filters))
     .orderBy(desc(clients.esMarciano), desc(clients.lastVisitAt), clients.name)
-    .limit(20);
+    .limit(options?.limit ?? 20);
 
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
     phoneRaw: row.phoneRaw,
+    avatarUrl: row.avatarUrl,
     esMarciano: row.esMarciano,
     archivedAt: row.archivedAt,
     totalVisits: row.totalVisits ?? 0,

@@ -11,17 +11,18 @@ export default async function ClientesPage() {
     redirect("/login");
   }
 
-  const [initialClients, retentionCandidates] = await Promise.all([
-    searchVisibleClients(actor, ""),
+  const [initialClients, allClients, retentionCandidates] = await Promise.all([
+    searchVisibleClients(actor, "", { limit: 12 }),
+    searchVisibleClients(actor, "", { limit: 120 }),
     actor.isAdmin ? getRetentionCandidates() : Promise.resolve([]),
   ]);
 
   return (
-    <div className="space-y-4">
-      <section className="flex items-center justify-between gap-3">
+    <div className="space-y-5">
+      <section className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-bold text-white">Marcianos</h1>
-          <p className="text-sm text-zinc-400">Directorio interno y memoria operativa del equipo.</p>
+          <h1 className="font-display text-3xl font-bold text-white">Clientes</h1>
+          <p className="text-sm text-zinc-400">Recientes primero, buscador a mano y memoria visual del corte.</p>
         </div>
         <Link
           href="/clientes/nuevo"
@@ -35,7 +36,7 @@ export default async function ClientesPage() {
         <RetentionBanner candidates={retentionCandidates} />
       ) : null}
 
-      <ClientSearch initialClients={initialClients} />
+      <ClientSearch initialClients={initialClients} allClients={allClients} />
     </div>
   );
 }

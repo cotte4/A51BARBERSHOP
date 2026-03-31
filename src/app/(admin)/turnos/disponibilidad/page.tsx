@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import DisponibilidadGrid from "@/components/turnos/DisponibilidadGrid";
 import {
   crearDisponibilidadAction,
@@ -10,15 +11,20 @@ import {
   getTurnosOcupadosDesde,
   resolvePublicBarberoBySlug,
 } from "@/lib/turnos";
+import { requireAdminSession } from "@/lib/admin-action";
 
 export default async function DisponibilidadPage() {
+  if (!(await requireAdminSession())) {
+    redirect("/turnos");
+  }
+
   const pinky = await resolvePublicBarberoBySlug("pinky");
 
   if (!pinky) {
     return (
       <main className="min-h-screen bg-gray-50 px-4 py-6">
         <div className="mx-auto max-w-4xl rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
-          No encontrÃ© al barbero admin activo para configurar disponibilidad.
+          No encontre al barbero admin activo para configurar disponibilidad.
         </div>
       </main>
     );
@@ -35,7 +41,7 @@ export default async function DisponibilidadPage() {
       <div className="mx-auto max-w-4xl space-y-5">
         <div>
           <Link href="/turnos" className="text-sm text-gray-400 hover:text-gray-600">
-            ← Turnos
+            {"<- Turnos"}
           </Link>
           <h1 className="mt-2 text-2xl font-semibold text-gray-900">Disponibilidad</h1>
         </div>

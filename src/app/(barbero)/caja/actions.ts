@@ -29,7 +29,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-// ─── Tipos ───────────────────────────────────────────
+// â”€â”€â”€ Tipos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type CierreFormState = {
   error?: string;
@@ -46,7 +46,7 @@ export type AtencionFormState = {
   };
 };
 
-// ─── Helpers ─────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function getFechaHoy(): string {
   return getFechaHoyArgentina();
@@ -90,7 +90,7 @@ function parseProductosSeleccionados(formData: FormData): ProductoSeleccionadoIn
   }
 }
 
-// ─── registrarAtencion ────────────────────────────────
+// â”€â”€â”€ registrarAtencion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function registrarAtencion(
   prevState: AtencionFormState,
@@ -98,7 +98,7 @@ export async function registrarAtencion(
 ): Promise<AtencionFormState> {
   const actor = await getCajaActorContext();
   if (!actor) {
-    return { error: "Debés iniciar sesión para registrar atenciones." };
+    return { error: "DebÃ©s iniciar sesiÃ³n para registrar atenciones." };
   }
 
   // Leer campos
@@ -106,16 +106,16 @@ export async function registrarAtencion(
   const servicioId = formData.get("servicioId") as string;
   const medioPagoId = formData.get("medioPagoId") as string;
   const precioCobradoStr = formData.get("precioCobrado") as string;
-  const adicionalesIds = formData.getAll("adicionalesIds") as string[]; // múltiples
+  const adicionalesIds = formData.getAll("adicionalesIds") as string[]; // mÃºltiples
   const notas = formData.get("notas") as string | null;
 
   const productosSeleccionados = parseProductosSeleccionados(formData);
 
   // Validaciones
   const fieldErrors: AtencionFormState["fieldErrors"] = {};
-  if (!barberoId) fieldErrors.barberoId = "Seleccioná un barbero";
-  if (!servicioId) fieldErrors.servicioId = "Seleccioná un servicio";
-  if (!medioPagoId) fieldErrors.medioPagoId = "Seleccioná un medio de pago";
+  if (!barberoId) fieldErrors.barberoId = "SeleccionÃ¡ un barbero";
+  if (!servicioId) fieldErrors.servicioId = "SeleccionÃ¡ un servicio";
+  if (!medioPagoId) fieldErrors.medioPagoId = "SeleccionÃ¡ un medio de pago";
   if (precioCobradoStr === "" || precioCobradoStr === null || isNaN(Number(precioCobradoStr))) {
     fieldErrors.precioCobrado = "El precio es requerido";
   } else if (Number(precioCobradoStr) < 0) {
@@ -127,7 +127,7 @@ export async function registrarAtencion(
       return { error: "Tu usuario no tiene un barbero activo vinculado." };
     }
     if (barberoId && barberoId !== actor.barberoId) {
-      fieldErrors.barberoId = "Solo podés registrar atenciones para tu perfil.";
+      fieldErrors.barberoId = "Solo podÃ©s registrar atenciones para tu perfil.";
     }
   }
 
@@ -174,16 +174,17 @@ export async function registrarAtencion(
     });
   } catch (e) {
     console.error("Error registrando atencion:", e);
-    return { error: "No se pudo registrar la atención. Intentá de nuevo." };
+    return { error: "No se pudo registrar la atenciÃ³n. IntentÃ¡ de nuevo." };
   }
 
   revalidatePath("/caja");
+  revalidatePath("/hoy");
   revalidatePath("/inventario");
   revalidatePath("/dashboard");
   redirect("/caja");
 }
 
-// ─── editarAtencion ───────────────────────────────────
+// â”€â”€â”€ editarAtencion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type AtencionRapidaState = {
   error?: string;
@@ -197,16 +198,16 @@ async function registrarAtencionRapidaInterna(
   const userRole = (session?.user as { role?: string } | undefined)?.role;
 
   if (!userId) {
-    return { error: "DebÃ©s iniciar sesiÃ³n para registrar una atenciÃ³n." };
+    return { error: "DebÃƒÂ©s iniciar sesiÃƒÂ³n para registrar una atenciÃƒÂ³n." };
   }
 
   if (await hasCajaCerradaHoy()) {
-    return { error: "La caja del dÃ­a ya fue cerrada. No se pueden registrar nuevas atenciones." };
+    return { error: "La caja del dÃƒÂ­a ya fue cerrada. No se pueden registrar nuevas atenciones." };
   }
 
   const barberoId = await resolveCajaActorBarberoId(userId, userRole === "admin");
   if (!barberoId) {
-    return { error: "No encontrÃ© un barbero activo vinculado para usar la acciÃ³n rÃ¡pida." };
+    return { error: "No encontrÃƒÂ© un barbero activo vinculado para usar la acciÃƒÂ³n rÃƒÂ¡pida." };
   }
 
   const defaults = await getQuickActionDefaultsForBarbero(barberoId);
@@ -223,10 +224,11 @@ async function registrarAtencionRapidaInterna(
     });
   } catch (error) {
     console.error("Error registrando atencion rapida:", error);
-    return { error: "No se pudo registrar la atenciÃ³n rÃ¡pida. IntentÃ¡ de nuevo." };
+    return { error: "No se pudo registrar la atenciÃƒÂ³n rÃƒÂ¡pida. IntentÃƒÂ¡ de nuevo." };
   }
 
   revalidatePath("/caja");
+  revalidatePath("/hoy");
   revalidatePath("/inventario");
   revalidatePath("/dashboard");
   redirect("/caja");
@@ -260,7 +262,7 @@ export async function editarAtencion(
 ): Promise<AtencionFormState> {
   const actor = await getCajaActorContext();
   if (!actor) {
-    return { error: "Debés iniciar sesión para editar atenciones." };
+    return { error: "DebÃ©s iniciar sesiÃ³n para editar atenciones." };
   }
 
   const barberoId = formData.get("barberoId") as string;
@@ -277,16 +279,16 @@ export async function editarAtencion(
     .where(eq(atenciones.id, id))
     .limit(1);
 
-  if (!atencionExistente) return { error: "Atención no encontrada." };
-  if (atencionExistente.anulado) return { error: "No se puede editar una atención anulada." };
+  if (!atencionExistente) return { error: "AtenciÃ³n no encontrada." };
+  if (atencionExistente.anulado) return { error: "No se puede editar una atenciÃ³n anulada." };
   if (atencionExistente.fecha !== getFechaHoy()) {
-    return { error: "Solo se pueden editar atenciones del día de hoy." };
+    return { error: "Solo se pueden editar atenciones del dÃ­a de hoy." };
   }
 
   const fieldErrors: AtencionFormState["fieldErrors"] = {};
-  if (!barberoId) fieldErrors.barberoId = "Seleccioná un barbero";
-  if (!servicioId) fieldErrors.servicioId = "Seleccioná un servicio";
-  if (!medioPagoId) fieldErrors.medioPagoId = "Seleccioná un medio de pago";
+  if (!barberoId) fieldErrors.barberoId = "SeleccionÃ¡ un barbero";
+  if (!servicioId) fieldErrors.servicioId = "SeleccionÃ¡ un servicio";
+  if (!medioPagoId) fieldErrors.medioPagoId = "SeleccionÃ¡ un medio de pago";
   if (precioCobradoStr === "" || isNaN(Number(precioCobradoStr))) {
     fieldErrors.precioCobrado = "El precio es requerido";
   } else if (Number(precioCobradoStr) < 0) {
@@ -297,10 +299,10 @@ export async function editarAtencion(
       return { error: "Tu usuario no tiene un barbero activo vinculado." };
     }
     if (atencionExistente.barberoId !== actor.barberoId) {
-      return { error: "Solo podés editar atenciones de tu perfil." };
+      return { error: "Solo podÃ©s editar atenciones de tu perfil." };
     }
     if (barberoId && barberoId !== actor.barberoId) {
-      fieldErrors.barberoId = "Solo podés editar atenciones de tu perfil.";
+      fieldErrors.barberoId = "Solo podÃ©s editar atenciones de tu perfil.";
     }
   }
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
@@ -319,24 +321,24 @@ export async function editarAtencion(
   }
 
   try {
-    // Verificar que la atención existe y es de hoy
+    // Verificar que la atenciÃ³n existe y es de hoy
     const [atencionExistente] = await db
       .select()
       .from(atenciones)
       .where(eq(atenciones.id, id))
       .limit(1);
 
-    if (!atencionExistente) return { error: "Atención no encontrada." };
-    if (atencionExistente.anulado) return { error: "No se puede editar una atención anulada." };
+    if (!atencionExistente) return { error: "AtenciÃ³n no encontrada." };
+    if (atencionExistente.anulado) return { error: "No se puede editar una atenciÃ³n anulada." };
     if (atencionExistente.fecha !== getFechaHoy()) {
-      return { error: "Solo se pueden editar atenciones del día de hoy." };
+      return { error: "Solo se pueden editar atenciones del dÃ­a de hoy." };
     }
 
     const [barbero] = await db.select().from(barberos).where(eq(barberos.id, barberoId)).limit(1);
     const [medioPago] = await db.select().from(mediosPago).where(eq(mediosPago.id, medioPagoId)).limit(1);
     const [servicio] = await db.select().from(servicios).where(eq(servicios.id, servicioId)).limit(1);
 
-    if (!barbero || !medioPago || !servicio) return { error: "Datos inválidos." };
+    if (!barbero || !medioPago || !servicio) return { error: "Datos invÃ¡lidos." };
 
     const productosIds = productosSeleccionados.map((item) => item.productoId);
     if (productosIds.length > 0) {
@@ -404,16 +406,17 @@ export async function editarAtencion(
     });
   } catch (e) {
     console.error("Error editando atencion:", e);
-    return { error: "No se pudo actualizar la atención. Intentá de nuevo." };
+    return { error: "No se pudo actualizar la atenciÃ³n. IntentÃ¡ de nuevo." };
   }
 
   revalidatePath("/caja");
+  revalidatePath("/hoy");
   revalidatePath("/inventario");
   revalidatePath("/dashboard");
   redirect("/caja");
 }
 
-// ─── anularAtencion ───────────────────────────────────
+// â”€â”€â”€ anularAtencion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function anularAtencion(
   id: string,
@@ -429,7 +432,7 @@ export async function anularAtencion(
 
   const motivoAnulacion = formData.get("motivoAnulacion") as string;
   if (!motivoAnulacion || motivoAnulacion.trim() === "") {
-    return { fieldErrors: { motivoAnulacion: "El motivo de anulación es requerido" } };
+    return { fieldErrors: { motivoAnulacion: "El motivo de anulaciÃ³n es requerido" } };
   }
 
   try {
@@ -439,10 +442,10 @@ export async function anularAtencion(
       .where(eq(atenciones.id, id))
       .limit(1);
 
-    if (!atencionExistente) return { error: "Atención no encontrada." };
-    if (atencionExistente.anulado) return { error: "Esta atención ya está anulada." };
+    if (!atencionExistente) return { error: "AtenciÃ³n no encontrada." };
+    if (atencionExistente.anulado) return { error: "Esta atenciÃ³n ya estÃ¡ anulada." };
     if (atencionExistente.fecha !== getFechaHoy()) {
-      return { error: "Solo se pueden anular atenciones del día de hoy." };
+      return { error: "Solo se pueden anular atenciones del dÃ­a de hoy." };
     }
 
     await db.update(atenciones).set({
@@ -451,20 +454,21 @@ export async function anularAtencion(
     }).where(eq(atenciones.id, id));
   } catch (e) {
     console.error("Error anulando atencion:", e);
-    return { error: "No se pudo anular la atención. Intentá de nuevo." };
+    return { error: "No se pudo anular la atenciÃ³n. IntentÃ¡ de nuevo." };
   }
 
   revalidatePath("/caja");
-  return {}; // No redirect — el usuario sigue en la página de caja
+  revalidatePath("/hoy");
+  return {}; // No redirect â€” el usuario sigue en la pÃ¡gina de caja
 }
 
-// ─── cerrarCaja ───────────────────────────────────────
+// â”€â”€â”€ cerrarCaja â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function cerrarCaja(
   prevState: CierreFormState,
   formData: FormData
 ): Promise<CierreFormState> {
-  // 1. Verificar sesión admin
+  // 1. Verificar sesiÃ³n admin
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
   if (userRole !== "admin") {
@@ -487,7 +491,7 @@ export async function cerrarCaja(
   }
 
   try {
-    // 3. Traer todas las atenciones no anuladas del día
+    // 3. Traer todas las atenciones no anuladas del dÃ­a
     const atencionesDelDia = await db
       .select()
       .from(atenciones)
@@ -497,7 +501,7 @@ export async function cerrarCaja(
     const mediosPagoList = await db.select().from(mediosPago);
     const cantidadAtenciones = atencionesDelDia.length;
 
-    // 4. Calcular totales generales y caja neta real del día
+    // 4. Calcular totales generales y caja neta real del dÃ­a
     const fechaHoyDate = new Date(fechaHoy + "T00:00:00-03:00");
     const finDia = new Date(fechaHoy + "T23:59:59-03:00");
     const ventasProductos = await db.select().from(stockMovimientos)
@@ -526,7 +530,7 @@ export async function cerrarCaja(
     const totalComisionesMedios = cierreResumen.totales.totalComisionesMediosDia;
     const totalNeto = cierreResumen.totales.cajaNetaDia;
 
-    // 5. Totales por medio de pago — servicios + productos
+    // 5. Totales por medio de pago â€” servicios + productos
     const mediosPagoMap = new Map(mediosPagoList.map(m => [m.id, m]));
 
     // Acumular por nombre de medio de pago
@@ -594,14 +598,15 @@ export async function cerrarCaja(
     }
   } catch (e) {
     console.error("Error cerrando caja:", e);
-    return { error: "No se pudo cerrar la caja. Intentá de nuevo." };
+    return { error: "No se pudo cerrar la caja. IntentÃ¡ de nuevo." };
   }
 
   revalidatePath("/caja");
+  revalidatePath("/hoy");
   redirect(`/caja/cierre/${getFechaHoy()}`);
 }
 
-// ─── registrarVentaProducto ───────────────────────────
+// â”€â”€â”€ registrarVentaProducto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type VentaProductoFormState = {
   error?: string;
@@ -625,7 +630,7 @@ export async function registrarVentaProducto(
 
   // Validaciones
   const fieldErrors: VentaProductoFormState["fieldErrors"] = {};
-  if (!productoId) fieldErrors.productoId = "Seleccioná un producto";
+  if (!productoId) fieldErrors.productoId = "SeleccionÃ¡ un producto";
   if (!cantidadStr || isNaN(Number(cantidadStr)) || Number(cantidadStr) < 1) {
     fieldErrors.cantidad = "La cantidad debe ser al menos 1";
   }
@@ -634,14 +639,14 @@ export async function registrarVentaProducto(
   } else if (Number(precioCobradoStr) < 0) {
     fieldErrors.precioCobrado = "El precio no puede ser negativo";
   }
-  if (!medioPagoId) fieldErrors.medioPagoId = "Seleccioná un medio de pago";
+  if (!medioPagoId) fieldErrors.medioPagoId = "SeleccionÃ¡ un medio de pago";
 
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
-  // Verificar sesión
+  // Verificar sesiÃ³n
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
-    return { error: "Debés iniciar sesión para realizar esta operación." };
+    return { error: "DebÃ©s iniciar sesiÃ³n para realizar esta operaciÃ³n." };
   }
 
   // Verificar que no hay cierre para hoy
@@ -659,7 +664,7 @@ export async function registrarVentaProducto(
   const cantidad = parseInt(cantidadStr, 10);
   const precioCobrado = Number(precioCobradoStr);
 
-  // Verificar que el producto exista, esté activo y tenga stock suficiente
+  // Verificar que el producto exista, estÃ© activo y tenga stock suficiente
   const [producto] = await db
     .select()
     .from(productos)
@@ -667,7 +672,7 @@ export async function registrarVentaProducto(
     .limit(1);
 
   if (!producto) return { fieldErrors: { productoId: "Producto no encontrado" } };
-  if (!producto.activo) return { fieldErrors: { productoId: "El producto no está activo" } };
+  if (!producto.activo) return { fieldErrors: { productoId: "El producto no estÃ¡ activo" } };
   if ((producto.stockActual ?? 0) < cantidad) {
     return { error: `Sin stock disponible. Stock actual: ${producto.stockActual ?? 0}` };
   }
@@ -692,10 +697,11 @@ export async function registrarVentaProducto(
     });
   } catch (e) {
     console.error("Error registrando venta de producto:", e);
-    return { error: "No se pudo registrar la venta. Intentá de nuevo." };
+    return { error: "No se pudo registrar la venta. IntentÃ¡ de nuevo." };
   }
 
   revalidatePath("/caja");
+  revalidatePath("/hoy");
   revalidatePath("/inventario");
   revalidatePath(`/inventario/${productoId}`);
   revalidatePath("/inventario/rotacion");

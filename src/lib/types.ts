@@ -60,6 +60,7 @@ export interface ClientSummary {
   id: string;
   name: string;
   phoneRaw: string | null;
+  avatarUrl?: string | null;
   esMarciano: boolean;
   archivedAt: Date | null;
   totalVisits: number;

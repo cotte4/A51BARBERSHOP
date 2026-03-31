@@ -35,6 +35,7 @@ a51-smoke*.log
 .env*
 !.env.example
 .claude/
+planning/
 
 # vercel
 .vercel

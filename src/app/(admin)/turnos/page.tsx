@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { TurnoSummary } from "@/lib/types";
 import TurnoCard from "@/components/turnos/TurnoCard";
 import QuickTurnoSlotCard from "@/components/turnos/QuickTurnoSlotCard";
@@ -12,11 +13,12 @@ import {
   getBarberosActivosTurnos,
   getDisponibilidadLibrePorFecha,
   getFechaHoyArgentina,
-  getTurnosAdminList,
+  getTurnosVisibleList,
 } from "@/lib/turnos";
+import { getTurnosActorContext } from "@/lib/turnos-access";
 
 type TurnosPageProps = {
-  searchParams: Promise<{ fecha?: string; estado?: string }>;
+  searchParams: Promise<{ fecha?: string; estado?: string; scope?: string }>;
 };
 
 type TimelineFreeSlot = {
@@ -29,14 +31,21 @@ type TimelineFreeSlot = {
 };
 
 export default async function TurnosPage({ searchParams }: TurnosPageProps) {
+  const actor = await getTurnosActorContext();
+  if (!actor) {
+    redirect("/login");
+  }
+
   const params = await searchParams;
   const fecha = params.fecha ?? getFechaHoyArgentina();
   const estado = params.estado && params.estado !== "todos" ? params.estado : undefined;
+  const scope = actor.isAdmin && params.scope === "equipo" ? "equipo" : "mio";
+  const visibleBarberoId = scope === "mio" ? actor.barberoId ?? undefined : undefined;
 
   const [turnos, barberos, slotsLibres] = await Promise.all([
-    getTurnosAdminList(fecha, estado),
+    getTurnosVisibleList(fecha, estado, visibleBarberoId),
     getBarberosActivosTurnos(),
-    getDisponibilidadLibrePorFecha(fecha),
+    getDisponibilidadLibrePorFecha(fecha, visibleBarberoId),
   ]);
 
   const fechaHoy = getFechaHoyArgentina();
@@ -45,22 +54,43 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
   const pendientes = turnos.filter((turno) => turno.estado === "pendiente").length;
   const confirmados = turnos.filter((turno) => turno.estado === "confirmado").length;
   const completados = turnos.filter((turno) => turno.estado === "completado").length;
+  const actorBarbero = actor.barberoId ? barberos.find((barbero) => barbero.id === actor.barberoId) : null;
+  const title = scope === "equipo" ? "Turnos del equipo" : "Mis turnos";
+  const subtitle =
+    scope === "equipo"
+      ? "La agenda completa del local, con huecos y estados a la vista."
+      : `${actorBarbero?.nombre ?? "Tu agenda"} en foco, con huecos listos para cargar sin vueltas.`;
+  const showScopeToggle = actor.isAdmin && actor.barberoId;
+
+  if (!actor.isAdmin && !actor.barberoId) {
+    return (
+      <main className="min-h-screen bg-stone-100 px-4 py-6">
+        <div className="mx-auto max-w-4xl rounded-[28px] border border-rose-200 bg-white p-6 shadow-sm">
+          <p className="text-base font-semibold text-stone-900">No encontramos tu perfil de barbero.</p>
+          <p className="mt-2 text-sm text-stone-500">
+            Vincula tu usuario con un barbero activo para usar la agenda desde este tab.
+          </p>
+          <Link href="/hoy" className="mt-4 inline-flex rounded-xl bg-stone-900 px-4 py-2 text-sm font-medium text-white">
+            Volver a hoy
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-stone-100 px-4 py-6">
+    <main className="min-h-screen bg-stone-100 px-4 py-6 pb-24">
       <div className="mx-auto max-w-5xl space-y-5">
         <section className="overflow-hidden rounded-[30px] bg-stone-950 text-stone-50 shadow-[0_24px_80px_rgba(28,25,23,0.18)]">
           <div className="bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.22),_transparent_34%),radial-gradient(circle_at_bottom_left,_rgba(14,165,233,0.18),_transparent_30%)] p-6 sm:p-7">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-2xl">
-                <Link href="/dashboard" className="text-sm text-stone-300 hover:text-white">
-                  ← Dashboard
+                <Link href="/hoy" className="text-sm text-stone-300 hover:text-white">
+                  ← Hoy
                 </Link>
-                <h1 className="mt-3 text-3xl font-semibold tracking-tight">Turnos</h1>
-                <p className="mt-2 text-sm text-stone-300">
-                  {formatFechaLarga(fecha)}
-                  {isToday ? " · Hoy" : ""}
-                </p>
+                <h1 className="mt-3 text-3xl font-semibold tracking-tight">{title}</h1>
+                <p className="mt-2 text-sm text-stone-300">{formatFechaLarga(fecha)}{isToday ? " · Hoy" : ""}</p>
+                <p className="mt-3 text-sm text-stone-300">{subtitle}</p>
                 <div className="mt-3 flex flex-wrap gap-2 text-sm text-stone-200">
                   <span>{turnos.length} turnos</span>
                   <span>·</span>
@@ -74,27 +104,36 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
 
               <div className="flex flex-wrap gap-3">
                 <Link
-                  href="/reservar/pinky"
+                  href="#agenda"
                   className="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-emerald-500 px-5 text-sm font-semibold text-emerald-950 hover:bg-emerald-400"
                 >
                   + Nuevo turno
                 </Link>
                 <Link
-                  href="/turnos/disponibilidad"
+                  href={actor.isAdmin ? "/turnos/disponibilidad" : "#agenda"}
                   className="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-5 text-sm font-medium text-white hover:bg-white/15"
                 >
-                  Disponibilidad
+                  {actor.isAdmin ? "Disponibilidad" : "Ver huecos"}
                 </Link>
               </div>
             </div>
           </div>
         </section>
 
+        {showScopeToggle ? (
+          <section className="rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <ScopeLink href={buildTurnosHref(fecha, estado, "mio")} label="Mis turnos" active={scope === "mio"} />
+              <ScopeLink href={buildTurnosHref(fecha, estado, "equipo")} label="Equipo" active={scope === "equipo"} />
+            </div>
+          </section>
+        ) : null}
+
         <section className="rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-center gap-3">
-            <DateLink href={buildEstadoHref(shiftDate(fecha, -1), estado)} label="Ayer" />
-            <DateLink href={buildEstadoHref(fechaHoy, estado)} label="Hoy" active={isToday} />
-            <DateLink href={buildEstadoHref(shiftDate(fecha, 1), estado)} label="Mañana" />
+            <DateLink href={buildTurnosHref(shiftDate(fecha, -1), estado, scope)} label="Ayer" />
+            <DateLink href={buildTurnosHref(fechaHoy, estado, scope)} label="Hoy" active={isToday} />
+            <DateLink href={buildTurnosHref(shiftDate(fecha, 1), estado, scope)} label="Manana" />
 
             <form className="ml-auto flex flex-wrap gap-3">
               <input
@@ -103,6 +142,7 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
                 defaultValue={fecha}
                 className="h-11 rounded-xl border border-stone-300 px-4 text-sm text-stone-900 outline-none focus:border-stone-900"
               />
+              <input type="hidden" name="scope" value={scope} />
               <select
                 name="estado"
                 defaultValue={estado ?? "todos"}
@@ -118,34 +158,34 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
                 type="submit"
                 className="h-11 rounded-xl bg-stone-100 px-4 text-sm font-medium text-stone-700 hover:bg-stone-200"
               >
-                Ver día
+                Ver dia
               </button>
             </form>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            <StatusLink href={buildEstadoHref(fecha)} label="Todos" active={!estado} />
-            <StatusLink href={buildEstadoHref(fecha, "pendiente")} label="Pendientes" active={estado === "pendiente"} />
-            <StatusLink href={buildEstadoHref(fecha, "confirmado")} label="Confirmados" active={estado === "confirmado"} />
-            <StatusLink href={buildEstadoHref(fecha, "completado")} label="Completados" active={estado === "completado"} />
-            <StatusLink href={buildEstadoHref(fecha, "cancelado")} label="Cancelados" active={estado === "cancelado"} />
+            <StatusLink href={buildTurnosHref(fecha, undefined, scope)} label="Todos" active={!estado} />
+            <StatusLink href={buildTurnosHref(fecha, "pendiente", scope)} label="Pendientes" active={estado === "pendiente"} />
+            <StatusLink href={buildTurnosHref(fecha, "confirmado", scope)} label="Confirmados" active={estado === "confirmado"} />
+            <StatusLink href={buildTurnosHref(fecha, "completado", scope)} label="Completados" active={estado === "completado"} />
+            <StatusLink href={buildTurnosHref(fecha, "cancelado", scope)} label="Cancelados" active={estado === "cancelado"} />
           </div>
         </section>
 
-        <section className="rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm">
+        <section id="agenda" className="rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm">
           <div className="mb-4">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-400">
               Agenda visual
             </p>
-            <h2 className="mt-2 text-xl font-semibold text-stone-900">La agenda manda</h2>
+            <h2 className="mt-2 text-xl font-semibold text-stone-900">Lo que viene hoy</h2>
             <p className="text-sm text-stone-500">
-              Turnos confirmados bien visibles y huecos libres convertidos en acciones rápidas.
+              Los turnos ocupados y los huecos disponibles quedan en una sola mirada.
             </p>
           </div>
 
           {timelineSlots.length === 0 ? (
             <div className="rounded-[24px] border border-dashed border-stone-300 bg-stone-50 p-10 text-center text-sm text-stone-500">
-              No hay turnos ni disponibilidad cargada para este día.
+              No hay turnos ni disponibilidad cargada para este dia.
             </div>
           ) : (
             <div className="space-y-4">
@@ -192,9 +232,9 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
         </section>
 
         <section className="grid gap-3 md:grid-cols-3">
-          <SmallStat label="Barberos activos" value={String(barberos.length)} />
+          <SmallStat label="Barberos visibles" value={String(scope === "equipo" ? barberos.length : 1)} />
           <SmallStat label="Huecos libres" value={String(slotsLibres.length)} />
-          <SmallStat label="Siguiente foco" value={pendientes > 0 ? "Pendientes" : "Agenda al día"} />
+          <SmallStat label="Siguiente foco" value={pendientes > 0 ? "Pendientes" : "Agenda al dia"} />
         </section>
       </div>
     </main>
@@ -236,6 +276,19 @@ function StatusLink({ href, label, active }: { href: string; label: string; acti
   );
 }
 
+function ScopeLink({ href, label, active }: { href: string; label: string; active?: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`inline-flex min-h-[42px] items-center rounded-full px-4 text-sm font-semibold ${
+        active ? "bg-stone-950 text-white" : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+      }`}
+    >
+      {label}
+    </Link>
+  );
+}
+
 function buildTimelineSlots(turnos: TurnoSummary[], freeSlots: TimelineFreeSlot[]) {
   const times = new Set<string>();
   for (const turno of turnos) times.add(turno.horaInicio);
@@ -253,11 +306,13 @@ function buildTimelineSlots(turnos: TurnoSummary[], freeSlots: TimelineFreeSlot[
   const startMinutes = Math.max(8 * 60, Math.min(...minuteValues) - 30);
   const endMinutes = Math.min(21 * 60, Math.max(...minuteValues) + 30);
 
-  return buildSlots(startMinutes, endMinutes).map((time) => ({
-    time,
-    turnos: turnos.filter((turno) => turno.horaInicio === time),
-    freeSlots: freeSlots.filter((slot) => slot.horaInicio === time),
-  })).filter((slot) => slot.turnos.length > 0 || slot.freeSlots.length > 0);
+  return buildSlots(startMinutes, endMinutes)
+    .map((time) => ({
+      time,
+      turnos: turnos.filter((turno) => turno.horaInicio === time),
+      freeSlots: freeSlots.filter((slot) => slot.horaInicio === time),
+    }))
+    .filter((slot) => slot.turnos.length > 0 || slot.freeSlots.length > 0);
 }
 
 function buildSlots(startMinutes: number, endMinutes: number) {
@@ -286,10 +341,13 @@ function shiftDate(fecha: string, days: number) {
   return current.toISOString().slice(0, 10);
 }
 
-function buildEstadoHref(fecha: string, estado?: string) {
+function buildTurnosHref(fecha: string, estado?: string, scope?: string) {
   const params = new URLSearchParams({ fecha });
   if (estado) {
     params.set("estado", estado);
+  }
+  if (scope && scope !== "mio") {
+    params.set("scope", scope);
   }
   return `/turnos?${params.toString()}`;
 }

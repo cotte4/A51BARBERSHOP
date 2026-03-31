@@ -1,3 +1,4 @@
+﻿import Image from "next/image";
 import type { VisitLogSummary } from "@/lib/types";
 
 type VisitHistoryProps = {
@@ -14,7 +15,7 @@ export default function VisitHistory({ visits }: VisitHistoryProps) {
       <h2 className="text-lg font-semibold text-gray-900">Historial visible</h2>
       <div className="mt-4 space-y-3">
         {visits.length === 0 ? (
-          <p className="text-sm text-gray-500">Todavía no hay visitas visibles para este perfil.</p>
+          <p className="text-sm text-gray-500">Todavia no hay visitas visibles para este perfil.</p>
         ) : (
           visits.map((visit) => (
             <article key={visit.id} className="rounded-2xl border border-gray-200 p-4">
@@ -40,6 +41,15 @@ export default function VisitHistory({ visits }: VisitHistoryProps) {
                 </div>
               ) : null}
               {visit.barberNotes ? <p className="mt-3 text-sm text-gray-700">{visit.barberNotes}</p> : null}
+              {visit.photoUrls.length > 0 ? (
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {visit.photoUrls.map((url, index) => (
+                    <div key={`${visit.id}-${index}`} className="relative aspect-square overflow-hidden rounded-2xl bg-gray-100">
+                      <Image src={url} alt={`Foto del corte ${index + 1}`} fill sizes="(max-width: 640px) 50vw, 180px" className="object-cover" />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </article>
           ))
         )}

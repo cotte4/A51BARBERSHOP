@@ -20,13 +20,13 @@ export default function CerrarCajaButton({ cerrarAction }: CerrarCajaButtonProps
         type="submit"
         disabled={isPending}
         onClick={(e) => {
-          if (!window.confirm("¿Confirmás el cierre de caja del día? Esta acción no se puede deshacer.")) {
+          if (!window.confirm("Estas seguro de cerrar la caja? Esta accion guarda quien la cerro, a que hora fue y no se puede deshacer.")) {
             e.preventDefault();
           }
         }}
         className="min-h-[44px] w-full bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors disabled:opacity-50"
       >
-        {isPending ? "Cerrando caja..." : "Confirmar cierre del día"}
+        {isPending ? "Cerrando caja..." : "Confirmar cierre del dia"}
       </button>
     </form>
   );

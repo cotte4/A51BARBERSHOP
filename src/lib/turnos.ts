@@ -154,7 +154,11 @@ export async function enforcePublicReservaRateLimit(ip: string | null) {
   return { allowed: true, ipHash };
 }
 
-export async function getTurnosAdminList(fecha: string, estado?: string) {
+export async function getTurnosVisibleList(
+  fecha: string,
+  estado?: string,
+  barberoId?: string
+) {
   const rows = await db
     .select({
       id: turnos.id,
@@ -174,9 +178,11 @@ export async function getTurnosAdminList(fecha: string, estado?: string) {
     .from(turnos)
     .innerJoin(barberos, eq(barberos.id, turnos.barberoId))
     .where(
-      estado
-        ? and(eq(turnos.fecha, fecha), eq(turnos.estado, estado))
-        : eq(turnos.fecha, fecha)
+      and(
+        eq(turnos.fecha, fecha),
+        estado ? eq(turnos.estado, estado) : undefined,
+        barberoId ? eq(turnos.barberoId, barberoId) : undefined
+      )
     )
     .orderBy(turnos.horaInicio);
 
@@ -214,6 +220,10 @@ export async function getTurnosAdminList(fecha: string, estado?: string) {
   }));
 }
 
+export async function getTurnosAdminList(fecha: string, estado?: string) {
+  return getTurnosVisibleList(fecha, estado);
+}
+
 export async function getDisponibilidadAdminList(barberoId: string, fromFecha: string) {
   return db
     .select({
@@ -238,7 +248,7 @@ export async function getBarberosActivosTurnos() {
     .orderBy(barberos.nombre);
 }
 
-export async function getDisponibilidadLibrePorFecha(fecha: string) {
+export async function getDisponibilidadLibrePorFecha(fecha: string, barberoId?: string) {
   if (await isFechaCerrada(fecha)) {
     return [];
   }
@@ -255,7 +265,13 @@ export async function getDisponibilidadLibrePorFecha(fecha: string) {
       })
       .from(turnosDisponibilidad)
       .innerJoin(barberos, eq(barberos.id, turnosDisponibilidad.barberoId))
-      .where(and(eq(turnosDisponibilidad.fecha, fecha), eq(barberos.activo, true)))
+      .where(
+        and(
+          eq(turnosDisponibilidad.fecha, fecha),
+          eq(barberos.activo, true),
+          barberoId ? eq(turnosDisponibilidad.barberoId, barberoId) : undefined
+        )
+      )
       .orderBy(turnosDisponibilidad.horaInicio, barberos.nombre),
     db
       .select({
@@ -266,6 +282,7 @@ export async function getDisponibilidadLibrePorFecha(fecha: string) {
       .where(
         and(
           eq(turnos.fecha, fecha),
+          barberoId ? eq(turnos.barberoId, barberoId) : undefined,
           inArray(turnos.estado, ["pendiente", "confirmado"])
         )
       ),
