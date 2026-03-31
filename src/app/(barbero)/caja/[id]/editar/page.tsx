@@ -2,10 +2,12 @@ import { db } from "@/db";
 import {
   atenciones,
   atencionesAdicionales,
+  atencionesProductos,
   barberos,
-  servicios,
   serviciosAdicionales,
   mediosPago,
+  productos,
+  servicios,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getCajaActorContext } from "@/lib/caja-access";
@@ -61,16 +63,23 @@ export default async function EditarAtencionPage({
     serviciosActivos,
     adicionalesAll,
     mediosPagoActivos,
+    productosActivos,
     adicionalesDeAtencion,
+    productosDeAtencion,
   ] = await Promise.all([
     db.select().from(barberos).where(eq(barberos.activo, true)),
     db.select().from(servicios).where(eq(servicios.activo, true)),
     db.select().from(serviciosAdicionales),
     db.select().from(mediosPago).where(eq(mediosPago.activo, true)),
+    db.select().from(productos).where(eq(productos.activo, true)),
     db
       .select()
       .from(atencionesAdicionales)
       .where(eq(atencionesAdicionales.atencionId, id)),
+    db
+      .select()
+      .from(atencionesProductos)
+      .where(eq(atencionesProductos.atencionId, id)),
   ]);
 
   const preselectedBarberoId = actor?.barberoId;
@@ -136,6 +145,12 @@ export default async function EditarAtencionPage({
             nombre: m.nombre,
             comisionPorcentaje: m.comisionPorcentaje,
           }))}
+          productosList={productosActivos.map((producto) => ({
+            id: producto.id,
+            nombre: producto.nombre,
+            precioVenta: producto.precioVenta,
+            stockActual: producto.stockActual,
+          }))}
           preselectedBarberoId={preselectedBarberoId}
           isAdmin={isAdmin}
           initialData={{
@@ -147,6 +162,11 @@ export default async function EditarAtencionPage({
             precioCobrado: atencion.precioCobrado ?? undefined,
             medioPagoId: atencion.medioPagoId ?? undefined,
             notas: atencion.notas,
+            productos: productosDeAtencion.map((producto) => ({
+              productoId: producto.productoId ?? "",
+              cantidad: producto.cantidad ?? 0,
+              precioUnitario: producto.precioUnitario,
+            })),
           }}
           submitLabel="Guardar cambios"
           cancelHref="/caja"

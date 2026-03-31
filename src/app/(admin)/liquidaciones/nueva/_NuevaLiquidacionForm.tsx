@@ -7,6 +7,8 @@ import type { LiquidacionFormState } from "../actions";
 
 interface Props {
   barberosList: Array<{ id: string; nombre: string }>;
+  initialBarberoId?: string;
+  initialFecha?: string;
 }
 
 const initialState: LiquidacionFormState = {};
@@ -30,47 +32,26 @@ function shiftDays(date: Date, days: number) {
   return copy;
 }
 
-function startOfMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function endOfMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
-}
-
 function buildPresets(): DatePreset[] {
   const today = new Date();
-  const thisMonthStart = startOfMonth(today);
-  const lastMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-  const lastMonthStart = startOfMonth(lastMonthDate);
-  const lastMonthEnd = endOfMonth(lastMonthDate);
 
   return [
     {
-      id: "this-month",
-      label: "Este mes",
-      description: "Desde el primer dia hasta hoy.",
+      id: "today",
+      label: "Hoy",
+      description: "Liquidacion diaria del dia en curso.",
       getRange: () => ({
-        inicio: formatDateInput(thisMonthStart),
+        inicio: formatDateInput(today),
         fin: formatDateInput(today),
       }),
     },
     {
-      id: "last-month",
-      label: "Mes pasado",
-      description: "Periodo calendario completo anterior.",
+      id: "yesterday",
+      label: "Ayer",
+      description: "Para cerrar el dia anterior en un toque.",
       getRange: () => ({
-        inicio: formatDateInput(lastMonthStart),
-        fin: formatDateInput(lastMonthEnd),
-      }),
-    },
-    {
-      id: "last-15",
-      label: "Ultimos 15 dias",
-      description: "Ventana corta para liquidaciones parciales.",
-      getRange: () => ({
-        inicio: formatDateInput(shiftDays(today, -14)),
-        fin: formatDateInput(today),
+        inicio: formatDateInput(shiftDays(today, -1)),
+        fin: formatDateInput(shiftDays(today, -1)),
       }),
     },
   ];
@@ -96,16 +77,23 @@ function getDaysBetween(inicio: string, fin: string) {
   return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
 }
 
-export default function NuevaLiquidacionForm({ barberosList }: Props) {
+export default function NuevaLiquidacionForm({
+  barberosList,
+  initialBarberoId,
+  initialFecha,
+}: Props) {
   const [state, formAction, isPending] = useActionState(generarLiquidacion, initialState);
   const presets = buildPresets();
-  const initialRange = presets[0].getRange();
+  const todayRange = presets[0].getRange();
+  const fechaInicial = initialFecha || todayRange.inicio;
 
-  const [barberoId, setBarberoId] = useState("");
-  const [periodoInicio, setPeriodoInicio] = useState(initialRange.inicio);
-  const [periodoFin, setPeriodoFin] = useState(initialRange.fin);
+  const [barberoId, setBarberoId] = useState(initialBarberoId ?? "");
+  const [periodoInicio, setPeriodoInicio] = useState(fechaInicial);
+  const [periodoFin, setPeriodoFin] = useState(fechaInicial);
   const [notas, setNotas] = useState("");
-  const [activePreset, setActivePreset] = useState(presets[0].id);
+  const [activePreset, setActivePreset] = useState(
+    initialFecha === presets[1].getRange().inicio ? "yesterday" : "today"
+  );
 
   useEffect(() => {
     if (periodoInicio && periodoFin) {
@@ -113,7 +101,7 @@ export default function NuevaLiquidacionForm({ barberosList }: Props) {
         const range = preset.getRange();
         return range.inicio === periodoInicio && range.fin === periodoFin;
       });
-      setActivePreset(matchingPreset?.id ?? "");
+      setActivePreset(matchingPreset?.id ?? "custom");
     }
   }, [periodoInicio, periodoFin, presets]);
 
@@ -187,7 +175,7 @@ export default function NuevaLiquidacionForm({ barberosList }: Props) {
         </p>
         <h2 className="mt-2 text-2xl font-semibold text-stone-950">Defini el periodo</h2>
         <p className="mt-1 text-sm text-stone-500">
-          Usa presets rapidos y ajusta a mano solo si el corte no es estandar.
+          Por default es diario. Si necesitas un rango legacy, cambialo manualmente.
         </p>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -217,6 +205,20 @@ export default function NuevaLiquidacionForm({ barberosList }: Props) {
               </button>
             );
           })}
+          <button
+            type="button"
+            onClick={() => setActivePreset("custom")}
+            className={`rounded-[24px] border px-4 py-4 text-left transition ${
+              activePreset === "custom"
+                ? "border-stone-900 bg-stone-900 text-white"
+                : "border-stone-200 bg-stone-50 text-stone-900 hover:border-stone-300 hover:bg-white"
+            }`}
+          >
+            <span className="block text-sm font-semibold">Personalizado</span>
+            <span className={`mt-2 block text-xs ${activePreset === "custom" ? "text-stone-300" : "text-stone-500"}`}>
+              Edita inicio y fin manualmente si necesitas un rango mayor a un dia.
+            </span>
+          </button>
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -275,15 +277,21 @@ export default function NuevaLiquidacionForm({ barberosList }: Props) {
             </p>
             <p className="mt-2 text-sm text-stone-300">
               {canPreview
-                ? `${formatFechaHumana(periodoInicio)} al ${formatFechaHumana(periodoFin)}`
-                : "Define el barbero y el rango para ver el resumen completo."}
+                ? periodoInicio === periodoFin
+                  ? formatFechaHumana(periodoInicio)
+                  : `${formatFechaHumana(periodoInicio)} al ${formatFechaHumana(periodoFin)}`
+                : "Define el barbero y la fecha para ver el resumen completo."}
             </p>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <div className="rounded-[22px] bg-white/10 px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.18em] text-stone-300">Duracion</p>
                 <p className="mt-2 text-lg font-semibold">
-                  {durationDays ? `${durationDays} dias` : "Pendiente"}
+                  {durationDays
+                    ? durationDays === 1
+                      ? "Liquidacion diaria"
+                      : `${durationDays} dias`
+                    : "Pendiente"}
                 </p>
               </div>
               <div className="rounded-[22px] bg-white/10 px-4 py-3">
@@ -317,7 +325,13 @@ export default function NuevaLiquidacionForm({ barberosList }: Props) {
               />
               <PreviewRow
                 label="Rango valido"
-                value={durationDays ? `${durationDays} dias incluidos` : "Revisa el rango"}
+                value={
+                  durationDays
+                    ? durationDays === 1
+                      ? "Liquidacion diaria"
+                      : `${durationDays} dias incluidos`
+                    : "Revisa el rango"
+                }
                 ok={Boolean(durationDays)}
               />
             </div>

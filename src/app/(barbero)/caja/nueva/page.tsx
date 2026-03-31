@@ -1,9 +1,16 @@
 import Link from "next/link";
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import AtencionForm from "@/components/caja/AtencionForm";
 import QuickCheckoutPanel from "@/components/caja/QuickCheckoutPanel";
 import { db } from "@/db";
-import { barberos, cierresCaja, mediosPago, servicios, serviciosAdicionales } from "@/db/schema";
+import {
+  barberos,
+  cierresCaja,
+  mediosPago,
+  productos,
+  servicios,
+  serviciosAdicionales,
+} from "@/db/schema";
 import { getQuickActionDefaultsForBarbero } from "@/lib/caja-atencion";
 import { getCajaActorContext } from "@/lib/caja-access";
 import type { QuickActionOption } from "@/lib/types";
@@ -53,11 +60,15 @@ export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionP
     );
   }
 
-  const [barberosActivos, serviciosActivos, adicionalesAll, mediosPagoActivos] = await Promise.all([
+  const [barberosActivos, serviciosActivos, adicionalesAll, mediosPagoActivos, productosActivos] = await Promise.all([
     db.select().from(barberos).where(eq(barberos.activo, true)),
     db.select().from(servicios).where(eq(servicios.activo, true)),
     db.select().from(serviciosAdicionales),
     db.select().from(mediosPago).where(eq(mediosPago.activo, true)),
+    db
+      .select()
+      .from(productos)
+      .where(and(eq(productos.activo, true), gt(productos.stockActual, 0))),
   ]);
 
   const preselectedBarberoId = actor?.barberoId;
@@ -161,6 +172,12 @@ export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionP
                 id: medio.id,
                 nombre: medio.nombre,
                 comisionPorcentaje: medio.comisionPorcentaje,
+              }))}
+              productosList={productosActivos.map((producto) => ({
+                id: producto.id,
+                nombre: producto.nombre,
+                precioVenta: producto.precioVenta,
+                stockActual: producto.stockActual,
               }))}
               preselectedBarberoId={preselectedBarberoId}
               isAdmin={isAdmin}

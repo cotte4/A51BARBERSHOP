@@ -20,7 +20,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     if (userRole === "admin") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return NextResponse.redirect(new URL("/caja", request.url));
     }
     return NextResponse.redirect(new URL("/caja", request.url));
   }
@@ -28,7 +28,7 @@ export async function proxy(request: NextRequest) {
   if (pathname === "/login" || pathname.startsWith("/login")) {
     if (isAuthenticated) {
       if (userRole === "admin") {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
+        return NextResponse.redirect(new URL("/caja", request.url));
       }
       return NextResponse.redirect(new URL("/caja", request.url));
     }

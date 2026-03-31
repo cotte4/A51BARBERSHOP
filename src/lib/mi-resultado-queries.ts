@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { atenciones, barberos, gastos, productos, stockMovimientos } from "@/db/schema";
 import { and, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
-import { getDaysInMonth, toNumber } from "@/lib/caja-finance";
+import { toNumber } from "@/lib/caja-finance";
 import { getPL } from "@/lib/dashboard-queries";
 import { getCategoriaGastoRapidoByEmoji } from "@/lib/gastos-rapidos";
 import { hasGastosRapidosSchema } from "@/lib/gastos-rapidos-server";
@@ -115,11 +115,6 @@ export async function getMiResultadoData() {
     .filter((barbero) => barbero.rol === "barbero")
     .map((barbero) => barbero.id);
 
-  const alquilerMensual = listaBarberos
-    .filter((barbero) => barbero.rol === "barbero")
-    .reduce((acumulado, barbero) => acumulado + toNumber(barbero.alquilerBancoMensual), 0);
-  const alquilerDia = alquilerMensual / Math.max(getDaysInMonth(fechaHoy), 1);
-
   const [atencionesHoy, atencionesMes, gastosFijosMesRows] = await Promise.all([
     db
       .select({
@@ -186,8 +181,8 @@ export async function getMiResultadoData() {
     0
   );
 
-  const totalIngresosHoy = tusCortesHoy + aporteCasaServiciosHoy + alquilerDia + margenProductosHoy;
-  const aporteCasaMes = plMes.ingresosCasaGabote + plMes.alquilerBancoMes;
+  const totalIngresosHoy = tusCortesHoy + aporteCasaServiciosHoy + margenProductosHoy;
+  const aporteCasaMes = plMes.ingresosCasaGabote;
   const totalIngresosMes = plMes.ingresosNetosPinky + aporteCasaMes + margenProductosMes;
   const totalEgresosMes =
     gastosFijosMes + quickExpensesMes.total + plMes.feesMedioPagoGabote;
@@ -201,7 +196,7 @@ export async function getMiResultadoData() {
       totalMes: totalIngresosMes,
       tusCortesHoy,
       tusCortesMes: plMes.ingresosNetosPinky,
-      aporteCasaHoy: aporteCasaServiciosHoy + alquilerDia,
+      aporteCasaHoy: aporteCasaServiciosHoy,
       aporteCasaMes,
       productosHoy: margenProductosHoy,
       productosMes: margenProductosMes,

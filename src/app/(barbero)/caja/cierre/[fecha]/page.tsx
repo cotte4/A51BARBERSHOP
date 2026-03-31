@@ -148,11 +148,6 @@ export default async function CierreDetallePage({
                     Ingreso neto propio: {formatARS(barbero.ingresoNetoServicios)}
                   </div>
                 )}
-                {barbero.alquilerBancoDiario > 0 && (
-                  <div className="mt-0.5 text-xs text-gray-400">
-                    Alquiler banco/dia devengado: {formatARS(barbero.alquilerBancoDiario)}
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -182,8 +177,6 @@ export default async function CierreDetallePage({
               Servicios {formatARS(resumen.totales.aporteCasaServicios)}
               {" · "}
               Productos {formatARS(resumen.totales.margenProductos)}
-              {" · "}
-              Alquiler devengado {formatARS(resumen.totales.alquilerBancoDevengadoDia)}
             </div>
           </div>
         )}

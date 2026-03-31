@@ -52,7 +52,6 @@ export async function GET(
     ingresosGaboteBruto: pl.ingresosGaboteBruto,
     comisionesGabote: pl.comisionesGabote,
     feesMedioPagoGabote: pl.feesMedioPagoGabote,
-    alquilerBancoMes: pl.alquilerBancoMes,
     margenProductosMes: pl.margenProductosMes,
     ingresosCasaGabote: pl.ingresosCasaGabote,
     gastosFijosMes: pl.gastosFijosMes,

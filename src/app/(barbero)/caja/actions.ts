@@ -22,6 +22,8 @@ import {
   getQuickActionDefaultsForBarbero,
   resolveCajaActorBarberoId,
   hasCajaCerradaHoy,
+  syncProductosAtencion,
+  type ProductoSeleccionadoInput,
 } from "@/lib/caja-atencion";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -50,6 +52,44 @@ function getFechaHoy(): string {
   return getFechaHoyArgentina();
 }
 
+function parseProductosSeleccionados(formData: FormData): ProductoSeleccionadoInput[] {
+  const productosRaw = formData.get("productosSeleccionados");
+
+  if (typeof productosRaw !== "string" || productosRaw.trim() === "") {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(productosRaw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .map((item) => ({
+        productoId:
+          typeof item?.id === "string"
+            ? item.id
+            : typeof item?.productoId === "string"
+              ? item.productoId
+              : "",
+        cantidad: Number(item?.cantidad ?? 0),
+        precioUnitario: Number(item?.precioUnitario ?? 0),
+      }))
+      .filter(
+        (item) =>
+          item.productoId &&
+          Number.isFinite(item.cantidad) &&
+          item.cantidad > 0 &&
+          Number.isFinite(item.precioUnitario) &&
+          item.precioUnitario >= 0
+      );
+  } catch (error) {
+    console.error("No se pudo parsear productosSeleccionados", error);
+    return [];
+  }
+}
+
 // ─── registrarAtencion ────────────────────────────────
 
 export async function registrarAtencion(
@@ -68,6 +108,8 @@ export async function registrarAtencion(
   const precioCobradoStr = formData.get("precioCobrado") as string;
   const adicionalesIds = formData.getAll("adicionalesIds") as string[]; // múltiples
   const notas = formData.get("notas") as string | null;
+
+  const productosSeleccionados = parseProductosSeleccionados(formData);
 
   // Validaciones
   const fieldErrors: AtencionFormState["fieldErrors"] = {};
@@ -91,6 +133,28 @@ export async function registrarAtencion(
 
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
+  const productosIds = productosSeleccionados.map((item) => item.productoId);
+  if (productosIds.length > 0) {
+    const productosActivos = await db
+      .select()
+      .from(productos)
+      .where(inArray(productos.id, productosIds));
+    const productosMap = new Map(productosActivos.map((producto) => [producto.id, producto]));
+
+    for (const item of productosSeleccionados) {
+      const producto = productosMap.get(item.productoId);
+      if (!producto) {
+        return { error: "Hay un producto seleccionado que ya no existe." };
+      }
+      if (!producto.activo) {
+        return { error: `El producto ${producto.nombre} no esta activo.` };
+      }
+      if ((producto.stockActual ?? 0) < item.cantidad) {
+        return { error: `Sin stock para ${producto.nombre}. Disponible: ${producto.stockActual ?? 0}` };
+      }
+    }
+  }
+
   // Verificar que no hay cierre para hoy
   if (await hasCajaCerradaHoy()) {
     const d = new Date(getFechaHoy() + "T12:00:00");
@@ -105,6 +169,7 @@ export async function registrarAtencion(
       medioPagoId,
       precioCobrado: Number(precioCobradoStr),
       adicionalesIds,
+      productos: productosSeleccionados,
       notas,
     });
   } catch (e) {
@@ -113,6 +178,8 @@ export async function registrarAtencion(
   }
 
   revalidatePath("/caja");
+  revalidatePath("/inventario");
+  revalidatePath("/dashboard");
   redirect("/caja");
 }
 
@@ -160,6 +227,8 @@ async function registrarAtencionRapidaInterna(
   }
 
   revalidatePath("/caja");
+  revalidatePath("/inventario");
+  revalidatePath("/dashboard");
   redirect("/caja");
 }
 
@@ -199,6 +268,7 @@ export async function editarAtencion(
   const medioPagoId = formData.get("medioPagoId") as string;
   const precioCobradoStr = formData.get("precioCobrado") as string;
   const adicionalesIds = formData.getAll("adicionalesIds") as string[];
+  const productosSeleccionados = parseProductosSeleccionados(formData);
   const notas = formData.get("notas") as string | null;
 
   const [atencionExistente] = await db
@@ -268,6 +338,24 @@ export async function editarAtencion(
 
     if (!barbero || !medioPago || !servicio) return { error: "Datos inválidos." };
 
+    const productosIds = productosSeleccionados.map((item) => item.productoId);
+    if (productosIds.length > 0) {
+      const productosActivos = await db
+        .select()
+        .from(productos)
+        .where(inArray(productos.id, productosIds));
+      const productosMap = new Map(productosActivos.map((producto) => [producto.id, producto]));
+
+      for (const item of productosSeleccionados) {
+        const producto = productosMap.get(item.productoId);
+        if (!producto) return { error: "Hay un producto seleccionado que ya no existe." };
+        if (!producto.activo) return { error: `El producto ${producto.nombre} no esta activo.` };
+        if ((producto.stockActual ?? 0) < item.cantidad) {
+          return { error: `Sin stock para ${producto.nombre}. Disponible: ${producto.stockActual ?? 0}` };
+        }
+      }
+    }
+
     const precioCobrado = Number(precioCobradoStr);
     const comisionMpPct = Number(medioPago.comisionPorcentaje ?? 0);
     const comisionMpMonto = precioCobrado * comisionMpPct / 100;
@@ -275,43 +363,53 @@ export async function editarAtencion(
     const comisionBarberoPct = Number(barbero.porcentajeComision ?? 0);
     const comisionBarberoMonto = precioCobrado * comisionBarberoPct / 100;
 
-    await db.update(atenciones).set({
-      barberoId,
-      servicioId,
-      precioCobrado: String(precioCobrado),
-      precioBase: servicio.precioBase,
-      medioPagoId,
-      comisionMedioPagoPct: String(comisionMpPct),
-      comisionMedioPagoMonto: String(comisionMpMonto.toFixed(2)),
-      montoNeto: String(montoNeto.toFixed(2)),
-      comisionBarberoPct: String(comisionBarberoPct),
-      comisionBarberoMonto: String(comisionBarberoMonto.toFixed(2)),
-      notas: notas?.trim() || null,
-    }).where(eq(atenciones.id, id));
+    await db.transaction(async (tx) => {
+      await tx.update(atenciones).set({
+        barberoId,
+        servicioId,
+        precioCobrado: String(precioCobrado),
+        precioBase: servicio.precioBase,
+        medioPagoId,
+        comisionMedioPagoPct: String(comisionMpPct),
+        comisionMedioPagoMonto: String(comisionMpMonto.toFixed(2)),
+        montoNeto: String(montoNeto.toFixed(2)),
+        comisionBarberoPct: String(comisionBarberoPct),
+        comisionBarberoMonto: String(comisionBarberoMonto.toFixed(2)),
+        notas: notas?.trim() || null,
+      }).where(eq(atenciones.id, id));
 
-    // Re-insertar adicionales
-    await db.delete(atencionesAdicionales).where(eq(atencionesAdicionales.atencionId, id));
+      await tx.delete(atencionesAdicionales).where(eq(atencionesAdicionales.atencionId, id));
 
-    if (adicionalesIds.length > 0) {
-      const adicionalesData = await db
-        .select()
-        .from(serviciosAdicionales)
-        .where(inArray(serviciosAdicionales.id, adicionalesIds));
+      if (adicionalesIds.length > 0) {
+        const adicionalesData = await tx
+          .select()
+          .from(serviciosAdicionales)
+          .where(inArray(serviciosAdicionales.id, adicionalesIds));
 
-      await db.insert(atencionesAdicionales).values(
-        adicionalesData.map((a) => ({
-          atencionId: id,
-          adicionalId: a.id,
-          precioCobrado: a.precioExtra ?? "0",
-        }))
-      );
-    }
+        await tx.insert(atencionesAdicionales).values(
+          adicionalesData.map((a) => ({
+            atencionId: id,
+            adicionalId: a.id,
+            precioCobrado: a.precioExtra ?? "0",
+          }))
+        );
+      }
+
+      await syncProductosAtencion({
+        tx,
+        atencionId: id,
+        medioPagoId,
+        productosSeleccionados,
+      });
+    });
   } catch (e) {
     console.error("Error editando atencion:", e);
     return { error: "No se pudo actualizar la atención. Intentá de nuevo." };
   }
 
   revalidatePath("/caja");
+  revalidatePath("/inventario");
+  revalidatePath("/dashboard");
   redirect("/caja");
 }
 

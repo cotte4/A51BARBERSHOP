@@ -101,8 +101,7 @@ export async function GET(
   const comision = Number(liq.totalComisionCalculada ?? 0);
   const sueldoMinimo = Number(liq.sueldoMinimo ?? 0);
   const alquilerBancoCobrado = Number(liq.alquilerBancoCobrado ?? 0);
-  const baseLiquidable = Math.max(comision, sueldoMinimo);
-  const resultadoPeriodo = baseLiquidable - alquilerBancoCobrado;
+  const resultadoPeriodo = Number(liq.montoAPagar ?? 0);
   const montoAPagar = Number(liq.montoAPagar ?? 0);
 
   const hoy = new Date().toISOString().split("T")[0]!;
@@ -115,7 +114,6 @@ export async function GET(
     atenciones: atencionesData,
     totalComisionCalculada: comision,
     sueldoMinimo,
-    baseLiquidable,
     alquilerBancoCobrado,
     resultadoPeriodo,
     montoAPagar,

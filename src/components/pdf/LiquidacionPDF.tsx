@@ -1,35 +1,26 @@
 import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
-import { pdfStyles, colors } from "./pdf-styles";
-
-// ——————————————————————————————
-// Tipos
-// ——————————————————————————————
+import { colors, pdfStyles } from "./pdf-styles";
 
 export type AtencionLiquidacionData = {
-  fecha: string; // "YYYY-MM-DD"
-  servicio: string; // nombre del servicio o notas
+  fecha: string;
+  servicio: string;
   precioCobrado: number;
   comisionBarbero: number;
 };
 
 export type LiquidacionPDFData = {
   barberoNombre: string;
-  periodoInicio: string; // "YYYY-MM-DD"
-  periodoFin: string; // "YYYY-MM-DD"
-  fechaEmision: string; // "YYYY-MM-DD"
+  periodoInicio: string;
+  periodoFin: string;
+  fechaEmision: string;
   atenciones: AtencionLiquidacionData[];
   totalComisionCalculada: number;
-  sueldoMinimo: number;
-  baseLiquidable: number;
-  alquilerBancoCobrado: number;
+  sueldoMinimo?: number;
+  alquilerBancoCobrado?: number;
   resultadoPeriodo: number;
   montoAPagar: number;
 };
-
-// ——————————————————————————————
-// Helpers de formato
-// ——————————————————————————————
 
 function ars(value: number): string {
   return new Intl.NumberFormat("es-AR", {
@@ -40,27 +31,34 @@ function ars(value: number): string {
 }
 
 function formatFecha(iso: string): string {
-  // Usa UTC+0 fijo para consistencia en server-side
   const [year, month, day] = iso.split("-").map(Number);
-  const meses = [
-    "ene", "feb", "mar", "abr", "may", "jun",
-    "jul", "ago", "sep", "oct", "nov", "dic",
-  ];
+  const meses = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
   return `${day} ${meses[(month ?? 1) - 1]} ${year}`;
 }
 
 function formatFechaLarga(iso: string): string {
   const [year, month, day] = iso.split("-").map(Number);
   const meses = [
-    "enero", "febrero", "marzo", "abril", "mayo", "junio",
-    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+    "enero",
+    "febrero",
+    "marzo",
+    "abril",
+    "mayo",
+    "junio",
+    "julio",
+    "agosto",
+    "septiembre",
+    "octubre",
+    "noviembre",
+    "diciembre",
   ];
   return `${day} de ${meses[(month ?? 1) - 1]} de ${year}`;
 }
 
-// ——————————————————————————————
-// Componente
-// ——————————————————————————————
+function formatPeriodo(periodoInicio: string, periodoFin: string): string {
+  if (periodoInicio === periodoFin) return formatFechaLarga(periodoInicio);
+  return `${formatFechaLarga(periodoInicio)} al ${formatFechaLarga(periodoFin)}`;
+}
 
 export function LiquidacionPDF({ data }: { data: LiquidacionPDFData }) {
   const {
@@ -70,35 +68,24 @@ export function LiquidacionPDF({ data }: { data: LiquidacionPDFData }) {
     fechaEmision,
     atenciones,
     totalComisionCalculada,
-    sueldoMinimo,
-    baseLiquidable,
-    alquilerBancoCobrado,
+    sueldoMinimo = 0,
+    alquilerBancoCobrado = 0,
     resultadoPeriodo,
     montoAPagar,
   } = data;
 
-  const seAplicoMinimo = sueldoMinimo > 0 && totalComisionCalculada < sueldoMinimo;
-  const mesPositivo = montoAPagar > 0;
+  const periodoPositivo = montoAPagar > 0;
 
   return (
-    <Document
-      title={`Liquidacion ${barberoNombre} - ${periodoInicio}`}
-      author="A51 Barber"
-    >
+    <Document title={`Liquidacion ${barberoNombre} - ${periodoInicio}`} author="A51 Barber">
       <Page size="A4" style={pdfStyles.page}>
-        {/* Cabecera */}
         <View style={pdfStyles.header}>
-          <Text style={pdfStyles.headerTitle}>A51 Barber — Liquidacion Mensual</Text>
+          <Text style={pdfStyles.headerTitle}>A51 Barber - Liquidacion</Text>
           <Text style={pdfStyles.headerSubtitle}>{barberoNombre}</Text>
-          <Text style={pdfStyles.headerMeta}>
-            Periodo: {formatFechaLarga(periodoInicio)} al {formatFechaLarga(periodoFin)}
-          </Text>
-          <Text style={pdfStyles.headerMeta}>
-            Fecha de emision: {formatFechaLarga(fechaEmision)}
-          </Text>
+          <Text style={pdfStyles.headerMeta}>Periodo: {formatPeriodo(periodoInicio, periodoFin)}</Text>
+          <Text style={pdfStyles.headerMeta}>Fecha de emision: {formatFechaLarga(fechaEmision)}</Text>
         </View>
 
-        {/* Tabla de atenciones */}
         <View style={pdfStyles.section}>
           <Text style={pdfStyles.sectionTitle}>Atenciones del periodo</Text>
 
@@ -106,43 +93,25 @@ export function LiquidacionPDF({ data }: { data: LiquidacionPDFData }) {
             <Text style={pdfStyles.emptyText}>Sin atenciones registradas</Text>
           ) : (
             <View style={pdfStyles.table}>
-              {/* Header */}
               <View style={pdfStyles.tableHeader}>
                 <Text style={[pdfStyles.tableHeaderCell, { flex: 1.2 }]}>Fecha</Text>
                 <Text style={[pdfStyles.tableHeaderCell, { flex: 2.5 }]}>Servicio</Text>
-                <Text style={[pdfStyles.tableHeaderCell, { flex: 1, textAlign: "right" }]}>
-                  Precio
-                </Text>
-                <Text style={[pdfStyles.tableHeaderCell, { flex: 1, textAlign: "right" }]}>
-                  Comision
-                </Text>
+                <Text style={[pdfStyles.tableHeaderCell, { flex: 1, textAlign: "right" }]}>Precio</Text>
+                <Text style={[pdfStyles.tableHeaderCell, { flex: 1, textAlign: "right" }]}>Comision</Text>
               </View>
 
-              {/* Filas */}
               {atenciones.map((atencion, idx) => (
-                <View
-                  key={idx}
-                  style={idx % 2 === 0 ? pdfStyles.tableRow : pdfStyles.tableRowAlt}
-                >
-                  <Text style={[pdfStyles.tableCell, { flex: 1.2 }]}>
-                    {formatFecha(atencion.fecha)}
-                  </Text>
-                  <Text style={[pdfStyles.tableCell, { flex: 2.5 }]}>
-                    {atencion.servicio}
-                  </Text>
-                  <Text style={[pdfStyles.tableCellRight, { flex: 1 }]}>
-                    {ars(atencion.precioCobrado)}
-                  </Text>
-                  <Text style={[pdfStyles.tableCellRight, { flex: 1 }]}>
-                    {ars(atencion.comisionBarbero)}
-                  </Text>
+                <View key={idx} style={idx % 2 === 0 ? pdfStyles.tableRow : pdfStyles.tableRowAlt}>
+                  <Text style={[pdfStyles.tableCell, { flex: 1.2 }]}>{formatFecha(atencion.fecha)}</Text>
+                  <Text style={[pdfStyles.tableCell, { flex: 2.5 }]}>{atencion.servicio}</Text>
+                  <Text style={[pdfStyles.tableCellRight, { flex: 1 }]}>{ars(atencion.precioCobrado)}</Text>
+                  <Text style={[pdfStyles.tableCellRight, { flex: 1 }]}>{ars(atencion.comisionBarbero)}</Text>
                 </View>
               ))}
             </View>
           )}
         </View>
 
-        {/* Subtotales */}
         <View style={pdfStyles.section}>
           <Text style={pdfStyles.sectionTitle}>Liquidacion</Text>
 
@@ -153,32 +122,23 @@ export function LiquidacionPDF({ data }: { data: LiquidacionPDFData }) {
             <Text style={pdfStyles.subtotalValue}>{ars(totalComisionCalculada)}</Text>
           </View>
 
-          {sueldoMinimo > 0 && (
+          {sueldoMinimo > 0 ? (
             <View style={pdfStyles.subtotalRow}>
-              <Text style={pdfStyles.subtotalLabel}>
-                Sueldo minimo garantizado{seAplicoMinimo ? " (se aplico)" : ""}
-              </Text>
+              <Text style={pdfStyles.subtotalLabel}>Sueldo minimo garantizado</Text>
               <Text style={pdfStyles.subtotalValue}>{ars(sueldoMinimo)}</Text>
             </View>
-          )}
+          ) : null}
 
-          <View style={pdfStyles.subtotalRow}>
-            <Text style={pdfStyles.subtotalLabel}>
-              Base liquidable {sueldoMinimo > 0 ? "(max entre comision y sueldo minimo)" : ""}
-            </Text>
-            <Text style={pdfStyles.subtotalValue}>{ars(baseLiquidable)}</Text>
-          </View>
-
-          {alquilerBancoCobrado > 0 && (
+          {alquilerBancoCobrado > 0 ? (
             <View style={pdfStyles.subtotalRow}>
               <Text style={[pdfStyles.subtotalLabel, { color: colors.negative }]}>
-                (-) Alquiler banco mensual
+                (-) Alquiler banco
               </Text>
               <Text style={[pdfStyles.subtotalValue, { color: colors.negative }]}>
                 -{ars(alquilerBancoCobrado)}
               </Text>
             </View>
-          )}
+          ) : null}
 
           <View style={pdfStyles.dividerRow} />
 
@@ -195,30 +155,27 @@ export function LiquidacionPDF({ data }: { data: LiquidacionPDFData }) {
           </View>
         </View>
 
-        {/* Resultado final */}
         <View
           style={[
             pdfStyles.resultBox,
-            mesPositivo ? pdfStyles.resultBoxPositive : pdfStyles.resultBoxNegative,
+            periodoPositivo ? pdfStyles.resultBoxPositive : pdfStyles.resultBoxNegative,
           ]}
         >
           <Text
             style={[
               pdfStyles.resultText,
-              mesPositivo ? pdfStyles.resultTextPositive : pdfStyles.resultTextNegative,
+              periodoPositivo ? pdfStyles.resultTextPositive : pdfStyles.resultTextNegative,
             ]}
           >
-            {mesPositivo
+            {periodoPositivo
               ? `Monto a pagar: ${ars(montoAPagar)}`
-              : "Mes negativo. No se genera pago ni deuda futura."}
+              : "Periodo negativo. No se genera pago ni deuda futura."}
           </Text>
         </View>
 
-        {/* Pie */}
         <View style={pdfStyles.footer} fixed>
           <Text style={pdfStyles.footerText}>
-            A51 Barber — Documento generado el {formatFechaLarga(fechaEmision)} — Solo de caracter
-            informativo
+            A51 Barber - Documento generado el {formatFechaLarga(fechaEmision)} - Solo de caracter informativo
           </Text>
         </View>
       </Page>

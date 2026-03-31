@@ -13,7 +13,6 @@ type BarberoCierreInput = {
   nombre: string;
   rol: string;
   tipoModelo: string | null;
-  alquilerBancoMensual: NumericLike;
   activo?: boolean | null;
 };
 
@@ -41,7 +40,6 @@ export type ResumenBarberoCierre = {
   cortes: number;
   totalBruto: number;
   comisionCalculada: number;
-  alquilerBancoDiario: number;
   aporteCasaServicios: number;
   ingresoNetoServicios: number;
 };
@@ -59,7 +57,6 @@ export type TotalesCierre = {
   totalComisionesMediosDia: number;
   cajaNetaDia: number;
   aporteCasaServicios: number;
-  alquilerBancoDevengadoDia: number;
   aporteEconomicoCasaDia: number;
 };
 
@@ -94,8 +91,7 @@ export function buildCierreResumen(args: {
   productos: ProductoCierreInput[];
   mediosPago: MedioPagoCierreInput[];
 }): CierreResumen {
-  const { fecha, atenciones, barberos, ventasProductos, productos, mediosPago } = args;
-  const daysInMonth = getDaysInMonth(fecha);
+  const { fecha: _fecha, atenciones, barberos, ventasProductos, productos, mediosPago } = args;
 
   const barberosMap = new Map(barberos.map((barbero) => [barbero.id, barbero]));
   const productosMap = new Map(productos.map((producto) => [producto.id, producto]));
@@ -131,10 +127,6 @@ export function buildCierreResumen(args: {
         cortes: 0,
         totalBruto: 0,
         comisionCalculada: 0,
-        alquilerBancoDiario:
-          barbero.tipoModelo === "hibrido"
-            ? toNumber(barbero.alquilerBancoMensual) / daysInMonth
-            : 0,
         aporteCasaServicios: 0,
         ingresoNetoServicios: 0,
       };
@@ -184,12 +176,6 @@ export function buildCierreResumen(args: {
 
   const cajaNetaProductos = totalProductosBruto - totalProductosComisionesMedios;
   const margenProductos = cajaNetaProductos - totalProductosCosto;
-  const alquilerBancoDevengadoDia = barberos
-    .filter((barbero) => barbero.activo !== false && barbero.tipoModelo === "hibrido")
-    .reduce(
-      (sum, barbero) => sum + toNumber(barbero.alquilerBancoMensual) / daysInMonth,
-      0
-    );
 
   return {
     version: 2,
@@ -208,9 +194,7 @@ export function buildCierreResumen(args: {
         totalServiciosComisionesMedios + totalProductosComisionesMedios,
       cajaNetaDia: cajaNetaServicios + cajaNetaProductos,
       aporteCasaServicios,
-      alquilerBancoDevengadoDia,
-      aporteEconomicoCasaDia:
-        aporteCasaServicios + margenProductos + alquilerBancoDevengadoDia,
+      aporteEconomicoCasaDia: aporteCasaServicios + margenProductos,
     },
   };
 }
@@ -240,15 +224,10 @@ export function normalizeCierreResumen({
             cortes?: number;
             totalBruto?: NumericLike;
             comisionCalculada?: NumericLike;
-            alquilerBancoDiario?: NumericLike;
           }
         >)
       : {};
 
-  const alquilerBancoDevengadoDia = Object.values(legacyBarberos).reduce(
-    (sum, resumen) => sum + toNumber(resumen.alquilerBancoDiario),
-    0
-  );
   const totalComisionesBarberos = Object.values(legacyBarberos).reduce(
     (sum, resumen) => sum + toNumber(resumen.comisionCalculada),
     0
@@ -269,7 +248,6 @@ export function normalizeCierreResumen({
           cortes: Number(resumen.cortes ?? 0),
           totalBruto: toNumber(resumen.totalBruto),
           comisionCalculada: toNumber(resumen.comisionCalculada),
-          alquilerBancoDiario: toNumber(resumen.alquilerBancoDiario),
           aporteCasaServicios: 0,
           ingresoNetoServicios: 0,
         },
@@ -288,8 +266,7 @@ export function normalizeCierreResumen({
       totalComisionesMediosDia: 0,
       cajaNetaDia: cajaNetaServicios + totalProductosBruto,
       aporteCasaServicios,
-      alquilerBancoDevengadoDia,
-      aporteEconomicoCasaDia: aporteCasaServicios + alquilerBancoDevengadoDia,
+      aporteEconomicoCasaDia: aporteCasaServicios,
     },
   };
 }

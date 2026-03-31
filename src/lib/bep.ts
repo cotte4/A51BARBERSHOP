@@ -3,7 +3,6 @@
 export type BepParams = {
   gastosMesReal: number;
   presupuestoMensual: number;
-  alquilerBancoDia: number;
   precioPromedioDia: number;
   mixGabote: number; // 0-1, default 0.5 si no hay datos
   feePromedioMedioPago: number; // proporción, ej: 0.03 para 3%
@@ -24,7 +23,6 @@ export function calcularBep(params: BepParams): BepResultado {
   const {
     gastosMesReal,
     presupuestoMensual,
-    alquilerBancoDia,
     precioPromedioDia,
     mixGabote,
     feePromedioMedioPago,
@@ -57,15 +55,11 @@ export function calcularBep(params: BepParams): BepResultado {
   }
 
   // Contribución de la casa por corte
-  // Solo los cortes de Gabote aportan a la casa (25% - fee)
+  // Gabote cobra 60%, la casa retiene 40% (menos fee de medio de pago)
   // Los cortes de Pinky no aportan a la casa
-  // El alquiler banco se prorratea por corte estimado del día
-  const cortesEstimadosDia = cortesDiaMes > 0 ? cortesDiaMes : 1;
   const contribucionPorCorteGabote =
-    precioPromedioDia * (0.25 - feePromedioMedioPago);
-  const aporteAlquilerPorCorte = alquilerBancoDia / cortesEstimadosDia;
-  const contribucionCasaPorCorte =
-    mixGabote * contribucionPorCorteGabote + aporteAlquilerPorCorte;
+    precioPromedioDia * (0.40 - feePromedioMedioPago);
+  const contribucionCasaPorCorte = mixGabote * contribucionPorCorteGabote;
 
   if (contribucionCasaPorCorte <= 0) {
     return {

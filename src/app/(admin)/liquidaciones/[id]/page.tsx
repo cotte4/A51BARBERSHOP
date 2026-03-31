@@ -6,6 +6,7 @@ import Link from "next/link";
 import { marcarPagada } from "../actions";
 import MarcarPagadaButton from "./_MarcarPagadaButton";
 import PrintButton from "./_PrintButton";
+import { formatFecha, formatFechaHora } from "@/lib/fecha";
 
 function formatARS(val: string | number | null | undefined): string {
   if (val === null || val === undefined || val === "") return "$0";
@@ -16,15 +17,6 @@ function formatARS(val: string | number | null | undefined): string {
   }).format(Number(val));
 }
 
-function formatFecha(val: string | null | undefined): string {
-  if (!val) return "-";
-  return new Date(val + "T12:00:00").toLocaleDateString("es-AR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "America/Argentina/Buenos_Aires",
-  });
-}
 
 interface LiquidacionPageProps {
   params: Promise<{ id: string }>;
@@ -50,11 +42,13 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
   const comision = Number(liq.totalComisionCalculada ?? 0);
   const sueldoMinimo = Number(liq.sueldoMinimo ?? 0);
   const alquilerBanco = Number(liq.alquilerBancoCobrado ?? 0);
-  const baseLiquidable = Math.max(comision, sueldoMinimo);
-  const resultadoPeriodo = baseLiquidable - alquilerBanco;
+  const resultadoPeriodo = Number(liq.montoAPagar ?? 0);
   const montoAPagar = Number(liq.montoAPagar ?? 0);
-  const seAplicoMinimo = sueldoMinimo > 0 && comision < sueldoMinimo;
-  const mesNegativo = resultadoPeriodo < 0;
+  const periodoLabel =
+    liq.periodoInicio && liq.periodoFin && liq.periodoInicio === liq.periodoFin
+      ? formatFecha(liq.periodoInicio)
+      : `${formatFecha(liq.periodoInicio)} al ${formatFecha(liq.periodoFin)}`;
+  const periodoNegativo = resultadoPeriodo < 0;
 
   const marcarConId = marcarPagada.bind(null, id);
 
@@ -81,7 +75,7 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
             </span>
           </div>
           <p className="mt-0.5 text-sm text-gray-500">
-            {formatFecha(liq.periodoInicio)} - {formatFecha(liq.periodoFin)}
+            {periodoLabel}
           </p>
         </div>
       </header>
@@ -113,35 +107,25 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
               <span className="text-gray-500">Comision calculada</span>
               <span className="font-medium text-gray-900">{formatARS(liq.totalComisionCalculada)}</span>
             </div>
-            {sueldoMinimo > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Sueldo minimo garantizado</span>
-                <span className="font-medium text-gray-900">{formatARS(liq.sueldoMinimo)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Base liquidable</span>
-              <span className="font-medium text-gray-900">{formatARS(baseLiquidable)}</span>
-            </div>
             {alquilerBanco > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Alquiler banco del periodo</span>
                 <span className="text-red-600">-{formatARS(liq.alquilerBancoCobrado)}</span>
               </div>
             )}
-            {seAplicoMinimo && (
-              <div className="mt-1 rounded-lg bg-blue-50 px-3 py-1.5 text-xs text-blue-600">
-                Se aplico sueldo minimo garantizado porque la comision fue menor.
+            {sueldoMinimo > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Sueldo minimo garantizado</span>
+                <span className="font-medium text-gray-900">{formatARS(liq.sueldoMinimo)}</span>
               </div>
             )}
-            {mesNegativo && (
+            {periodoNegativo && (
               <div className="rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
-                El periodo dio negativo. Se registra como resultado negativo del mes, sin deuda
-                ni arrastre.
+                El periodo dio negativo. Se registra como resultado negativo del periodo, sin deuda ni arrastre.
               </div>
             )}
             <div className="mt-1 flex justify-between border-t border-gray-100 pt-2 text-sm">
-              <span className="font-medium text-gray-700">Resultado neto del periodo</span>
+              <span className="font-medium text-gray-700">Resultado del periodo</span>
               <span className={resultadoPeriodo < 0 ? "font-bold text-red-600" : "font-bold text-gray-900"}>
                 {formatARS(resultadoPeriodo)}
               </span>
@@ -189,14 +173,7 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Generada</span>
               <span className="font-medium text-gray-900">
-                {liq.creadoEn
-                  ? new Date(liq.creadoEn).toLocaleDateString("es-AR", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                      timeZone: "America/Argentina/Buenos_Aires",
-                    })
-                  : "-"}
+                {formatFechaHora(liq.creadoEn)}
               </span>
             </div>
           </div>

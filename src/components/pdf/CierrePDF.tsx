@@ -11,7 +11,6 @@ export type ResumenBarberoCierrePDF = {
   cortes: number;
   totalBruto: number;
   comisionCalculada: number;
-  alquilerBancoDiario: number;
   aporteCasaServicios: number;
   ingresoNetoServicios: number;
 };
@@ -35,7 +34,6 @@ export type CierrePDFData = {
   aporteEconomicoCasaDia: number;
   aporteCasaServicios: number;
   margenProductos: number;
-  alquilerBancoDevengadoDia: number;
   // Por barbero
   barberos: Record<string, ResumenBarberoCierrePDF>;
   cantidadAtenciones: number;
@@ -97,7 +95,6 @@ export function CierrePDF({ data }: { data: CierrePDFData }) {
     aporteEconomicoCasaDia,
     aporteCasaServicios,
     margenProductos,
-    alquilerBancoDevengadoDia,
     barberos,
     cantidadAtenciones,
   } = data;
@@ -248,13 +245,6 @@ export function CierrePDF({ data }: { data: CierrePDFData }) {
             <View style={pdfStyles.subtotalRow}>
               <Text style={pdfStyles.subtotalLabel}>Margen por productos</Text>
               <Text style={pdfStyles.subtotalValue}>{ars(margenProductos)}</Text>
-            </View>
-          )}
-
-          {alquilerBancoDevengadoDia > 0 && (
-            <View style={pdfStyles.subtotalRow}>
-              <Text style={pdfStyles.subtotalLabel}>Alquiler banco devengado del dia</Text>
-              <Text style={pdfStyles.subtotalValue}>{ars(alquilerBancoDevengadoDia)}</Text>
             </View>
           )}
 

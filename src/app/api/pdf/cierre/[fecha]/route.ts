@@ -64,7 +64,6 @@ export async function GET(
     aporteEconomicoCasaDia: resumen.totales.aporteEconomicoCasaDia,
     aporteCasaServicios: resumen.totales.aporteCasaServicios,
     margenProductos: resumen.totales.margenProductos,
-    alquilerBancoDevengadoDia: resumen.totales.alquilerBancoDevengadoDia,
     barberos: resumen.barberos,
     cantidadAtenciones: cierre.cantidadAtenciones ?? 0,
   };

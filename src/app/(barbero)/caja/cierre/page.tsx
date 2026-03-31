@@ -3,6 +3,7 @@ import {
   atenciones,
   barberos,
   cierresCaja,
+  liquidaciones,
   mediosPago,
   productos,
   stockMovimientos,
@@ -109,7 +110,7 @@ export default async function CierrePage() {
   const barberosMap = new Map(barberosList.map((barbero) => [barbero.id, barbero]));
   const resumenPorBarbero: Record<
     string,
-    { nombre: string; cortes: number; bruto: number; comision: number; alquilerDiario: number }
+    { nombre: string; cortes: number; bruto: number; comision: number }
   > = {};
 
   for (const atencion of atencionesDelDia) {
@@ -122,16 +123,29 @@ export default async function CierrePage() {
         cortes: 0,
         bruto: 0,
         comision: 0,
-        alquilerDiario:
-          barbero.tipoModelo === "hibrido"
-            ? Number(barbero.alquilerBancoMensual ?? 0) / getDaysInMonth(fechaHoy)
-            : 0,
       };
     }
     resumenPorBarbero[atencion.barberoId].cortes += 1;
     resumenPorBarbero[atencion.barberoId].bruto += Number(atencion.precioCobrado ?? 0);
     resumenPorBarbero[atencion.barberoId].comision += Number(atencion.comisionBarberoMonto ?? 0);
   }
+
+  const gaboteEntry = Object.entries(resumenPorBarbero).find(([, resumen]) =>
+    resumen.nombre.toLowerCase().includes("gabo")
+  );
+  const gaboteLiquidacionExistente = gaboteEntry
+    ? await db
+        .select({ id: liquidaciones.id })
+        .from(liquidaciones)
+        .where(
+          and(
+            eq(liquidaciones.barberoId, gaboteEntry[0]),
+            eq(liquidaciones.periodoInicio, fechaHoy),
+            eq(liquidaciones.periodoFin, fechaHoy)
+          )
+        )
+        .limit(1)
+    : [];
 
   return (
     <div className="flex flex-col gap-5">
@@ -208,11 +222,6 @@ export default async function CierrePage() {
                   <span>Bruto: {formatARS(barbero.bruto)}</span>
                   <span>Su comision: {formatARS(barbero.comision)}</span>
                 </div>
-                {barbero.alquilerDiario > 0 && (
-                  <div className="mt-0.5 text-xs text-gray-400">
-                    Alquiler banco/dia devengado: {formatARS(barbero.alquilerDiario)}
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -240,8 +249,6 @@ export default async function CierrePage() {
             Servicios {formatARS(cierreResumen.totales.aporteCasaServicios)}
             {" · "}
             Productos {formatARS(cierreResumen.totales.margenProductos)}
-            {" · "}
-            Alquiler devengado {formatARS(cierreResumen.totales.alquilerBancoDevengadoDia)}
           </div>
         </div>
       </div>
@@ -265,6 +272,34 @@ export default async function CierrePage() {
 
       {totalEfectivo > 0 && <EfectivoChecker totalEfectivoSistema={totalEfectivo} />}
 
+      {gaboteEntry ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+            Liquidacion pendiente de Gabote
+          </p>
+          <h3 className="mt-2 text-base font-semibold text-gray-900">{gaboteEntry[1].nombre}</h3>
+          <p className="mt-1 text-sm text-gray-600">
+            {gaboteEntry[1].cortes} corte{gaboteEntry[1].cortes !== 1 ? "s" : ""} del dia • Comision{" "}
+            {formatARS(gaboteEntry[1].comision)}
+          </p>
+          {gaboteLiquidacionExistente.length > 0 ? (
+            <Link
+              href={`/liquidaciones/${gaboteLiquidacionExistente[0].id}`}
+              className="mt-4 inline-flex min-h-[44px] items-center rounded-lg border border-amber-300 bg-white px-4 text-sm font-medium text-amber-800 transition hover:bg-amber-100"
+            >
+              Liquidacion generada
+            </Link>
+          ) : (
+            <Link
+              href={`/liquidaciones/nueva?barberoId=${gaboteEntry[0]}&fecha=${fechaHoy}`}
+              className="mt-4 inline-flex min-h-[44px] items-center rounded-lg bg-amber-400 px-4 text-sm font-semibold text-amber-950 transition hover:bg-amber-300"
+            >
+              Generar liquidacion
+            </Link>
+          )}
+        </div>
+      ) : null}
+
       <CerrarCajaButton cerrarAction={cerrarCaja} />
 
       <Link href="/caja" className="text-center text-sm text-gray-400 hover:text-gray-600">
@@ -286,11 +321,6 @@ function getFechaHoy(): string {
   return new Date().toLocaleDateString("en-CA", {
     timeZone: "America/Argentina/Buenos_Aires",
   });
-}
-
-function getDaysInMonth(fecha: string): number {
-  const [year, month] = fecha.split("-").map(Number);
-  return new Date(year, month, 0).getDate();
 }
 
 function formatFechaLarga(fecha: string): string {

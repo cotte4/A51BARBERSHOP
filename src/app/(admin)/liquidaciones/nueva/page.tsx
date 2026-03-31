@@ -1,10 +1,18 @@
+import Link from "next/link";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { barberos } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import Link from "next/link";
 import NuevaLiquidacionForm from "./_NuevaLiquidacionForm";
 
-export default async function NuevaLiquidacionPage() {
+type NuevaLiquidacionPageProps = {
+  searchParams: Promise<{
+    barberoId?: string;
+    fecha?: string;
+  }>;
+};
+
+export default async function NuevaLiquidacionPage({ searchParams }: NuevaLiquidacionPageProps) {
+  const params = await searchParams;
   const barberosActivos = await db.select().from(barberos).where(eq(barberos.activo, true));
   const barberosLiquidables = barberosActivos.filter((barbero) => barbero.rol !== "admin");
 
@@ -41,6 +49,8 @@ export default async function NuevaLiquidacionPage() {
             id: barbero.id,
             nombre: barbero.nombre,
           }))}
+          initialBarberoId={params.barberoId}
+          initialFecha={params.fecha}
         />
       </div>
     </main>

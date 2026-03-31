@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { barberos, liquidaciones } from "@/db/schema";
+import { formatFecha } from "@/lib/fecha";
 
 function formatARS(value: string | null | undefined): string {
   if (!value) return "$0";
@@ -16,17 +17,10 @@ function formatARS(value: string | null | undefined): string {
 }
 
 function formatPeriodo(inicio: string | null, fin: string | null) {
-  const format = (value: string | null, withYear?: boolean) => {
-    if (!value) return "—";
-    return new Date(`${value}T12:00:00`).toLocaleDateString("es-AR", {
-      day: "numeric",
-      month: "short",
-      year: withYear ? "numeric" : undefined,
-      timeZone: "America/Argentina/Buenos_Aires",
-    });
-  };
-
-  return `${format(inicio)} - ${format(fin, true)}`;
+  if (inicio && fin && inicio === fin) {
+    return formatFecha(inicio);
+  }
+  return `${formatFecha(inicio)} - ${formatFecha(fin)}`;
 }
 
 export default async function LiquidacionesPage() {

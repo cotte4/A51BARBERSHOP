@@ -121,8 +121,8 @@ async function seed() {
       nombre: "Gabote",
       rol: "barbero",
       tipoModelo: "hibrido",
-      porcentajeComision: "75.00",
-      alquilerBancoMensual: "300000.00",
+      porcentajeComision: "60.00",
+      alquilerBancoMensual: null,
       sueldoMinimoGarantizado: null,
       activo: true,
     })

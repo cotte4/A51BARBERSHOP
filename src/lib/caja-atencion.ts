@@ -1,13 +1,16 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   atenciones,
   atencionesAdicionales,
+  atencionesProductos,
   barberos,
   cierresCaja,
   mediosPago,
+  productos,
   servicios,
   serviciosAdicionales,
+  stockMovimientos,
 } from "@/db/schema";
 import type { QuickActionDefaults } from "@/lib/types";
 
@@ -17,7 +20,14 @@ export type AtencionCreationInput = {
   medioPagoId: string;
   precioCobrado: number;
   adicionalesIds?: string[];
+  productos?: ProductoSeleccionadoInput[];
   notas?: string | null;
+};
+
+export type ProductoSeleccionadoInput = {
+  productoId: string;
+  cantidad: number;
+  precioUnitario: number;
 };
 
 export function getFechaHoyArgentina(): string {
@@ -75,45 +85,153 @@ export async function crearAtencionDesdeInput(input: AtencionCreationInput) {
   const comisionBarberoPct = Number(barbero.porcentajeComision ?? 0);
   const comisionBarberoMonto = (precioCobrado * comisionBarberoPct) / 100;
 
-  const [nuevaAtencion] = await db
-    .insert(atenciones)
-    .values({
-      barberoId: input.barberoId,
-      servicioId: input.servicioId,
-      fecha: getFechaHoyArgentina(),
-      hora: getHoraAhoraArgentina(),
-      precioBase: servicio.precioBase,
-      precioCobrado: String(precioCobrado),
-      medioPagoId: input.medioPagoId,
-      comisionMedioPagoPct: String(comisionMpPct),
-      comisionMedioPagoMonto: String(comisionMpMonto.toFixed(2)),
-      montoNeto: String(montoNeto.toFixed(2)),
-      comisionBarberoPct: String(comisionBarberoPct),
-      comisionBarberoMonto: String(comisionBarberoMonto.toFixed(2)),
-      notas: input.notas?.trim() || null,
-      anulado: false,
-    })
-    .returning();
-
   const adicionalesIds = input.adicionalesIds ?? [];
-  if (adicionalesIds.length > 0) {
-    const adicionalesData = await db
-      .select()
-      .from(serviciosAdicionales)
-      .where(inArray(serviciosAdicionales.id, adicionalesIds));
+  const productosSeleccionados = input.productos ?? [];
 
-    if (adicionalesData.length > 0) {
-      await db.insert(atencionesAdicionales).values(
-        adicionalesData.map((a) => ({
-          atencionId: nuevaAtencion.id,
-          adicionalId: a.id,
-          precioCobrado: a.precioExtra ?? "0",
-        }))
-      );
+  return db.transaction(async (tx) => {
+    const [nuevaAtencion] = await tx
+      .insert(atenciones)
+      .values({
+        barberoId: input.barberoId,
+        servicioId: input.servicioId,
+        fecha: getFechaHoyArgentina(),
+        hora: getHoraAhoraArgentina(),
+        precioBase: servicio.precioBase,
+        precioCobrado: String(precioCobrado),
+        medioPagoId: input.medioPagoId,
+        comisionMedioPagoPct: String(comisionMpPct),
+        comisionMedioPagoMonto: String(comisionMpMonto.toFixed(2)),
+        montoNeto: String(montoNeto.toFixed(2)),
+        comisionBarberoPct: String(comisionBarberoPct),
+        comisionBarberoMonto: String(comisionBarberoMonto.toFixed(2)),
+        notas: input.notas?.trim() || null,
+        anulado: false,
+      })
+      .returning();
+
+    if (adicionalesIds.length > 0) {
+      const adicionalesData = await tx
+        .select()
+        .from(serviciosAdicionales)
+        .where(inArray(serviciosAdicionales.id, adicionalesIds));
+
+      if (adicionalesData.length > 0) {
+        await tx.insert(atencionesAdicionales).values(
+          adicionalesData.map((a) => ({
+            atencionId: nuevaAtencion.id,
+            adicionalId: a.id,
+            precioCobrado: a.precioExtra ?? "0",
+          }))
+        );
+      }
     }
+
+    if (productosSeleccionados.length > 0) {
+      await syncProductosAtencion({
+        tx,
+        atencionId: nuevaAtencion.id,
+        medioPagoId: input.medioPagoId,
+        productosSeleccionados,
+      });
+    }
+
+    return nuevaAtencion;
+  });
+}
+
+type SyncProductosAtencionInput = {
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0];
+  atencionId: string;
+  medioPagoId: string;
+  productosSeleccionados: ProductoSeleccionadoInput[];
+};
+
+export async function syncProductosAtencion({
+  tx,
+  atencionId,
+  medioPagoId,
+  productosSeleccionados,
+}: SyncProductosAtencionInput) {
+  const movimientosPrevios = await tx
+    .select({
+      productoId: stockMovimientos.productoId,
+      cantidad: stockMovimientos.cantidad,
+    })
+    .from(stockMovimientos)
+    .where(
+      and(
+        eq(stockMovimientos.referenciaId, atencionId),
+        eq(stockMovimientos.tipo, "venta")
+      )
+    );
+
+  for (const movimiento of movimientosPrevios) {
+    if (!movimiento.productoId || !movimiento.cantidad) continue;
+    await tx
+      .update(productos)
+      .set({ stockActual: sql`${productos.stockActual} + ${Math.abs(movimiento.cantidad)}` })
+      .where(eq(productos.id, movimiento.productoId));
   }
 
-  return nuevaAtencion;
+  await tx
+    .delete(stockMovimientos)
+    .where(
+      and(
+        eq(stockMovimientos.referenciaId, atencionId),
+        eq(stockMovimientos.tipo, "venta")
+      )
+    );
+  await tx.delete(atencionesProductos).where(eq(atencionesProductos.atencionId, atencionId));
+
+  if (productosSeleccionados.length === 0) {
+    return;
+  }
+
+  const productosIds = productosSeleccionados.map((item) => item.productoId);
+  const productosData = await tx
+    .select()
+    .from(productos)
+    .where(inArray(productos.id, productosIds));
+  const productosMap = new Map(productosData.map((producto) => [producto.id, producto]));
+
+  for (const item of productosSeleccionados) {
+    const producto = productosMap.get(item.productoId);
+
+    if (!producto) {
+      throw new Error("Producto no encontrado");
+    }
+    if (!producto.activo) {
+      throw new Error("El producto no esta activo");
+    }
+    if ((producto.stockActual ?? 0) < item.cantidad) {
+      throw new Error(`Sin stock para ${producto.nombre}`);
+    }
+
+    await tx.insert(atencionesProductos).values({
+      atencionId,
+      productoId: item.productoId,
+      cantidad: item.cantidad,
+      precioUnitario: String(item.precioUnitario.toFixed(2)),
+      costoUnitarioSnapshot:
+        producto.costoCompra === null ? null : String(Number(producto.costoCompra).toFixed(2)),
+    });
+
+    await tx
+      .update(productos)
+      .set({ stockActual: sql`${productos.stockActual} - ${item.cantidad}` })
+      .where(eq(productos.id, item.productoId));
+
+    await tx.insert(stockMovimientos).values({
+      productoId: item.productoId,
+      tipo: "venta",
+      cantidad: -item.cantidad,
+      precioUnitario: String(item.precioUnitario.toFixed(2)),
+      costoUnitarioSnapshot:
+        producto.costoCompra === null ? null : String(Number(producto.costoCompra).toFixed(2)),
+      referenciaId: atencionId,
+      notas: medioPagoId,
+    });
+  }
 }
 
 export async function getQuickActionDefaultsForBarbero(barberoId: string): Promise<QuickActionDefaults | null> {

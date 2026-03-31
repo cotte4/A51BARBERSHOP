@@ -83,43 +83,31 @@ export async function generarLiquidacion(
     const totalBrutoCortes = atencionesDelPeriodo.reduce((s, a) => s + Number(a.precioCobrado ?? 0), 0);
     const totalComisionCalculada = atencionesDelPeriodo.reduce((s, a) => s + Number(a.comisionBarberoMonto ?? 0), 0);
 
-    const sueldoMinimo = Number(barbero.sueldoMinimoGarantizado ?? 0);
-    const alquilerBancoCobrado = barbero.tipoModelo === "hibrido"
-      ? Number(barbero.alquilerBancoMensual ?? 0)
-      : 0;
-
-    const baseLiquidable = Math.max(totalComisionCalculada, sueldoMinimo);
-    const resultadoPeriodo = baseLiquidable - alquilerBancoCobrado;
-    const montoAPagar = Math.max(0, resultadoPeriodo);
+    const montoAPagar = totalComisionCalculada;
 
     // 6. Insertar liquidación
-    await db.insert(liquidaciones).values({
+    const [nuevaLiquidacion] = await db.insert(liquidaciones).values({
       barberoId,
       periodoInicio,
       periodoFin,
       totalCortes,
       totalBrutoCortes: String(totalBrutoCortes.toFixed(2)),
       totalComisionCalculada: String(totalComisionCalculada.toFixed(2)),
-      sueldoMinimo: sueldoMinimo > 0 ? String(sueldoMinimo.toFixed(2)) : null,
-      alquilerBancoCobrado: alquilerBancoCobrado > 0 ? String(alquilerBancoCobrado.toFixed(2)) : null,
+      sueldoMinimo: null,
+      alquilerBancoCobrado: null,
       montoAPagar: String(montoAPagar.toFixed(2)),
       pagado: false,
       notas: notas?.trim() || null,
-    });
+    }).returning({ id: liquidaciones.id });
+
+    revalidatePath("/liquidaciones");
+    redirect(`/liquidaciones/${nuevaLiquidacion.id}`);
   } catch (e) {
     console.error("Error generando liquidación:", e);
     return { error: "No se pudo generar la liquidación. Intentá de nuevo." };
   }
 
   // Re-fetch para obtener el id recién insertado
-  const [ultimaLiq] = await db
-    .select({ id: liquidaciones.id })
-    .from(liquidaciones)
-    .where(and(eq(liquidaciones.barberoId, barberoId), eq(liquidaciones.periodoInicio, periodoInicio)))
-    .limit(1);
-
-  revalidatePath("/liquidaciones");
-  redirect(`/liquidaciones/${ultimaLiq.id}`);
 }
 
 export type MarcarPagadaState = { error?: string };

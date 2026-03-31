@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, count, eq, gte, lte } from "drizzle-orm";
+import { and, count, eq, gte, inArray, lte } from "drizzle-orm";
 import AnularButton from "@/components/caja/AnularButton";
 import GastoRapidoFAB from "@/components/gastos-rapidos/GastoRapidoFAB";
 import QuickActionButton from "@/components/turnos/QuickActionButton";
@@ -7,6 +7,7 @@ import { registrarGastoRapidoAction } from "@/app/(admin)/gastos-rapidos/actions
 import { db } from "@/db";
 import {
   atenciones,
+  atencionesProductos,
   barberos,
   cierresCaja,
   mediosPago,
@@ -239,10 +240,9 @@ export default async function CajaPage() {
       )
     );
 
-  const productosMap =
-    ventasProductosDia.length > 0
-      ? new Map((await db.select().from(productos)).map((producto) => [producto.id, producto]))
-      : new Map();
+  const productosMap = new Map(
+    (await db.select().from(productos)).map((producto) => [producto.id, producto])
+  );
 
   const totalProductos = ventasProductosDia.reduce(
     (sum, venta) => sum + Math.abs(Number(venta.cantidad ?? 0)) * Number(venta.precioUnitario ?? 0),
@@ -253,6 +253,25 @@ export default async function CajaPage() {
     if (!a.creadoEn || !b.creadoEn) return 0;
     return new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime();
   });
+
+  const productosPorAtencion =
+    atencionesDelDia.length > 0
+      ? await db
+          .select()
+          .from(atencionesProductos)
+          .where(inArray(atencionesProductos.atencionId, atencionesDelDia.map((item) => item.id)))
+      : [];
+  const productosPorAtencionMap = productosPorAtencion.reduce(
+    (map, item) => {
+      const atencionId = item.atencionId ?? "";
+      const producto = productosMap.get(item.productoId ?? "");
+      const current = map.get(atencionId) ?? [];
+      current.push(producto?.nombre ?? "Producto");
+      map.set(atencionId, current);
+      return map;
+    },
+    new Map<string, string[]>()
+  );
 
   const hoyStr = new Date().toLocaleDateString("en-CA", {
     timeZone: "America/Argentina/Buenos_Aires",
@@ -291,11 +310,8 @@ export default async function CajaPage() {
       (sum, atencion) => sum + Number(atencion.comisionBarberoMonto ?? 0),
       0
     );
-    alquilerMensual =
-      barberoDelUsuario.tipoModelo === "hibrido"
-        ? Number(barberoDelUsuario.alquilerBancoMensual ?? 0)
-        : 0;
-    netoProyectado = comisionDelMes - alquilerMensual;
+    alquilerMensual = 0;
+    netoProyectado = comisionDelMes;
 
     const cortesPorBarberoRaw = await db
       .select({
@@ -549,6 +565,17 @@ export default async function CajaPage() {
                                 </span>
                               ) : null}
                             </div>
+
+                            {(() => {
+                              const productosAtencion = productosPorAtencionMap.get(atencion.id) ?? [];
+                              if (productosAtencion.length === 0) return null;
+
+                              return (
+                                <p className="mt-3 text-sm text-zinc-400">
+                                  + {productosAtencion.join(", ")}
+                                </p>
+                              );
+                            })()}
 
                             {atencion.anulado && atencion.motivoAnulacion ? (
                               <p className={`mt-4 text-sm ${tone.note}`}>

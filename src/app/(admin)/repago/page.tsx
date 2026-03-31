@@ -13,6 +13,7 @@ import {
 } from "@/lib/amortizacion";
 import { auth } from "@/lib/auth";
 import { registrarCuota } from "./actions";
+import { formatFecha } from "@/lib/fecha";
 import RegistrarPagoForm from "./_RegistrarPagoForm";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -26,15 +27,6 @@ function formatARS(val: string | number | null | undefined): string {
   }).format(Number(val));
 }
 
-function formatFecha(fecha: string | null): string {
-  if (!fecha) return "—";
-  return new Date(fecha + "T12:00:00").toLocaleDateString("es-AR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "America/Argentina/Buenos_Aires",
-  });
-}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 

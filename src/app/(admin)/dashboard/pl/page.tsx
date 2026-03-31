@@ -192,11 +192,6 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
               indent
             />
             <PLRow
-              label="Alquiler banco"
-              valor={pl.alquilerBancoMes}
-              signo="+"
-            />
-            <PLRow
               label="Margen productos"
               valor={pl.margenProductosMes}
               signo="+"
@@ -204,7 +199,7 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
             <div className="p-2">
               <PLRow
                 label="Ingresos casa"
-                valor={pl.ingresosCasaGabote + pl.alquilerBancoMes + pl.margenProductosMes}
+                valor={pl.ingresosCasaGabote + pl.margenProductosMes}
                 subtotal
                 signo="="
               />

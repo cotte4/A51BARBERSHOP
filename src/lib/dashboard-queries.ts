@@ -55,13 +55,6 @@ export async function getKpisDia(): Promise<{
     .filter((b) => b.rol === "admin")
     .map((b) => b.id);
 
-  // Alquiler banco diario (Gabote)
-  const alquilerMensual = listaBarberos
-    .filter((b) => b.rol === "barbero")
-    .reduce((s, b) => s + toNumber(b.alquilerBancoMensual), 0);
-  const diasMes = getDaysInMonth(fechaHoy);
-  const alquilerDia = diasMes > 0 ? alquilerMensual / diasMes : 0;
-
   // Atenciones del día (no anuladas)
   const atencionesDia = await db
     .select({
@@ -92,8 +85,6 @@ export async function getKpisDia(): Promise<{
       atencionesPinky++;
     }
   }
-
-  aporteEconomicoCasa += alquilerDia;
 
   // Cierre realizado hoy
   const [cierre] = await db
@@ -131,10 +122,6 @@ export async function getKpisMes(
   const listaBarberos = await db.select().from(barberos);
   const gaboteIds = listaBarberos.filter((b) => b.rol === "barbero").map((b) => b.id);
   const pinkyIds = listaBarberos.filter((b) => b.rol === "admin").map((b) => b.id);
-
-  const alquilerMensual = listaBarberos
-    .filter((b) => b.rol === "barbero")
-    .reduce((s, b) => s + toNumber(b.alquilerBancoMensual), 0);
 
   // Atenciones del mes
   const atencionesMes = await db
@@ -219,7 +206,7 @@ export async function getKpisMes(
 
   // Resultado casa
   const resultadoCasaMes =
-    aporteCasaGabote + margenProductosMes + alquilerMensual - gastosFijosMes;
+    aporteCasaGabote + margenProductosMes - gastosFijosMes;
 
   // Cuota Memas
   const [repago] = await db
@@ -253,7 +240,6 @@ export async function getPL(
   comisionesGabote: number;
   comisionGabotePct: number;
   feesMedioPagoGabote: number;
-  alquilerBancoMes: number;
   margenProductosMes: number;
   ingresosCasaGabote: number;
   gastosFijosMes: number;
@@ -271,10 +257,6 @@ export async function getPL(
   const comisionGabotePct = listaBarberos
     .filter((b) => b.rol === "barbero")
     .reduce((max, b) => Math.max(max, toNumber(b.porcentajeComision)), 0);
-
-  const alquilerBancoMes = listaBarberos
-    .filter((b) => b.rol === "barbero")
-    .reduce((s, b) => s + toNumber(b.alquilerBancoMensual), 0);
 
   const atencionesMes = await db
     .select({
@@ -358,7 +340,7 @@ export async function getPL(
   const gastosFijosMes = gastosMes.reduce((s, g) => s + toNumber(g.monto), 0);
 
   const resultadoCasa =
-    ingresosCasaGabote + alquilerBancoMes + margenProductosMes - gastosFijosMes;
+    ingresosCasaGabote + margenProductosMes - gastosFijosMes;
 
   // Cuota Memas
   const [repago] = await db
@@ -376,7 +358,6 @@ export async function getPL(
     comisionesGabote,
     comisionGabotePct,
     feesMedioPagoGabote,
-    alquilerBancoMes,
     margenProductosMes,
     ingresosCasaGabote,
     gastosFijosMes,
@@ -631,7 +612,6 @@ export async function getComparativaTemporadas(): Promise<
 export async function getDatosBep(): Promise<{
   gastosMesReal: number;
   presupuestoMensual: number;
-  alquilerBancoDia: number;
   precioPromedioDia: number;
   mixGabote: number;
   feePromedioMedioPago: number;
@@ -647,11 +627,6 @@ export async function getDatosBep(): Promise<{
   const listaBarberos = await db.select().from(barberos);
   const gaboteIds = listaBarberos.filter((b) => b.rol === "barbero").map((b) => b.id);
   const pinkyIds = listaBarberos.filter((b) => b.rol === "admin").map((b) => b.id);
-
-  const alquilerMensual = listaBarberos
-    .filter((b) => b.rol === "barbero")
-    .reduce((s, b) => s + toNumber(b.alquilerBancoMensual), 0);
-  const alquilerBancoDia = diasMes > 0 ? alquilerMensual / diasMes : 0;
 
   // Gastos del mes
   const gastosMes = await db
@@ -716,7 +691,6 @@ export async function getDatosBep(): Promise<{
   return {
     gastosMesReal,
     presupuestoMensual,
-    alquilerBancoDia,
     precioPromedioDia,
     mixGabote,
     feePromedioMedioPago,

@@ -2,10 +2,8 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
-import GastoRapidoFAB from "@/components/gastos-rapidos/GastoRapidoFAB";
 import LogoutButton from "@/components/LogoutButton";
 import BrandMark from "@/components/BrandMark";
-import { registrarGastoRapidoAction } from "@/app/(admin)/gastos-rapidos/actions";
 import { auth } from "@/lib/auth";
 import { calcularBep } from "@/lib/bep";
 import { getDatosBep, getKpisDia, getKpisMes } from "@/lib/dashboard-queries";
@@ -66,35 +64,29 @@ export default async function DashboardPage() {
 
   const accionesPrincipales = [
     {
-      href: "/caja/nueva",
-      eyebrow: "Accion principal",
-      title: "Cobrar corte",
-      detail: "Registrar una atencion en segundos",
+      href: "/liquidaciones",
+      eyebrow: "Gestion",
+      title: "Liquidaciones",
+      detail: "Pendientes, pagos y comprobantes",
       className: "neon-button",
+    },
+    {
+      href: "/inventario",
+      eyebrow: "Control",
+      title: "Inventario",
+      detail: "Stock, rotacion y alertas de reposicion",
+      className: "ghost-button",
     },
     {
       href: "/turnos",
       eyebrow: "Agenda",
-      title: "Ver agenda",
-      detail: "Pendientes, confirmados y completados",
-      className: "ghost-button",
-    },
-    {
-      href: "/gastos-rapidos",
-      eyebrow: "Caja",
-      title: "Gasto rapido",
-      detail: "Anotar una salida sin friccion",
+      title: "Turnos",
+      detail: "Disponibilidad y agenda del equipo",
       className: "panel-soft text-zinc-100 hover:border-[#8cff59]/35 hover:text-white",
     },
   ];
 
   const accesosOperativos = [
-    {
-      href: "/caja",
-      icon: "CA",
-      title: "Caja del dia",
-      detail: "Ver atenciones, editar cobros y cerrar la jornada",
-    },
     {
       href: "/inventario",
       icon: "IN",
@@ -112,6 +104,12 @@ export default async function DashboardPage() {
       icon: "MC",
       title: "Mi cuenta",
       detail: "Revisar mi resultado y saldos sin verlo en la portada",
+    },
+    {
+      href: "/repago",
+      icon: "RE",
+      title: "Repago",
+      detail: "Seguir cuotas y saldo pendiente",
     },
   ];
 
@@ -160,7 +158,7 @@ export default async function DashboardPage() {
                   Todo lo critico esta a mano.
                 </h2>
                 <p className="mt-2 max-w-xl text-sm leading-6 text-stone-300">
-                  Cobra, mira tu agenda y registra movimientos sin entrar a reportes largos.
+                  El dashboard ahora es la base de gestion: estado del negocio, alertas y accesos administrativos sin duplicar la operacion diaria.
                 </p>
               </div>
 
@@ -283,7 +281,7 @@ export default async function DashboardPage() {
                 <p className="eyebrow text-xs font-semibold">
                   Accesos rapidos
                 </p>
-                <h3 className="font-display mt-2 text-xl font-semibold text-white">Operacion diaria</h3>
+                <h3 className="font-display mt-2 text-xl font-semibold text-white">Gestion del negocio</h3>
               </div>
               <Link
                 href="/turnos"
@@ -408,11 +406,6 @@ export default async function DashboardPage() {
         </section>
       </main>
 
-      <GastoRapidoFAB
-        action={registrarGastoRapidoAction}
-        returnTo="/dashboard"
-        historyHref="/gastos-rapidos"
-      />
     </div>
   );
 }

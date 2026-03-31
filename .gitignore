@@ -29,10 +29,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+a51-smoke*.log
 
 # env files — .env.local nunca al repo, .env.example sí
 .env*
 !.env.example
+.claude/
 
 # vercel
 .vercel

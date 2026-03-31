@@ -223,6 +223,30 @@ export const atencionesAdicionales = pgTable("atenciones_adicionales", {
   precioCobrado: numeric("precio_cobrado", { precision: 12, scale: 2 }),
 });
 
+export const atencionesProductos = pgTable(
+  "atenciones_productos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    atencionId: uuid("atencion_id")
+      .notNull()
+      .references(() => atenciones.id, { onDelete: "cascade" }),
+    productoId: uuid("producto_id")
+      .notNull()
+      .references(() => productos.id),
+    cantidad: integer("cantidad").notNull().default(1),
+    precioUnitario: numeric("precio_unitario", { precision: 12, scale: 2 }).notNull(),
+    costoUnitarioSnapshot: numeric("costo_unitario_snapshot", {
+      precision: 12,
+      scale: 2,
+    }),
+  },
+  (table) => [
+    check("atenciones_productos_cantidad_check", sql`${table.cantidad} > 0`),
+    index("atenciones_productos_atencion_idx").on(table.atencionId),
+    index("atenciones_productos_producto_idx").on(table.productoId),
+  ]
+);
+
 // ————————————————————————————
 // PRODUCTOS E INVENTARIO
 // ————————————————————————————

@@ -13,7 +13,6 @@ export type PLPDFData = {
   ingresosGaboteBruto: number;
   comisionesGabote: number;
   feesMedioPagoGabote: number;
-  alquilerBancoMes: number;
   margenProductosMes: number;
   ingresosCasaGabote: number;
   gastosFijosMes: number;
@@ -117,7 +116,6 @@ export function PLPDF({ data }: { data: PLPDFData }) {
     ingresosGaboteBruto,
     comisionesGabote,
     feesMedioPagoGabote,
-    alquilerBancoMes,
     margenProductosMes,
     ingresosCasaGabote,
     gastosFijosMes,
@@ -128,7 +126,7 @@ export function PLPDF({ data }: { data: PLPDFData }) {
   } = data;
 
   const hoy = new Date().toISOString().split("T")[0]!;
-  const ingresosCasaTotal = ingresosCasaGabote + alquilerBancoMes + margenProductosMes;
+  const ingresosCasaTotal = ingresosCasaGabote + margenProductosMes;
 
   return (
     <Document title={`P&L ${nombreMes(mes, anio)}`} author="A51 Barber">
@@ -152,7 +150,7 @@ export function PLPDF({ data }: { data: PLPDFData }) {
             signo="+"
           />
           <PLRow
-            label="Comision Gabote (75%)"
+            label="Comision Gabote (60%)"
             valor={comisionesGabote}
             negativo
             signo="-"
@@ -166,11 +164,6 @@ export function PLPDF({ data }: { data: PLPDFData }) {
             signo="-"
             indent
             muted
-          />
-          <PLRow
-            label="Alquiler banco"
-            valor={alquilerBancoMes}
-            signo="+"
           />
           <PLRow
             label="Margen productos"
