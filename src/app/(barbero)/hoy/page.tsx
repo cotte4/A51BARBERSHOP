@@ -1,7 +1,6 @@
 ﻿import Link from "next/link";
 import { and, desc, eq, gte, lte } from "drizzle-orm";
 import HoyActionStrip from "@/components/hoy/HoyActionStrip";
-import QuickActionButton from "@/components/turnos/QuickActionButton";
 import { db } from "@/db";
 import {
   atenciones,
@@ -12,8 +11,7 @@ import {
   servicios,
   stockMovimientos,
 } from "@/db/schema";
-import { registrarAtencionRapidaSeleccionadaAction } from "@/app/(barbero)/caja/actions";
-import { getQuickActionDefaultsForBarbero } from "@/lib/caja-atencion";
+import { registrarAtencionExpressAction } from "@/app/(barbero)/caja/actions";
 import { getTurnosActorContext } from "@/lib/turnos-access";
 import { getTurnosVisibleList } from "@/lib/turnos";
 
@@ -158,24 +156,8 @@ export default async function HoyPage() {
   const serviciosMap = new Map(serviciosList.map((servicio) => [servicio.id, servicio]));
   const productosMap = new Map(productosList.map((producto) => [producto.id, producto]));
 
-  const quickDefaults = actor.barberoId ? await getQuickActionDefaultsForBarbero(actor.barberoId) : null;
-  const quickOptions = quickDefaults
-    ? [
-        quickDefaults,
-        ...mediosPagoList
-          .filter((medio) => {
-            const nombre = (medio.nombre ?? "").toLowerCase();
-            return medio.id !== quickDefaults.medioPagoId && (nombre.includes("efectivo") || nombre.includes("transf") || nombre.includes("tarjeta") || nombre.includes("posnet"));
-          })
-          .slice(0, 2)
-          .map((medio) => ({
-            medioPagoId: medio.id,
-            medioPagoNombre: medio.nombre ?? "-",
-            precioBase: quickDefaults.precioBase,
-            comisionMedioPagoPct: Number(medio.comisionPorcentaje ?? 0),
-          })),
-      ].slice(0, 2)
-    : [];
+  const serviciosActivos = serviciosList.filter((s) => s.activo);
+  const mediosPagoActivos = mediosPagoList.filter((m) => m.activo);
 
   const activeAtenciones = atencionesHoyRows.filter((row) => !row.anulado);
   const atencionesCount = activeAtenciones.length;
@@ -259,9 +241,14 @@ export default async function HoyPage() {
           <div className="bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.28),_transparent_32%),radial-gradient(circle_at_bottom_left,_rgba(245,158,11,0.18),_transparent_34%)] p-6 sm:p-7">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-300">Hoy</p>
             <h1 className="mt-3 text-3xl font-semibold capitalize tracking-tight">{formatFechaLarga(fechaHoy)}</h1>
-            <p className="mt-3 max-w-2xl text-sm text-stone-300">
-              Todo lo que necesitas para trabajar hoy vive aqui: cobrar rapido, ver tu agenda, registrar una atencion nueva y revisar el estado de la caja.
-            </p>
+            <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+              <span className="text-2xl font-bold text-[#8cff59]">{atencionesCount} {atencionesCount === 1 ? "corte" : "cortes"}</span>
+              {ingresosServicios + ingresosProductos > 0 ? (
+                <span className="text-lg font-semibold text-stone-200">{formatARS(ingresosServicios + ingresosProductos)} cobrado</span>
+              ) : (
+                <span className="text-sm text-stone-400">Sin movimiento todavía</span>
+              )}
+            </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <span className={`inline-flex min-h-[36px] items-center rounded-full px-3 text-sm font-medium ${cierreHoy ? "bg-white/12 text-white ring-1 ring-white/15" : "bg-emerald-400 text-emerald-950"}`}>
                 {cierreHoy ? "Caja cerrada" : "Caja abierta"}
@@ -277,21 +264,10 @@ export default async function HoyPage() {
 
         <HoyActionStrip
           turnos={turnosMini}
-          nuevaAtencionHref="/caja/nueva"
-          cierreHref={cierreHref}
-          cierreLabel={cierreLabel}
-          cierreDescription={cierreDescription}
-          canClose={Boolean(cierreHref && (actor.isAdmin || cierreHoy))}
+          servicios={serviciosActivos.map((s) => ({ id: s.id, nombre: s.nombre, precioBase: s.precioBase }))}
+          mediosPago={mediosPagoActivos.map((m) => ({ id: m.id, nombre: m.nombre, comisionPorcentaje: m.comisionPorcentaje }))}
+          action={registrarAtencionExpressAction}
         />
-
-        <section id="cobro-rapido">
-          <QuickActionButton
-            defaults={quickDefaults}
-            options={quickOptions}
-            action={registrarAtencionRapidaSeleccionadaAction}
-            editHref="/caja/nueva?fromQuickAction=1"
-          />
-        </section>
 
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <StatCard eyebrow="Caja" label="Estado" value={cierreHoy ? "Cerrada" : "Operando"} helper={cierreHoy ? `Cerrada a las ${formatHora(cierreHoy.cerradoEn)}` : "Todavia admite movimientos"} />
@@ -341,9 +317,6 @@ export default async function HoyPage() {
               <h2 className="font-display mt-2 text-xl font-semibold text-white">Lo que merece atencion</h2>
 
               <div className="mt-4 space-y-3">
-                {!quickDefaults ? (
-                  <AlertCard title="Cobro rapido sin configurar" body="Define el servicio y medio de pago por defecto para usar el boton principal sin entrar al formulario completo." href="/caja/nueva?fromQuickAction=1" cta="Configurar" />
-                ) : null}
                 {pendingTurnos > 0 ? (
                   <AlertCard title="Turnos pendientes" body={`Tienes ${pendingTurnos} turno${pendingTurnos === 1 ? "" : "s"} pendiente${pendingTurnos === 1 ? "" : "s"} para revisar.`} href="/turnos?estado=pendiente" cta="Ir a turnos" />
                 ) : null}

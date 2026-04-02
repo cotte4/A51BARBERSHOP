@@ -12,6 +12,7 @@ interface ServicioFormProps {
   initialData?: {
     nombre?: string;
     precioBase?: string | null;
+    duracionMinutos?: number | null;
   };
   submitLabel?: string;
   cancelHref?: string;
@@ -39,6 +40,9 @@ export default function ServicioForm({
   const [state, formAction, isPending] = useActionState(action, initialState);
   const [nombre, setNombre] = useState(initialData?.nombre ?? "");
   const [precioBase, setPrecioBase] = useState(initialData?.precioBase ?? "");
+  const [duracionMinutos, setDuracionMinutos] = useState(
+    String(initialData?.duracionMinutos ?? 60)
+  );
   const [motivo, setMotivo] = useState("");
   const precioNumero = Number(precioBase) || 0;
 
@@ -99,6 +103,26 @@ export default function ServicioForm({
               ) : null}
             </div>
 
+            <div className="flex flex-col gap-2">
+              <label htmlFor="duracionMinutos" className="text-sm font-medium text-stone-700">
+                Duración <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="duracionMinutos"
+                name="duracionMinutos"
+                value={duracionMinutos}
+                onChange={(event) => setDuracionMinutos(event.target.value)}
+                className="min-h-[48px] rounded-xl border border-stone-300 px-4 text-sm text-stone-900 outline-none focus:border-stone-900"
+              >
+                <option value="30">30 min</option>
+                <option value="45">45 min</option>
+                <option value="60">60 min</option>
+              </select>
+              {state.fieldErrors?.duracionMinutos ? (
+                <p className="text-xs text-red-500">{state.fieldErrors.duracionMinutos}</p>
+              ) : null}
+            </div>
+
             {showMotivoField ? (
               <div className="flex flex-col gap-2">
                 <label htmlFor="motivoCambioPrecio" className="text-sm font-medium text-stone-700">
@@ -129,6 +153,10 @@ export default function ServicioForm({
               <p className="mt-4 text-sm text-stone-300">Precio visible en caja</p>
               <p className="mt-2 text-3xl font-semibold tracking-tight">
                 {formatARS(precioNumero)}
+              </p>
+              <p className="mt-4 text-sm text-stone-300">Duración</p>
+              <p className="mt-2 text-xl font-semibold tracking-tight">
+                {duracionMinutos} min
               </p>
               {showMotivoField && motivo.trim() ? (
                 <p className="mt-4 text-sm text-stone-300">Motivo: {motivo}</p>

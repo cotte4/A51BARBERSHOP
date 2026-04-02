@@ -16,22 +16,7 @@ export default async function BarberoLayout({ children }: { children: React.Reac
       <header className="border-b border-zinc-800/80 bg-zinc-950/90 px-4 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="flex flex-col gap-2">
-              <BrandMark href="/hoy" compact subtitle="Modo operativo" />
-              <div className="flex items-center gap-2 text-xs text-zinc-400">
-                <Link href="/hoy" className="rounded-full px-3 py-1.5 hover:bg-white/5 hover:text-white">
-                  Hoy
-                </Link>
-                <Link href="/caja" className="rounded-full px-3 py-1.5 hover:bg-white/5 hover:text-white">
-                  Caja
-                </Link>
-                {isAdmin ? (
-                  <Link href="/negocio" className="rounded-full px-3 py-1.5 hover:bg-white/5 hover:text-white">
-                    Negocio
-                  </Link>
-                ) : null}
-              </div>
-            </div>
+            <BrandMark href="/hoy" compact subtitle="Modo operativo" />
           </div>
 
           <div className="flex items-center gap-3">

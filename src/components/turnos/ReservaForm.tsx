@@ -7,6 +7,12 @@ type ReservaFormProps = {
   barberoNombre: string;
   initialFecha: string;
   productos: Array<{ id: string; nombre: string }>;
+  servicios: Array<{
+    id: string;
+    nombre: string;
+    precioBase: string | null;
+    duracionMinutos: number;
+  }>;
 };
 
 type Slot = {
@@ -16,13 +22,24 @@ type Slot = {
   duracionMinutos: number;
 };
 
+function formatARS(value: string | null) {
+  if (!value) return null;
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    minimumFractionDigits: 0,
+  }).format(Number(value));
+}
+
 export default function ReservaForm({
   slug,
   barberoNombre,
   initialFecha,
   productos,
+  servicios,
 }: ReservaFormProps) {
   const [fecha, setFecha] = useState(initialFecha);
+  const [selectedServicioId, setSelectedServicioId] = useState(servicios[0]?.id ?? "");
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<string>("");
@@ -35,7 +52,23 @@ export default function ReservaForm({
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const selectedServicio = servicios.find((servicio) => servicio.id === selectedServicioId) ?? null;
+
   useEffect(() => {
+    if (!selectedServicioId && servicios[0]?.id) {
+      setSelectedServicioId(servicios[0].id);
+    }
+  }, [selectedServicioId, servicios]);
+
+  useEffect(() => {
+    if (!selectedServicio) {
+      setSlots([]);
+      setSelectedSlot("");
+      return;
+    }
+
+    const servicioActual = selectedServicio;
+
     let ignore = false;
     const controller = new AbortController();
 
@@ -44,7 +77,9 @@ export default function ReservaForm({
       setError(null);
       try {
         const response = await fetch(
-          `/api/turnos/disponibles?slug=${encodeURIComponent(slug)}&fecha=${encodeURIComponent(fecha)}`,
+          `/api/turnos/disponibles?slug=${encodeURIComponent(slug)}&fecha=${encodeURIComponent(
+            fecha
+          )}&duracion=${servicioActual.duracionMinutos}`,
           { signal: controller.signal }
         );
         const data = (await response.json()) as { slots?: Slot[]; error?: string };
@@ -73,7 +108,7 @@ export default function ReservaForm({
       ignore = true;
       controller.abort();
     };
-  }, [fecha, slug]);
+  }, [fecha, selectedServicio, slug]);
 
   function toggleExtra(productoId: string) {
     setExtras((current) => {
@@ -88,14 +123,20 @@ export default function ReservaForm({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!selectedServicio) {
+      setError("Elegí un servicio antes de seguir.");
+      return;
+    }
+
     if (!selectedSlot) {
-      setError("ElegÃ­ un horario disponible.");
+      setError("Elegí un horario disponible.");
       return;
     }
 
     const slot = slots.find((item) => item.id === selectedSlot);
     if (!slot) {
-      setError("Ese horario ya no estÃ¡ disponible.");
+      setError("Ese horario ya no está disponible.");
       return;
     }
 
@@ -104,9 +145,8 @@ export default function ReservaForm({
 
     const payload = {
       slug,
-      fecha,
-      horaInicio: slot.horaInicio,
-      duracionMinutos: slot.duracionMinutos,
+      slotId: slot.id,
+      serviceId: selectedServicio.id,
       clienteNombre: nombre,
       clienteTelefonoRaw: telefono,
       notaCliente: nota,
@@ -151,6 +191,39 @@ export default function ReservaForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <p className="mb-3 text-sm font-medium text-gray-700">Servicio</p>
+        {servicios.length === 0 ? (
+          <p className="text-sm text-gray-500">No hay servicios disponibles en este momento.</p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {servicios.map((servicio) => {
+              const selected = servicio.id === selectedServicioId;
+              return (
+                <button
+                  key={servicio.id}
+                  type="button"
+                  onClick={() => setSelectedServicioId(servicio.id)}
+                  className={`rounded-3xl border p-4 text-left transition ${
+                    selected
+                      ? "border-gray-900 bg-gray-900 text-white"
+                      : "border-gray-200 bg-gray-50 text-gray-800 hover:bg-gray-100"
+                  }`}
+                >
+                  <span className="block text-base font-semibold">{servicio.nombre}</span>
+                  <span className="mt-2 block text-sm opacity-80">
+                    {servicio.duracionMinutos} min
+                  </span>
+                  <span className="mt-1 block text-sm opacity-80">
+                    {formatARS(servicio.precioBase) ?? "Precio a confirmar"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
         <label htmlFor="fecha" className="mb-2 block text-sm font-medium text-gray-700">
           Fecha
         </label>
@@ -165,7 +238,14 @@ export default function ReservaForm({
       </div>
 
       <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-        <p className="mb-3 text-sm font-medium text-gray-700">Horarios disponibles</p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-medium text-gray-700">Horarios disponibles</p>
+          {selectedServicio ? (
+            <p className="text-xs text-gray-500">
+              Mostrando slots para {selectedServicio.nombre.toLowerCase()} ({selectedServicio.duracionMinutos} min)
+            </p>
+          ) : null}
+        </div>
         {loading ? <p className="text-sm text-gray-500">Buscando horarios...</p> : null}
         {!loading && slots.length === 0 ? (
           <p className="text-sm text-gray-500">No hay horarios disponibles para esa fecha.</p>
@@ -183,13 +263,13 @@ export default function ReservaForm({
               }`}
             >
               <span className="block font-medium">{slot.horaInicio}</span>
-              <span className="block text-xs opacity-80">{slot.duracionMinutos} min</span>
+              <span className="block text-xs opacity-80">slot de {slot.duracionMinutos} min</span>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm space-y-4">
+      <div className="space-y-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
         <div>
           <label htmlFor="clienteNombre" className="mb-2 block text-sm font-medium text-gray-700">
             Nombre
@@ -205,7 +285,7 @@ export default function ReservaForm({
 
         <div>
           <label htmlFor="clienteTelefono" className="mb-2 block text-sm font-medium text-gray-700">
-            TelÃ©fono
+            Teléfono
           </label>
           <input
             id="clienteTelefono"
@@ -230,7 +310,7 @@ export default function ReservaForm({
 
         <div>
           <label htmlFor="sugerenciaCancion" className="mb-2 block text-sm font-medium text-gray-700">
-            Sugerencia de canciÃ³n
+            Sugerencia de canción
           </label>
           <input
             id="sugerenciaCancion"
@@ -273,7 +353,7 @@ export default function ReservaForm({
 
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || servicios.length === 0}
         className="h-12 w-full rounded-2xl bg-gray-900 text-sm font-medium text-white transition hover:bg-gray-700 disabled:opacity-50"
       >
         {submitting ? "Enviando..." : "Enviar solicitud"}

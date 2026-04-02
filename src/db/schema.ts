@@ -114,12 +114,22 @@ export const barberos = pgTable(
 // ————————————————————————————
 // SERVICIOS Y PRECIOS
 // ————————————————————————————
-export const servicios = pgTable("servicios", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  nombre: text("nombre").notNull(),
-  precioBase: numeric("precio_base", { precision: 12, scale: 2 }),
-  activo: boolean("activo").default(true),
-});
+export const servicios = pgTable(
+  "servicios",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    nombre: text("nombre").notNull(),
+    precioBase: numeric("precio_base", { precision: 12, scale: 2 }),
+    duracionMinutos: integer("duracion_minutos").notNull().default(60),
+    activo: boolean("activo").default(true),
+  },
+  (table) => [
+    check(
+      "servicios_duracion_minutos_check",
+      sql`${table.duracionMinutos} IN (30, 45, 60)`
+    ),
+  ]
+);
 
 export const serviciosAdicionales = pgTable("servicios_adicionales", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -174,6 +184,7 @@ export const mediosPago = pgTable("medios_pago", {
 export const atenciones = pgTable("atenciones", {
   id: uuid("id").defaultRandom().primaryKey(),
   barberoId: uuid("barbero_id").references(() => barberos.id),
+  clientId: uuid("client_id").references(() => clients.id),
   servicioId: uuid("servicio_id").references(() => servicios.id),
   fecha: date("fecha").notNull(),
   hora: time("hora", { withTimezone: true }),
@@ -214,6 +225,7 @@ export const atenciones = pgTable("atenciones", {
 (table) => [
   index("atenciones_fecha_idx").on(table.fecha),
   index("atenciones_barbero_id_idx").on(table.barberoId),
+  index("atenciones_client_id_idx").on(table.clientId),
 ]);
 
 export const atencionesAdicionales = pgTable("atenciones_adicionales", {
@@ -235,6 +247,7 @@ export const atencionesProductos = pgTable(
       .references(() => productos.id),
     cantidad: integer("cantidad").notNull().default(1),
     precioUnitario: numeric("precio_unitario", { precision: 12, scale: 2 }).notNull(),
+    esMarcianoIncluido: boolean("es_marciano_incluido").notNull().default(false),
     costoUnitarioSnapshot: numeric("costo_unitario_snapshot", {
       precision: 12,
       scale: 2,
@@ -258,6 +271,7 @@ export const productos = pgTable("productos", {
   costoCompra: numeric("costo_compra", { precision: 12, scale: 2 }),
   stockActual: integer("stock_actual").default(0),
   stockMinimo: integer("stock_minimo").default(5),
+  esConsumicion: boolean("es_consumicion").notNull().default(false),
   activo: boolean("activo").default(true),
 });
 
@@ -490,11 +504,14 @@ export const turnos = pgTable(
     fecha: date("fecha").notNull(),
     horaInicio: time("hora_inicio").notNull(),
     duracionMinutos: integer("duracion_minutos").notNull(),
+    servicioId: uuid("servicio_id").references(() => servicios.id),
+    precioEsperado: numeric("precio_esperado", { precision: 12, scale: 2 }),
     estado: text("estado").notNull().default("pendiente"),
     notaCliente: text("nota_cliente"),
     sugerenciaCancion: text("sugerencia_cancion"),
     motivoCancelacion: text("motivo_cancelacion"),
     esMarcianoSnapshot: boolean("es_marciano_snapshot").notNull().default(false),
+    prioridadAbsoluta: boolean("prioridad_absoluta").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -505,7 +522,7 @@ export const turnos = pgTable(
     ),
     check(
       "turnos_duracion_minutos_check",
-      sql`${table.duracionMinutos} IN (45, 60)`
+      sql`${table.duracionMinutos} IN (30, 45, 60)`
     ),
     index("turnos_barbero_fecha_idx").on(table.barberoId, table.fecha),
     index("turnos_estado_fecha_idx").on(table.estado, table.fecha),
@@ -568,6 +585,23 @@ export const turnosReservaIntentos = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("turnos_reserva_intentos_ip_created_idx").on(table.ipHash, table.createdAt)]
+);
+
+export const pantallaEvents = pgTable(
+  "pantalla_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    turnoId: uuid("turno_id")
+      .notNull()
+      .references(() => turnos.id, { onDelete: "cascade" }),
+    cancion: text("cancion").notNull(),
+    clienteNombre: text("cliente_nombre").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("pantalla_events_created_at_idx").on(table.createdAt),
+    index("pantalla_events_turno_id_idx").on(table.turnoId),
+  ]
 );
 
 export const visitLogs = pgTable(

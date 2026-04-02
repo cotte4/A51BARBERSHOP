@@ -12,6 +12,7 @@ export type ServicioFormState = {
   fieldErrors?: {
     nombre?: string;
     precioBase?: string;
+    duracionMinutos?: string;
   };
 };
 
@@ -25,6 +26,7 @@ export async function crearServicio(
 
   const nombre = formData.get("nombre") as string;
   const precioBaseStr = formData.get("precioBase") as string;
+  const duracionMinutosStr = formData.get("duracionMinutos") as string;
 
   const fieldErrors: ServicioFormState["fieldErrors"] = {};
 
@@ -35,6 +37,9 @@ export async function crearServicio(
     fieldErrors.precioBase = "El precio es requerido";
   } else if (Number(precioBaseStr) <= 0) {
     fieldErrors.precioBase = "El precio debe ser mayor a $0";
+  }
+  if (!duracionMinutosStr || ![30, 45, 60].includes(Number(duracionMinutosStr))) {
+    fieldErrors.duracionMinutos = "La duracion debe ser 30, 45 o 60 minutos";
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -47,6 +52,7 @@ export async function crearServicio(
       .values({
         nombre: nombre.trim(),
         precioBase: precioBaseStr,
+        duracionMinutos: Number(duracionMinutosStr),
         activo: true,
       })
       .returning();
@@ -77,6 +83,7 @@ export async function editarServicio(
 
   const nombre = formData.get("nombre") as string;
   const precioBaseStr = formData.get("precioBase") as string;
+  const duracionMinutosStr = formData.get("duracionMinutos") as string;
   const motivoCambioPrecio = formData.get("motivoCambioPrecio") as string;
   const precioCambioStr = formData.get("precioCambio") as string; // solo presente si cambió
 
@@ -89,6 +96,9 @@ export async function editarServicio(
     fieldErrors.precioBase = "El precio es requerido";
   } else if (Number(precioBaseStr) <= 0) {
     fieldErrors.precioBase = "El precio debe ser mayor a $0";
+  }
+  if (!duracionMinutosStr || ![30, 45, 60].includes(Number(duracionMinutosStr))) {
+    fieldErrors.duracionMinutos = "La duracion debe ser 30, 45 o 60 minutos";
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -109,7 +119,11 @@ export async function editarServicio(
     // Actualizar servicio
     await db
       .update(servicios)
-      .set({ nombre: nombre.trim(), precioBase: precioBaseStr })
+      .set({
+        nombre: nombre.trim(),
+        precioBase: precioBaseStr,
+        duracionMinutos: Number(duracionMinutosStr),
+      })
       .where(eq(servicios.id, id));
 
     // Si el precio cambió, crear registro en historial

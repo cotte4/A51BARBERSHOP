@@ -78,6 +78,11 @@ export default async function ProductoDetallePage({ params }: Props) {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-xl font-bold text-gray-900">{producto.nombre}</h1>
+                {producto.esConsumicion ? (
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+                    Consumicion Marciano
+                  </span>
+                ) : null}
                 {stockBajo ? (
                   <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700">
                     Stock bajo
@@ -122,6 +127,12 @@ export default async function ProductoDetallePage({ params }: Props) {
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Stock minimo</span>
               <span className="font-medium text-gray-900">{producto.stockMinimo ?? 5}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Tipo</span>
+              <span className="font-medium text-gray-900">
+                {producto.esConsumicion ? "Consumicion Marciano" : "Producto normal"}
+              </span>
             </div>
           </div>
         </div>

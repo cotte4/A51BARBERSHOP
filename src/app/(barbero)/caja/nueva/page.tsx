@@ -11,10 +11,8 @@ import {
   servicios,
   serviciosAdicionales,
 } from "@/db/schema";
-import { getQuickActionDefaultsForBarbero } from "@/lib/caja-atencion";
 import { getCajaActorContext } from "@/lib/caja-access";
-import type { QuickActionOption } from "@/lib/types";
-import { registrarAtencion, registrarAtencionRapidaSeleccionadaAction } from "../actions";
+import { registrarAtencion, registrarAtencionExpressAction } from "../actions";
 
 type NuevaAtencionPageProps = {
   searchParams: Promise<{
@@ -72,32 +70,6 @@ export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionP
   ]);
 
   const preselectedBarberoId = actor?.barberoId;
-  const quickDefaults = preselectedBarberoId
-    ? await getQuickActionDefaultsForBarbero(preselectedBarberoId)
-    : null;
-  const quickActionOptions: QuickActionOption[] = quickDefaults
-    ? [
-        quickDefaults,
-        ...mediosPagoActivos
-          .filter((medio) => {
-            const nombre = (medio.nombre ?? "").toLowerCase();
-            return (
-              medio.id !== quickDefaults.medioPagoId &&
-              (nombre.includes("efectivo") ||
-                nombre.includes("transf") ||
-                nombre.includes("posnet") ||
-                nombre.includes("tarjeta"))
-            );
-          })
-          .slice(0, 2)
-          .map((medio) => ({
-            medioPagoId: medio.id,
-            medioPagoNombre: medio.nombre ?? "-",
-            precioBase: quickDefaults.precioBase,
-            comisionMedioPagoPct: Number(medio.comisionPorcentaje ?? 0),
-          })),
-      ].slice(0, 2)
-    : [];
 
   if (!isAdmin && !preselectedBarberoId) {
     return (
@@ -138,9 +110,9 @@ export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionP
 
         <div className="space-y-6">
           <QuickCheckoutPanel
-            defaults={quickDefaults}
-            options={quickActionOptions}
-            action={registrarAtencionRapidaSeleccionadaAction}
+            servicios={serviciosActivos.map((s) => ({ id: s.id, nombre: s.nombre, precioBase: s.precioBase }))}
+            mediosPago={mediosPagoActivos.map((m) => ({ id: m.id, nombre: m.nombre, comisionPorcentaje: m.comisionPorcentaje }))}
+            action={registrarAtencionExpressAction}
           />
 
           <div className="panel-card rounded-[30px] p-5 sm:p-6">
@@ -178,6 +150,7 @@ export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionP
                 nombre: producto.nombre,
                 precioVenta: producto.precioVenta,
                 stockActual: producto.stockActual,
+                esConsumicion: producto.esConsumicion,
               }))}
               preselectedBarberoId={preselectedBarberoId}
               isAdmin={isAdmin}

@@ -54,6 +54,7 @@ export default async function EditarServicioPage({
           initialData={{
             nombre: servicio.nombre,
             precioBase: servicio.precioBase,
+            duracionMinutos: servicio.duracionMinutos,
           }}
           submitLabel="Guardar cambios"
           cancelHref="/configuracion/servicios"

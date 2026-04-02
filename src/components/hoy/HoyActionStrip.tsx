@@ -1,7 +1,10 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useState } from "react";
+import Modal from "@/components/ui/Modal";
+import QuickCheckoutPanel from "@/components/caja/QuickCheckoutPanel";
+import type { AtencionRapidaState } from "@/app/(barbero)/caja/actions";
 
 type TurnoMini = {
   id: string;
@@ -10,50 +13,42 @@ type TurnoMini = {
   estado: string;
 };
 
+type Servicio = { id: string; nombre: string; precioBase: string | null };
+type MedioPago = { id: string; nombre: string | null; comisionPorcentaje: string | null };
+
 type HoyActionStripProps = {
   turnos: TurnoMini[];
-  nuevaAtencionHref: string;
-  cierreHref?: string;
-  cierreLabel: string;
-  cierreDescription: string;
-  canClose: boolean;
+  servicios: Servicio[];
+  mediosPago: MedioPago[];
+  action: (prevState: AtencionRapidaState, formData: FormData) => Promise<AtencionRapidaState>;
 };
 
 export default function HoyActionStrip({
   turnos,
-  nuevaAtencionHref,
-  cierreHref,
-  cierreLabel,
-  cierreDescription,
-  canClose,
+  servicios,
+  mediosPago,
+  action,
 }: HoyActionStripProps) {
   const [showTurnos, setShowTurnos] = useState(false);
+  const [showNueva, setShowNueva] = useState(false);
 
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Link
-          href="#cobro-rapido"
-          className="flex min-h-[88px] flex-col justify-between rounded-[24px] bg-[#8cff59] px-5 py-4 text-left text-[#07130a] shadow-[0_18px_36px_rgba(140,255,89,0.18)]"
+        {/* Cobro rápido — abre modal */}
+        <button
+          type="button"
+          onClick={() => setShowNueva(true)}
+          className="flex min-h-[88px] flex-col justify-between rounded-[24px] bg-[#8cff59] px-5 py-4 text-left text-[#07130a] shadow-[0_18px_36px_rgba(140,255,89,0.18)] transition hover:bg-[#a8ff80]"
         >
           <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#07130a]/70">Primero</span>
           <div>
-            <p className="text-xl font-semibold">Cobro rápido</p>
-            <p className="mt-1 text-sm text-[#07130a]/75">El corte más común, sin vueltas.</p>
-          </div>
-        </Link>
-
-        <Link
-          href={nuevaAtencionHref}
-          className="flex min-h-[88px] flex-col justify-between rounded-[24px] border border-zinc-800 bg-zinc-950/50 px-5 py-4 text-left text-white transition hover:border-[#8cff59]/30"
-        >
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Completo</span>
-          <div>
             <p className="text-xl font-semibold">Nueva atención</p>
-            <p className="mt-1 text-sm text-zinc-400">Servicio, extras y productos en una sola carga.</p>
+            <p className="mt-1 text-sm text-[#07130a]/75">Registrar servicio o cobro rápido.</p>
           </div>
-        </Link>
+        </button>
 
+        {/* Turnos */}
         <button
           type="button"
           onClick={() => setShowTurnos((prev) => !prev)}
@@ -68,30 +63,51 @@ export default function HoyActionStrip({
           </div>
         </button>
 
-        {canClose && cierreHref ? (
-          <Link
-            href={cierreHref}
-            className="flex min-h-[88px] flex-col justify-between rounded-[24px] border border-amber-400/30 bg-amber-400/10 px-5 py-4 text-left text-amber-100 transition hover:border-amber-300/60 hover:bg-amber-400/15"
-          >
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/75">Cierre</span>
-            <div>
-              <p className="text-xl font-semibold">{cierreLabel}</p>
-              <p className="mt-1 text-sm text-amber-100/75">{cierreDescription}</p>
-            </div>
-          </Link>
-        ) : (
-          <div className="flex min-h-[88px] flex-col justify-between rounded-[24px] border border-zinc-800 bg-zinc-950/30 px-5 py-4 text-left text-zinc-400">
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-600">Cierre</span>
-            <div>
-              <p className="text-xl font-semibold text-zinc-300">{cierreLabel}</p>
-              <p className="mt-1 text-sm text-zinc-500">Solo lo ejecuta el responsable del cierre.</p>
-            </div>
+        {/* Vender producto */}
+        <Link
+          href="/caja/vender"
+          className="flex min-h-[88px] flex-col justify-between rounded-[24px] border border-zinc-800 bg-zinc-950/50 px-5 py-4 text-left text-white transition hover:border-[#8cff59]/30"
+        >
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Retail</span>
+          <div>
+            <p className="text-xl font-semibold">Vender producto</p>
+            <p className="mt-1 text-sm text-zinc-400">Cobrar con stock disponible.</p>
           </div>
-        )}
+        </Link>
+
+        {/* Ver caja */}
+        <Link
+          href="/caja"
+          className="flex min-h-[88px] flex-col justify-between rounded-[24px] border border-zinc-800 bg-zinc-950/50 px-5 py-4 text-left text-white transition hover:border-[#8cff59]/30"
+        >
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Control</span>
+          <div>
+            <p className="text-xl font-semibold">Ver caja</p>
+            <p className="mt-1 text-sm text-zinc-400">Movimientos y estado del día.</p>
+          </div>
+        </Link>
       </div>
 
+      {/* Modal nueva atención */}
+      {showNueva && (
+        <Modal onClose={() => setShowNueva(false)}>
+          <div className="mb-4">
+            <p className="eyebrow text-xs font-semibold text-zinc-500">Caja</p>
+            <h2 className="font-display mt-1 text-2xl font-semibold tracking-tight text-white">
+              Nueva atención
+            </h2>
+          </div>
+          <QuickCheckoutPanel
+            servicios={servicios}
+            mediosPago={mediosPago}
+            action={action}
+          />
+        </Modal>
+      )}
+
+      {/* Panel de turnos */}
       {showTurnos ? (
-        <section id="panel-turnos" className="rounded-[26px] border border-zinc-800 bg-zinc-950/50 p-5 text-white shadow-sm">
+        <section className="rounded-[26px] border border-zinc-800 bg-zinc-950/50 p-5 text-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Mini agenda</p>
@@ -109,7 +125,7 @@ export default function HoyActionStrip({
 
           {turnos.length === 0 ? (
             <div className="mt-4 rounded-[22px] border border-dashed border-zinc-700 bg-zinc-950/30 px-4 py-5 text-sm text-zinc-400">
-              No hay turnos cargados para hoy. Puedes sumar uno nuevo desde la agenda.
+              No hay turnos cargados para hoy.
             </div>
           ) : (
             <div className="mt-4 grid gap-3 md:grid-cols-2">

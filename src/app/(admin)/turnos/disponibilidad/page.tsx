@@ -22,8 +22,8 @@ export default async function DisponibilidadPage() {
 
   if (!pinky) {
     return (
-      <main className="min-h-screen bg-gray-50 px-4 py-6">
-        <div className="mx-auto max-w-4xl rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
+      <main className="min-h-screen bg-zinc-950 px-4 py-6">
+        <div className="mx-auto max-w-4xl rounded-2xl border border-red-900/40 bg-red-950/30 p-6 text-red-400">
           No encontre al barbero admin activo para configurar disponibilidad.
         </div>
       </main>
@@ -37,13 +37,13 @@ export default async function DisponibilidadPage() {
   ]);
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-6">
+    <main className="min-h-screen bg-zinc-950 px-4 py-6">
       <div className="mx-auto max-w-4xl space-y-5">
         <div>
-          <Link href="/turnos" className="text-sm text-gray-400 hover:text-gray-600">
+          <Link href="/turnos" className="text-sm text-zinc-500 hover:text-zinc-300">
             {"<- Turnos"}
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold text-gray-900">Disponibilidad</h1>
+          <h1 className="mt-2 text-2xl font-semibold text-white">Disponibilidad</h1>
         </div>
 
         <DisponibilidadGrid

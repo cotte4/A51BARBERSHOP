@@ -39,6 +39,7 @@ export type AtencionFormState = {
   error?: string;
   fieldErrors?: {
     barberoId?: string;
+    clientId?: string;
     servicioId?: string;
     medioPagoId?: string;
     precioCobrado?: string;
@@ -75,6 +76,7 @@ function parseProductosSeleccionados(formData: FormData): ProductoSeleccionadoIn
               : "",
         cantidad: Number(item?.cantidad ?? 0),
         precioUnitario: Number(item?.precioUnitario ?? 0),
+        esMarcianoIncluido: Boolean(item?.esMarcianoIncluido),
       }))
       .filter(
         (item) =>
@@ -104,6 +106,8 @@ export async function registrarAtencion(
   // Leer campos
   const barberoId = formData.get("barberoId") as string;
   const servicioId = formData.get("servicioId") as string;
+  const clientIdRaw = (formData.get("clientId") as string | null) ?? "";
+  const clientId = clientIdRaw.trim() || null;
   const medioPagoId = formData.get("medioPagoId") as string;
   const precioCobradoStr = formData.get("precioCobrado") as string;
   const adicionalesIds = formData.getAll("adicionalesIds") as string[]; // mÃºltiples
@@ -133,28 +137,6 @@ export async function registrarAtencion(
 
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
-  const productosIds = productosSeleccionados.map((item) => item.productoId);
-  if (productosIds.length > 0) {
-    const productosActivos = await db
-      .select()
-      .from(productos)
-      .where(inArray(productos.id, productosIds));
-    const productosMap = new Map(productosActivos.map((producto) => [producto.id, producto]));
-
-    for (const item of productosSeleccionados) {
-      const producto = productosMap.get(item.productoId);
-      if (!producto) {
-        return { error: "Hay un producto seleccionado que ya no existe." };
-      }
-      if (!producto.activo) {
-        return { error: `El producto ${producto.nombre} no esta activo.` };
-      }
-      if ((producto.stockActual ?? 0) < item.cantidad) {
-        return { error: `Sin stock para ${producto.nombre}. Disponible: ${producto.stockActual ?? 0}` };
-      }
-    }
-  }
-
   // Verificar que no hay cierre para hoy
   if (await hasCajaCerradaHoy()) {
     const d = new Date(getFechaHoy() + "T12:00:00");
@@ -165,6 +147,7 @@ export async function registrarAtencion(
   try {
     await crearAtencionDesdeInput({
       barberoId,
+      clientId,
       servicioId,
       medioPagoId,
       precioCobrado: Number(precioCobradoStr),
@@ -174,13 +157,19 @@ export async function registrarAtencion(
     });
   } catch (e) {
     console.error("Error registrando atencion:", e);
-    return { error: "No se pudo registrar la atenciÃ³n. IntentÃ¡ de nuevo." };
+    return {
+      error: e instanceof Error ? e.message : "No se pudo registrar la atención. Intentá de nuevo.",
+    };
   }
 
   revalidatePath("/caja");
   revalidatePath("/hoy");
   revalidatePath("/inventario");
   revalidatePath("/dashboard");
+  if (clientId) {
+    revalidatePath("/clientes");
+    revalidatePath(`/clientes/${clientId}`);
+  }
   redirect("/caja");
 }
 
@@ -255,6 +244,47 @@ export async function registrarAtencionRapidaConMedioAction(
   return registrarAtencionRapidaInterna(medioPagoId);
 }
 
+// Acción express: acepta servicioId + medioPagoId explícitos desde el panel de caja
+export async function registrarAtencionExpressAction(
+  prevState: AtencionRapidaState,
+  formData: FormData
+): Promise<AtencionRapidaState> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const userId = session?.user?.id;
+  const userRole = (session?.user as { role?: string } | undefined)?.role;
+
+  if (!userId) return { error: "Debés iniciar sesión para registrar una atención." };
+  if (await hasCajaCerradaHoy()) return { error: "La caja del día ya fue cerrada." };
+
+  const barberoId = await resolveCajaActorBarberoId(userId, userRole === "admin");
+  if (!barberoId) return { error: "No encontré un barbero activo vinculado." };
+
+  const servicioId = formData.get("servicioId") as string | null;
+  const medioPagoId = formData.get("medioPagoId") as string | null;
+  const precioCobradoStr = formData.get("precioCobrado") as string | null;
+
+  if (!servicioId) return { error: "Seleccioná un servicio." };
+  if (!medioPagoId) return { error: "Seleccioná un medio de pago." };
+
+  const precioCobrado = Number(precioCobradoStr ?? 0);
+  if (!precioCobradoStr || isNaN(precioCobrado) || precioCobrado <= 0) {
+    return { error: "El precio del servicio no es válido." };
+  }
+
+  try {
+    await crearAtencionDesdeInput({ barberoId, servicioId, medioPagoId, precioCobrado });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("Error registrando atencion express:", message);
+    return { error: "No se pudo registrar la atención. Intentá de nuevo." };
+  }
+
+  revalidatePath("/caja");
+  revalidatePath("/hoy");
+  revalidatePath("/dashboard");
+  redirect("/caja");
+}
+
 export async function editarAtencion(
   id: string,
   prevState: AtencionFormState,
@@ -267,6 +297,8 @@ export async function editarAtencion(
 
   const barberoId = formData.get("barberoId") as string;
   const servicioId = formData.get("servicioId") as string;
+  const clientIdRaw = (formData.get("clientId") as string | null) ?? "";
+  const clientId = clientIdRaw.trim() || null;
   const medioPagoId = formData.get("medioPagoId") as string;
   const precioCobradoStr = formData.get("precioCobrado") as string;
   const adicionalesIds = formData.getAll("adicionalesIds") as string[];
@@ -340,24 +372,6 @@ export async function editarAtencion(
 
     if (!barbero || !medioPago || !servicio) return { error: "Datos invÃ¡lidos." };
 
-    const productosIds = productosSeleccionados.map((item) => item.productoId);
-    if (productosIds.length > 0) {
-      const productosActivos = await db
-        .select()
-        .from(productos)
-        .where(inArray(productos.id, productosIds));
-      const productosMap = new Map(productosActivos.map((producto) => [producto.id, producto]));
-
-      for (const item of productosSeleccionados) {
-        const producto = productosMap.get(item.productoId);
-        if (!producto) return { error: "Hay un producto seleccionado que ya no existe." };
-        if (!producto.activo) return { error: `El producto ${producto.nombre} no esta activo.` };
-        if ((producto.stockActual ?? 0) < item.cantidad) {
-          return { error: `Sin stock para ${producto.nombre}. Disponible: ${producto.stockActual ?? 0}` };
-        }
-      }
-    }
-
     const precioCobrado = Number(precioCobradoStr);
     const comisionMpPct = Number(medioPago.comisionPorcentaje ?? 0);
     const comisionMpMonto = precioCobrado * comisionMpPct / 100;
@@ -368,6 +382,7 @@ export async function editarAtencion(
     await db.transaction(async (tx) => {
       await tx.update(atenciones).set({
         barberoId,
+        clientId,
         servicioId,
         precioCobrado: String(precioCobrado),
         precioBase: servicio.precioBase,
@@ -400,19 +415,29 @@ export async function editarAtencion(
       await syncProductosAtencion({
         tx,
         atencionId: id,
+        clientId,
         medioPagoId,
         productosSeleccionados,
       });
     });
   } catch (e) {
     console.error("Error editando atencion:", e);
-    return { error: "No se pudo actualizar la atenciÃ³n. IntentÃ¡ de nuevo." };
+    return {
+      error: e instanceof Error ? e.message : "No se pudo actualizar la atención. Intentá de nuevo.",
+    };
   }
 
   revalidatePath("/caja");
   revalidatePath("/hoy");
   revalidatePath("/inventario");
   revalidatePath("/dashboard");
+  if (clientId) {
+    revalidatePath("/clientes");
+    revalidatePath(`/clientes/${clientId}`);
+  }
+  if (atencionExistente.clientId && atencionExistente.clientId !== clientId) {
+    revalidatePath(`/clientes/${atencionExistente.clientId}`);
+  }
   redirect("/caja");
 }
 

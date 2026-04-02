@@ -49,8 +49,8 @@ export default function ClientAvatarUploader({ initialValue, clientId }: ClientA
   return (
     <div className="space-y-3">
       <input type="hidden" name="avatarUrl" value={avatarUrl} />
-      <div className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
-        <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gray-900 text-lg font-semibold text-white">
+      <div className="flex items-center gap-4 rounded-2xl border border-zinc-700 bg-zinc-800 px-4 py-4">
+        <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-zinc-700 text-lg font-semibold text-white">
           {avatarUrl ? (
             <Image src={avatarUrl} alt="Avatar del cliente" fill sizes="64px" className="object-cover" />
           ) : (
@@ -59,15 +59,15 @@ export default function ClientAvatarUploader({ initialValue, clientId }: ClientA
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-gray-900">Foto o avatar del cliente</p>
-          <p className="mt-1 text-xs text-gray-500">Sirve para reconocerlo rapido en clientes y su perfil.</p>
+          <p className="text-sm font-medium text-white">Foto o avatar del cliente</p>
+          <p className="mt-1 text-xs text-zinc-500">Sirve para reconocerlo rapido en clientes y su perfil.</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white"
+            className="rounded-xl bg-zinc-700 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-600"
           >
             {avatarUrl ? "Cambiar foto" : "Subir foto"}
           </button>
@@ -75,7 +75,7 @@ export default function ClientAvatarUploader({ initialValue, clientId }: ClientA
             <button
               type="button"
               onClick={() => setAvatarUrl("")}
-              className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700"
+              className="rounded-xl border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-400 hover:bg-zinc-700"
             >
               Quitar
             </button>
@@ -91,8 +91,8 @@ export default function ClientAvatarUploader({ initialValue, clientId }: ClientA
         onChange={(event) => handleFileChange(event.target.files?.[0] ?? null)}
       />
 
-      {isUploading ? <p className="text-xs text-gray-500">Subiendo foto...</p> : null}
-      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      {isUploading ? <p className="text-xs text-zinc-500">Subiendo foto...</p> : null}
+      {error ? <p className="text-xs text-red-400">{error}</p> : null}
     </div>
   );
 }

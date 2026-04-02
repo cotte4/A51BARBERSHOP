@@ -13,7 +13,7 @@ export default function MarcarPagadaButton({ marcarAction }: Props) {
   return (
     <form action={formAction}>
       {state.error && (
-        <p className="text-red-500 text-sm mb-2">{state.error}</p>
+        <p className="text-red-400 text-sm mb-2">{state.error}</p>
       )}
       <button
         type="submit"
@@ -21,7 +21,7 @@ export default function MarcarPagadaButton({ marcarAction }: Props) {
         onClick={e => {
           if (!window.confirm("¿Confirmás el pago de esta liquidación?")) e.preventDefault();
         }}
-        className="min-h-[44px] w-full bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-700 disabled:opacity-50"
+        className="min-h-[44px] w-full rounded-xl bg-[#8cff59] text-[#07130a] text-sm font-semibold hover:bg-[#a8ff80] disabled:opacity-50"
       >
         {isPending ? "Guardando..." : "Marcar como pagada"}
       </button>

@@ -150,6 +150,7 @@ export default async function ServiciosPage() {
                           {formatARS(servicio.precioBase)}
                         </p>
                         <p className="mt-2 text-sm text-stone-500">
+                          {servicio.duracionMinutos} min ·{" "}
                           {servicio.adicionales.length > 0
                             ? `${servicio.adicionales.length} adicional${servicio.adicionales.length > 1 ? "es" : ""} disponible${servicio.adicionales.length > 1 ? "s" : ""}`
                             : "Sin adicionales configurados"}

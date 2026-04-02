@@ -6,6 +6,7 @@ import {
   cierresCaja,
   clients,
   productos,
+  servicios,
   turnos,
   turnosDisponibilidad,
   turnosExtras,
@@ -54,7 +55,11 @@ export async function isFechaCerrada(fecha: string): Promise<boolean> {
   return !!cierre;
 }
 
-export async function getTurnosDisponibles(barberoId: string, fecha: string) {
+export async function getTurnosDisponibles(
+  barberoId: string,
+  fecha: string,
+  duracionMinutos?: number
+) {
   if (await isFechaCerrada(fecha)) {
     return [];
   }
@@ -86,12 +91,26 @@ export async function getTurnosDisponibles(barberoId: string, fecha: string) {
   const ocupadas = new Set(ocupados.map((slot) => normalizeHora(slot.horaInicio)));
 
   return slots
+    .filter((slot) => (duracionMinutos ? slot.duracionMinutos >= duracionMinutos : true))
     .filter((slot) => !ocupadas.has(normalizeHora(slot.horaInicio)))
     .sort((a, b) => normalizeHora(a.horaInicio).localeCompare(normalizeHora(b.horaInicio)))
     .map((slot) => ({
       ...slot,
       horaInicio: normalizeHora(slot.horaInicio),
     }));
+}
+
+export async function getServiciosPublicos() {
+  return db
+    .select({
+      id: servicios.id,
+      nombre: servicios.nombre,
+      precioBase: servicios.precioBase,
+      duracionMinutos: servicios.duracionMinutos,
+    })
+    .from(servicios)
+    .where(eq(servicios.activo, true))
+    .orderBy(servicios.nombre);
 }
 
 export async function getProductosExtrasActivos() {
@@ -169,14 +188,18 @@ export async function getTurnosVisibleList(
       fecha: turnos.fecha,
       horaInicio: turnos.horaInicio,
       duracionMinutos: turnos.duracionMinutos,
+      servicioNombre: servicios.nombre,
+      precioEsperado: turnos.precioEsperado,
       estado: turnos.estado,
       notaCliente: turnos.notaCliente,
       sugerenciaCancion: turnos.sugerenciaCancion,
       motivoCancelacion: turnos.motivoCancelacion,
       esMarcianoSnapshot: turnos.esMarcianoSnapshot,
+      prioridadAbsoluta: turnos.prioridadAbsoluta,
     })
     .from(turnos)
     .innerJoin(barberos, eq(barberos.id, turnos.barberoId))
+    .leftJoin(servicios, eq(servicios.id, turnos.servicioId))
     .where(
       and(
         eq(turnos.fecha, fecha),

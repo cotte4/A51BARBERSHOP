@@ -14,9 +14,9 @@ function formatARS(val: string | number | null | undefined): string {
     style: "currency",
     currency: "ARS",
     minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(Number(val));
 }
-
 
 interface LiquidacionPageProps {
   params: Promise<{ id: string }>;
@@ -44,141 +44,154 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
   const alquilerBanco = Number(liq.alquilerBancoCobrado ?? 0);
   const resultadoPeriodo = Number(liq.montoAPagar ?? 0);
   const montoAPagar = Number(liq.montoAPagar ?? 0);
+
   const periodoLabel =
     liq.periodoInicio && liq.periodoFin && liq.periodoInicio === liq.periodoFin
       ? formatFecha(liq.periodoInicio)
       : `${formatFecha(liq.periodoInicio)} al ${formatFecha(liq.periodoFin)}`;
-  const periodoNegativo = resultadoPeriodo < 0;
 
+  const periodoNegativo = resultadoPeriodo < 0;
   const marcarConId = marcarPagada.bind(null, id);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white px-4 py-4">
-        <div className="mx-auto max-w-2xl">
+    <div className="min-h-screen bg-zinc-950 px-4 py-6 pb-24">
+      <div className="mx-auto flex max-w-2xl flex-col gap-5">
+
+        {/* Back + header */}
+        <div>
           <Link
             href="/liquidaciones"
-            className="print:hidden mb-2 block text-sm text-gray-400 hover:text-gray-600"
+            className="print:hidden inline-flex min-h-[36px] items-center rounded-xl border border-zinc-800 bg-zinc-900 px-3 text-xs font-medium text-zinc-400 hover:bg-zinc-800"
           >
-            {"<- Liquidaciones"}
+            ← Ver historial
           </Link>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-xl font-bold text-gray-900">
-              Liquidacion - {barbero?.nombre ?? "-"}
-            </h1>
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs ${
-                liq.pagado ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"
-              }`}
-            >
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h1 className="text-xl font-bold text-white">
+                {barbero?.nombre ?? "—"}
+              </h1>
+              <p className="mt-0.5 text-sm text-zinc-500">{periodoLabel}</p>
+            </div>
+            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+              liq.pagado
+                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                : "border-amber-500/20 bg-amber-500/10 text-amber-400"
+            }`}>
               {liq.pagado ? "Pagado" : "Pendiente"}
             </span>
           </div>
-          <p className="mt-0.5 text-sm text-gray-500">
-            {periodoLabel}
-          </p>
         </div>
-      </header>
 
-      <main className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-6">
+        {/* PARA VOS — hero card */}
+        <section className="overflow-hidden rounded-[32px] border border-[#8cff59]/30 bg-zinc-900 shadow-[0_0_60px_rgba(140,255,89,0.08)]">
+          <div className="bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.12),_transparent_50%)] p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">Para vos</p>
+            <p className={`mt-2 text-5xl font-bold tracking-tight ${periodoNegativo ? "text-red-400" : "text-[#8cff59]"}`}>
+              {formatARS(montoAPagar)}
+            </p>
+            <p className="mt-2 text-sm text-zinc-500">
+              {liq.totalCortes ?? 0} cortes · {periodoLabel}
+            </p>
+            {periodoNegativo && (
+              <p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+                El período dio negativo. Se registra sin deuda ni arrastre.
+              </p>
+            )}
+          </div>
+        </section>
+
+        {/* Desglose */}
+        <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Desglose</p>
+          <div className="mt-4 flex flex-col gap-3">
+            <Row
+              label="Cortes realizados"
+              value={String(liq.totalCortes ?? 0)}
+              plain
+            />
+            <Row
+              label="Total bruto cortes"
+              value={formatARS(liq.totalBrutoCortes)}
+              positive
+            />
+            <Row
+              label="Comisión calculada"
+              value={formatARS(comision)}
+              positive
+            />
+            {alquilerBanco > 0 && (
+              <Row
+                label="Alquiler banco del período"
+                value={`-${formatARS(alquilerBanco)}`}
+                negative
+              />
+            )}
+            {sueldoMinimo > 0 && (
+              <Row
+                label="Sueldo mínimo garantizado"
+                value={formatARS(sueldoMinimo)}
+                positive
+              />
+            )}
+            <div className="mt-1 border-t border-zinc-800 pt-3">
+              <Row
+                label="Resultado del período"
+                value={formatARS(resultadoPeriodo)}
+                highlight={!periodoNegativo}
+                negative={periodoNegativo}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Pago */}
+        {liq.pagado ? (
+          <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Pago</p>
+            <div className="mt-3 flex justify-between text-sm">
+              <span className="text-zinc-500">Fecha de pago</span>
+              <span className="font-medium text-white">{formatFecha(liq.fechaPago)}</span>
+            </div>
+          </section>
+        ) : (
+          <section className="print:hidden rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Registrar pago</p>
+            <div className="mt-3">
+              <MarcarPagadaButton marcarAction={marcarConId} />
+            </div>
+          </section>
+        )}
+
+        {/* Notas */}
+        {liq.notas && (
+          <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Notas</p>
+            <p className="mt-2 whitespace-pre-line text-sm text-zinc-400">{liq.notas}</p>
+          </section>
+        )}
+
+        {/* Detalles técnicos */}
+        <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Detalles</p>
+          <div className="mt-3 flex flex-col gap-2">
+            <Row label="Barbero" value={barbero?.nombre ?? "—"} plain />
+            <Row label="Modelo" value={barbero?.tipoModelo ?? "—"} plain />
+            <Row label="Generada" value={formatFechaHora(liq.creadoEn)} plain />
+          </div>
+        </section>
+
+        {/* Acciones imprimir/PDF */}
         <div className="print:hidden flex flex-wrap gap-2">
           <PrintButton />
           <a
             href={`/api/pdf/liquidacion/${id}`}
             download
-            className="min-h-[44px] inline-flex items-center px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            className="inline-flex min-h-[44px] items-center rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-sm font-medium text-zinc-300 hover:bg-zinc-800"
           >
             Descargar PDF
           </a>
         </div>
-
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-gray-700">Resumen</h2>
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Cortes realizados</span>
-              <span className="font-medium text-gray-900">{liq.totalCortes ?? 0}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Total bruto cortes</span>
-              <span className="font-medium text-gray-900">{formatARS(liq.totalBrutoCortes)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Comision calculada</span>
-              <span className="font-medium text-gray-900">{formatARS(liq.totalComisionCalculada)}</span>
-            </div>
-            {alquilerBanco > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Alquiler banco del periodo</span>
-                <span className="text-red-600">-{formatARS(liq.alquilerBancoCobrado)}</span>
-              </div>
-            )}
-            {sueldoMinimo > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Sueldo minimo garantizado</span>
-                <span className="font-medium text-gray-900">{formatARS(liq.sueldoMinimo)}</span>
-              </div>
-            )}
-            {periodoNegativo && (
-              <div className="rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
-                El periodo dio negativo. Se registra como resultado negativo del periodo, sin deuda ni arrastre.
-              </div>
-            )}
-            <div className="mt-1 flex justify-between border-t border-gray-100 pt-2 text-sm">
-              <span className="font-medium text-gray-700">Resultado del periodo</span>
-              <span className={resultadoPeriodo < 0 ? "font-bold text-red-600" : "font-bold text-gray-900"}>
-                {formatARS(resultadoPeriodo)}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="font-semibold text-gray-700">Monto a pagar</span>
-              <span className="text-base font-bold text-gray-900">{formatARS(montoAPagar)}</span>
-            </div>
-          </div>
-        </div>
-
-        {liq.pagado ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <h2 className="mb-2 text-sm font-semibold text-gray-700">Pago</h2>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Fecha de pago</span>
-              <span className="font-medium text-gray-900">{formatFecha(liq.fechaPago)}</span>
-            </div>
-          </div>
-        ) : (
-          <div className="print:hidden rounded-xl border border-gray-200 bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold text-gray-700">Registrar pago</h2>
-            <MarcarPagadaButton marcarAction={marcarConId} />
-          </div>
-        )}
-
-        {liq.notas && (
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <h2 className="mb-1 text-sm font-semibold text-gray-700">Notas</h2>
-            <p className="whitespace-pre-line text-sm text-gray-600">{liq.notas}</p>
-          </div>
-        )}
-
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <h2 className="mb-2 text-sm font-semibold text-gray-700">Detalles</h2>
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Barbero</span>
-              <span className="font-medium text-gray-900">{barbero?.nombre ?? "-"}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Modelo</span>
-              <span className="font-medium capitalize text-gray-900">{barbero?.tipoModelo ?? "-"}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Generada</span>
-              <span className="font-medium text-gray-900">
-                {formatFechaHora(liq.creadoEn)}
-              </span>
-            </div>
-          </div>
-        </div>
-      </main>
+      </div>
 
       <style>{`
         @media print {
@@ -186,6 +199,37 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
           @page { margin: 1.5cm; }
         }
       `}</style>
+    </div>
+  );
+}
+
+function Row({
+  label,
+  value,
+  positive,
+  negative,
+  highlight,
+  plain,
+}: {
+  label: string;
+  value: string;
+  positive?: boolean;
+  negative?: boolean;
+  highlight?: boolean;
+  plain?: boolean;
+}) {
+  const valueClass = highlight
+    ? "font-bold text-[#8cff59] text-base"
+    : negative
+    ? "font-semibold text-red-400"
+    : positive
+    ? "font-medium text-[#8cff59]"
+    : "font-medium text-white";
+
+  return (
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <span className="text-zinc-500">{label}</span>
+      <span className={valueClass}>{value}</span>
     </div>
   );
 }

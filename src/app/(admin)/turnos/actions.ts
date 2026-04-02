@@ -3,7 +3,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { turnos, turnosDisponibilidad } from "@/db/schema";
+import { pantallaEvents, turnos, turnosDisponibilidad } from "@/db/schema";
 import { requireAdminSession } from "@/lib/admin-action";
 import { getTurnosActorContext } from "@/lib/turnos-access";
 import {
@@ -15,6 +15,7 @@ import {
 
 export type TurnoActionState = {
   error?: string;
+  success?: string;
 };
 
 export type QuickTurnoCreateState = {
@@ -69,7 +70,12 @@ export async function confirmarTurnoAction(
 
   await db
     .update(turnos)
-    .set({ estado: "confirmado", updatedAt: new Date(), motivoCancelacion: null })
+    .set({
+      estado: "confirmado",
+      updatedAt: new Date(),
+      motivoCancelacion: null,
+      prioridadAbsoluta: turno.esMarcianoSnapshot,
+    })
     .where(eq(turnos.id, turnoId));
 
   revalidatePath("/turnos");
@@ -134,6 +140,41 @@ export async function completarTurnoAction(
   revalidatePath("/hoy");
   revalidatePath("/turnos/disponibilidad");
   return {};
+}
+
+export async function clienteLlegoAction(
+  turnoId: string,
+  _prevState: TurnoActionState
+): Promise<TurnoActionState> {
+  const { turno, allowed } = await getManagedTurno(turnoId);
+  if (!turno) {
+    return { error: "Turno no encontrado." };
+  }
+  if (!allowed) {
+    return { error: "Solo podes gestionar tus propios turnos." };
+  }
+  if (turno.estado !== "confirmado") {
+    return { error: "Solo podes avisar llegada en turnos confirmados." };
+  }
+
+  const cancion = turno.sugerenciaCancion?.trim();
+  if (!cancion) {
+    return { error: "Ese turno no tiene sugerencia de canción." };
+  }
+
+  try {
+    await db.insert(pantallaEvents).values({
+      turnoId,
+      cancion,
+      clienteNombre: turno.clienteNombre,
+    });
+  } catch (error) {
+    console.error("Error enviando evento a pantalla:", error);
+    return { error: "No pude avisarle a la pantalla. Intentá de nuevo." };
+  }
+
+  revalidatePath("/turnos");
+  return { success: "Canción enviada a la pantalla." };
 }
 
 export async function crearDisponibilidadAction(
@@ -294,6 +335,7 @@ export async function crearTurnoRapidoAction(
       duracionMinutos,
       estado: "confirmado",
       esMarcianoSnapshot: clientMatch?.esMarciano ?? false,
+      prioridadAbsoluta: clientMatch?.esMarciano ?? false,
     });
   } catch (error) {
     console.error("Error creando turno rapido:", error);

@@ -37,7 +37,9 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/inventario") ||
     pathname.startsWith("/repago") ||
     pathname.startsWith("/mi-resultado") ||
-    pathname.startsWith("/gastos-rapidos")
+    pathname.startsWith("/gastos-rapidos") ||
+    pathname.startsWith("/pantalla") ||
+    pathname.startsWith("/api/spotify")
   ) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
@@ -93,6 +95,9 @@ export const config = {
     "/turnos/:path*",
     "/mi-resultado/:path*",
     "/gastos-rapidos/:path*",
+    "/pantalla/:path*",
+    "/pantalla",
+    "/api/spotify/:path*",
     "/caja/:path*",
     "/clientes/:path*",
   ],

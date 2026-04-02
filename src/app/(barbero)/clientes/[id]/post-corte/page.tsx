@@ -22,16 +22,16 @@ export default async function PostCortePage({ params }: PostCortePageProps) {
 
   return (
     <div className="space-y-4">
-      <Link href={`/clientes/${id}`} className="text-sm text-gray-500 underline">
+      <Link href={`/clientes/${id}`} className="text-sm text-zinc-400 underline hover:text-zinc-300">
         ← {client.name}
       </Link>
 
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Registro post-corte</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-white">Registro post-corte</h1>
+        <p className="text-sm text-zinc-400">
           {client.name}
           {client.esMarciano ? (
-            <span className="ml-2 rounded-full bg-lime-100 px-2 py-0.5 text-xs font-semibold text-lime-800">
+            <span className="ml-2 rounded-full bg-[#8cff59]/15 px-2 py-0.5 text-xs font-semibold text-[#8cff59]">
               Marciano
             </span>
           ) : null}

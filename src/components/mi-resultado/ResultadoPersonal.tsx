@@ -9,21 +9,8 @@ function formatARS(value: number) {
     style: "currency",
     currency: "ARS",
     minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(value);
-}
-
-function resultTone(value: number) {
-  return value >= 0
-    ? {
-        card: "border-emerald-200 bg-emerald-50",
-        text: "text-emerald-900",
-        amount: "text-emerald-700",
-      }
-    : {
-        card: "border-red-200 bg-red-50",
-        text: "text-red-900",
-        amount: "text-red-700",
-      };
 }
 
 export default function ResultadoPersonal({
@@ -31,33 +18,58 @@ export default function ResultadoPersonal({
   paraVosMes,
   paraLaBarberMes,
 }: ResultadoPersonalProps) {
-  const paraVosTone = resultTone(paraVosMes);
-  const barberTone = resultTone(paraLaBarberMes);
+  const paraVosNegativo = paraVosMes < 0;
+  const barberNegativo = paraLaBarberMes < 0;
 
   return (
     <section className="grid gap-4 md:grid-cols-2">
-      <div className={`rounded-[28px] border p-5 shadow-sm ${paraVosTone.card}`}>
-        <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${paraVosTone.text}`}>
-          Para vos
-        </p>
-        <div className="mt-4 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-gray-500">Hoy</p>
-            <p className={`mt-2 text-3xl font-bold ${paraVosTone.amount}`}>{formatARS(paraVosHoy)}</p>
+
+      {/* PARA VOS — hero */}
+      <div className={`overflow-hidden rounded-[32px] border shadow-[0_0_60px_rgba(140,255,89,0.1)] ${
+        paraVosNegativo
+          ? "border-red-500/25 bg-zinc-900"
+          : "border-[#8cff59]/30 bg-zinc-900"
+      }`}>
+        <div className={`h-full ${paraVosNegativo ? "" : "bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.13),_transparent_55%)]"} p-6`}>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">Para vos</p>
+
+          <div className="mt-5 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-zinc-600">Hoy</p>
+              <p className={`mt-1 text-2xl font-bold ${paraVosNegativo ? "text-red-400" : "text-[#8cff59]"}`}>
+                {formatARS(paraVosHoy)}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs uppercase tracking-wide text-zinc-600">Este mes</p>
+              <p className={`mt-1 text-2xl font-bold ${paraVosNegativo ? "text-red-400" : "text-[#8cff59]"}`}>
+                {formatARS(paraVosMes)}
+              </p>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-xs uppercase tracking-wide text-gray-500">Mes</p>
-            <p className={`mt-2 text-3xl font-bold ${paraVosTone.amount}`}>{formatARS(paraVosMes)}</p>
+
+          <div className={`mt-5 rounded-[20px] border px-4 py-3 ${
+            paraVosNegativo
+              ? "border-red-500/20 bg-red-500/10"
+              : "border-[#8cff59]/20 bg-[#8cff59]/8"
+          }`}>
+            <p className={`text-xs uppercase tracking-wide ${paraVosNegativo ? "text-red-400/70" : "text-zinc-500"}`}>
+              Resultado neto del mes
+            </p>
+            <p className={`mt-1 text-4xl font-bold tracking-tight ${paraVosNegativo ? "text-red-400" : "text-[#8cff59]"}`}>
+              {formatARS(paraVosMes)}
+            </p>
           </div>
         </div>
       </div>
 
-      <div className={`rounded-[28px] border p-5 shadow-sm ${barberTone.card}`}>
-        <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${barberTone.text}`}>
-          Para la barber
+      {/* Para la barber */}
+      <div className="rounded-[32px] border border-zinc-800 bg-zinc-900 p-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">Para la barber</p>
+        <p className="mt-1 text-xs text-zinc-600">Resultado casa este mes</p>
+        <p className={`mt-4 text-4xl font-bold tracking-tight ${barberNegativo ? "text-red-400" : "text-[#8cff59]"}`}>
+          {formatARS(paraLaBarberMes)}
         </p>
-        <p className="mt-4 text-xs uppercase tracking-wide text-gray-500">Resultado casa mes</p>
-        <p className={`mt-2 text-4xl font-bold ${barberTone.amount}`}>{formatARS(paraLaBarberMes)}</p>
       </div>
     </section>
   );

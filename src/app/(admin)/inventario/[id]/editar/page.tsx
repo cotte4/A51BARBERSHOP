@@ -44,6 +44,7 @@ export default async function EditarProductoPage({ params }: Props) {
               costoCompra: producto.costoCompra ?? "",
               stockMinimo: producto.stockMinimo ?? 5,
               stockActual: producto.stockActual ?? 0,
+              esConsumicion: producto.esConsumicion ?? false,
             }}
           />
         </div>

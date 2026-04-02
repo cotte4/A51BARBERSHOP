@@ -1,12 +1,13 @@
-import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import IngresosSummary from "@/components/mi-resultado/IngresosSummary";
 import EgresosSummary from "@/components/mi-resultado/EgresosSummary";
 import ResultadoPersonal from "@/components/mi-resultado/ResultadoPersonal";
 import GastoRapidoFAB from "@/components/gastos-rapidos/GastoRapidoFAB";
-import { getMiResultadoData } from "@/lib/mi-resultado-queries";
+import GastosHistorialModal from "@/components/gastos-rapidos/GastosHistorialModal";
+import { getMiResultadoData, getGastosRapidosDelMes } from "@/lib/mi-resultado-queries";
 import { registrarGastoRapidoAction } from "@/app/(admin)/gastos-rapidos/actions";
 
 export default async function MiResultadoPage() {
@@ -17,37 +18,29 @@ export default async function MiResultadoPage() {
     redirect("/caja");
   }
 
-  const data = await getMiResultadoData();
+  const [data, { gastos, total }] = await Promise.all([
+    getMiResultadoData(),
+    getGastosRapidosDelMes(),
+  ]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white px-4 py-4">
-        <div className="mx-auto max-w-4xl">
-          <Link href="/dashboard" className="text-sm text-gray-400 hover:text-gray-600">
-            ← Dashboard
-          </Link>
-          <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Mi Resultado</h1>
-              <p className="text-sm text-gray-500">
-                Hoy y mes actual, sin cuota Memas.
-              </p>
-            </div>
-            <Link
-              href="/gastos-rapidos"
-              className="text-sm font-medium text-gray-700 underline hover:text-gray-900"
-            >
-              Ver historial de gastos rapidos
+    <div className="min-h-screen bg-zinc-950 px-4 py-6 pb-24">
+      <div className="mx-auto flex max-w-4xl flex-col gap-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <Link href="/dashboard" className="text-xs text-zinc-600 hover:text-zinc-400">
+              ← Dashboard
             </Link>
+            <h1 className="mt-2 text-2xl font-bold text-white">Mi Resultado</h1>
+            <p className="mt-0.5 text-sm text-zinc-500">Hoy y mes actual, sin cuota Memas.</p>
           </div>
+          <GastosHistorialModal gastos={gastos} total={total} />
         </div>
-      </header>
 
-      <main className="mx-auto flex max-w-4xl flex-col gap-5 px-4 py-6">
         <IngresosSummary {...data.ingresos} />
         <EgresosSummary {...data.egresos} />
         <ResultadoPersonal {...data.resultado} />
-      </main>
+      </div>
 
       <GastoRapidoFAB
         action={registrarGastoRapidoAction}

@@ -106,6 +106,20 @@ export default function NuevoProductoForm() {
         )}
       </div>
 
+      <label className="flex items-start gap-3 rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-700">
+        <input
+          type="checkbox"
+          name="esConsumicion"
+          className="mt-0.5 size-4 rounded border-gray-300"
+        />
+        <span>
+          <span className="block font-medium text-gray-900">Producto de consumición</span>
+          <span className="mt-1 block text-xs text-gray-500">
+            Habilita que este producto pueda marcarse como incluido para clientes Marciano.
+          </span>
+        </span>
+      </label>
+
       <div className="flex gap-3 pt-2">
         <Link
           href="/inventario"

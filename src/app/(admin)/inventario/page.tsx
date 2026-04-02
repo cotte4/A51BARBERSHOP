@@ -34,32 +34,32 @@ export default async function InventarioPage() {
     .orderBy(asc(productos.nombre));
 
   return (
-    <div className="min-h-screen bg-stone-100">
-      <header className="border-b border-stone-200 bg-white/95 px-4 py-4 backdrop-blur">
+    <div className="min-h-screen bg-zinc-950">
+      <header className="border-b border-zinc-800 bg-zinc-950/90 px-4 py-4 backdrop-blur">
         <div className="mx-auto max-w-5xl">
-          <Link href="/dashboard" className="mb-2 block text-sm text-stone-400 hover:text-stone-600">
+          <Link href="/dashboard" className="mb-2 block text-sm text-zinc-500 hover:text-zinc-300">
             ← Dashboard
           </Link>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
                 Operación
               </p>
-              <h1 className="mt-2 text-2xl font-bold text-stone-900">Inventario</h1>
-              <p className="mt-1 text-sm text-stone-500">
+              <h1 className="mt-2 text-2xl font-bold text-white">Inventario</h1>
+              <p className="mt-1 text-sm text-zinc-400">
                 Ajustes rápidos, alertas visibles y cards listas para tocar.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Link
                 href="/inventario/rotacion"
-                className="inline-flex min-h-[48px] items-center rounded-2xl bg-stone-100 px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-200"
+                className="inline-flex min-h-[48px] items-center rounded-2xl border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800"
               >
                 Ver rotación →
               </Link>
               <Link
                 href="/inventario/nuevo"
-                className="inline-flex min-h-[48px] items-center rounded-2xl bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
+                className="inline-flex min-h-[48px] items-center rounded-2xl bg-[#8cff59] px-4 py-2 text-sm font-medium text-[#07130a] hover:bg-[#b6ff84]"
               >
                 + Nuevo producto
               </Link>
@@ -70,9 +70,9 @@ export default async function InventarioPage() {
 
       <main className="mx-auto max-w-5xl px-4 py-6">
         {lista.length === 0 ? (
-          <div className="rounded-[28px] border border-stone-200 bg-white p-8 text-center shadow-sm">
-            <p className="text-stone-500">No hay productos cargados todavía.</p>
-            <Link href="/inventario/nuevo" className="mt-4 inline-block text-sm font-medium text-stone-900 underline">
+          <div className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-8 text-center">
+            <p className="text-zinc-400">No hay productos cargados todavía.</p>
+            <Link href="/inventario/nuevo" className="mt-4 inline-block text-sm font-medium text-[#8cff59] underline">
               Agregar el primero
             </Link>
           </div>
@@ -83,10 +83,10 @@ export default async function InventarioPage() {
               return (
                 <div
                   key={p.id}
-                  className={`group relative overflow-hidden rounded-[28px] border bg-white p-5 shadow-sm transition ${
+                  className={`group relative overflow-hidden rounded-[28px] border p-5 transition ${
                     stockBajo
-                      ? "border-red-200 shadow-[0_0_0_1px_rgba(239,68,68,0.16),0_14px_32px_rgba(239,68,68,0.10)]"
-                      : "border-stone-200 hover:-translate-y-0.5 hover:shadow-md"
+                      ? "border-red-900/50 bg-zinc-900 shadow-[0_0_0_1px_rgba(239,68,68,0.12),0_14px_32px_rgba(239,68,68,0.08)]"
+                      : "border-zinc-800 bg-zinc-900 hover:-translate-y-0.5 hover:border-zinc-700"
                   }`}
                 >
                   <Link
@@ -101,20 +101,25 @@ export default async function InventarioPage() {
                         <span className="text-2xl" aria-hidden="true">
                           {getProductoEmoji(p.nombre)}
                         </span>
-                        <span className="font-semibold text-stone-900">{p.nombre}</span>
+                        <span className="font-semibold text-white">{p.nombre}</span>
+                        {p.esConsumicion ? (
+                          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-300">
+                            Consumicion
+                          </span>
+                        ) : null}
                         {stockBajo ? (
-                          <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700">
+                          <span className="rounded-full bg-red-950/60 px-2 py-0.5 text-xs text-red-400">
                             Stock bajo
                           </span>
                         ) : null}
                       </div>
 
-                      <div className="mt-2 text-sm text-stone-500">
+                      <div className="mt-2 text-sm text-zinc-400">
                         Mínimo sugerido:{" "}
-                        <span className="font-medium text-stone-900">{p.stockMinimo ?? 5}</span>
+                        <span className="font-medium text-zinc-200">{p.stockMinimo ?? 5}</span>
                         {p.precioVenta ? (
                           <span className="ml-3">
-                            Venta: <span className="font-medium text-stone-900">{formatARS(p.precioVenta)}</span>
+                            Venta: <span className="font-medium text-zinc-200">{formatARS(p.precioVenta)}</span>
                           </span>
                         ) : null}
                       </div>
@@ -123,7 +128,7 @@ export default async function InventarioPage() {
                     <div className="relative z-10 flex flex-shrink-0 gap-2">
                       <Link
                         href={`/inventario/${p.id}/editar`}
-                        className="inline-flex min-h-[44px] items-center rounded-2xl border border-stone-200 bg-white px-4 text-sm font-medium text-stone-600 transition hover:bg-stone-50 hover:text-stone-900"
+                        className="inline-flex min-h-[44px] items-center rounded-2xl border border-zinc-700 bg-zinc-800/50 px-4 text-sm font-medium text-zinc-300 transition hover:bg-zinc-700 hover:text-white"
                       >
                         Editar
                       </Link>
@@ -131,11 +136,11 @@ export default async function InventarioPage() {
                   </div>
 
                   <div className="relative z-10 mt-5 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-                    <div className="rounded-[22px] bg-stone-50 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">
+                    <div className="rounded-[22px] bg-zinc-800/50 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
                         Card táctil
                       </p>
-                      <p className="mt-2 text-sm text-stone-600">
+                      <p className="mt-2 text-sm text-zinc-400">
                         Tocá la tarjeta para ver detalle completo. Los botones sirven para sumar o descontar stock desde acá.
                       </p>
                     </div>

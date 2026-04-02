@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { and, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import AnularButton from "@/components/caja/AnularButton";
+import QuickCheckoutPanel from "@/components/caja/QuickCheckoutPanel";
 import GastoRapidoFAB from "@/components/gastos-rapidos/GastoRapidoFAB";
-import QuickActionButton from "@/components/turnos/QuickActionButton";
 import { registrarGastoRapidoAction } from "@/app/(admin)/gastos-rapidos/actions";
 import { db } from "@/db";
 import {
@@ -16,12 +16,11 @@ import {
   stockMovimientos,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { getQuickActionDefaultsForBarbero, resolveCajaActorBarberoId } from "@/lib/caja-atencion";
+import { resolveCajaActorBarberoId } from "@/lib/caja-atencion";
 import { headers } from "next/headers";
-import type { QuickActionOption } from "@/lib/types";
 import {
   anularAtencion,
-  registrarAtencionRapidaSeleccionadaAction,
+  registrarAtencionExpressAction,
 } from "./actions";
 
 type CajaPageProps = {
@@ -156,17 +155,6 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
   const quickActionBarberoId = userId
     ? await resolveCajaActorBarberoId(userId, isAdmin)
     : null;
-  const quickDefaults = quickActionBarberoId
-    ? await getQuickActionDefaultsForBarbero(quickActionBarberoId)
-    : null;
-  const quickEditHref =
-    quickDefaults && quickActionBarberoId
-      ? `/caja/nueva?barberoId=${encodeURIComponent(quickActionBarberoId)}&servicioId=${encodeURIComponent(
-          quickDefaults.servicioId
-        )}&medioPagoId=${encodeURIComponent(quickDefaults.medioPagoId)}&precioCobrado=${encodeURIComponent(
-          String(quickDefaults.precioBase)
-        )}&fromQuickAction=1`
-      : "/caja/nueva?fromQuickAction=1";
 
   const [cierreHoy] = await db
     .select({
@@ -202,28 +190,10 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
         );
 
   const barberosMap = new Map((await db.select().from(barberos)).map((barbero) => [barbero.id, barbero]));
-  const serviciosMap = new Map((await db.select().from(servicios)).map((servicio) => [servicio.id, servicio]));
-  const mediosPagoMap = new Map((await db.select().from(mediosPago)).map((medio) => [medio.id, medio]));
-  const quickActionOptions: QuickActionOption[] = quickDefaults
-    ? [
-        quickDefaults,
-        ...Array.from(mediosPagoMap.values())
-          .filter((medio) => {
-            const nombre = (medio.nombre ?? "").toLowerCase();
-            return (
-              medio.id !== quickDefaults.medioPagoId &&
-              (nombre.includes("efectivo") || nombre.includes("transfer"))
-            );
-          })
-          .slice(0, 2)
-          .map((medio) => ({
-            medioPagoId: medio.id,
-            medioPagoNombre: medio.nombre ?? "-",
-            precioBase: quickDefaults.precioBase,
-            comisionMedioPagoPct: Number(medio.comisionPorcentaje ?? 0),
-          })),
-      ].slice(0, 2)
-    : [];
+  const serviciosActivos = await db.select().from(servicios).where(eq(servicios.activo, true));
+  const serviciosMap = new Map(serviciosActivos.map((servicio) => [servicio.id, servicio]));
+  const mediosPagoActivos = await db.select().from(mediosPago).where(eq(mediosPago.activo, true));
+  const mediosPagoMap = new Map(mediosPagoActivos.map((medio) => [medio.id, medio]));
 
   const atencionesActivas = atencionesDelDia.filter((atencion) => !atencion.anulado);
   const atencionesAnuladas = atencionesDelDia.length - atencionesActivas.length;
@@ -443,39 +413,6 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
     totalBarberosRanking = cortesPorBarberoRaw.length;
   }
 
-  const ctaCards = cierreHoy
-    ? [
-        {
-          href: `/caja/cierre/${fechaHoy}`,
-          title: "Ver cierre",
-          description: "Entrar al resumen final del dia y revisar los numeros cerrados.",
-          tone: "bg-white/12 text-white ring-1 ring-white/15 hover:bg-white/18",
-        },
-      ]
-    : [
-        {
-          href: "/caja/nueva",
-          title: "Nueva atencion",
-          description: "Registrar un servicio ahora mismo con prioridad total.",
-          tone: "bg-emerald-400 text-emerald-950 hover:bg-emerald-300",
-        },
-        {
-          href: "/caja/vender",
-          title: "Vender producto",
-          description: "Cobrar retail con el mismo lenguaje rapido de caja.",
-          tone: "bg-white/12 text-white ring-1 ring-white/15 hover:bg-white/18",
-        },
-        ...(isAdmin
-          ? [
-              {
-                href: "/caja/cierre",
-                title: "Cerrar caja",
-                description: "Finalizar la jornada solo cuando ya no entren mas ventas.",
-                tone: "bg-amber-300 text-amber-950 hover:bg-amber-200",
-              },
-            ]
-          : []),
-      ];
 
   const cardsResumen = [
     {
@@ -545,26 +482,60 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                     {totalAtenciones} servicios
                   </span>
                   <span className="inline-flex min-h-[36px] items-center rounded-full bg-white/10 px-3 text-sm text-stone-200 ring-1 ring-white/10">
-                    Neto actual {formatARS(totalNeto + totalProductos)}
+                    Neto {formatARS(totalNeto + totalProductos)}
                   </span>
                 </div>
-              </div>
 
-              <div className="grid w-full gap-3 sm:grid-cols-2 xl:w-[440px] xl:grid-cols-1">
-                {ctaCards.map((card) => (
-                  <Link
-                    key={card.href}
-                    href={card.href}
-                    className={`rounded-[24px] px-5 py-4 transition ${card.tone}`}
-                  >
-                    <span className="block text-base font-semibold">{card.title}</span>
-                    <span className="mt-1 block text-sm/6 opacity-85">{card.description}</span>
-                  </Link>
-                ))}
+                {/* Acciones secundarias */}
+                {!cierreHoy && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Link
+                      href="/caja/vender"
+                      className="inline-flex min-h-[40px] items-center rounded-full bg-white/10 px-4 text-sm font-medium text-white ring-1 ring-white/15 hover:bg-white/18 transition"
+                    >
+                      Vender producto
+                    </Link>
+                    {isAdmin && (
+                      <Link
+                        href="/caja/cierre"
+                        className="inline-flex min-h-[40px] items-center rounded-full bg-amber-300/15 px-4 text-sm font-medium text-amber-200 ring-1 ring-amber-300/20 hover:bg-amber-300/22 transition"
+                      >
+                        Cerrar caja
+                      </Link>
+                    )}
+                  </div>
+                )}
+                {cierreHoy && (
+                  <div className="mt-4">
+                    <Link
+                      href={`/caja/cierre/${fechaHoy}`}
+                      className="inline-flex min-h-[40px] items-center rounded-full bg-white/10 px-4 text-sm font-medium text-white ring-1 ring-white/15 hover:bg-white/18 transition"
+                    >
+                      Ver resumen del cierre
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </section>
+
+        {/* Panel de cobro rápido — solo cuando caja abierta */}
+        {!cierreHoy && serviciosActivos.length > 0 && (
+          <QuickCheckoutPanel
+            servicios={serviciosActivos.map((s) => ({
+              id: s.id,
+              nombre: s.nombre,
+              precioBase: s.precioBase,
+            }))}
+            mediosPago={mediosPagoActivos.map((m) => ({
+              id: m.id,
+              nombre: m.nombre,
+              comisionPorcentaje: m.comisionPorcentaje,
+            }))}
+            action={registrarAtencionExpressAction}
+          />
+        )}
 
         <section className="flex flex-wrap items-center justify-between gap-3 rounded-[28px] border border-zinc-800 bg-zinc-950/60 px-4 py-4">
           <div>
@@ -659,12 +630,6 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
 
         <section className="grid gap-6 xl:grid-cols-[1.55fr_1fr]">
           <div className="space-y-6">
-            <QuickActionButton
-              defaults={quickDefaults}
-              options={quickActionOptions}
-              action={registrarAtencionRapidaSeleccionadaAction}
-              editHref={quickEditHref}
-            />
 
             {vista === "simple" ? (
               <section className="panel-card rounded-[30px] p-5">

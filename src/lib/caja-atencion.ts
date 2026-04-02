@@ -5,7 +5,9 @@ import {
   atencionesAdicionales,
   atencionesProductos,
   barberos,
+  clients,
   cierresCaja,
+  marcianoBeneficiosUso,
   mediosPago,
   productos,
   servicios,
@@ -13,9 +15,11 @@ import {
   stockMovimientos,
 } from "@/db/schema";
 import type { QuickActionDefaults } from "@/lib/types";
+import { MARCIANO_BENEFICIOS } from "@/lib/marciano-config";
 
 export type AtencionCreationInput = {
   barberoId: string;
+  clientId?: string | null;
   servicioId: string;
   medioPagoId: string;
   precioCobrado: number;
@@ -28,6 +32,7 @@ export type ProductoSeleccionadoInput = {
   productoId: string;
   cantidad: number;
   precioUnitario: number;
+  esMarcianoIncluido?: boolean;
 };
 
 export function getFechaHoyArgentina(): string {
@@ -42,6 +47,62 @@ export function getHoraAhoraArgentina(): string {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
+  });
+}
+
+function getCurrentMonthKey(fecha = getFechaHoyArgentina()): string {
+  return fecha.slice(0, 7);
+}
+
+async function applyMarcianoConsumicionesDelta(input: {
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0];
+  clientId: string;
+  delta: number;
+  fecha: string;
+}) {
+  if (input.delta === 0) {
+    return;
+  }
+
+  const mes = getCurrentMonthKey(input.fecha);
+  const [existing] = await input.tx
+    .select()
+    .from(marcianoBeneficiosUso)
+    .where(and(eq(marcianoBeneficiosUso.clientId, input.clientId), eq(marcianoBeneficiosUso.mes, mes)))
+    .limit(1);
+
+  const consumicionesActuales = existing?.consumicionesUsadas ?? 0;
+  const consumicionesSiguientes = consumicionesActuales + input.delta;
+
+  if (consumicionesSiguientes < 0) {
+    throw new Error("No se pudo reconciliar el uso Marciano de consumiciones.");
+  }
+
+  if (
+    input.delta > 0 &&
+    MARCIANO_BENEFICIOS.consumicionesPorMes !== null &&
+    consumicionesSiguientes > MARCIANO_BENEFICIOS.consumicionesPorMes
+  ) {
+    throw new Error(
+      `El cliente ya agotó sus ${MARCIANO_BENEFICIOS.consumicionesPorMes} consumiciones Marciano del mes.`
+    );
+  }
+
+  if (existing) {
+    await input.tx
+      .update(marcianoBeneficiosUso)
+      .set({
+        consumicionesUsadas: consumicionesSiguientes,
+        updatedAt: new Date(),
+      })
+      .where(eq(marcianoBeneficiosUso.id, existing.id));
+    return;
+  }
+
+  await input.tx.insert(marcianoBeneficiosUso).values({
+    clientId: input.clientId,
+    mes,
+    consumicionesUsadas: consumicionesSiguientes,
   });
 }
 
@@ -77,6 +138,17 @@ export async function crearAtencionDesdeInput(input: AtencionCreationInput) {
   if (!servicio) {
     throw new Error("Servicio no encontrado");
   }
+  if (input.clientId) {
+    const [client] = await db
+      .select({ id: clients.id })
+      .from(clients)
+      .where(eq(clients.id, input.clientId))
+      .limit(1);
+
+    if (!client) {
+      throw new Error("Cliente no encontrado");
+    }
+  }
 
   const precioCobrado = input.precioCobrado;
   const comisionMpPct = Number(medioPago.comisionPorcentaje ?? 0);
@@ -93,6 +165,7 @@ export async function crearAtencionDesdeInput(input: AtencionCreationInput) {
       .insert(atenciones)
       .values({
         barberoId: input.barberoId,
+        clientId: input.clientId ?? null,
         servicioId: input.servicioId,
         fecha: getFechaHoyArgentina(),
         hora: getHoraAhoraArgentina(),
@@ -130,6 +203,7 @@ export async function crearAtencionDesdeInput(input: AtencionCreationInput) {
       await syncProductosAtencion({
         tx,
         atencionId: nuevaAtencion.id,
+        clientId: input.clientId ?? null,
         medioPagoId: input.medioPagoId,
         productosSeleccionados,
       });
@@ -142,6 +216,7 @@ export async function crearAtencionDesdeInput(input: AtencionCreationInput) {
 type SyncProductosAtencionInput = {
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0];
   atencionId: string;
+  clientId?: string | null;
   medioPagoId: string;
   productosSeleccionados: ProductoSeleccionadoInput[];
 };
@@ -149,9 +224,25 @@ type SyncProductosAtencionInput = {
 export async function syncProductosAtencion({
   tx,
   atencionId,
+  clientId,
   medioPagoId,
   productosSeleccionados,
 }: SyncProductosAtencionInput) {
+  const [atencion] = await tx
+    .select({
+      id: atenciones.id,
+      fecha: atenciones.fecha,
+      clientId: atenciones.clientId,
+    })
+    .from(atenciones)
+    .where(eq(atenciones.id, atencionId))
+    .limit(1);
+
+  if (!atencion) {
+    throw new Error("Atencion no encontrada");
+  }
+
+  const resolvedClientId = clientId ?? atencion.clientId ?? null;
   const movimientosPrevios = await tx
     .select({
       productoId: stockMovimientos.productoId,
@@ -164,6 +255,19 @@ export async function syncProductosAtencion({
         eq(stockMovimientos.tipo, "venta")
       )
     );
+
+  const productosPrevios = await tx
+    .select({
+      cantidad: atencionesProductos.cantidad,
+      esMarcianoIncluido: atencionesProductos.esMarcianoIncluido,
+    })
+    .from(atencionesProductos)
+    .where(eq(atencionesProductos.atencionId, atencionId));
+
+  const consumicionesMarcianoPrevias = productosPrevios.reduce(
+    (total, item) => total + (item.esMarcianoIncluido ? item.cantidad : 0),
+    0
+  );
 
   for (const movimiento of movimientosPrevios) {
     if (!movimiento.productoId || !movimiento.cantidad) continue;
@@ -183,7 +287,39 @@ export async function syncProductosAtencion({
     );
   await tx.delete(atencionesProductos).where(eq(atencionesProductos.atencionId, atencionId));
 
+  let client:
+    | {
+        id: string;
+        esMarciano: boolean;
+      }
+    | null = null;
+
+  if (resolvedClientId) {
+    const [foundClient] = await tx
+      .select({
+        id: clients.id,
+        esMarciano: clients.esMarciano,
+      })
+      .from(clients)
+      .where(eq(clients.id, resolvedClientId))
+      .limit(1);
+
+    if (!foundClient) {
+      throw new Error("Cliente no encontrado");
+    }
+
+    client = foundClient;
+  }
+
   if (productosSeleccionados.length === 0) {
+    if (consumicionesMarcianoPrevias > 0 && resolvedClientId) {
+      await applyMarcianoConsumicionesDelta({
+        tx,
+        clientId: resolvedClientId,
+        delta: -consumicionesMarcianoPrevias,
+        fecha: atencion.fecha,
+      });
+    }
     return;
   }
 
@@ -193,6 +329,19 @@ export async function syncProductosAtencion({
     .from(productos)
     .where(inArray(productos.id, productosIds));
   const productosMap = new Map(productosData.map((producto) => [producto.id, producto]));
+  const consumicionesMarcianoNuevas = productosSeleccionados.reduce(
+    (total, item) => total + (item.esMarcianoIncluido ? item.cantidad : 0),
+    0
+  );
+
+  if (consumicionesMarcianoNuevas > 0) {
+    if (!client) {
+      throw new Error("Seleccioná un cliente Marciano para incluir consumiciones a $0.");
+    }
+    if (!client.esMarciano) {
+      throw new Error("Solo clientes Marciano pueden usar consumiciones incluidas.");
+    }
+  }
 
   for (const item of productosSeleccionados) {
     const producto = productosMap.get(item.productoId);
@@ -206,12 +355,18 @@ export async function syncProductosAtencion({
     if ((producto.stockActual ?? 0) < item.cantidad) {
       throw new Error(`Sin stock para ${producto.nombre}`);
     }
+    if (item.esMarcianoIncluido && !producto.esConsumicion) {
+      throw new Error(`${producto.nombre} no está marcado como consumición Marciano.`);
+    }
+
+    const precioUnitario = item.esMarcianoIncluido ? 0 : item.precioUnitario;
 
     await tx.insert(atencionesProductos).values({
       atencionId,
       productoId: item.productoId,
       cantidad: item.cantidad,
-      precioUnitario: String(item.precioUnitario.toFixed(2)),
+      precioUnitario: String(precioUnitario.toFixed(2)),
+      esMarcianoIncluido: item.esMarcianoIncluido ?? false,
       costoUnitarioSnapshot:
         producto.costoCompra === null ? null : String(Number(producto.costoCompra).toFixed(2)),
     });
@@ -225,11 +380,20 @@ export async function syncProductosAtencion({
       productoId: item.productoId,
       tipo: "venta",
       cantidad: -item.cantidad,
-      precioUnitario: String(item.precioUnitario.toFixed(2)),
+      precioUnitario: String(precioUnitario.toFixed(2)),
       costoUnitarioSnapshot:
         producto.costoCompra === null ? null : String(Number(producto.costoCompra).toFixed(2)),
       referenciaId: atencionId,
       notas: medioPagoId,
+    });
+  }
+
+  if (resolvedClientId && consumicionesMarcianoPrevias !== consumicionesMarcianoNuevas) {
+    await applyMarcianoConsumicionesDelta({
+      tx,
+      clientId: resolvedClientId,
+      delta: consumicionesMarcianoNuevas - consumicionesMarcianoPrevias,
+      fecha: atencion.fecha,
     });
   }
 }

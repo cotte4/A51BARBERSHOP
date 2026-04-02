@@ -34,61 +34,59 @@ export default function QuickTurnoSlotCard({
   }, [router, state.success]);
 
   return (
-    <div className="rounded-[22px] border border-dashed border-stone-300 bg-stone-50 p-4 transition hover:border-stone-400 hover:bg-white">
+    <div className={`rounded-[20px] border transition ${open ? "border-[#8cff59]/30 bg-zinc-900" : "border-dashed border-zinc-700 bg-zinc-900/50 hover:border-zinc-600 hover:bg-zinc-900"}`}>
       <button
         type="button"
-        onClick={() => setOpen((current) => !current)}
-        className="flex w-full items-center justify-between gap-3 text-left"
+        onClick={() => setOpen((c) => !c)}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
       >
         <div>
-          <p className="text-sm font-semibold text-stone-900">
-            {time} · Hueco libre
+          <p className="text-sm font-medium text-zinc-300">
+            Hueco libre · {durationMinutos} min
           </p>
-          <p className="mt-1 text-sm text-stone-500">
-            {barberName} · {durationMinutos} min
-          </p>
+          <p className="mt-0.5 text-xs text-zinc-600">{barberName}</p>
         </div>
-        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-xl text-stone-400 shadow-sm">
+        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-800 text-sm font-bold text-[#8cff59]">
           +
         </span>
       </button>
 
       {open ? (
-        <form action={formAction} className="mt-4 space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2">
+        <form action={formAction} className="border-t border-zinc-800 px-4 pb-4 pt-3 space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2">
             <input
               name="clienteNombre"
               placeholder="Nombre del cliente"
               required
-              className="h-12 rounded-2xl border border-stone-300 bg-white px-4 text-sm text-stone-900 outline-none focus:border-stone-900"
+              className="h-11 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-[#8cff59]"
             />
             <input
               name="clienteTelefonoRaw"
               placeholder="Teléfono (opcional)"
-              className="h-12 rounded-2xl border border-stone-300 bg-white px-4 text-sm text-stone-900 outline-none focus:border-stone-900"
+              className="h-11 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500"
             />
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2">
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-stone-900 px-4 text-sm font-semibold text-white transition hover:bg-stone-700 disabled:opacity-50"
+              className="inline-flex min-h-[40px] items-center justify-center rounded-xl bg-[#8cff59] px-4 text-sm font-semibold text-[#07130a] hover:bg-[#a8ff80] disabled:opacity-50"
             >
               {pending ? "Guardando..." : "Guardar turno"}
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-white px-4 text-sm font-medium text-stone-700 transition hover:bg-stone-100"
+              className="inline-flex min-h-[40px] items-center justify-center rounded-xl bg-zinc-800 px-4 text-sm font-medium text-zinc-400 hover:bg-zinc-700"
             >
               Cancelar
             </button>
           </div>
           {state.error ? (
-            <p className="text-sm text-red-600">{state.error}</p>
+            <p className="text-xs text-red-400">{state.error}</p>
           ) : null}
           {state.fieldErrors?.clienteNombre ? (
-            <p className="text-sm text-red-600">{state.fieldErrors.clienteNombre}</p>
+            <p className="text-xs text-red-400">{state.fieldErrors.clienteNombre}</p>
           ) : null}
         </form>
       ) : null}

@@ -15,6 +15,7 @@ export type ProductoFormState = {
     stockMinimo?: string;
     precioVenta?: string;
     costoCompra?: string;
+    esConsumicion?: string;
   };
 };
 
@@ -31,6 +32,7 @@ export async function crearProducto(
   const precioVentaRaw = (formData.get("precioVenta") as string)?.trim();
   const costoCompraRaw = (formData.get("costoCompra") as string)?.trim();
   const stockMinimoRaw = (formData.get("stockMinimo") as string)?.trim();
+  const esConsumicion = String(formData.get("esConsumicion") ?? "") === "on";
 
   const fieldErrors: ProductoFormState["fieldErrors"] = {};
   if (!nombre) fieldErrors.nombre = "El nombre es requerido";
@@ -58,6 +60,7 @@ export async function crearProducto(
       costoCompra: costoCompra !== null ? String(costoCompra.toFixed(2)) : null,
       stockActual: 0,
       stockMinimo,
+      esConsumicion,
       activo: true,
     });
   } catch (error) {
@@ -85,6 +88,7 @@ export async function editarProducto(
   const precioVentaRaw = (formData.get("precioVenta") as string)?.trim();
   const costoCompraRaw = (formData.get("costoCompra") as string)?.trim();
   const stockMinimoRaw = (formData.get("stockMinimo") as string)?.trim();
+  const esConsumicion = String(formData.get("esConsumicion") ?? "") === "on";
 
   const fieldErrors: ProductoFormState["fieldErrors"] = {};
   if (!nombre) fieldErrors.nombre = "El nombre es requerido";
@@ -121,6 +125,7 @@ export async function editarProducto(
         precioVenta: precioVenta !== null ? String(precioVenta.toFixed(2)) : null,
         costoCompra: costoCompra !== null ? String(costoCompra.toFixed(2)) : null,
         stockMinimo,
+        esConsumicion,
       })
       .where(eq(productos.id, id));
   } catch (error) {

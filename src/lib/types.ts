@@ -151,6 +151,9 @@ export interface TurnoSummary {
   sugerenciaCancion: string | null;
   motivoCancelacion: string | null;
   esMarcianoSnapshot: boolean;
+  prioridadAbsoluta: boolean;
+  servicioNombre: string | null;
+  precioEsperado: string | null;
   extras: Array<{
     id: string;
     nombre: string;
@@ -165,9 +168,8 @@ export interface TurnoDetalle extends TurnoSummary {
 
 export interface ReservaPublicInput {
   slug: string;
-  fecha: string;
-  horaInicio: string;
-  duracionMinutos: number;
+  serviceId: string;
+  slotId: string;
   clienteNombre: string;
   clienteTelefonoRaw?: string;
   notaCliente?: string;
@@ -181,12 +183,5 @@ export interface QuickActionDefaults {
   precioBase: number;
   medioPagoId: string;
   medioPagoNombre: string;
-  comisionMedioPagoPct: number;
-}
-
-export interface QuickActionOption {
-  medioPagoId: string;
-  medioPagoNombre: string;
-  precioBase: number;
   comisionMedioPagoPct: number;
 }

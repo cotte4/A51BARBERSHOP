@@ -32,53 +32,58 @@ export default function MarcianosBriefing({ clientId }: MarcianosBriefingProps) 
     });
   }
 
-  if (!briefing) {
-    return (
-      <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">Briefing IA</h2>
-        <p className="mt-2 text-sm text-gray-500">
-          Resumen del cliente antes del corte, generado por IA.
-        </p>
-
-        {error ? (
-          <p className="mt-3 text-sm text-red-600">{error}</p>
-        ) : null}
-
-        <button
-          onClick={loadBriefing}
-          disabled={isPending}
-          className="mt-4 h-11 rounded-xl bg-gray-900 px-5 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {isPending ? "Generando…" : "Ver briefing"}
-        </button>
-      </section>
-    );
-  }
-
   return (
-    <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-gray-900">Briefing IA</h2>
+    <section className="overflow-hidden rounded-[28px] border border-[#8cff59]/20 bg-zinc-900">
+      {/* Header bar */}
+      <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-5 py-3">
         <div className="flex items-center gap-2">
-          {cached ? (
-            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-500">
-              desde caché
-            </span>
-          ) : null}
-          <button
-            onClick={() => {
-              setBriefing(null);
-              loadBriefing();
-            }}
-            disabled={isPending}
-            className="text-xs text-gray-500 underline disabled:opacity-50"
-          >
-            Regenerar
-          </button>
+          <span className="h-1.5 w-1.5 rounded-full bg-[#8cff59]" />
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">Briefing IA</p>
         </div>
+        {briefing ? (
+          <div className="flex items-center gap-3">
+            {cached ? (
+              <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-xs text-zinc-500">
+                caché
+              </span>
+            ) : null}
+            <button
+              onClick={() => { setBriefing(null); loadBriefing(); }}
+              disabled={isPending}
+              className="text-xs text-zinc-500 hover:text-zinc-300 disabled:opacity-50"
+            >
+              Regenerar
+            </button>
+          </div>
+        ) : null}
       </div>
 
-      <p className="mt-4 text-sm leading-relaxed text-gray-700 whitespace-pre-wrap">{briefing}</p>
+      <div className="px-5 py-4">
+        {!briefing ? (
+          <>
+            <p className="text-sm text-zinc-500">
+              Resumen del cliente antes del corte, generado por IA.
+            </p>
+            {error ? (
+              <p className="mt-2 text-xs text-red-400">{error}</p>
+            ) : null}
+            <button
+              onClick={loadBriefing}
+              disabled={isPending}
+              className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-[#8cff59]/10 border border-[#8cff59]/20 px-4 text-sm font-semibold text-[#8cff59] hover:bg-[#8cff59]/20 disabled:opacity-60"
+            >
+              {isPending ? (
+                <>
+                  <span className="h-3 w-3 animate-spin rounded-full border border-[#8cff59] border-t-transparent" />
+                  Generando…
+                </>
+              ) : "Ver briefing"}
+            </button>
+          </>
+        ) : (
+          <p className="text-sm leading-relaxed text-zinc-300 whitespace-pre-wrap">{briefing}</p>
+        )}
+      </div>
     </section>
   );
 }

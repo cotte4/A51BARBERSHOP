@@ -17,16 +17,16 @@ export default async function ConfiguracionLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white px-4 py-4">
+    <div className="min-h-screen bg-zinc-950">
+      <header className="border-b border-zinc-800 bg-zinc-950/90 px-4 py-4 backdrop-blur">
         <div className="mx-auto max-w-2xl">
           <Link
             href="/dashboard"
-            className="mb-2 block text-sm text-gray-400 hover:text-gray-600"
+            className="mb-2 block text-sm text-zinc-500 hover:text-zinc-300"
           >
             ← Dashboard
           </Link>
-          <h1 className="text-xl font-bold text-gray-900">Configuración</h1>
+          <h1 className="text-xl font-bold text-white">Configuración</h1>
         </div>
       </header>
 

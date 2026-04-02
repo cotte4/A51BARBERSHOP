@@ -12,6 +12,7 @@ interface ProductoData {
   costoCompra: string;
   stockMinimo: number;
   stockActual: number;
+  esConsumicion: boolean;
 }
 
 interface Props {
@@ -126,6 +127,21 @@ export default function EditarProductoForm({ editarAction, producto }: Props) {
           <p className="text-red-500 text-xs mt-1">{state.fieldErrors.stockMinimo}</p>
         )}
       </div>
+
+      <label className="flex items-start gap-3 rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-700">
+        <input
+          type="checkbox"
+          name="esConsumicion"
+          defaultChecked={producto.esConsumicion}
+          className="mt-0.5 size-4 rounded border-gray-300"
+        />
+        <span>
+          <span className="block font-medium text-gray-900">Producto de consumiciÃ³n</span>
+          <span className="mt-1 block text-xs text-gray-500">
+            Permite incluirlo a $0 dentro de beneficios Marciano desde caja.
+          </span>
+        </span>
+      </label>
 
       <div className="flex gap-3 pt-2">
         <Link

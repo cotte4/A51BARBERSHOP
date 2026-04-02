@@ -19,17 +19,9 @@ export default async function ClientesPage() {
 
   return (
     <div className="space-y-5">
-      <section className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl font-bold text-white">Clientes</h1>
-          <p className="text-sm text-zinc-400">Recientes primero, buscador a mano y memoria visual del corte.</p>
-        </div>
-        <Link
-          href="/clientes/nuevo"
-          className="neon-button rounded-xl px-4 py-3 text-sm font-semibold"
-        >
-          Nuevo cliente
-        </Link>
+      <section>
+        <h1 className="font-display text-3xl font-bold text-white">Clientes</h1>
+        <p className="text-sm text-zinc-400">Recientes primero, buscador a mano y memoria visual del corte.</p>
       </section>
 
       {actor.isAdmin && retentionCandidates.length > 0 ? (

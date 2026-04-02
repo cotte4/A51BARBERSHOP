@@ -1,6 +1,11 @@
 import { notFound } from "next/navigation";
 import ReservaForm from "@/components/turnos/ReservaForm";
-import { getFechaHoyArgentina, getProductosExtrasActivos, resolvePublicBarberoBySlug } from "@/lib/turnos";
+import {
+  getFechaHoyArgentina,
+  getProductosExtrasActivos,
+  getServiciosPublicos,
+  resolvePublicBarberoBySlug,
+} from "@/lib/turnos";
 
 type ReservarPageProps = {
   params: Promise<{ slug: string }>;
@@ -14,7 +19,10 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
     notFound();
   }
 
-  const productos = await getProductosExtrasActivos();
+  const [productos, servicios] = await Promise.all([
+    getProductosExtrasActivos(),
+    getServiciosPublicos(),
+  ]);
   const initialFecha = getFechaHoyArgentina();
 
   return (
@@ -33,6 +41,12 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
           barberoNombre={barbero.nombre}
           initialFecha={initialFecha}
           productos={productos}
+          servicios={servicios.map((servicio) => ({
+            id: servicio.id,
+            nombre: servicio.nombre,
+            precioBase: servicio.precioBase,
+            duracionMinutos: servicio.duracionMinutos,
+          }))}
         />
       </div>
     </main>

@@ -150,10 +150,10 @@ export default async function CierrePage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <Link href="/caja" className="text-sm text-gray-400 hover:text-gray-600">
+        <Link href="/caja" className="text-sm text-zinc-400 hover:text-zinc-300">
           {"<- Caja"}
         </Link>
-        <h2 className="mt-1 text-lg font-semibold text-gray-900">
+        <h2 className="mt-1 text-lg font-semibold text-white">
           Cierre - {formatFechaLarga(fechaHoy)}
         </h2>
       </div>

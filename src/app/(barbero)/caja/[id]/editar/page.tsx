@@ -4,6 +4,7 @@ import {
   atencionesAdicionales,
   atencionesProductos,
   barberos,
+  clients,
   serviciosAdicionales,
   mediosPago,
   productos,
@@ -66,6 +67,7 @@ export default async function EditarAtencionPage({
     productosActivos,
     adicionalesDeAtencion,
     productosDeAtencion,
+    atencionClient,
   ] = await Promise.all([
     db.select().from(barberos).where(eq(barberos.activo, true)),
     db.select().from(servicios).where(eq(servicios.activo, true)),
@@ -80,6 +82,18 @@ export default async function EditarAtencionPage({
       .select()
       .from(atencionesProductos)
       .where(eq(atencionesProductos.atencionId, id)),
+    atencion.clientId
+      ? db
+          .select({
+            id: clients.id,
+            name: clients.name,
+            phoneRaw: clients.phoneRaw,
+            esMarciano: clients.esMarciano,
+          })
+          .from(clients)
+          .where(eq(clients.id, atencion.clientId))
+          .limit(1)
+      : Promise.resolve([]),
   ]);
 
   const preselectedBarberoId = actor?.barberoId;
@@ -150,11 +164,20 @@ export default async function EditarAtencionPage({
             nombre: producto.nombre,
             precioVenta: producto.precioVenta,
             stockActual: producto.stockActual,
+            esConsumicion: producto.esConsumicion,
           }))}
           preselectedBarberoId={preselectedBarberoId}
           isAdmin={isAdmin}
           initialData={{
             barberoId: atencion.barberoId ?? undefined,
+            client: atencionClient[0]
+              ? {
+                  id: atencionClient[0].id,
+                  name: atencionClient[0].name,
+                  phoneRaw: atencionClient[0].phoneRaw,
+                  esMarciano: atencionClient[0].esMarciano,
+                }
+              : null,
             servicioId: atencion.servicioId ?? undefined,
             adicionalesIds: adicionalesDeAtencion
               .map((a) => a.adicionalId ?? "")
@@ -166,6 +189,7 @@ export default async function EditarAtencionPage({
               productoId: producto.productoId ?? "",
               cantidad: producto.cantidad ?? 0,
               precioUnitario: producto.precioUnitario,
+              esMarcianoIncluido: producto.esMarcianoIncluido ?? false,
             })),
           }}
           submitLabel="Guardar cambios"

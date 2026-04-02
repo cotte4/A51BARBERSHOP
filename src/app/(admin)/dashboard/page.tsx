@@ -16,6 +16,7 @@ function formatARS(value: number): string {
     style: "currency",
     currency: "ARS",
     minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(value);
 }
 
@@ -59,9 +60,10 @@ export default async function DashboardPage() {
   const bep = calcularBep(datosBep);
   const bepProgress = getBepProgress(kpisDia.atencionesHoy, bep.cortesBep);
   const productosStockBajo = todosProductos.filter(
-    (producto) => (producto.stockActual ?? 0) <= (producto.stockMinimo ?? 5)
+    (p) => (p.stockActual ?? 0) <= (p.stockMinimo ?? 5)
   );
 
+  // Hero buttons — sin Turnos (ya está en bottom nav)
   const accionesPrincipales = [
     {
       href: "/liquidaciones",
@@ -78,38 +80,39 @@ export default async function DashboardPage() {
       className: "ghost-button",
     },
     {
-      href: "/turnos",
-      eyebrow: "Agenda",
-      title: "Turnos",
-      detail: "Disponibilidad y agenda del equipo",
+      href: "/mi-resultado",
+      eyebrow: "Finanzas",
+      title: "Mi resultado",
+      detail: "Ingresos, egresos y resultado neto del mes",
       className: "panel-soft text-zinc-100 hover:border-[#8cff59]/35 hover:text-white",
     },
   ];
 
+  // Accesos rápidos — sin Inventario ni Liquidaciones (ya están arriba)
   const accesosOperativos = [
     {
-      href: "/inventario",
-      icon: "IN",
-      title: "Inventario",
-      detail: `${productosStockBajo.length} producto${productosStockBajo.length === 1 ? "" : "s"} en alerta`,
+      href: "/gastos-rapidos",
+      icon: "💸",
+      title: "Historial de gastos",
+      detail: "Gastos rápidos del mes",
     },
     {
-      href: "/liquidaciones",
-      icon: "LI",
-      title: "Liquidaciones",
-      detail: "Pagos, pendientes y comprobantes",
-    },
-    {
-      href: "/mi-resultado",
-      icon: "MC",
-      title: "Mi cuenta",
-      detail: "Revisar mi resultado y saldos sin verlo en la portada",
+      href: "/configuracion/medios-de-pago",
+      icon: "💳",
+      title: "Medios de pago",
+      detail: "Comisiones y canales de cobro",
     },
     {
       href: "/repago",
-      icon: "RE",
+      icon: "🔄",
       title: "Repago",
       detail: "Seguir cuotas y saldo pendiente",
+    },
+    {
+      href: "/negocio",
+      icon: "⚙️",
+      title: "Configuración",
+      detail: "Servicios, barberos y ajustes del local",
     },
   ];
 
@@ -147,6 +150,8 @@ export default async function DashboardPage() {
       </header>
 
       <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6">
+
+        {/* Hero */}
         <section className="overflow-hidden rounded-[28px] bg-stone-950 text-stone-50 shadow-[0_24px_80px_rgba(28,25,23,0.18)]">
           <div className="bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.35),_transparent_35%),radial-gradient(circle_at_bottom_left,_rgba(14,165,233,0.24),_transparent_30%)] p-5 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -157,9 +162,25 @@ export default async function DashboardPage() {
                 <h2 className="font-display mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
                   Todo lo critico esta a mano.
                 </h2>
-                <p className="mt-2 max-w-xl text-sm leading-6 text-stone-300">
-                  El dashboard ahora es la base de gestion: estado del negocio, alertas y accesos administrativos sin duplicar la operacion diaria.
-                </p>
+
+                {/* Métricas rápidas en lugar del párrafo de texto */}
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 text-sm font-medium text-stone-200">
+                    ✂️ {kpisDia.atencionesHoy} cortes hoy
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 text-sm font-medium text-stone-200">
+                    💰 {formatARS(kpisDia.cajaNeta)} facturado
+                  </span>
+                  {productosStockBajo.length > 0 ? (
+                    <span className="rounded-full border border-amber-400/30 bg-amber-400/15 px-3 py-1.5 text-sm font-medium text-amber-300">
+                      🚨 {productosStockBajo.length} alerta{productosStockBajo.length !== 1 ? "s" : ""}
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-sm font-medium text-emerald-300">
+                      ✅ Sin alertas
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -194,19 +215,19 @@ export default async function DashboardPage() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
+
+          {/* Hoy en el local — datos globales, no del barbero */}
           <div className="panel-card rounded-[28px] p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="eyebrow text-xs font-semibold">
-                  Mi dia
-                </p>
+                <p className="eyebrow text-xs font-semibold">Hoy en el local</p>
                 <h3 className="font-display mt-2 text-2xl font-semibold text-white">
-                  {kpisDia.atencionesHoy} cortes hoy
+                  {kpisDia.atencionesHoy} cortes del local
                 </h3>
                 <p className="mt-1 text-sm text-zinc-400">
-                  Mi ganancia estimada hoy:{" "}
-                  <span className="font-semibold text-white">
-                    {formatARS(miResultado.resultado.paraVosHoy)}
+                  Ingreso bruto estimado:{" "}
+                  <span className="font-semibold text-[#8cff59]">
+                    {formatARS(kpisDia.cajaNeta)}
                   </span>
                 </p>
               </div>
@@ -222,11 +243,11 @@ export default async function DashboardPage() {
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
               <div className="panel-soft rounded-2xl p-4">
-                <p className="text-xs font-medium text-zinc-400">Tus cortes</p>
+                <p className="text-xs font-medium text-zinc-400">Cortes Pinky</p>
                 <p className="font-display mt-2 text-3xl font-bold text-white">{kpisDia.atencionesPinky}</p>
               </div>
               <div className="panel-soft rounded-2xl p-4">
-                <p className="text-xs font-medium text-zinc-400">Agentes</p>
+                <p className="text-xs font-medium text-zinc-400">Cortes Gabote</p>
                 <p className="font-display mt-2 text-3xl font-bold text-white">{kpisDia.atencionesGabote}</p>
               </div>
               <div className="panel-soft rounded-2xl p-4">
@@ -250,9 +271,7 @@ export default async function DashboardPage() {
                 </div>
                 {!bep.sinReferencia ? (
                   <div className="rounded-2xl bg-zinc-950/70 px-3 py-2 text-right">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                      BEP
-                    </p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">BEP</p>
                     <p className="mt-1 text-lg font-bold text-white">{bep.cortesBep} cortes</p>
                   </div>
                 ) : null}
@@ -275,20 +294,11 @@ export default async function DashboardPage() {
             </div>
           </div>
 
+          {/* Accesos rápidos — sin duplicados */}
           <div className="panel-card rounded-[28px] p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="eyebrow text-xs font-semibold">
-                  Accesos rapidos
-                </p>
-                <h3 className="font-display mt-2 text-xl font-semibold text-white">Gestion del negocio</h3>
-              </div>
-              <Link
-                href="/turnos"
-                className="text-sm font-medium text-zinc-400 underline-offset-4 hover:text-[#8cff59] hover:underline"
-              >
-                Ver agenda
-              </Link>
+            <div>
+              <p className="eyebrow text-xs font-semibold">Accesos rapidos</p>
+              <h3 className="font-display mt-2 text-xl font-semibold text-white">Gestion del negocio</h3>
             </div>
 
             <div className="mt-4 divide-y divide-zinc-800 overflow-hidden rounded-[24px] border border-zinc-800">
@@ -298,14 +308,14 @@ export default async function DashboardPage() {
                   href={item.href}
                   className="flex items-center gap-4 bg-zinc-950/25 px-4 py-4 transition hover:bg-white/4"
                 >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#8cff59] text-xs font-bold tracking-[0.2em] text-[#08130a]">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#8cff59]/10 border border-[#8cff59]/20 text-xl">
                     {item.icon}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-white">{item.title}</p>
                     <p className="mt-1 text-sm text-zinc-400">{item.detail}</p>
                   </div>
-                  <span className="text-lg text-[#8cff59]">+</span>
+                  <span className="text-lg text-[#8cff59]">→</span>
                 </Link>
               ))}
             </div>
@@ -316,9 +326,7 @@ export default async function DashboardPage() {
           <div className="panel-card rounded-[28px] p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="eyebrow text-xs font-semibold">
-                  Alertas
-                </p>
+                <p className="eyebrow text-xs font-semibold">Alertas</p>
                 <h3 className="font-display mt-2 text-xl font-semibold text-white">Lo que pide atencion</h3>
               </div>
               <Link
@@ -354,23 +362,16 @@ export default async function DashboardPage() {
             ) : (
               <div className="mt-4 rounded-[22px] border border-[#8cff59]/25 bg-[#8cff59]/10 p-5">
                 <p className="font-semibold text-[#8cff59]">Inventario en orden</p>
-                <p className="mt-1 text-sm text-zinc-300">
-                  Hoy no hay productos con stock bajo.
-                </p>
+                <p className="mt-1 text-sm text-zinc-300">Hoy no hay productos con stock bajo.</p>
               </div>
             )}
           </div>
 
           <div className="panel-card rounded-[28px] p-5">
-            <p className="eyebrow text-xs font-semibold">
-              Finanzas y control
-            </p>
+            <p className="eyebrow text-xs font-semibold">Finanzas y control</p>
             <h3 className="font-display mt-2 text-xl font-semibold text-white">
               Reportes fuera del camino
             </h3>
-            <p className="mt-2 text-sm leading-6 text-zinc-400">
-              Siguen disponibles, pero ya no dominan la pantalla principal.
-            </p>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div className="panel-soft rounded-[22px] p-4">
@@ -398,14 +399,13 @@ export default async function DashboardPage() {
                     <p className="font-semibold text-white">{item.title}</p>
                     <p className="mt-1 text-sm text-zinc-400">{item.detail}</p>
                   </div>
-                  <span className="text-lg text-[#8cff59]">+</span>
+                  <span className="text-lg text-[#8cff59]">→</span>
                 </Link>
               ))}
             </div>
           </div>
         </section>
       </main>
-
     </div>
   );
 }
