@@ -13,12 +13,11 @@ export default function MusicaPage() {
                   {"<"} Turnos
                 </Link>
                 <p className="mt-2 text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
-                  Operacion
+                  Operación
                 </p>
-                <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">Musica</h1>
+                <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">Música</h1>
                 <p className="mt-3 max-w-2xl text-sm text-zinc-300">
-                  Jukebox manual para el local, con el mismo device compartido que usa el flujo
-                  automatico de turnos.
+                  Controlá el parlante del local. Buscá canciones o poné una playlist.
                 </p>
               </div>
               <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-200">

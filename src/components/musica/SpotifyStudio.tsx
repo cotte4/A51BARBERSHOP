@@ -419,7 +419,7 @@ export default function SpotifyStudio() {
       {statusMessage ? <div className={`rounded-[24px] border px-4 py-3 text-sm ${statusTone}`}>{statusMessage}</div> : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className={`rounded-full border px-4 py-2 text-sm font-medium ${statusTone}`}>
-          Spotify {refreshTokenRef.current ? "conectado" : "sin conectar"}
+          Spotify {refreshTokenRef.current ? "conectado" : "desconectado"}
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => void connectSpotify()} className="inline-flex min-h-[44px] items-center gap-2 rounded-2xl bg-[#8cff59] px-4 text-sm font-semibold text-[#07130a] hover:bg-[#b6ff84]">
@@ -435,14 +435,14 @@ export default function SpotifyStudio() {
 
       <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-4">
-          <Card title="Device compartido" icon={<Speaker className="h-4 w-4" />} subtitle="Un solo device para turnos y jukebox.">
+          <Card title="Parlante" icon={<Speaker className="h-4 w-4" />} subtitle="El parlante del local. Compartido con el flujo de turnos.">
             <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-400">
               <span>{devices.length} devices</span>
               <span>-</span>
               <span>{currentDevice ? currentDevice.name : "sin seleccion"}</span>
             </div>
             {loadingDevices ? <Empty label="Cargando devices..." /> : null}
-            {!loadingDevices && devices.length === 0 ? <Empty label="No encontramos devices" description="Abri Spotify Connect o una sesion de Spotify en el local." /> : null}
+            {!loadingDevices && devices.length === 0 ? <Empty label="Sin parlantes activos" description="Abrí Spotify en el dispositivo del local y volvé a refrescar." /> : null}
             <div className="mt-4 grid gap-3">
               {devices.map((device) => {
                 const active = device.id === selectedDeviceId;
@@ -469,7 +469,7 @@ export default function SpotifyStudio() {
             </div>
           </Card>
 
-          <Card title="Ahora suena" icon={<Music2 className="h-4 w-4" />} subtitle="Estado actual del parlante.">
+          <Card title="Ahora suena" icon={<Music2 className="h-4 w-4" />} subtitle="Lo que está sonando en el local.">
             {loadingNowPlaying ? <Empty label="Leyendo estado..." /> : null}
             {!loadingNowPlaying && nowPlaying?.item ? (
               <div className="space-y-4">
@@ -507,12 +507,12 @@ export default function SpotifyStudio() {
                 </div>
               </div>
             ) : (
-              <Empty label="Nada sonando" description="Usa busqueda o una playlist para empezar." />
+              <Empty label="Nada sonando" description="Elegí una canción o playlist para empezar." />
             )}
           </Card>
         </div>
         <div className="space-y-4">
-          <Card title="Buscar tracks" icon={<Search className="h-4 w-4" />} subtitle="Buscador manual para el local.">
+          <Card title="Buscar" icon={<Search className="h-4 w-4" />} subtitle="Buscá cualquier canción y ponela directamente.">
             <form onSubmit={(event) => void searchTracksAction(event)} className="space-y-3">
               <input
                 value={query}
@@ -527,7 +527,11 @@ export default function SpotifyStudio() {
             </form>
             <div className="mt-4 space-y-3">
               {tracks.map((track) => (
-                <article key={track.id} className="rounded-[22px] border border-zinc-800 bg-zinc-950 p-3">
+                <article
+                  key={track.id}
+                  onClick={() => void playTrackAction(track)}
+                  className={`rounded-[22px] border border-zinc-800 bg-zinc-950 p-3 cursor-pointer hover:border-zinc-600 hover:bg-zinc-900 active:scale-[0.98] transition-all ${busy === `track:${track.id}` ? "opacity-60 pointer-events-none" : ""}`}
+                >
                   <div className="flex gap-3">
                     <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
                       {track.imageUrl ? (
@@ -544,18 +548,17 @@ export default function SpotifyStudio() {
                       <p className="mt-1 truncate text-xs text-zinc-400">{track.artists.join(" - ")}</p>
                       <p className="mt-1 truncate text-xs text-zinc-600">{track.albumName}</p>
                     </div>
-                    <button onClick={() => void playTrackAction(track)} disabled={busy === `track:${track.id}`} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-2xl bg-[#8cff59] px-3 text-xs font-semibold text-[#07130a] hover:bg-[#b6ff84]">
-                      <Play className="h-3.5 w-3.5" />
-                      Play
-                    </button>
+                    <div className="inline-flex h-10 shrink-0 items-center justify-center w-10 rounded-2xl bg-[#8cff59] text-[#07130a]">
+                      {busy === `track:${track.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                    </div>
                   </div>
                 </article>
               ))}
-              {!tracks.length ? <Empty label="Sin resultados" description="Hace una busqueda para ver canciones listas para reproducir." /> : null}
+              {!tracks.length ? <Empty label="Sin resultados" description="Escribí el nombre de una canción o artista." /> : null}
             </div>
           </Card>
 
-          <Card title="Playlists" icon={<Disc3 className="h-4 w-4" />} subtitle="Lista simple para el control manual.">
+          <Card title="Playlists" icon={<Disc3 className="h-4 w-4" />} subtitle="Tus playlists de Spotify.">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm text-zinc-400">{playlists.length} playlists</p>
               <button onClick={() => void loadPlaylists()} className="inline-flex min-h-[36px] items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-800">
@@ -606,10 +609,13 @@ export default function SpotifyStudio() {
                             {currentTracks.map((track) => (
                               <div
                                 key={`${playlist.id}:${track.id}`}
-                                className={`flex items-center gap-3 rounded-2xl border p-3 ${
+                                onClick={() => void playTrackAction({ ...track, imageUrl: track.albumImageUrl ?? "" })}
+                                className={`flex items-center gap-3 rounded-2xl border p-3 cursor-pointer active:scale-[0.98] transition-all ${
+                                  busy === `track:${track.id}` ? "opacity-60 pointer-events-none" : ""
+                                } ${
                                   nowPlaying?.item?.uri === track.uri
                                     ? "border-[#8cff59]/40 bg-[#8cff59]/10"
-                                    : "border-zinc-800 bg-zinc-900/60"
+                                    : "border-zinc-800 bg-zinc-900/60 hover:border-zinc-600 hover:bg-zinc-900"
                                 }`}
                               >
                                 <div className="min-w-0 flex-1">
@@ -623,10 +629,9 @@ export default function SpotifyStudio() {
                                   </div>
                                   <p className="mt-1 truncate text-xs text-zinc-400">{track.artists.join(" - ")}</p>
                                 </div>
-                                <button onClick={() => void playTrackAction({ ...track, imageUrl: track.albumImageUrl ?? "" })} disabled={busy === `track:${track.id}`} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-2xl bg-[#8cff59] px-3 text-xs font-semibold text-[#07130a] hover:bg-[#b6ff84]">
-                                  <Play className="h-3.5 w-3.5" />
-                                  Tema
-                                </button>
+                                <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#8cff59] text-[#07130a]">
+                                  {busy === `track:${track.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                                </div>
                               </div>
                             ))}
                             {hasMoreTracks ? (
@@ -640,18 +645,18 @@ export default function SpotifyStudio() {
                                 ) : (
                                   <RefreshCw className="h-3.5 w-3.5" />
                                 )}
-                                Ver mas temas
+                                Ver más
                               </button>
                             ) : null}
                           </div>
                         ) : null}
-                        {!isLoadingTracks && currentTracks.length === 0 ? <Empty label="Sin temas cargados" description="Esta playlist no devolvio tracks reproducibles para esta cuenta." /> : null}
+                        {!isLoadingTracks && currentTracks.length === 0 ? <Empty label="Sin canciones" description="Esta playlist no tiene canciones disponibles para esta cuenta." /> : null}
                       </div>
                     ) : null}
                   </article>
                 );
               })}
-              {!playlists.length && !loadingPlaylists ? <Empty label="Sin playlists" description="Con la cuenta conectada, aca van a aparecer las playlists." /> : null}
+              {!playlists.length && !loadingPlaylists ? <Empty label="Sin playlists" description="Conectá Spotify para ver tus playlists acá." /> : null}
             </div>
           </Card>
         </div>

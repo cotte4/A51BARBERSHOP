@@ -141,7 +141,11 @@ async function requestSpotify<T>(
     return null;
   }
 
-  return JSON.parse(text) as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
 }
 
 async function parseErrorPayload(response: Response): Promise<unknown> {
@@ -270,7 +274,7 @@ export async function listPlaylists(accessToken: string): Promise<SpotifyPlaylis
     uri: playlist.uri,
     name: playlist.name,
     imageUrl: playlist.images[0]?.url ?? null,
-    trackCount: playlist.tracks.total,
+    trackCount: playlist.tracks?.total ?? 0,
     ownerName: playlist.owner.display_name ?? null,
   }));
 }
