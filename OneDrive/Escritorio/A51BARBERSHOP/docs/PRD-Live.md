@@ -1,7 +1,7 @@
 # A51 Barber - PRD Live
 
 **Estado real del sistema**
-Actualizado: 30/03/2026 (sesion 13)
+Actualizado: 02/04/2026 (sesion 15)
 
 ## 1. Proposito del documento
 
@@ -120,6 +120,7 @@ Archivos de soporte detectados:
 - `/reservar/[slug]`
 - `/api/turnos/disponibles`
 - `/api/turnos/reservar`
+- `/negocio`
 
 ### Estructura de permisos
 
@@ -165,6 +166,7 @@ Estado verificado:
 - `caja/nueva` y `caja/[id]/editar` ahora bloquean a usuarios barbero sin `barberos.userId` activo vinculado
 - `registrarAtencion` y `editarAtencion` validan server-side que un barbero solo pueda operar sobre su propio `barberoId`
 - `AtencionForm` conserva el `precioCobrado` guardado al abrir una edicion y ya no lo pisa en el primer render por el auto-fill de servicio/adicionales
+- `AtencionForm` incluye selector de productos dentro del mismo formulario de atencion: boton "+ Agregar producto" que despliega panel con stock, controles de cantidad +/-, subtotal en tiempo real; los productos se envian en el mismo submit que la atencion
 
 ### Inventario
 
@@ -257,6 +259,52 @@ Estado verificado (30/03/2026 sesion 11):
 - el banner de retencion usa `clients.last_visit_at`
 - las dependencias `@vercel/blob` y `@anthropic-ai/sdk` ya estan instaladas en el proyecto
 
+### Prioridad Absoluta Marciano
+
+Implementado en:
+
+- `src/db/schema.ts` - campo `prioridad_absoluta` en tabla `turnos`
+- `src/app/(admin)/turnos/actions.ts` - `confirmarTurnoAction` setea `prioridadAbsoluta = true` cuando `esMarcianoSnapshot = true`; `crearTurnoRapidoAction` setea prioridad si el cliente detectado es Marciano
+- `src/app/(admin)/turnos/page.tsx` - franja separada de solicitudes Marciano pendientes al tope de la agenda
+- `src/components/turnos/TurnoCard.tsx` - badge "PRIORIDAD" cuando `prioridadAbsoluta = true`
+- `src/lib/turnos.ts` - `prioridadAbsoluta` incluido en `getTurnosVisibleList`
+- `src/lib/types.ts` - `TurnoSummary` incluye `prioridadAbsoluta`
+
+Estado verificado (02/04/2026 sesion 15):
+
+- todos los acceptance criteria del plan `fase-marciano-prioridad.md` verificados en codigo
+
+### Consumiciones Marciano en Caja
+
+Implementado en:
+
+- `src/db/schema.ts` - `es_consumicion` en `productos`, `client_id` en `atenciones`, `es_marciano_incluido` en `atenciones_productos`
+- `src/components/caja/AtencionForm.tsx` - selector de cliente con busqueda; toggle "Marcar como incluida" / "Quitar beneficio" solo visible si el producto tiene `esConsumicion = true`, hay `clientId` y el cliente es Marciano
+- `src/lib/caja-atencion.ts` - acepta `clientId`, valida elegibilidad del cliente y del producto, calcula delta y actualiza `marciano_beneficios_uso.consumiciones_usadas`
+- `src/app/(barbero)/caja/actions.ts` - `registrarAtencion` y `editarAtencion` aceptan `clientId`
+- `src/app/(barbero)/clientes/[id]/page.tsx` - estado Marciano muestra `consumicionesUsadas` ademas de `cortesUsados`
+
+Estado verificado (02/04/2026 sesion 15):
+
+- todos los acceptance criteria del plan `fase-marciano-consumiciones.md` verificados en codigo
+- el feedback visual en el formulario incluye badge "N incluida(s)" y linea "Incluidas: X • ahorro $XXX" en el subtotal
+
+### Pantalla Musical
+
+Implementado en:
+
+- `src/db/schema.ts` - tabla `pantalla_events` con `turnoId`, `cancion`, `clienteNombre`, `createdAt`
+- `src/app/(admin)/turnos/actions.ts` - `clienteLlegoAction` valida turno confirmado con cancion e inserta en `pantalla_events`
+- `src/app/api/turnos/pantalla-latest/route.ts` - endpoint GET con parametro `after` (timestamp ISO); devuelve el evento mas reciente posterior a ese instante; `Cache-Control: no-store`
+- `src/app/pantalla/page.tsx` - Client Component con polling cada 3s; guarda `lastSeenCreatedAt` en `localStorage` para anti-replay; cuando llega evento nuevo abre Spotify via `window.open`; si popup bloqueado muestra CTA manual
+- `src/components/turnos/TurnoCard.tsx` - boton "Llego" para turnos confirmados con cancion; link fallback "Poner cancion" con URL de busqueda de Spotify
+
+Estado verificado (02/04/2026 sesion 15):
+
+- todos los acceptance criteria del plan `fase-pantalla-musical.md` verificados en codigo
+- se descarto SSE/WebSockets por incompatibilidad con Vercel serverless; polling cada 3s es el approach definitivo
+- integracion con Web Playback SDK (reproduccion automatica real) evaluada y dejada como iteracion futura: requiere cuenta Premium + OAuth PKCE; research completo en `docs/plans/fase-pantalla-musical.md`
+
 ### Turnos + Accion Rapida
 
 Implementado en:
@@ -282,6 +330,25 @@ Estado verificado (30/03/2026 sesion 12):
 - `src/proxy.ts` protege `/turnos` como superficie admin
 - caja ahora tiene accion rapida con confirmacion previa y fallback al formulario completo cuando faltan defaults
 - configuracion de barberos ahora permite definir servicio y medio de pago por defecto para la accion rapida
+
+Estado verificado (02/04/2026 sesion 14):
+
+- el formulario publico `/reservar/[slug]` incluye campo de sugerencia de cancion y selector de extras (productos del catalogo via checkboxes); los extras se guardan en `turnos_extras` al confirmar la reserva
+- `TurnoCard` muestra badge fucsia "Marciano" cuando `turno.esMarcianoSnapshot` es `true`; el snapshot se guarda en `actions.ts` al momento de crear el turno desde la reserva publica
+
+### Navegacion
+
+Implementado en:
+
+- `src/components/navigation/RoleBottomNav.tsx`
+- `src/app/(admin)/negocio/page.tsx`
+
+Estado verificado (02/04/2026 sesion 14):
+
+- la navegacion es un bottom nav fijo con 4 tabs para barbero (Hoy, Caja, Clientes, Turnos) y 5 tabs para admin (agrega Negocio)
+- el tab "Negocio" agrupa todo lo que pertenece al rol de owner: dashboard, cierre, inventario, liquidaciones, mi-resultado, repago, configuracion, gastos-rapidos
+- `/negocio` es un hub de links agrupados por categoria: Ventas y caja, Inventario, Barberos, Pagos, Configuracion
+- esta estructura implementa la separacion PRD entre operacion del dia (Hoy/Caja/Clientes/Turnos) y gestion del negocio (Negocio), sin necesitar dos secciones literales en la nav
 
 ### PDFs exportables
 
@@ -383,9 +450,11 @@ No agregar aqui:
 - Fase 4 funcionalmente implementada y verificada por build (sesion 11, 30/03/2026)
 - Fase 5 funcionalmente implementada y verificada por build (sesion 12, 30/03/2026)
 - Fase 6 implementada, verificada por build y QA en produccion (sesion 13, 30/03/2026)
+- Prioridad Absoluta Marciano, Consumiciones Marciano y Pantalla Musical verificadas en codigo (sesion 15, 02/04/2026)
 - **TODAS LAS FASES COMPLETAS** — sistema listo para operacion (deadline: mayo 2026)
 - proximos pasos: seed de datos reales, capacitacion de usuarios (Pinky/Gabote), go-live
 - siguiente plan operativo: `docs/plans/go-live-seed-capacitacion.md`
+- iteracion futura opcional: Web Playback SDK para reproduccion automatica en pantalla musical (ver research en `docs/plans/fase-pantalla-musical.md`)
 
 ### Decisiones tomadas sobre Fase 3 (29/03/2026)
 
