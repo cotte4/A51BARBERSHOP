@@ -30,6 +30,19 @@ function normalizeTimeInput(value: string): string {
   return value.length === 5 ? `${value}:00` : value;
 }
 
+function timeToMinutes(value: string): number {
+  const [hours, minutes] = value.slice(0, 5).split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function minutesToTime(value: number): string {
+  const hours = Math.floor(value / 60)
+    .toString()
+    .padStart(2, "0");
+  const minutes = (value % 60).toString().padStart(2, "0");
+  return `${hours}:${minutes}:00`;
+}
+
 async function loadTurno(turnoId: string) {
   const [turno] = await db.select().from(turnos).where(eq(turnos.id, turnoId)).limit(1);
   return turno ?? null;
@@ -188,6 +201,8 @@ export async function crearDisponibilidadAction(
 
   const fecha = String(formData.get("fecha") ?? "");
   const horaInicio = normalizeTimeInput(String(formData.get("horaInicio") ?? ""));
+  const horaFinRaw = String(formData.get("horaFin") ?? "").trim();
+  const horaFin = horaFinRaw ? normalizeTimeInput(horaFinRaw) : "";
   const duracionMinutos = Number(formData.get("duracionMinutos") ?? 0);
 
   if (!fecha || !horaInicio || !TURNO_DURACIONES.includes(duracionMinutos as 45 | 60)) {
@@ -200,21 +215,67 @@ export async function crearDisponibilidadAction(
     return { error: "Ese dia ya tiene cierre y no admite nuevos turnos." };
   }
 
-  try {
-    await db.insert(turnosDisponibilidad).values({
+  const startMinutes = timeToMinutes(horaInicio);
+  const endMinutes = horaFin ? timeToMinutes(horaFin) : startMinutes + duracionMinutos;
+
+  if (endMinutes <= startMinutes) {
+    return { error: "La hora de fin debe ser posterior al inicio." };
+  }
+
+  const generatedSlots = [];
+  for (let cursor = startMinutes; cursor + duracionMinutos <= endMinutes; cursor += duracionMinutos) {
+    generatedSlots.push({
       barberoId,
       fecha,
-      horaInicio,
+      horaInicio: minutesToTime(cursor),
       duracionMinutos,
     });
+  }
+
+  if (generatedSlots.length === 0) {
+    return { error: "Ese rango no alcanza para generar ningun slot con el intervalo elegido." };
+  }
+
+  let createdCount = 0;
+
+  try {
+    for (const slot of generatedSlots) {
+      const existing = await db
+        .select({ id: turnosDisponibilidad.id })
+        .from(turnosDisponibilidad)
+        .where(
+          and(
+            eq(turnosDisponibilidad.barberoId, slot.barberoId),
+            eq(turnosDisponibilidad.fecha, slot.fecha),
+            eq(turnosDisponibilidad.horaInicio, slot.horaInicio)
+          )
+        )
+        .limit(1);
+
+      if (existing[0]) {
+        continue;
+      }
+
+      await db.insert(turnosDisponibilidad).values(slot);
+      createdCount += 1;
+    }
   } catch (error) {
     console.error("Error creando disponibilidad:", error);
-    return { error: "Ese slot ya existe o no pudo guardarse." };
+    return { error: "No pude guardar la jornada. Intenta de nuevo." };
+  }
+
+  if (createdCount === 0) {
+    return { error: "Ese rango ya estaba cargado completo." };
   }
 
   revalidatePath("/turnos/disponibilidad");
   revalidatePath("/reservar/pinky");
-  return {};
+  return {
+    success:
+      createdCount === 1
+        ? "Se agrego 1 slot."
+        : `Se generaron ${createdCount} slots para la jornada.`,
+  };
 }
 
 export async function eliminarDisponibilidadAction(slotId: string): Promise<void> {
