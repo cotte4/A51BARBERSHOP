@@ -66,6 +66,16 @@ function BriefcaseIcon() {
   );
 }
 
+function MusicIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M8 18a2.5 2.5 0 1 1-2.5-2.5A2.5 2.5 0 0 1 8 18Z" />
+      <path d="M18.5 16.5A2.5 2.5 0 1 1 16 14a2.5 2.5 0 0 1 2.5 2.5Z" />
+      <path d="M8 18V7.5l10-2V16" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function getNavItems(isAdmin: boolean): NavItem[] {
   const items: NavItem[] = [
     {
@@ -96,6 +106,12 @@ function getNavItems(isAdmin: boolean): NavItem[] {
 
   if (isAdmin) {
     items.push({
+      href: "/musica",
+      label: "Musica",
+      icon: <MusicIcon />,
+      isActive: (pathname) => pathname.startsWith("/musica"),
+    });
+    items.push({
       href: "/negocio",
       label: "Negocio",
       icon: <BriefcaseIcon />,
@@ -121,7 +137,7 @@ export default function RoleBottomNav({ isAdmin }: { isAdmin: boolean }) {
   return (
     <nav className="fixed inset-x-0 bottom-4 z-30 px-3 sm:px-4">
       <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
-        <div className={`grid gap-1 ${isAdmin ? "grid-cols-5" : "grid-cols-4"}`}>
+        <div className={`grid gap-1 ${isAdmin ? "grid-cols-6" : "grid-cols-4"}`}>
           {navItems.map((item) => {
             const active = item.isActive(pathname);
             return (

@@ -20,6 +20,7 @@ type Props = {
   servicios: Servicio[];
   mediosPago: MedioPago[];
   action: (prevState: AtencionRapidaState, formData: FormData) => Promise<AtencionRapidaState>;
+  returnTo?: string;
 };
 
 const initialState: AtencionRapidaState = {};
@@ -54,7 +55,7 @@ function esCorteYBarba(nombre: string): boolean {
   return n.includes("barba") || n.includes("beard");
 }
 
-export default function QuickCheckoutPanel({ servicios, mediosPago, action }: Props) {
+export default function QuickCheckoutPanel({ servicios, mediosPago, action, returnTo }: Props) {
   const [state, formAction, isPending] = useActionState(action, initialState);
   const [selectedServicioId, setSelectedServicioId] = useState<string | null>(null);
   const [selectedMedioPagoId, setSelectedMedioPagoId] = useState<string | null>(null);
@@ -145,6 +146,7 @@ export default function QuickCheckoutPanel({ servicios, mediosPago, action }: Pr
           <input type="hidden" name="servicioId" value={selectedServicioId ?? ""} />
           <input type="hidden" name="medioPagoId" value={selectedMedioPagoId ?? ""} />
           <input type="hidden" name="precioCobrado" value={precio} />
+          {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
 
           <button
             type="submit"

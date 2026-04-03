@@ -22,6 +22,15 @@ type Slot = {
   duracionMinutos: number;
 };
 
+type SpotifyTrackOption = {
+  id: string;
+  uri: string;
+  name: string;
+  artistNames: string[];
+  albumName: string;
+  imageUrl: string;
+};
+
 function formatARS(value: string | null) {
   if (!value) return null;
   return new Intl.NumberFormat("es-AR", {
@@ -47,6 +56,9 @@ export default function ReservaForm({
   const [telefono, setTelefono] = useState("");
   const [nota, setNota] = useState("");
   const [cancion, setCancion] = useState("");
+  const [spotifyTrackUri, setSpotifyTrackUri] = useState("");
+  const [trackResults, setTrackResults] = useState<SpotifyTrackOption[]>([]);
+  const [searchingTracks, setSearchingTracks] = useState(false);
   const [extras, setExtras] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -121,22 +133,65 @@ export default function ReservaForm({
     });
   }
 
+  async function handleSpotifySearch() {
+    const query = cancion.trim();
+    if (query.length < 2) {
+      setTrackResults([]);
+      return;
+    }
+
+    setSearchingTracks(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/spotify/search-track?q=${encodeURIComponent(query)}`, {
+        cache: "no-store",
+      });
+      const data = (await response.json()) as {
+        tracks?: SpotifyTrackOption[];
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "No pude buscar canciones.");
+      }
+
+      setTrackResults(data.tracks ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No pude buscar canciones.");
+      setTrackResults([]);
+    } finally {
+      setSearchingTracks(false);
+    }
+  }
+
+  function handleSongInputChange(value: string) {
+    setCancion(value);
+    setSpotifyTrackUri("");
+  }
+
+  function selectTrack(track: SpotifyTrackOption) {
+    setCancion(`${track.name} - ${track.artistNames[0] ?? "Spotify"}`);
+    setSpotifyTrackUri(track.uri);
+    setTrackResults([]);
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!selectedServicio) {
-      setError("Elegí un servicio antes de seguir.");
+      setError("Elegi un servicio antes de seguir.");
       return;
     }
 
     if (!selectedSlot) {
-      setError("Elegí un horario disponible.");
+      setError("Elegi un horario disponible.");
       return;
     }
 
     const slot = slots.find((item) => item.id === selectedSlot);
     if (!slot) {
-      setError("Ese horario ya no está disponible.");
+      setError("Ese horario ya no esta disponible.");
       return;
     }
 
@@ -151,6 +206,7 @@ export default function ReservaForm({
       clienteTelefonoRaw: telefono,
       notaCliente: nota,
       sugerenciaCancion: cancion,
+      spotifyTrackUri,
       extras: Object.entries(extras).map(([productoId, cantidad]) => ({
         productoId,
         cantidad,
@@ -210,9 +266,7 @@ export default function ReservaForm({
                   }`}
                 >
                   <span className="block text-base font-semibold">{servicio.nombre}</span>
-                  <span className="mt-2 block text-sm opacity-80">
-                    {servicio.duracionMinutos} min
-                  </span>
+                  <span className="mt-2 block text-sm opacity-80">{servicio.duracionMinutos} min</span>
                   <span className="mt-1 block text-sm opacity-80">
                     {formatARS(servicio.precioBase) ?? "Precio a confirmar"}
                   </span>
@@ -285,7 +339,7 @@ export default function ReservaForm({
 
         <div>
           <label htmlFor="clienteTelefono" className="mb-2 block text-sm font-medium text-gray-700">
-            Teléfono
+            Telefono
           </label>
           <input
             id="clienteTelefono"
@@ -310,14 +364,63 @@ export default function ReservaForm({
 
         <div>
           <label htmlFor="sugerenciaCancion" className="mb-2 block text-sm font-medium text-gray-700">
-            Sugerencia de canción
+            Sugerencia de cancion
           </label>
-          <input
-            id="sugerenciaCancion"
-            value={cancion}
-            onChange={(event) => setCancion(event.target.value)}
-            className="h-12 w-full rounded-xl border border-gray-300 px-4 text-sm text-gray-900 outline-none focus:border-gray-900"
-          />
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <input
+                id="sugerenciaCancion"
+                value={cancion}
+                onChange={(event) => handleSongInputChange(event.target.value)}
+                placeholder="Tema, artista o cancion favorita"
+                className="h-12 w-full rounded-xl border border-gray-300 px-4 text-sm text-gray-900 outline-none focus:border-gray-900"
+              />
+              <button
+                type="button"
+                onClick={() => void handleSpotifySearch()}
+                disabled={searchingTracks || cancion.trim().length < 2}
+                className="shrink-0 rounded-xl bg-gray-900 px-4 text-sm font-medium text-white transition hover:bg-gray-700 disabled:opacity-50"
+              >
+                {searchingTracks ? "Buscando..." : "Buscar"}
+              </button>
+            </div>
+
+            {spotifyTrackUri ? (
+              <p className="text-xs font-medium text-green-700">
+                Cancion vinculada a Spotify. El local va a poder reproducirla con URI estable.
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500">
+                Si elegis un resultado de Spotify, la barberia la puede reproducir de forma mas confiable.
+              </p>
+            )}
+
+            {trackResults.length > 0 ? (
+              <div className="space-y-2">
+                {trackResults.map((track) => (
+                  <button
+                    key={track.id}
+                    type="button"
+                    onClick={() => selectTrack(track)}
+                    className="flex w-full items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-left transition hover:bg-gray-100"
+                  >
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-gray-200">
+                      {track.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={track.imageUrl} alt={track.albumName} className="h-full w-full object-cover" />
+                      ) : null}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-gray-900">{track.name}</p>
+                      <p className="truncate text-xs text-gray-600">{track.artistNames.join(" · ")}</p>
+                      <p className="truncate text-xs text-gray-400">{track.albumName}</p>
+                    </div>
+                    <span className="text-xs font-medium text-gray-700">Elegir</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
 

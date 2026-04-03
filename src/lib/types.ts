@@ -149,6 +149,7 @@ export interface TurnoSummary {
   estado: TurnoEstado;
   notaCliente: string | null;
   sugerenciaCancion: string | null;
+  spotifyTrackUri: string | null;
   motivoCancelacion: string | null;
   esMarcianoSnapshot: boolean;
   prioridadAbsoluta: boolean;
@@ -174,6 +175,7 @@ export interface ReservaPublicInput {
   clienteTelefonoRaw?: string;
   notaCliente?: string;
   sugerenciaCancion?: string;
+  spotifyTrackUri?: string;
   extras?: TurnoExtraInput[];
 }
 

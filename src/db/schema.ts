@@ -509,6 +509,7 @@ export const turnos = pgTable(
     estado: text("estado").notNull().default("pendiente"),
     notaCliente: text("nota_cliente"),
     sugerenciaCancion: text("sugerencia_cancion"),
+    spotifyTrackUri: text("spotify_track_uri"),
     motivoCancelacion: text("motivo_cancelacion"),
     esMarcianoSnapshot: boolean("es_marciano_snapshot").notNull().default(false),
     prioridadAbsoluta: boolean("prioridad_absoluta").notNull().default(false),
@@ -601,6 +602,25 @@ export const pantallaEvents = pgTable(
   (table) => [
     index("pantalla_events_created_at_idx").on(table.createdAt),
     index("pantalla_events_turno_id_idx").on(table.turnoId),
+  ]
+);
+
+export const pantallaVotes = pgTable(
+  "pantalla_votes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => pantallaEvents.id, { onDelete: "cascade" }),
+    deviceKeyHash: text("device_key_hash").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("pantalla_votes_event_id_idx").on(table.eventId),
+    uniqueIndex("pantalla_votes_event_device_key_idx").on(
+      table.eventId,
+      table.deviceKeyHash
+    ),
   ]
 );
 

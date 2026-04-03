@@ -1,9 +1,20 @@
-const SPOTIFY_SCOPES = [
+import { playTrack, searchTracks } from "@/lib/spotify-api";
+
+export const SPOTIFY_AUTH_SCOPES = [
   "streaming",
   "user-read-private",
   "user-read-email",
   "user-read-playback-state",
+  "user-read-currently-playing",
+  "user-modify-playback-state",
+  "playlist-read-private",
+  "playlist-read-collaborative",
 ].join(" ");
+
+type SpotifyAuthStatePayload = {
+  codeVerifier: string;
+  returnTo: string;
+};
 
 function base64urlEncode(buffer: ArrayBuffer): string {
   return btoa(String.fromCharCode(...new Uint8Array(buffer)))
@@ -12,64 +23,69 @@ function base64urlEncode(buffer: ArrayBuffer): string {
     .replace(/=+$/, "");
 }
 
-export function buildAuthUrl(): string {
-  const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-  if (!clientId) throw new Error("NEXT_PUBLIC_SPOTIFY_CLIENT_ID no configurado.");
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const redirectUri = `${appUrl}/api/spotify/callback`;
-
-  // code_verifier: 64 bytes random, base64url
+async function generatePkcePair() {
   const verifierBytes = new Uint8Array(64);
   crypto.getRandomValues(verifierBytes);
   const codeVerifier = base64urlEncode(verifierBytes.buffer);
-
-  // Pasamos el verifier como state para que el callback server-side lo pueda leer
-  const state = codeVerifier;
-
-  // Construir la URL de autorización (challenge se calcula async, usamos el verifier directo via state)
-  const params = new URLSearchParams({
-    response_type: "code",
-    client_id: clientId,
-    scope: SPOTIFY_SCOPES,
-    redirect_uri: redirectUri,
-    state,
-    code_challenge_method: "S256",
-    // El challenge se calculará en el callback usando el state
-    code_challenge: "", // placeholder, se reemplaza abajo
-  });
-
-  // Calcular code_challenge síncronamente no es posible (SHA-256 es async)
-  // Devolvemos una promesa, pero para mantener la firma simple usamos la versión async en buildAuthUrlAsync
-  throw new Error("Usá buildAuthUrlAsync en su lugar.");
-}
-
-export async function buildAuthUrlAsync(): Promise<string> {
-  const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-  if (!clientId) throw new Error("NEXT_PUBLIC_SPOTIFY_CLIENT_ID no configurado.");
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const redirectUri = `${appUrl}/api/spotify/callback`;
-
-  // code_verifier: 64 bytes random, base64url
-  const verifierBytes = new Uint8Array(64);
-  crypto.getRandomValues(verifierBytes);
-  const codeVerifier = base64urlEncode(verifierBytes.buffer);
-
-  // code_challenge: SHA-256 del verifier, base64url
   const verifierEncoded = new TextEncoder().encode(codeVerifier);
   const hashBuffer = await crypto.subtle.digest("SHA-256", verifierEncoded);
   const codeChallenge = base64urlEncode(hashBuffer);
 
-  // Pasamos el verifier como state para que el callback server-side lo pueda leer
-  const state = codeVerifier;
+  return { codeVerifier, codeChallenge };
+}
+
+function encodeAuthState(payload: SpotifyAuthStatePayload): string {
+  return btoa(JSON.stringify(payload))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+export function decodeAuthState(state: string): SpotifyAuthStatePayload | null {
+  try {
+    const normalized = state.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const decoded =
+      typeof atob === "function"
+        ? atob(padded)
+        : Buffer.from(padded, "base64").toString("utf-8");
+    const parsed = JSON.parse(decoded) as Partial<SpotifyAuthStatePayload>;
+
+    if (!parsed.codeVerifier || !parsed.returnTo || !parsed.returnTo.startsWith("/")) {
+      return null;
+    }
+
+    return {
+      codeVerifier: parsed.codeVerifier,
+      returnTo: parsed.returnTo,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function buildAuthUrl(): string {
+  throw new Error("Usa buildAuthUrlAsync en su lugar.");
+}
+
+export async function buildAuthUrlAsync(returnTo = "/pantalla"): Promise<string> {
+  const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+  if (!clientId) throw new Error("NEXT_PUBLIC_SPOTIFY_CLIENT_ID no configurado.");
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const redirectUri = `${appUrl}/api/spotify/callback`;
+  const { codeVerifier, codeChallenge } = await generatePkcePair();
+  const safeReturnTo = returnTo.startsWith("/") ? returnTo : "/pantalla";
 
   const params = new URLSearchParams({
     response_type: "code",
     client_id: clientId,
-    scope: SPOTIFY_SCOPES,
+    scope: SPOTIFY_AUTH_SCOPES,
     redirect_uri: redirectUri,
-    state,
+    state: encodeAuthState({
+      codeVerifier,
+      returnTo: safeReturnTo,
+    }),
     code_challenge_method: "S256",
     code_challenge: codeChallenge,
   });
@@ -97,11 +113,11 @@ export function initSpotifyPlayer(
       });
 
       player.addListener("initialization_error", ({ message }) => {
-        onError(`Error de inicialización: ${message}`);
+        onError(`Error de inicializacion: ${message}`);
       });
 
       player.addListener("authentication_error", ({ message }) => {
-        onError(`Error de autenticación: ${message}`);
+        onError(`Error de autenticacion: ${message}`);
       });
 
       player.addListener("account_error", ({ message }) => {
@@ -112,20 +128,17 @@ export function initSpotifyPlayer(
     };
   }
 
-  // Si el SDK ya está cargado, inicializar directamente
   if (window.Spotify) {
     setupPlayer();
     window.onSpotifyWebPlaybackSDKReady();
     return;
   }
 
-  // Si ya está el script, solo configurar el callback
   if (document.getElementById(scriptId)) {
     setupPlayer();
     return;
   }
 
-  // Cargar el script por primera vez
   setupPlayer();
   const script = document.createElement("script");
   script.id = scriptId;
@@ -133,51 +146,41 @@ export function initSpotifyPlayer(
   script.async = true;
   document.body.appendChild(script);
 
-  // Timeout de seguridad: 10s
   setTimeout(() => {
     if (!window.Spotify) {
-      onError("El SDK de Spotify no cargó a tiempo. Revisá tu conexión.");
+      onError("El SDK de Spotify no cargo a tiempo. Revisa tu conexion.");
     }
   }, 10000);
 }
+
+export type TrackMeta = {
+  albumImageUrl: string;
+  artistName: string;
+  trackName: string;
+};
 
 export async function searchAndPlay(
   query: string,
   accessToken: string,
   deviceId: string
-): Promise<void> {
-  // Buscar el track
-  const searchRes = await fetch(
-    `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }
-  );
+): Promise<TrackMeta | null> {
+  const tracks = await searchTracks(query, accessToken, { limit: 1 });
+  const track = tracks[0];
 
-  if (!searchRes.ok) {
-    throw new Error(`Error buscando en Spotify: ${searchRes.status}`);
-  }
-
-  const searchData = (await searchRes.json()) as {
-    tracks: { items: { uri: string; name: string }[] };
-  };
-
-  const track = searchData.tracks.items[0];
   if (!track) {
     throw new Error("Track no encontrado en Spotify.");
   }
 
-  // Reproducir
-  const playRes = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ uris: [track.uri] }),
+  await playTrack(accessToken, {
+    deviceId,
+    trackUri: track.uri,
   });
 
-  if (!playRes.ok && playRes.status !== 204) {
-    throw new Error(`Error reproduciendo en Spotify: ${playRes.status}`);
-  }
+  return {
+    albumImageUrl: track.albumImageUrl ?? "",
+    artistName: track.artists[0] ?? "",
+    trackName: track.name,
+  };
 }
+
+export type { SpotifyTrack } from "@/lib/spotify-api";

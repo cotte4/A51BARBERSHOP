@@ -1,0 +1,1 @@
+ALTER TABLE "turnos" ADD COLUMN "spotify_track_uri" text;

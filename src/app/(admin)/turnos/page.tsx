@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { TurnoSummary } from "@/lib/types";
 import TurnoCard from "@/components/turnos/TurnoCard";
+import TurnosSpotifyBridge from "@/components/turnos/TurnosSpotifyBridge";
 import QuickTurnoSlotCard from "@/components/turnos/QuickTurnoSlotCard";
 import {
   clienteLlegoAction,
@@ -80,6 +81,7 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
 
   return (
     <main className="min-h-screen bg-zinc-950 px-4 py-6 pb-24">
+      <TurnosSpotifyBridge />
       <div className="mx-auto max-w-5xl space-y-4">
         <section className="overflow-hidden rounded-[30px] bg-zinc-900 shadow-[0_24px_80px_rgba(0,0,0,0.4)]">
           <div className="bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.12),_transparent_34%)] p-5 sm:p-6">

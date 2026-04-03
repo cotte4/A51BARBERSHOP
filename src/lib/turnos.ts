@@ -193,6 +193,7 @@ export async function getTurnosVisibleList(
       estado: turnos.estado,
       notaCliente: turnos.notaCliente,
       sugerenciaCancion: turnos.sugerenciaCancion,
+      spotifyTrackUri: turnos.spotifyTrackUri,
       motivoCancelacion: turnos.motivoCancelacion,
       esMarcianoSnapshot: turnos.esMarcianoSnapshot,
       prioridadAbsoluta: turnos.prioridadAbsoluta,

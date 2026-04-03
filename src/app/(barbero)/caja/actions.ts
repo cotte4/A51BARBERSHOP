@@ -244,6 +244,11 @@ export async function registrarAtencionRapidaConMedioAction(
   return registrarAtencionRapidaInterna(medioPagoId);
 }
 
+function sanitizeReturnTo(value: string | null): string {
+  if (value && value.startsWith("/")) return value;
+  return "/caja";
+}
+
 // Acción express: acepta servicioId + medioPagoId explícitos desde el panel de caja
 export async function registrarAtencionExpressAction(
   prevState: AtencionRapidaState,
@@ -262,6 +267,7 @@ export async function registrarAtencionExpressAction(
   const servicioId = formData.get("servicioId") as string | null;
   const medioPagoId = formData.get("medioPagoId") as string | null;
   const precioCobradoStr = formData.get("precioCobrado") as string | null;
+  const returnTo = formData.get("returnTo") as string | null;
 
   if (!servicioId) return { error: "Seleccioná un servicio." };
   if (!medioPagoId) return { error: "Seleccioná un medio de pago." };
@@ -282,7 +288,7 @@ export async function registrarAtencionExpressAction(
   revalidatePath("/caja");
   revalidatePath("/hoy");
   revalidatePath("/dashboard");
-  redirect("/caja");
+  redirect(sanitizeReturnTo(returnTo));
 }
 
 export async function editarAtencion(

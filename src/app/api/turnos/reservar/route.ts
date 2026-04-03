@@ -22,6 +22,7 @@ const reservaSchema = z.object({
   clienteTelefonoRaw: z.string().trim().optional().or(z.literal("")),
   notaCliente: z.string().trim().optional().or(z.literal("")),
   sugerenciaCancion: z.string().trim().optional().or(z.literal("")),
+  spotifyTrackUri: z.string().trim().regex(/^spotify:track:[A-Za-z0-9]+$/).optional().or(z.literal("")),
   extras: z.array(extraSchema).default([]),
 });
 
@@ -151,6 +152,7 @@ export async function POST(request: Request) {
         estado: "pendiente",
         notaCliente: parsed.data.notaCliente || null,
         sugerenciaCancion: parsed.data.sugerenciaCancion || null,
+        spotifyTrackUri: parsed.data.spotifyTrackUri || null,
         esMarcianoSnapshot: clientMatch?.esMarciano ?? false,
       })
       .returning({ id: turnos.id });

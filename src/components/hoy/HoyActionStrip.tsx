@@ -101,6 +101,7 @@ export default function HoyActionStrip({
             servicios={servicios}
             mediosPago={mediosPago}
             action={action}
+            returnTo="/hoy"
           />
         </Modal>
       )}

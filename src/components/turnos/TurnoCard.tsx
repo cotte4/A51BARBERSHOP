@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import type { TurnoSummary } from "@/lib/types";
 import type { TurnoActionState } from "@/app/(admin)/turnos/actions";
 
@@ -36,6 +36,12 @@ function buildSpotifySearchUrl(song: string) {
   return `https://open.spotify.com/search/${encodeURIComponent(song)}`;
 }
 
+function buildSpotifyTrackUrl(uri: string | null) {
+  if (!uri?.startsWith("spotify:track:")) return null;
+  const [, , trackId] = uri.split(":");
+  return trackId ? `https://open.spotify.com/track/${trackId}` : null;
+}
+
 function formatExpectedPrice(value: string | null) {
   if (!value) return null;
   return new Intl.NumberFormat("es-AR", {
@@ -43,6 +49,18 @@ function formatExpectedPrice(value: string | null) {
     currency: "ARS",
     minimumFractionDigits: 0,
   }).format(Number(value));
+}
+
+function buildTurnoLlegoPayload(turno: TurnoSummary, successMessage: string) {
+  return {
+    turnoId: turno.id,
+    clienteNombre: turno.clienteNombre,
+    cancion: turno.sugerenciaCancion ?? null,
+    spotifyTrackUri: turno.spotifyTrackUri ?? null,
+    barberoNombre: turno.barberoNombre,
+    estado: turno.estado,
+    successMessage,
+  };
 }
 
 export default function TurnoCard({
@@ -53,8 +71,14 @@ export default function TurnoCard({
   clienteLlegoAction,
 }: TurnoCardProps) {
   const [showReject, setShowReject] = useState(false);
-  const [confirmState, confirmFormAction, confirmPending] = useActionState(confirmarAction, initialState);
-  const [completeState, completeFormAction, completePending] = useActionState(completarAction, initialState);
+  const [confirmState, confirmFormAction, confirmPending] = useActionState(
+    confirmarAction,
+    initialState
+  );
+  const [completeState, completeFormAction, completePending] = useActionState(
+    completarAction,
+    initialState
+  );
   const [rejectState, rejectFormAction, rejectPending] = useActionState(rechazarAction, initialState);
   const [llegoState, llegoFormAction, llegoPending] = useActionState(
     clienteLlegoAction ?? noopTurnoAction,
@@ -63,8 +87,28 @@ export default function TurnoCard({
   const actionError =
     confirmState.error ?? completeState.error ?? rejectState.error ?? llegoState.error;
   const actionSuccess = llegoState.success;
-  const cancionUrl = turno.sugerenciaCancion ? buildSpotifySearchUrl(turno.sugerenciaCancion) : null;
+  const cancionUrl =
+    buildSpotifyTrackUrl(turno.spotifyTrackUri) ??
+    (turno.sugerenciaCancion ? buildSpotifySearchUrl(turno.sugerenciaCancion) : null);
   const formattedPrecioEsperado = formatExpectedPrice(turno.precioEsperado);
+
+  useEffect(() => {
+    if (!actionSuccess) return;
+
+    window.dispatchEvent(
+      new CustomEvent("a51:turno-llego", {
+        detail: buildTurnoLlegoPayload(turno, actionSuccess),
+      })
+    );
+  }, [
+    actionSuccess,
+    turno.barberoNombre,
+    turno.clienteNombre,
+    turno.estado,
+    turno.id,
+    turno.spotifyTrackUri,
+    turno.sugerenciaCancion,
+  ]);
 
   return (
     <article
@@ -93,11 +137,11 @@ export default function TurnoCard({
             ) : null}
           </div>
           <p className="mt-1 text-xs text-zinc-500">
-            {turno.horaInicio} · {turno.duracionMinutos} min · {turno.barberoNombre}
+            {turno.horaInicio} Â· {turno.duracionMinutos} min Â· {turno.barberoNombre}
           </p>
           {turno.servicioNombre || formattedPrecioEsperado ? (
             <p className="mt-1 text-xs text-zinc-400">
-              {[turno.servicioNombre, formattedPrecioEsperado].filter(Boolean).join(" · ")}
+              {[turno.servicioNombre, formattedPrecioEsperado].filter(Boolean).join(" Â· ")}
             </p>
           ) : null}
           {turno.prioridadAbsoluta ? (
@@ -118,14 +162,14 @@ export default function TurnoCard({
       ) : null}
 
       {turno.sugerenciaCancion ? (
-        <p className="mt-2 text-xs text-zinc-500">♪ {turno.sugerenciaCancion}</p>
+        <p className="mt-2 text-xs text-zinc-500">â™ª {turno.sugerenciaCancion}</p>
       ) : null}
 
       {turno.extras.length > 0 ? (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {turno.extras.map((extra) => (
             <span key={extra.id} className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs text-zinc-400">
-              {extra.nombre} ×{extra.cantidad}
+              {extra.nombre} Ã—{extra.cantidad}
             </span>
           ))}
         </div>
@@ -142,9 +186,12 @@ export default function TurnoCard({
       ) : null}
 
       {actionSuccess ? (
-        <p className="mt-2 rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 py-2 text-xs text-sky-300">
-          {actionSuccess}
-        </p>
+        <div className="mt-2 rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 py-2 text-xs text-sky-300">
+          <p className="font-semibold text-sky-200">{actionSuccess}</p>
+          <p className="mt-1 text-sky-100/80">
+            Este evento ya quedo listo para que el motor compartido de Spotify lo tome en cuenta.
+          </p>
+        </div>
       ) : null}
 
       <div className="mt-3 flex flex-wrap gap-2">
@@ -172,15 +219,21 @@ export default function TurnoCard({
         {turno.estado === "confirmado" ? (
           <>
             {turno.sugerenciaCancion && clienteLlegoAction ? (
-              <form action={llegoFormAction}>
-                <button
-                  type="submit"
-                  disabled={llegoPending}
-                  className="rounded-xl border border-sky-400/30 bg-sky-500/15 px-4 py-2 text-xs font-semibold text-sky-300 hover:bg-sky-500/25 disabled:opacity-50"
-                >
-                  {llegoPending ? "Enviando..." : "Llegó"}
-                </button>
-              </form>
+              <div className="space-y-1.5">
+                <form action={llegoFormAction}>
+                  <button
+                    type="submit"
+                    disabled={llegoPending}
+                    className="rounded-xl border border-sky-400/30 bg-sky-500/15 px-4 py-2 text-xs font-semibold text-sky-300 hover:bg-sky-500/25 disabled:opacity-50"
+                  >
+                    {llegoPending ? "Enviando..." : "Llego"}
+                  </button>
+                </form>
+                <p className="max-w-[24rem] text-[11px] leading-4 text-sky-200/70">
+                  Este boton avisa a la pantalla y deja preparado el flujo para disparar la musica
+                  del local.
+                </p>
+              </div>
             ) : null}
             {cancionUrl ? (
               <a
@@ -189,7 +242,7 @@ export default function TurnoCard({
                 rel="noreferrer"
                 className="rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/10 px-4 py-2 text-xs font-medium text-fuchsia-300 hover:bg-fuchsia-500/20"
               >
-                Poner canción
+                Poner cancion
               </a>
             ) : null}
             <form action={completeFormAction}>
@@ -210,7 +263,7 @@ export default function TurnoCard({
           <textarea
             name="motivoCancelacion"
             rows={2}
-            placeholder="Motivo del rechazo o cancelación"
+            placeholder="Motivo del rechazo o cancelacion"
             className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500"
           />
           <div className="flex gap-2">
