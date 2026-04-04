@@ -1,7 +1,7 @@
 # A51 Barber - PRD Live
 
 **Estado real del sistema**
-Actualizado: 02/04/2026 (sesion 15)
+Actualizado: 04/04/2026 (sesion 16)
 
 ## 1. Proposito del documento
 
@@ -121,6 +121,14 @@ Archivos de soporte detectados:
 - `/api/turnos/disponibles`
 - `/api/turnos/reservar`
 - `/negocio`
+- `/hoy`
+- `/(barbero)/musica`
+- `/(admin)/musica`
+- `/(admin)/configuracion/musica`
+- `/api/spotify/callback`
+- `/api/spotify/refresh`
+- `/api/spotify/search-track`
+- `/api/youtube/search-beat`
 
 ### Estructura de permisos
 
@@ -305,6 +313,45 @@ Estado verificado (02/04/2026 sesion 15):
 - se descarto SSE/WebSockets por incompatibilidad con Vercel serverless; polling cada 3s es el approach definitivo
 - integracion con Web Playback SDK (reproduccion automatica real) evaluada y dejada como iteracion futura: requiere cuenta Premium + OAuth PKCE; research completo en `docs/plans/fase-pantalla-musical.md`
 
+### Sistema Musical v3 — Music Engine
+
+Implementado en (04/04/2026 sesion 16):
+
+- `src/db/schema.ts` - tablas `music_provider_connections`, `music_players`, `music_mode_state`, `music_queue_sessions`, `music_queue_items`, `music_runtime_status`, `music_events`, `music_schedule_rules`
+- `src/lib/music-engine.ts` - motor musical provider-agnostic: resuelve modo activo, siguiente item, estado de salud del provider
+- `src/lib/music-types.ts` - tipos del sistema (`MusicDashboardState`, `MusicMode`, `MusicRuntimeState`, etc.)
+- `src/lib/music-provider.ts` - interfaz comun de provider
+- `src/lib/spotify-api.ts`, `src/lib/spotify-sdk.ts`, `src/lib/spotify-server.ts`, `src/lib/spotify-session.ts` - Spotify adapter
+- `src/app/(admin)/musica/` y `src/app/(admin)/configuracion/musica/` - configuracion musical (admin)
+- `src/app/(barbero)/musica/page.tsx` - pantalla de operacion musical del barbero
+- `src/app/(barbero)/musica/actions.ts` - server actions: `setAutoModeAction`, `activateDjModeAction`, `activateJamModeAction`, `pauseMusicAction`, `resumeMusicAction`, `skipMusicAction`, `playPlaylistNowAction`, `queueTrackAction`, `syncMusicDashboardAction`
+- `src/app/api/spotify/callback`, `src/app/api/spotify/refresh`, `src/app/api/spotify/search-track` - endpoints Spotify OAuth y busqueda
+- `src/components/musica/MusicOperationConsole.tsx` - consola principal de operacion
+- `src/components/musica/SpotifyStudio.tsx` - componente de control Spotify
+- `src/components/musica/MusicStateBadge.tsx` - badge de estado del sistema
+- `src/components/musica/SpotifyConnectButton.tsx` - boton de conexion OAuth
+- `src/components/configuracion/MusicConfigPanel.tsx` - panel de configuracion musical
+
+Estado (04/04/2026 sesion 16):
+
+- arquitectura provider-agnostic implementada (Strategy C del plan `fase-musica-v3.md`)
+- modos `Auto`, `Soy DJ` y `Jam` operativos desde la consola del barbero
+- Spotify como provider inicial via OAuth; player esperado: celu del local con Spotify abierto
+- estados `ready`, `degraded` y `offline` implementados con feedback visible en la consola
+
+### Beats Mode (YouTube)
+
+Implementado en (04/04/2026 sesion 16):
+
+- `src/app/api/youtube/search-beat/route.ts` - busqueda server-side en YouTube Data API v3 (key segura, no expuesta al cliente); maxResults 50; filtra por categoria Music
+- `src/components/musica/BeatsStudio.tsx` - componente de busqueda y reproduccion: genre chips (Trap, Boom Bap, Drill, Lo-Fi, R&B, Afrobeat, Reggaeton, Jazz), input libre, grilla de resultados con thumbnail/titulo/canal, reproductor iframe con autoplay
+- `src/components/musica/MusicOperationConsole.tsx` - tab switcher "Spotify / Beats" al tope de la consola musical del barbero
+- `.env.local` - `YOUTUBE_API_KEY` agregada (reutilizada del proyecto BeatFinder)
+
+Scope implementado: buscar beats de YouTube y reproducirlos directamente desde la pantalla musical del barbero. Independiente del Music Engine por ahora.
+
+Pendiente: agregar `YOUTUBE_API_KEY` como variable de entorno en Vercel dashboard antes del proximo deploy.
+
 ### Turnos + Accion Rapida
 
 Implementado en:
@@ -340,15 +387,28 @@ Estado verificado (02/04/2026 sesion 14):
 
 Implementado en:
 
-- `src/components/navigation/RoleBottomNav.tsx`
+- `src/components/navigation/RoleBottomNav.tsx` — bottom nav unificado por rol (reemplaza AdminBottomNav que fue removido)
 - `src/app/(admin)/negocio/page.tsx`
 
-Estado verificado (02/04/2026 sesion 14):
+Estado verificado (04/04/2026 sesion 16):
 
 - la navegacion es un bottom nav fijo con 4 tabs para barbero (Hoy, Caja, Clientes, Turnos) y 5 tabs para admin (agrega Negocio)
 - el tab "Negocio" agrupa todo lo que pertenece al rol de owner: dashboard, cierre, inventario, liquidaciones, mi-resultado, repago, configuracion, gastos-rapidos
 - `/negocio` es un hub de links agrupados por categoria: Ventas y caja, Inventario, Barberos, Pagos, Configuracion
 - esta estructura implementa la separacion PRD entre operacion del dia (Hoy/Caja/Clientes/Turnos) y gestion del negocio (Negocio), sin necesitar dos secciones literales en la nav
+- `AdminBottomNav` removido del codebase — `RoleBottomNav` es la unica implementacion vigente
+
+### Pagina Hoy (barbero)
+
+Implementado en:
+
+- `src/app/(barbero)/hoy/page.tsx` - hub de inicio del barbero: turnos del dia, acceso rapido a caja, resumen de la jornada
+- `src/components/hoy/HoyActionStrip.tsx` - strip de acciones rapidas
+
+Estado (04/04/2026 sesion 16):
+
+- `/hoy` es la pantalla principal del barbero al iniciar el dia
+- integra turnos visibles del actor, atenciones del dia y accion rapida de registro
 
 ### PDFs exportables
 
@@ -451,10 +511,12 @@ No agregar aqui:
 - Fase 5 funcionalmente implementada y verificada por build (sesion 12, 30/03/2026)
 - Fase 6 implementada, verificada por build y QA en produccion (sesion 13, 30/03/2026)
 - Prioridad Absoluta Marciano, Consumiciones Marciano y Pantalla Musical verificadas en codigo (sesion 15, 02/04/2026)
+- Music Engine v3 (Strategy C), Beats Mode (YouTube), pagina Hoy y redesign UI implementados (sesion 16, 04/04/2026)
 - **TODAS LAS FASES COMPLETAS** — sistema listo para operacion (deadline: mayo 2026)
 - proximos pasos: seed de datos reales, capacitacion de usuarios (Pinky/Gabote), go-live
 - siguiente plan operativo: `docs/plans/go-live-seed-capacitacion.md`
-- iteracion futura opcional: Web Playback SDK para reproduccion automatica en pantalla musical (ver research en `docs/plans/fase-pantalla-musical.md`)
+- **bloqueante antes de deploy**: agregar `YOUTUBE_API_KEY` en Vercel dashboard
+- iteracion futura opcional: integrar Beats Mode al Music Engine (colas, modos); Web Playback SDK para reproduccion automatica en pantalla musical
 
 ### Decisiones tomadas sobre Fase 3 (29/03/2026)
 
