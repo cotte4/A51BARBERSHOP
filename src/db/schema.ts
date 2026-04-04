@@ -717,3 +717,198 @@ export const clientBriefingCache = pgTable(
     ),
   ]
 );
+
+// ----------------------------------------------------------------------------
+// SISTEMA MUSICAL V3
+// ----------------------------------------------------------------------------
+export const musicProviderConnections = pgTable(
+  "music_provider_connections",
+  {
+    id: text("id").primaryKey(),
+    provider: text("provider").notNull(),
+    status: text("status").notNull().default("disconnected"),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "music_provider_connections_status_check",
+      sql`${table.status} IN ('connected', 'disconnected', 'error')`
+    ),
+    index("music_provider_connections_provider_idx").on(table.provider),
+  ]
+);
+
+export const musicPlayers = pgTable(
+  "music_players",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    provider: text("provider").notNull(),
+    providerPlayerId: text("provider_player_id").notNull(),
+    name: text("name").notNull(),
+    kind: text("kind").notNull(),
+    status: text("status").notNull().default("missing"),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+    isDefault: boolean("is_default").notNull().default(false),
+    isExpectedLocalPlayer: boolean("is_expected_local_player").notNull().default(false),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "music_players_status_check",
+      sql`${table.status} IN ('ready', 'missing', 'error')`
+    ),
+    uniqueIndex("music_players_provider_player_id_idx").on(
+      table.provider,
+      table.providerPlayerId
+    ),
+    index("music_players_expected_idx").on(table.isExpectedLocalPlayer),
+  ]
+);
+
+export const musicModeState = pgTable(
+  "music_mode_state",
+  {
+    id: text("id").primaryKey(),
+    activeMode: text("active_mode").notNull().default("auto"),
+    manualOwnerBarberoId: uuid("manual_owner_barbero_id").references(() => barberos.id),
+    manualOwnerUserId: text("manual_owner_user_id").references(() => user.id),
+    pendingContextRef: text("pending_context_ref"),
+    pendingContextLabel: text("pending_context_label"),
+    jamEnabled: boolean("jam_enabled").notNull().default(false),
+    autoEnabled: boolean("auto_enabled").notNull().default(true),
+    runtimeState: text("runtime_state").notNull().default("offline"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedByUserId: text("updated_by_user_id").references(() => user.id),
+  },
+  (table) => [
+    check(
+      "music_mode_state_active_mode_check",
+      sql`${table.activeMode} IN ('auto', 'dj', 'jam')`
+    ),
+    check(
+      "music_mode_state_runtime_state_check",
+      sql`${table.runtimeState} IN ('ready', 'degraded', 'offline')`
+    ),
+  ]
+);
+
+export const musicScheduleRules = pgTable(
+  "music_schedule_rules",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    dayMask: text("day_mask").array().notNull().default(sql`'{}'::text[]`),
+    startTime: time("start_time").notNull(),
+    endTime: time("end_time").notNull(),
+    providerPlaylistRef: text("provider_playlist_ref").notNull(),
+    label: text("label").notNull(),
+    priority: integer("priority").notNull().default(0),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("music_schedule_rules_enabled_idx").on(table.enabled, table.priority),
+  ]
+);
+
+export const musicQueueSessions = pgTable(
+  "music_queue_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    mode: text("mode").notNull(),
+    status: text("status").notNull().default("active"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    createdByUserId: text("created_by_user_id").references(() => user.id),
+  },
+  (table) => [
+    check(
+      "music_queue_sessions_mode_check",
+      sql`${table.mode} IN ('dj', 'jam')`
+    ),
+    check(
+      "music_queue_sessions_status_check",
+      sql`${table.status} IN ('active', 'ended')`
+    ),
+  ]
+);
+
+export const musicQueueItems = pgTable(
+  "music_queue_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => musicQueueSessions.id, { onDelete: "cascade" }),
+    sourceType: text("source_type").notNull(),
+    ownerBarberoId: uuid("owner_barbero_id").references(() => barberos.id),
+    providerTrackRef: text("provider_track_ref").notNull(),
+    displayTitle: text("display_title").notNull(),
+    displayArtist: text("display_artist"),
+    state: text("state").notNull().default("queued"),
+    positionHint: integer("position_hint").notNull().default(0),
+    requiresPlayer: boolean("requires_player").notNull().default(true),
+    dispatchedAt: timestamp("dispatched_at", { withTimezone: true }),
+    playedAt: timestamp("played_at", { withTimezone: true }),
+    skippedAt: timestamp("skipped_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "music_queue_items_source_type_check",
+      sql`${table.sourceType} IN ('dj', 'jam', 'system')`
+    ),
+    check(
+      "music_queue_items_state_check",
+      sql`${table.state} IN ('queued', 'dispatched', 'played', 'skipped')`
+    ),
+    index("music_queue_items_session_position_idx").on(table.sessionId, table.positionHint),
+    index("music_queue_items_owner_idx").on(table.ownerBarberoId),
+  ]
+);
+
+export const musicRuntimeStatus = pgTable(
+  "music_runtime_status",
+  {
+    id: text("id").primaryKey(),
+    providerStatus: text("provider_status").notNull().default("disconnected"),
+    playerStatus: text("player_status").notNull().default("missing"),
+    activePlayerId: uuid("active_player_id").references(() => musicPlayers.id),
+    lastPlayerSeenAt: timestamp("last_player_seen_at", { withTimezone: true }),
+    lastPlaybackAttemptAt: timestamp("last_playback_attempt_at", { withTimezone: true }),
+    lastPlaybackSuccessAt: timestamp("last_playback_success_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    degradedReason: text("degraded_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "music_runtime_status_provider_status_check",
+      sql`${table.providerStatus} IN ('connected', 'disconnected', 'error')`
+    ),
+    check(
+      "music_runtime_status_player_status_check",
+      sql`${table.playerStatus} IN ('ready', 'missing', 'error')`
+    ),
+  ]
+);
+
+export const musicEvents = pgTable(
+  "music_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventType: text("event_type").notNull(),
+    payload: jsonb("payload"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("music_events_type_created_idx").on(table.eventType, table.createdAt)]
+);

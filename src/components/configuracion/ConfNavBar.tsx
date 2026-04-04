@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const navItems = [
   { href: "/configuracion/barberos", label: "Barberos" },
   { href: "/configuracion/servicios", label: "Servicios" },
+  { href: "/configuracion/musica", label: "Musica" },
   { href: "/configuracion/medios-de-pago", label: "Medios de Pago" },
   { href: "/configuracion/gastos-fijos", label: "Gastos Fijos" },
   { href: "/configuracion/temporadas", label: "Temporadas" },

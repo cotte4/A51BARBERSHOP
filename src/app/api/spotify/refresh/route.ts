@@ -1,6 +1,16 @@
+import { auth } from "@/lib/auth";
+
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const session = await auth.api.getSession({
+    headers: request.headers,
+  });
+  if (!session?.user?.id) {
+    return Response.json({ error: "No autenticado." }, { status: 401 });
+  }
+
   let body: { refreshToken?: string };
   try {
     body = (await request.json()) as { refreshToken?: string };

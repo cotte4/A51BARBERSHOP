@@ -102,15 +102,15 @@ function getNavItems(isAdmin: boolean): NavItem[] {
       icon: <CalendarIcon />,
       isActive: (pathname) => pathname.startsWith("/turnos"),
     },
-  ];
-
-  if (isAdmin) {
-    items.push({
+    {
       href: "/musica",
       label: "Musica",
       icon: <MusicIcon />,
       isActive: (pathname) => pathname.startsWith("/musica"),
-    });
+    },
+  ];
+
+  if (isAdmin) {
     items.push({
       href: "/negocio",
       label: "Negocio",
@@ -137,7 +137,7 @@ export default function RoleBottomNav({ isAdmin }: { isAdmin: boolean }) {
   return (
     <nav className="fixed inset-x-0 bottom-4 z-30 px-3 sm:px-4">
       <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
-        <div className={`grid gap-1 ${isAdmin ? "grid-cols-6" : "grid-cols-4"}`}>
+        <div className={`grid gap-1 ${isAdmin ? "grid-cols-6" : "grid-cols-5"}`}>
           {navItems.map((item) => {
             const active = item.isActive(pathname);
             return (

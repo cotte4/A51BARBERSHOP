@@ -68,14 +68,14 @@ export function buildAuthUrl(): string {
   throw new Error("Usa buildAuthUrlAsync en su lugar.");
 }
 
-export async function buildAuthUrlAsync(returnTo = "/pantalla"): Promise<string> {
+export async function buildAuthUrlAsync(returnTo = "/configuracion/musica"): Promise<string> {
   const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
   if (!clientId) throw new Error("NEXT_PUBLIC_SPOTIFY_CLIENT_ID no configurado.");
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const redirectUri = `${appUrl}/api/spotify/callback`;
   const { codeVerifier, codeChallenge } = await generatePkcePair();
-  const safeReturnTo = returnTo.startsWith("/") ? returnTo : "/pantalla";
+  const safeReturnTo = returnTo.startsWith("/") ? returnTo : "/configuracion/musica";
 
   const params = new URLSearchParams({
     response_type: "code",

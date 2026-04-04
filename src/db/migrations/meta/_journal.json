@@ -43,6 +43,13 @@
       "when": 1775185953750,
       "tag": "0005_romantic_havok",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775332917789,
+      "tag": "0006_sloppy_spitfire",
+      "breakpoints": true
     }
   ]
 }

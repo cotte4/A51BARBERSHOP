@@ -400,3 +400,17 @@ export async function skipToPrevious(accessToken: string, deviceId?: string | nu
     query: deviceId ? { device_id: deviceId } : undefined,
   });
 }
+
+export async function addTrackToQueue(
+  accessToken: string,
+  trackUri: string,
+  deviceId?: string | null
+): Promise<void> {
+  await requestSpotify<void>("/me/player/queue", accessToken, {
+    method: "POST",
+    query: {
+      uri: trackUri,
+      ...(deviceId ? { device_id: deviceId } : {}),
+    },
+  });
+}

@@ -189,7 +189,7 @@ export default function TurnoCard({
         <div className="mt-2 rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 py-2 text-xs text-sky-300">
           <p className="font-semibold text-sky-200">{actionSuccess}</p>
           <p className="mt-1 text-sky-100/80">
-            Este evento ya quedo listo para que el motor compartido de Spotify lo tome en cuenta.
+            Este evento ya quedo listo para la pantalla y para cualquier automatizacion musical futura.
           </p>
         </div>
       ) : null}

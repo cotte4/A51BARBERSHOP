@@ -38,8 +38,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/repago") ||
     pathname.startsWith("/mi-resultado") ||
     pathname.startsWith("/gastos-rapidos") ||
-    pathname.startsWith("/pantalla") ||
-    pathname.startsWith("/api/spotify")
+    pathname.startsWith("/pantalla")
   ) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
@@ -78,6 +77,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname.startsWith("/musica")) {
+    if (!isAuthenticated) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    return NextResponse.next();
+  }
+
   return NextResponse.next();
 }
 
@@ -93,11 +99,11 @@ export const config = {
     "/inventario/:path*",
     "/repago/:path*",
     "/turnos/:path*",
+    "/musica/:path*",
     "/mi-resultado/:path*",
     "/gastos-rapidos/:path*",
     "/pantalla/:path*",
     "/pantalla",
-    "/api/spotify/:path*",
     "/caja/:path*",
     "/clientes/:path*",
   ],

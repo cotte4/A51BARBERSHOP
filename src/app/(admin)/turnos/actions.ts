@@ -3,7 +3,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { pantallaEvents, turnos, turnosDisponibilidad } from "@/db/schema";
+import { musicEvents, pantallaEvents, turnos, turnosDisponibilidad } from "@/db/schema";
 import { requireAdminSession } from "@/lib/admin-action";
 import { getTurnosActorContext } from "@/lib/turnos-access";
 import {
@@ -176,11 +176,24 @@ export async function clienteLlegoAction(
   }
 
   try {
-    await db.insert(pantallaEvents).values({
-      turnoId,
-      cancion,
-      clienteNombre: turno.clienteNombre,
-    });
+    await Promise.all([
+      db.insert(pantallaEvents).values({
+        turnoId,
+        cancion,
+        clienteNombre: turno.clienteNombre,
+      }),
+      db.insert(musicEvents).values({
+        eventType: "turno.cliente_llego",
+        payload: {
+          turnoId,
+          clienteNombre: turno.clienteNombre,
+          cancion,
+          spotifyTrackUri: turno.spotifyTrackUri ?? null,
+          barberoId: turno.barberoId,
+          proposalStatus: "pending",
+        },
+      }),
+    ]);
   } catch (error) {
     console.error("Error enviando evento a pantalla:", error);
     return { error: "No pude avisarle a la pantalla. Intentá de nuevo." };

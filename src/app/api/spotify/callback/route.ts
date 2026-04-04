@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
 import { decodeAuthState } from "@/lib/spotify-sdk";
+import { upsertSpotifyConnection } from "@/lib/music-engine";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -12,7 +14,7 @@ export async function GET(request: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const redirectUri = `${appUrl}/api/spotify/callback`;
   const authState = state ? decodeAuthState(state) : null;
-  const returnTo = authState?.returnTo ?? "/pantalla";
+  const returnTo = authState?.returnTo ?? "/configuracion/musica";
 
   if (error || !code || !authState) {
     return Response.redirect(`${appUrl}${returnTo}?spotify_error=auth_failed`);
@@ -52,13 +54,14 @@ export async function GET(request: NextRequest) {
       expires_in: number;
     };
 
-    const params = new URLSearchParams({
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
-      expires_in: String(tokens.expires_in),
+    await upsertSpotifyConnection({
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      expiresAt: new Date(Date.now() + tokens.expires_in * 1000),
     });
 
-    return Response.redirect(`${appUrl}${returnTo}?${params.toString()}`);
+    const separator = returnTo.includes("?") ? "&" : "?";
+    return Response.redirect(`${appUrl}${returnTo}${separator}spotify_connected=1`);
   } catch (err) {
     console.error("Spotify callback error:", err);
     return Response.redirect(`${appUrl}${returnTo}?spotify_error=unexpected`);

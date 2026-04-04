@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -35,6 +36,13 @@ async function getClientCredentialsToken() {
 }
 
 export async function GET(request: Request) {
+  const session = await auth.api.getSession({
+    headers: request.headers,
+  });
+  if (!session?.user?.id) {
+    return Response.json({ error: "No autenticado." }, { status: 401 });
+  }
+
   const url = new URL(request.url);
   const parsed = querySchema.safeParse({
     q: url.searchParams.get("q"),
