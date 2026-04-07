@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems = [
+  { href: "/configuracion", label: "Resumen" },
   { href: "/configuracion/barberos", label: "Barberos" },
   { href: "/configuracion/servicios", label: "Servicios" },
   { href: "/configuracion/musica", label: "Musica" },
@@ -16,21 +17,22 @@ export default function ConfNavBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="bg-white border-b border-gray-200 px-4">
-      <div className="max-w-2xl mx-auto">
+    <nav className="sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950/90 px-4 backdrop-blur">
+      <div className="mx-auto max-w-6xl">
         <div className="flex overflow-x-auto gap-0">
           {navItems.map((item) => {
-            const isActive = pathname.startsWith(item.href);
+            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={`
-                  whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 transition-colors
+                  whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors
                   ${
                     isActive
-                      ? "border-gray-900 text-gray-900"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      ? "border-[#8cff59] text-[#8cff59]"
+                      : "border-transparent text-zinc-400 hover:border-zinc-600 hover:text-white"
                   }
                 `}
               >

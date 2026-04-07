@@ -14,18 +14,47 @@ export async function proxy(request: NextRequest) {
 
   const isAuthenticated = !!session?.user;
   const userRole = (session?.user as { role?: string })?.role;
+  const isMarciano = userRole === "marciano";
+  const isMarcianoRoute = pathname === "/marciano" || pathname.startsWith("/marciano/");
+  const isMarcianoPublicRoute =
+    pathname === "/marciano/login" ||
+    pathname.startsWith("/marciano/login") ||
+    pathname === "/marciano/registro" ||
+    pathname.startsWith("/marciano/registro") ||
+    pathname === "/marciano/recuperar" ||
+    pathname.startsWith("/marciano/recuperar") ||
+    pathname === "/marciano/reset" ||
+    pathname.startsWith("/marciano/reset");
 
   if (pathname === "/") {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    return NextResponse.redirect(new URL("/hoy", request.url));
+    return NextResponse.redirect(new URL(isMarciano ? "/marciano" : "/hoy", request.url));
   }
 
   if (pathname === "/login" || pathname.startsWith("/login")) {
     if (isAuthenticated) {
+      return NextResponse.redirect(new URL(isMarciano ? "/marciano" : "/hoy", request.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (isMarcianoRoute) {
+    if (!isAuthenticated) {
+      return isMarcianoPublicRoute
+        ? NextResponse.next()
+        : NextResponse.redirect(new URL("/marciano/login", request.url));
+    }
+
+    if (!isMarciano) {
       return NextResponse.redirect(new URL("/hoy", request.url));
     }
+
+    if (isMarcianoPublicRoute) {
+      return NextResponse.redirect(new URL("/marciano", request.url));
+    }
+
     return NextResponse.next();
   }
 
@@ -43,6 +72,9 @@ export async function proxy(request: NextRequest) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
+    if (isMarciano) {
+      return NextResponse.redirect(new URL("/marciano", request.url));
+    }
     if (userRole !== "admin") {
       return NextResponse.redirect(new URL("/caja", request.url));
     }
@@ -53,12 +85,18 @@ export async function proxy(request: NextRequest) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
+    if (isMarciano) {
+      return NextResponse.redirect(new URL("/marciano", request.url));
+    }
     return NextResponse.next();
   }
 
   if (pathname.startsWith("/turnos")) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
+    }
+    if (isMarciano) {
+      return NextResponse.redirect(new URL("/marciano", request.url));
     }
     return NextResponse.next();
   }
@@ -67,6 +105,9 @@ export async function proxy(request: NextRequest) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
+    if (isMarciano) {
+      return NextResponse.redirect(new URL("/marciano", request.url));
+    }
     return NextResponse.next();
   }
 
@@ -74,12 +115,18 @@ export async function proxy(request: NextRequest) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
+    if (isMarciano) {
+      return NextResponse.redirect(new URL("/marciano", request.url));
+    }
     return NextResponse.next();
   }
 
   if (pathname.startsWith("/musica")) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
+    }
+    if (isMarciano) {
+      return NextResponse.redirect(new URL("/marciano", request.url));
     }
     return NextResponse.next();
   }
@@ -106,5 +153,6 @@ export const config = {
     "/pantalla",
     "/caja/:path*",
     "/clientes/:path*",
+    "/marciano/:path*",
   ],
 };

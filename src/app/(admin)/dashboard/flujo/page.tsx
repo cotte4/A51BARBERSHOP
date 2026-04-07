@@ -59,16 +59,16 @@ export default async function FlujoPage({ searchParams }: { searchParams: Search
   const hayDatos = flujo.some((d) => d.ingresos > 0 || d.egresos > 0);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-4">
+    <div className="min-h-screen bg-zinc-950">
+      <header className="bg-zinc-900 border-b border-zinc-800 px-4 py-4">
         <div className="max-w-2xl mx-auto">
           <Link
             href="/dashboard"
-            className="text-gray-400 hover:text-gray-600 text-sm mb-2 block"
+            className="text-zinc-400 hover:text-[#8cff59] text-sm mb-2 block"
           >
             ← Dashboard
           </Link>
-          <h1 className="text-xl font-bold text-gray-900">Flujo mensual</h1>
+          <h1 className="font-display text-xl font-bold text-white">Flujo mensual</h1>
         </div>
       </header>
 
@@ -77,16 +77,16 @@ export default async function FlujoPage({ searchParams }: { searchParams: Search
         <div className="flex items-center justify-between">
           <Link
             href={`/dashboard/flujo?mes=${mesPrev}&anio=${anioPrev}`}
-            className="min-h-[44px] flex items-center px-4 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+            className="min-h-[44px] flex items-center px-4 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 hover:bg-zinc-800"
           >
             ← Anterior
           </Link>
-          <span className="text-sm font-semibold text-gray-900 capitalize">
+          <span className="text-sm font-semibold text-white capitalize">
             {nombreMes(mes, anio)}
           </span>
           <Link
             href={`/dashboard/flujo?mes=${mesNext}&anio=${anioNext}`}
-            className="min-h-[44px] flex items-center px-4 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+            className="min-h-[44px] flex items-center px-4 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 hover:bg-zinc-800"
           >
             Siguiente →
           </Link>
@@ -94,23 +94,25 @@ export default async function FlujoPage({ searchParams }: { searchParams: Search
 
         {/* Resumen */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 mb-1">Total ingresos</p>
-            <p className="text-lg font-bold text-gray-900">{formatARS(totalIngresos)}</p>
+          <div className="panel-card rounded-[28px] p-4">
+            <p className="text-xs text-zinc-400 mb-1">Total ingresos</p>
+            <p className="text-lg font-bold text-white">{formatARS(totalIngresos)}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 mb-1">Total egresos</p>
-            <p className="text-lg font-bold text-red-700">{formatARS(totalEgresos)}</p>
+          <div className="panel-card rounded-[28px] p-4">
+            <p className="text-xs text-zinc-400 mb-1">Total egresos</p>
+            <p className="text-lg font-bold text-red-300">{formatARS(totalEgresos)}</p>
           </div>
           <div
-            className={`rounded-xl border p-4 ${
-              saldoFinal >= 0 ? "bg-white border-gray-200" : "bg-red-50 border-red-200"
+            className={`rounded-[28px] border p-4 ${
+              saldoFinal >= 0
+                ? "panel-card"
+                : "bg-red-500/15 border-red-500/30"
             }`}
           >
-            <p className="text-xs text-gray-500 mb-1">Saldo final</p>
+            <p className="text-xs text-zinc-400 mb-1">Saldo final</p>
             <p
               className={`text-lg font-bold ${
-                saldoFinal >= 0 ? "text-gray-900" : "text-red-700"
+                saldoFinal >= 0 ? "text-white" : "text-red-300"
               }`}
             >
               {formatARS(saldoFinal)}
@@ -120,26 +122,26 @@ export default async function FlujoPage({ searchParams }: { searchParams: Search
 
         {/* Tabla de flujo */}
         {!hayDatos ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-            <p className="text-gray-500 text-sm">No hay datos para este mes.</p>
+          <div className="panel-card rounded-[28px] p-8 text-center">
+            <p className="text-zinc-400 text-sm">No hay datos para este mes.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="panel-card rounded-[28px] overflow-hidden">
             {/* Header */}
-            <div className="grid grid-cols-5 gap-0 bg-gray-50 border-b border-gray-200">
-              <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <div className="grid grid-cols-5 gap-0 bg-zinc-950/50 border-b border-zinc-800">
+              <div className="px-3 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                 Fecha
               </div>
-              <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">
+              <div className="px-3 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right">
                 Ingresos
               </div>
-              <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">
+              <div className="px-3 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right">
                 Egresos
               </div>
-              <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">
+              <div className="px-3 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right">
                 Saldo día
               </div>
-              <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">
+              <div className="px-3 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right">
                 Acumulado
               </div>
             </div>
@@ -150,33 +152,33 @@ export default async function FlujoPage({ searchParams }: { searchParams: Search
               return (
                 <div
                   key={dia.fecha}
-                  className={`grid grid-cols-5 gap-0 border-b border-gray-100 last:border-0 ${
-                    egresosSuperanIngresos ? "bg-red-50" : ""
+                  className={`grid grid-cols-5 gap-0 border-b border-zinc-800 last:border-0 ${
+                    egresosSuperanIngresos ? "bg-red-500/10" : ""
                   }`}
                 >
-                  <div className="px-3 py-2.5 text-sm text-gray-700 font-medium">
+                  <div className="px-3 py-2.5 text-sm text-zinc-300 font-medium">
                     {formatDia(dia.fecha)}
                   </div>
-                  <div className="px-3 py-2.5 text-sm text-right text-gray-900 tabular-nums">
+                  <div className="px-3 py-2.5 text-sm text-right text-white tabular-nums">
                     {dia.ingresos > 0 ? formatARS(dia.ingresos) : "—"}
                   </div>
                   <div className="px-3 py-2.5 text-sm text-right tabular-nums">
                     {dia.egresos > 0 ? (
-                      <span className="text-red-700">{formatARS(dia.egresos)}</span>
+                      <span className="text-red-300">{formatARS(dia.egresos)}</span>
                     ) : (
                       "—"
                     )}
                   </div>
                   <div
                     className={`px-3 py-2.5 text-sm text-right font-medium tabular-nums ${
-                      dia.saldoDia >= 0 ? "text-gray-900" : "text-red-700"
+                      dia.saldoDia >= 0 ? "text-white" : "text-red-300"
                     }`}
                   >
                     {formatARS(dia.saldoDia)}
                   </div>
                   <div
                     className={`px-3 py-2.5 text-sm text-right font-semibold tabular-nums ${
-                      dia.saldoAcumulado >= 0 ? "text-gray-900" : "text-red-700"
+                      dia.saldoAcumulado >= 0 ? "text-white" : "text-red-300"
                     }`}
                   >
                     {formatARS(dia.saldoAcumulado)}
@@ -187,7 +189,7 @@ export default async function FlujoPage({ searchParams }: { searchParams: Search
           </div>
         )}
 
-        <p className="text-xs text-gray-400 text-center">
+        <p className="text-xs text-zinc-400 text-center">
           Ingresos = cierres de caja. Egresos = gastos registrados. Días sin actividad muestran $0.
         </p>
       </main>

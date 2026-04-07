@@ -32,6 +32,12 @@ type TimelineFreeSlot = {
   duracionMinutos: number;
 };
 
+type TimelineSlot = {
+  time: string;
+  turnos: TurnoSummary[];
+  freeSlots: TimelineFreeSlot[];
+};
+
 export default async function TurnosPage({ searchParams }: TurnosPageProps) {
   const actor = await getTurnosActorContext();
   if (!actor) {
@@ -56,22 +62,27 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
   const pendingMarcianos = turnos.filter(
     (turno) => turno.estado === "pendiente" && turno.esMarcianoSnapshot
   );
-  const pendientes = turnos.filter((t) => t.estado === "pendiente").length;
-  const confirmados = turnos.filter((t) => t.estado === "confirmado").length;
-  const completados = turnos.filter((t) => t.estado === "completado").length;
-  const actorBarbero = actor.barberoId ? barberos.find((b) => b.id === actor.barberoId) : null;
+  const pendientes = turnos.filter((turno) => turno.estado === "pendiente").length;
+  const confirmados = turnos.filter((turno) => turno.estado === "confirmado").length;
+  const completados = turnos.filter((turno) => turno.estado === "completado").length;
+  const actorBarbero = actor.barberoId ? barberos.find((barbero) => barbero.id === actor.barberoId) : null;
   const title = scope === "equipo" ? "Turnos del equipo" : "Mis turnos";
   const showScopeToggle = actor.isAdmin && actor.barberoId;
+  const priorityCount = turnos.filter((turno) => turno.estado === "pendiente" && turno.prioridadAbsoluta).length;
 
   if (!actor.isAdmin && !actor.barberoId) {
     return (
-      <main className="min-h-screen bg-zinc-950 px-4 py-6">
-        <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-900 p-6">
-          <p className="text-base font-semibold text-white">No encontramos tu perfil de barbero.</p>
+      <main className="app-shell min-h-screen px-4 py-6">
+        <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-900 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+          <p className="eyebrow text-xs">Acceso a turnos</p>
+          <p className="mt-3 text-base font-semibold text-white">No encontramos tu perfil de barbero.</p>
           <p className="mt-2 text-sm text-zinc-400">
             Vincula tu usuario con un barbero activo para usar la agenda desde este tab.
           </p>
-          <Link href="/hoy" className="mt-4 inline-flex rounded-xl bg-[#8cff59] px-4 py-2 text-sm font-semibold text-[#07130a]">
+          <Link
+            href="/hoy"
+            className="neon-button mt-4 inline-flex min-h-[44px] items-center rounded-2xl px-4 text-sm font-semibold"
+          >
             Volver a hoy
           </Link>
         </div>
@@ -80,85 +91,171 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-4 py-6 pb-24">
+    <main className="app-shell min-h-screen px-4 py-6 pb-24">
       <TurnosSpotifyBridge />
       <div className="mx-auto max-w-5xl space-y-4">
-        <section className="overflow-hidden rounded-[30px] bg-zinc-900 shadow-[0_24px_80px_rgba(0,0,0,0.4)]">
-          <div className="bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.12),_transparent_34%)] p-5 sm:p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <Link href="/hoy" className="text-xs font-medium text-zinc-500 hover:text-zinc-300">
-                  ← Hoy
-                </Link>
-                <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">{title}</h1>
-                <p className="mt-1 text-sm text-zinc-400">
-                  {formatFechaLarga(fecha)}
-                  {isToday ? " · Hoy" : ""}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-500">
-                  <span className="text-white">{turnos.length} turnos</span>
-                  <span>·</span>
-                  <span className="text-amber-400">{pendientes} pendientes</span>
-                  <span>·</span>
-                  <span className="text-emerald-400">{confirmados} confirmados</span>
-                  <span>·</span>
-                  <span className="text-zinc-400">{completados} completados</span>
+        <section className="panel-card overflow-hidden rounded-[30px]">
+          <div className="bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.16),_transparent_34%)] p-5 sm:p-6 lg:p-7">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-2xl space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link href="/hoy" className="eyebrow inline-flex items-center text-xs hover:text-zinc-300">
+                    &larr; Hoy
+                  </Link>
+                  <span className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8cff59]">
+                    {isToday ? "En curso" : "Plan del dia"}
+                  </span>
+                  <span className="rounded-full border border-zinc-700 bg-zinc-900/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-300">
+                    {scope === "equipo" ? "Equipo" : "Mi agenda"}
+                  </span>
+                </div>
+
+                <div>
+                  <h1 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                    {title}
+                  </h1>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+                    {formatFechaLarga(fecha)}
+                    {isToday ? " · Hoy" : ""}. Priorizamos pendientes y confirmados para ver rapido lo que pide
+                    accion.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1.5 text-xs font-medium text-zinc-300">
+                    {turnos.length} turnos visibles
+                  </span>
+                  <span className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/10 px-3 py-1.5 text-xs font-medium text-[#8cff59]">
+                    {slotsLibres.length} huecos libres
+                  </span>
+                  {priorityCount > 0 ? (
+                    <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200">
+                      {priorityCount} pendientes prioritarios
+                    </span>
+                  ) : null}
+                  {pendingMarcianos.length > 0 ? (
+                    <span className="rounded-full border border-fuchsia-400/30 bg-fuchsia-400/10 px-3 py-1.5 text-xs font-medium text-fuchsia-200">
+                      {pendingMarcianos.length} solicitudes Marciano
+                    </span>
+                  ) : null}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+
+              <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
                 <Link
                   href={slotsLibres.length === 0 ? "/turnos/disponibilidad" : "#agenda"}
-                  className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-[#8cff59] px-4 text-sm font-semibold text-[#07130a]"
+                  className="neon-button inline-flex min-h-[44px] items-center justify-center rounded-2xl px-4 text-sm font-semibold"
                 >
                   + Nuevo turno
                 </Link>
                 {actor.isAdmin ? (
                   <Link
                     href="/turnos/disponibilidad"
-                    className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-zinc-700 px-4 text-sm font-medium text-zinc-200 hover:bg-zinc-800"
+                    className="ghost-button inline-flex min-h-[44px] items-center justify-center rounded-2xl px-4 text-sm font-semibold"
                   >
                     Disponibilidad
                   </Link>
                 ) : null}
               </div>
             </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <MetricCard
+                label="Pendientes"
+                value={String(pendientes)}
+                detail={priorityCount > 0 ? `${priorityCount} con prioridad` : "Listos para despejar"}
+                tone="amber"
+              />
+              <MetricCard
+                label="Confirmados"
+                value={String(confirmados)}
+                detail="Turnos listos para atender"
+                tone="emerald"
+              />
+              <MetricCard
+                label="Completados"
+                value={String(completados)}
+                detail="Cierre operativo del dia"
+                tone="slate"
+              />
+              <MetricCard
+                label="Huecos libres"
+                value={String(slotsLibres.length)}
+                detail="Disponibilidad lista para cargar"
+                tone="brand"
+              />
+            </div>
           </div>
         </section>
 
         {showScopeToggle ? (
-          <div className="flex gap-2">
-            <ScopeLink
-              href={buildTurnosHref(fecha, estado, "mio")}
-              label={actorBarbero?.nombre ?? "Mis turnos"}
-              active={scope === "mio"}
-            />
-            <ScopeLink href={buildTurnosHref(fecha, estado, "equipo")} label="Equipo" active={scope === "equipo"} />
-          </div>
+          <section className="panel-soft rounded-[24px] p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="eyebrow text-[10px]">Scope</p>
+                <h2 className="font-display text-xl text-white">Barbero o equipo</h2>
+              </div>
+              <p className="text-xs text-zinc-500">
+                {scope === "equipo" ? "Estas viendo toda la operacion activa" : "Estas viendo solo tu agenda"}
+              </p>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <ScopeLink
+                href={buildTurnosHref(fecha, estado, "mio")}
+                label={actorBarbero?.nombre ?? "Mis turnos"}
+                active={scope === "mio"}
+              />
+              <ScopeLink href={buildTurnosHref(fecha, estado, "equipo")} label="Equipo" active={scope === "equipo"} />
+            </div>
+          </section>
         ) : null}
 
-        <section className="rounded-[24px] border border-zinc-800 bg-zinc-900 px-4 py-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <DateLink href={buildTurnosHref(shiftDate(fecha, -1), estado, scope)} label="← Ayer" />
+        <section className="panel-soft rounded-[24px] p-4 sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="eyebrow text-[10px]">Filtros</p>
+              <h2 className="font-display text-xl text-white sm:text-2xl">Recorte de agenda</h2>
+              <p className="mt-1 text-sm text-zinc-400">
+                Cambia el dia y el estado sin perder contexto visual.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded-full border border-zinc-700 bg-zinc-950/60 px-3 py-1.5 text-xs font-medium text-zinc-300">
+                {turnos.length} visibles
+              </span>
+              <span className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/10 px-3 py-1.5 text-xs font-medium text-[#8cff59]">
+                {isToday ? "Vista de hoy" : "Fecha manual"}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <DateLink href={buildTurnosHref(shiftDate(fecha, -1), estado, scope)} label="Ayer" />
             <DateLink href={buildTurnosHref(fechaHoy, estado, scope)} label="Hoy" active={isToday} />
-            <DateLink href={buildTurnosHref(shiftDate(fecha, 1), estado, scope)} label="Mañana →" />
-            <form className="ml-auto flex items-center gap-2">
+            <DateLink href={buildTurnosHref(shiftDate(fecha, 1), estado, scope)} label="Mañana" />
+          </div>
+
+          <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label className="flex-1">
+              <span className="eyebrow mb-2 block text-[10px]">Fecha manual</span>
               <input
                 type="date"
                 name="fecha"
                 defaultValue={fecha}
-                className="h-9 rounded-xl border border-zinc-700 bg-zinc-800 px-3 text-sm text-white outline-none focus:border-[#8cff59]"
+                className="h-11 w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-white outline-none placeholder-zinc-600 focus:border-[#8cff59]"
               />
-              <input type="hidden" name="scope" value={scope} />
-              <input type="hidden" name="estado" value={estado ?? "todos"} />
-              <button
-                type="submit"
-                className="h-9 rounded-xl bg-zinc-800 px-3 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
-              >
-                Ir
-              </button>
-            </form>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-1.5">
+            </label>
+            <input type="hidden" name="scope" value={scope} />
+            <input type="hidden" name="estado" value={estado ?? "todos"} />
+            <button
+              type="submit"
+              className="neon-button inline-flex min-h-[44px] items-center justify-center rounded-2xl px-4 text-sm font-semibold"
+            >
+              Ir
+            </button>
+          </form>
+
+          <div className="mt-4 flex flex-wrap gap-2">
             <StatusLink href={buildTurnosHref(fecha, undefined, scope)} label="Todos" active={!estado} />
             <StatusLink href={buildTurnosHref(fecha, "pendiente", scope)} label="Pendientes" active={estado === "pendiente"} />
             <StatusLink href={buildTurnosHref(fecha, "confirmado", scope)} label="Confirmados" active={estado === "confirmado"} />
@@ -167,29 +264,30 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
           </div>
         </section>
 
-        <section id="agenda" className="rounded-[24px] border border-zinc-800 bg-zinc-900 p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Agenda visual</p>
-              <h2 className="mt-1 text-lg font-semibold text-white">Lo que viene hoy</h2>
+        <section id="agenda" className="panel-card rounded-[28px] p-4 sm:p-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl">
+              <p className="eyebrow text-[10px]">Agenda visual</p>
+              <h2 className="font-display text-2xl text-white">Timeline de servicio</h2>
+              <p className="mt-1 text-sm text-zinc-400">
+                Los pendientes quedan arriba de cada bloque, luego confirmados y los huecos libres para ocupar.
+              </p>
             </div>
-            {slotsLibres.length > 0 ? (
-              <span className="rounded-full border border-[#8cff59]/30 bg-[#8cff59]/10 px-3 py-1 text-xs font-medium text-[#8cff59]">
-                {slotsLibres.length} huecos libres
-              </span>
-            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <LegendChip tone="amber" label="Pendiente" />
+              <LegendChip tone="emerald" label="Confirmado" />
+              <LegendChip tone="brand" label="Hueco libre" />
+            </div>
           </div>
 
           {pendingMarcianos.length > 0 ? (
-            <div className="mb-4 rounded-[20px] border border-fuchsia-500/20 bg-fuchsia-500/8 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-fuchsia-300">
-                Solicitudes Marciano
-              </p>
+            <div className="mt-4 rounded-[22px] border border-fuchsia-400/20 bg-fuchsia-400/8 p-4">
+              <p className="eyebrow text-[10px] text-fuchsia-200">Solicitudes Marciano</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {pendingMarcianos.map((turno) => (
                   <span
                     key={turno.id}
-                    className="rounded-full border border-fuchsia-400/20 bg-zinc-950/60 px-3 py-1.5 text-xs text-zinc-200"
+                    className="rounded-full border border-fuchsia-300/20 bg-zinc-950/70 px-3 py-1.5 text-xs text-zinc-200"
                   >
                     {turno.horaInicio} · {turno.clienteNombre} · {turno.barberoNombre}
                   </span>
@@ -199,71 +297,128 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
           ) : null}
 
           {timelineSlots.length === 0 ? (
-            <div className="rounded-[20px] border border-dashed border-zinc-700 bg-zinc-950/50 p-8 text-center text-sm text-zinc-500">
-              No hay turnos ni disponibilidad cargada para este día.
+            <div className="mt-5 rounded-[22px] border border-dashed border-zinc-700 bg-zinc-950/50 p-8 text-center text-sm text-zinc-500">
+              No hay turnos ni disponibilidad cargada para este dia.
               <br />
-              <Link href="/turnos/disponibilidad" className="mt-3 inline-flex rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700">
+              <Link
+                href="/turnos/disponibilidad"
+                className="ghost-button mt-3 inline-flex min-h-[44px] items-center rounded-2xl px-4 text-sm font-semibold"
+              >
                 Configurar disponibilidad
               </Link>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="mt-5 space-y-3">
               {timelineSlots.map((slot) => (
-                <div key={slot.time} className="grid gap-2 md:grid-cols-[72px_1fr]">
-                  <div className="flex items-start pt-3 md:justify-end">
-                    <span className="rounded-lg bg-zinc-800 px-2 py-1 text-xs font-semibold text-zinc-400">
-                      {slot.time}
-                    </span>
+                <div key={slot.time} className="grid gap-3 md:grid-cols-[112px_1fr]">
+                  <div className="flex items-start md:justify-end">
+                    <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-right">
+                      <p className="text-sm font-semibold text-white">{slot.time}</p>
+                      <p className="mt-0.5 text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                        {slot.turnos.length > 0 ? "Bloque activo" : "Hueco abierto"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    {slot.turnos.map((turno) => (
-                      <TurnoCard
-                        key={turno.id}
-                        turno={turno}
-                        confirmarAction={confirmarTurnoAction.bind(null, turno.id)}
-                        completarAction={completarTurnoAction.bind(null, turno.id)}
-                        rechazarAction={rechazarTurnoAction.bind(null, turno.id)}
-                        clienteLlegoAction={clienteLlegoAction.bind(null, turno.id)}
-                      />
-                    ))}
-                    {slot.freeSlots.map((freeSlot) => (
-                      <QuickTurnoSlotCard
-                        key={freeSlot.id}
-                        time={freeSlot.horaInicio}
-                        barberName={freeSlot.barberoNombre}
-                        durationMinutos={freeSlot.duracionMinutos}
-                        action={crearTurnoRapidoAction.bind(
-                          null,
-                          freeSlot.barberoId,
-                          freeSlot.fecha,
-                          freeSlot.horaInicio,
-                          freeSlot.duracionMinutos
-                        )}
-                      />
-                    ))}
+
+                  <div
+                    className={`rounded-[24px] border p-3 sm:p-4 ${
+                      slot.turnos.length > 0
+                        ? "border-zinc-800 bg-zinc-950"
+                        : "border-[#8cff59]/20 bg-[#8cff59]/5"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="eyebrow text-[10px]">
+                        {slot.turnos.length > 0 ? "Turnos programados" : "Hueco disponible"}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {slot.turnos.length > 0 ? (
+                          <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[11px] font-medium text-zinc-300">
+                            {slot.turnos.length} {slot.turnos.length === 1 ? "turno" : "turnos"}
+                          </span>
+                        ) : null}
+                        {slot.freeSlots.length > 0 ? (
+                          <span className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/10 px-2.5 py-1 text-[11px] font-semibold text-[#8cff59]">
+                            {slot.freeSlots.length} {slot.freeSlots.length === 1 ? "hueco" : "huecos"}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      {slot.turnos.map((turno) => (
+                        <TurnoCard
+                          key={turno.id}
+                          turno={turno}
+                          confirmarAction={confirmarTurnoAction.bind(null, turno.id)}
+                          completarAction={completarTurnoAction.bind(null, turno.id)}
+                          rechazarAction={rechazarTurnoAction.bind(null, turno.id)}
+                          clienteLlegoAction={clienteLlegoAction.bind(null, turno.id)}
+                        />
+                      ))}
+                      {slot.freeSlots.map((freeSlot) => (
+                        <QuickTurnoSlotCard
+                          key={freeSlot.id}
+                          time={freeSlot.horaInicio}
+                          barberName={freeSlot.barberoNombre}
+                          durationMinutos={freeSlot.duracionMinutos}
+                          action={crearTurnoRapidoAction.bind(
+                            null,
+                            freeSlot.barberoId,
+                            freeSlot.fecha,
+                            freeSlot.horaInicio,
+                            freeSlot.duracionMinutos
+                          )}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </section>
-
-        <section className="grid gap-3 md:grid-cols-3">
-          <SmallStat label="Barberos visibles" value={String(scope === "equipo" ? barberos.length : 1)} />
-          <SmallStat label="Huecos libres" value={String(slotsLibres.length)} />
-          <SmallStat label="Foco" value={pendientes > 0 ? `${pendientes} pendientes` : "Agenda al día"} />
-        </section>
       </div>
     </main>
   );
 }
 
-function SmallStat({ label, value }: { label: string; value: string }) {
+function MetricCard({
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  tone: "amber" | "emerald" | "slate" | "brand";
+}) {
+  const toneClasses = {
+    amber: "border-amber-400/20 bg-amber-400/8 text-amber-200",
+    emerald: "border-emerald-400/20 bg-emerald-400/8 text-emerald-200",
+    slate: "border-zinc-700 bg-zinc-950/70 text-zinc-200",
+    brand: "border-[#8cff59]/20 bg-[#8cff59]/10 text-[#8cff59]",
+  }[tone];
+
   return (
-    <div className="rounded-[20px] border border-zinc-800 bg-zinc-900 px-4 py-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">{label}</p>
-      <p className="mt-1.5 text-lg font-semibold text-white">{value}</p>
+    <div className={`rounded-[22px] border p-4 ${toneClasses}`}>
+      <p className="eyebrow text-[10px]">{label}</p>
+      <p className="mt-2 text-2xl font-semibold tracking-tight text-white">{value}</p>
+      <p className="mt-1 text-xs text-zinc-400">{detail}</p>
     </div>
+  );
+}
+
+function LegendChip({ label, tone }: { label: string; tone: "amber" | "emerald" | "brand" }) {
+  const toneClasses = {
+    amber: "border-amber-400/20 bg-amber-400/10 text-amber-200",
+    emerald: "border-emerald-400/20 bg-emerald-400/10 text-emerald-200",
+    brand: "border-[#8cff59]/20 bg-[#8cff59]/10 text-[#8cff59]",
+  }[tone];
+
+  return (
+    <span className={`rounded-full border px-3 py-1.5 text-xs font-medium ${toneClasses}`}>{label}</span>
   );
 }
 
@@ -271,10 +426,10 @@ function DateLink({ href, label, active }: { href: string; label: string; active
   return (
     <Link
       href={href}
-      className={`inline-flex min-h-[36px] items-center rounded-xl px-3 text-sm font-medium ${
+      className={`inline-flex min-h-[40px] items-center rounded-2xl px-3.5 text-sm font-semibold ${
         active
-          ? "bg-[#8cff59] text-[#07130a]"
-          : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+          ? "bg-[#8cff59] text-[#07130a] shadow-[0_10px_30px_rgba(140,255,89,0.18)]"
+          : "border border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900"
       }`}
     >
       {label}
@@ -286,10 +441,10 @@ function StatusLink({ href, label, active }: { href: string; label: string; acti
   return (
     <Link
       href={href}
-      className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+      className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
         active
           ? "bg-zinc-100 text-zinc-900"
-          : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+          : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
       }`}
     >
       {label}
@@ -301,8 +456,8 @@ function ScopeLink({ href, label, active }: { href: string; label: string; activ
   return (
     <Link
       href={href}
-      className={`inline-flex min-h-[38px] items-center rounded-full px-4 text-sm font-semibold ${
-        active ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+      className={`inline-flex min-h-[40px] items-center rounded-full px-4 text-sm font-semibold ${
+        active ? "bg-zinc-100 text-zinc-900" : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
       }`}
     >
       {label}
@@ -310,7 +465,7 @@ function ScopeLink({ href, label, active }: { href: string; label: string; activ
   );
 }
 
-function buildTimelineSlots(turnos: TurnoSummary[], freeSlots: TimelineFreeSlot[]) {
+function buildTimelineSlots(turnos: TurnoSummary[], freeSlots: TimelineFreeSlot[]): TimelineSlot[] {
   const times = new Set<string>();
   for (const turno of turnos) times.add(turno.horaInicio);
   for (const slot of freeSlots) times.add(slot.horaInicio);
@@ -326,8 +481,8 @@ function buildTimelineSlots(turnos: TurnoSummary[], freeSlots: TimelineFreeSlot[
   return buildSlots(startMinutes, endMinutes)
     .map((time) => ({
       time,
-      turnos: sortTurnosForSlot(turnos.filter((t) => t.horaInicio === time)),
-      freeSlots: freeSlots.filter((s) => s.horaInicio === time),
+      turnos: sortTurnosForSlot(turnos.filter((turno) => turno.horaInicio === time)),
+      freeSlots: freeSlots.filter((slot) => slot.horaInicio === time),
     }))
     .filter((slot) => slot.turnos.length > 0 || slot.freeSlots.length > 0);
 }

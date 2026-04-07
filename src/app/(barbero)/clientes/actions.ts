@@ -22,6 +22,7 @@ export type ClientFormState = {
   error?: string;
   fieldErrors?: {
     name?: string;
+    email?: string;
     phoneRaw?: string;
   };
   possibleDuplicates?: Array<{
@@ -37,6 +38,11 @@ function parseTags(raw: FormDataEntryValue | null): string[] {
     .map((tag) => tag.trim())
     .filter(Boolean)
     .slice(0, 12);
+}
+
+function normalizeClientEmail(raw: FormDataEntryValue | null): string | null {
+  const value = String(raw ?? "").trim().toLowerCase();
+  return value || null;
 }
 
 function stringifyAuditValue(value: unknown): string | null {
@@ -79,6 +85,7 @@ export async function createClientAction(
   }
 
   const name = String(formData.get("name") ?? "").trim();
+  const email = normalizeClientEmail(formData.get("email"));
   const phoneRaw = String(formData.get("phoneRaw") ?? "").trim() || null;
   const avatarUrl = String(formData.get("avatarUrl") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
@@ -93,6 +100,10 @@ export async function createClientAction(
   const fieldErrors: ClientFormState["fieldErrors"] = {};
   if (!name) {
     fieldErrors.name = "El nombre es obligatorio.";
+  }
+
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    fieldErrors.email = "Ingresá un email válido.";
   }
 
   if (!actor.isAdmin && !actor.barberoId) {
@@ -124,6 +135,22 @@ export async function createClientAction(
     }
   }
 
+  if (email) {
+    const [existingByEmail] = await db
+      .select({ id: clients.id })
+      .from(clients)
+      .where(eq(clients.email, email))
+      .limit(1);
+
+    if (existingByEmail) {
+      return {
+        fieldErrors: {
+          email: "Ese email ya pertenece a otro cliente.",
+        },
+      };
+    }
+  }
+
   if (!confirmDuplicate) {
     const possibleDuplicates = await db
       .select({
@@ -149,6 +176,7 @@ export async function createClientAction(
     .insert(clients)
     .values({
       name,
+      email,
       phoneRaw,
       phoneNormalized,
       avatarUrl,
@@ -183,6 +211,7 @@ export async function updateClientAction(clientId: string, formData: FormData) {
   }
 
   const name = String(formData.get("name") ?? "").trim();
+  const email = normalizeClientEmail(formData.get("email"));
   const phoneRaw = String(formData.get("phoneRaw") ?? "").trim() || null;
   const avatarUrl = String(formData.get("avatarUrl") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
@@ -198,6 +227,10 @@ export async function updateClientAction(clientId: string, formData: FormData) {
     throw new Error("El nombre es obligatorio.");
   }
 
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("Ingresá un email válido.");
+  }
+
   if (phoneNormalized) {
     const [existingByPhone] = await db
       .select({ id: clients.id })
@@ -210,6 +243,18 @@ export async function updateClientAction(clientId: string, formData: FormData) {
     }
   }
 
+  if (email) {
+    const [existingByEmail] = await db
+      .select({ id: clients.id })
+      .from(clients)
+      .where(and(eq(clients.email, email), ne(clients.id, clientId)))
+      .limit(1);
+
+    if (existingByEmail) {
+      throw new Error("Ese email ya pertenece a otro cliente.");
+    }
+  }
+
   const nextEsMarciano =
     actor.isAdmin ? String(formData.get("esMarciano") ?? "") === "on" : existing.esMarciano;
 
@@ -217,6 +262,7 @@ export async function updateClientAction(clientId: string, formData: FormData) {
     .update(clients)
     .set({
       name,
+      email,
       phoneRaw,
       phoneNormalized,
       avatarUrl,
@@ -240,6 +286,7 @@ export async function updateClientAction(clientId: string, formData: FormData) {
     changedByBarberoId: actor.barberoId,
     changes: [
       { fieldName: "name", oldValue: existing.name, newValue: name },
+      { fieldName: "email", oldValue: existing.email, newValue: email },
       { fieldName: "phone_raw", oldValue: existing.phoneRaw, newValue: phoneRaw },
       { fieldName: "avatar_url", oldValue: existing.avatarUrl, newValue: avatarUrl },
       { fieldName: "notes", oldValue: existing.notes, newValue: notes },

@@ -1,4 +1,4 @@
-﻿import Image from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import type { ClientSummary } from "@/lib/types";
 
@@ -25,12 +25,13 @@ export default function ClientCard({ client }: ClientCardProps) {
 
   const barberMemory = client.lastVisitNote?.trim() || "Sin nota del ultimo corte";
   const relativeLastVisit = client.lastVisitAt ? formatRelativeVisit(client.lastVisitAt) : "Todavia no vino";
+  const phoneHref = client.phoneRaw ? `tel:${client.phoneRaw.replace(/\D/g, "")}` : null;
 
   return (
-    <article className="panel-card rounded-3xl p-4 transition hover:border-[#8cff59]/25">
-      <div className="flex items-start justify-between gap-3">
+    <article className="panel-card rounded-[28px] p-4 sm:p-5 transition hover:border-[#8cff59]/25">
+      <div className="flex flex-col gap-4">
         <div className="flex items-start gap-3">
-          <div className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#8cff59] text-sm font-semibold text-[#07130a] ring-1 ring-[#8cff59]/20">
+          <div className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#8cff59] text-sm font-semibold text-[#07130a] ring-1 ring-[#8cff59]/20">
             {client.avatarUrl ? (
               <Image src={client.avatarUrl} alt={client.name} fill sizes="56px" className="object-cover" />
             ) : (
@@ -38,69 +39,84 @@ export default function ClientCard({ client }: ClientCardProps) {
             )}
           </div>
 
-          <div>
+          <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <Link
                 href={`/clientes/${client.id}`}
-                className="text-base font-semibold text-white underline-offset-4 hover:text-[#8cff59] hover:underline"
+                className="min-w-0 truncate text-base font-semibold text-white underline-offset-4 hover:text-[#8cff59] hover:underline"
               >
                 {client.name}
               </Link>
 
               {client.esMarciano ? (
-                <span className="rounded-full bg-[#8cff59]/14 px-2.5 py-1 text-xs font-semibold text-[#8cff59]">
+                <span className="rounded-full border border-[#8cff59]/18 bg-[#8cff59]/12 px-2.5 py-1 text-xs font-semibold text-[#8cff59]">
                   Marciano
                 </span>
               ) : null}
 
               {client.archivedAt ? (
-                <span className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-300">
+                <span className="rounded-full border border-white/8 bg-white/[0.04] px-2.5 py-1 text-xs font-medium text-zinc-300">
                   Archivado
                 </span>
               ) : null}
             </div>
 
-            <p className="mt-1 text-sm text-zinc-400">{client.phoneRaw || "Sin telefono"}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-400">
+              {phoneHref ? (
+                <a href={phoneHref} className="hover:text-white">
+                  {client.phoneRaw}
+                </a>
+              ) : (
+                <span>Sin telefono</span>
+              )}
+              <span className="text-zinc-600">-</span>
+              <span>{client.totalVisits} visitas</span>
+            </div>
 
-            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
-              Memoria del barbero
-            </p>
-            <p className="mt-1 text-sm text-zinc-300">
-              Ultimo corte: <span className="font-medium text-white">{barberMemory}</span>
-            </p>
-            <p className="mt-1 text-xs text-zinc-400">
-              {relativeLastVisit}
-              {client.lastVisitBarberoNombre ? ` con ${client.lastVisitBarberoNombre}` : ""}
-            </p>
+            <div className="mt-3 rounded-[20px] border border-white/6 bg-white/[0.03] p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                Memoria del barbero
+              </p>
+              <p className="mt-1 text-sm leading-6 text-zinc-300">
+                Ultimo corte: <span className="font-medium text-white">{barberMemory}</span>
+              </p>
+              <p className="mt-1 text-xs text-zinc-400">
+                {relativeLastVisit}
+                {client.lastVisitBarberoNombre ? ` con ${client.lastVisitBarberoNombre}` : ""}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="mt-4 flex flex-wrap gap-4 text-xs text-zinc-400">
-        <span>{lastVisitLabel}</span>
-        <span>{client.totalVisits} visitas</span>
-        <span>{client.lastVisitBarberoNombre || "Sin barbero previo"}</span>
-      </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+          <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1">
+            {lastVisitLabel}
+          </span>
+          <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1">
+            {client.lastVisitBarberoNombre || "Sin barbero previo"}
+          </span>
+        </div>
 
-      <div className="mt-4 flex flex-wrap gap-3">
-        <Link
-          href="/turnos"
-          className="ghost-button inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 text-sm font-semibold"
-        >
-          Agendar turno
-        </Link>
-        <Link
-          href="/caja/nueva"
-          className="neon-button inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 text-sm font-semibold"
-        >
-          Cobrar
-        </Link>
-        <Link
-          href={`/clientes/${client.id}`}
-          className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-zinc-700 bg-zinc-950/40 px-4 text-sm font-medium text-zinc-200 transition hover:border-[#8cff59]/30 hover:text-white"
-        >
-          Ver perfil
-        </Link>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <Link
+            href={`/clientes/${client.id}`}
+            className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-white/10 bg-zinc-950/60 px-4 text-sm font-semibold text-white hover:border-[#8cff59]/25"
+          >
+            Ver perfil
+          </Link>
+          <Link
+            href="/turnos"
+            className="ghost-button inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 text-sm font-semibold"
+          >
+            Agendar turno
+          </Link>
+          <Link
+            href="/caja/nueva"
+            className="neon-button inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 text-sm font-semibold"
+          >
+            Cobrar
+          </Link>
+        </div>
       </div>
     </article>
   );

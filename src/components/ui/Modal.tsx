@@ -1,7 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+
+function XIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export default function Modal({
   children,
@@ -33,7 +40,7 @@ export default function Modal({
             onClick={close}
             className="flex min-h-[36px] items-center gap-1.5 rounded-full bg-zinc-800 px-3 py-1.5 text-sm text-zinc-400 transition hover:bg-zinc-700 hover:text-white"
           >
-            <X size={14} />
+            <XIcon />
             Cerrar
           </button>
         </div>

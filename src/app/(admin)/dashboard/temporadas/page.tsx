@@ -39,26 +39,26 @@ export default async function TemporadasPage() {
   const temporadas = await getComparativaTemporadas();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-4">
+    <div className="min-h-screen bg-zinc-950">
+      <header className="bg-zinc-900 border-b border-zinc-800 px-4 py-4">
         <div className="max-w-2xl mx-auto">
           <Link
             href="/dashboard"
-            className="text-gray-400 hover:text-gray-600 text-sm mb-2 block"
+            className="text-zinc-400 hover:text-[#8cff59] text-sm mb-2 block"
           >
             ← Dashboard
           </Link>
-          <h1 className="text-xl font-bold text-gray-900">Temporadas</h1>
+          <h1 className="font-display text-xl font-bold text-white">Temporadas</h1>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4">
         {temporadas.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-            <p className="text-gray-500 text-sm">No hay temporadas configuradas.</p>
+          <div className="panel-card rounded-[28px] p-8 text-center">
+            <p className="text-zinc-400 text-sm">No hay temporadas configuradas.</p>
             <Link
               href="/configuracion/temporadas"
-              className="mt-3 inline-block text-sm text-gray-900 underline"
+              className="mt-3 inline-block text-sm text-white underline hover:text-[#8cff59]"
             >
               Configurar temporadas →
             </Link>
@@ -71,32 +71,32 @@ export default async function TemporadasPage() {
             return (
               <div
                 key={temp.id}
-                className={`bg-white rounded-xl border p-5 ${
+                className={`panel-card rounded-[28px] border p-5 ${
                   esActiva
-                    ? "border-gray-900 shadow-sm"
+                    ? "border-[#8cff59]/40"
                     : esFutura
-                    ? "border-gray-200 opacity-75"
-                    : "border-gray-200"
+                    ? "border-zinc-800 opacity-75"
+                    : "border-zinc-800"
                 }`}
               >
                 {/* Header de la temporada */}
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="font-bold text-gray-900">{temp.nombre}</h2>
+                      <h2 className="font-bold text-white">{temp.nombre}</h2>
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                           esActiva
-                            ? "bg-green-100 text-green-700"
+                            ? "bg-emerald-500/15 text-emerald-300"
                             : esFutura
-                            ? "bg-blue-50 text-blue-600"
-                            : "bg-gray-100 text-gray-500"
+                            ? "bg-sky-500/15 text-sky-300"
+                            : "bg-zinc-800 text-zinc-400"
                         }`}
                       >
                         {esActiva ? "Activa" : esFutura ? "Futura" : "Completada"}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-zinc-400 mt-0.5">
                       {formatPeriodo(temp.fechaInicio, temp.fechaFin)}
                     </p>
                   </div>
@@ -106,17 +106,17 @@ export default async function TemporadasPage() {
                 <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                   {/* Cortes/día */}
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Cortes/día proy.</p>
-                    <p className="text-base font-semibold text-gray-900">
+                    <p className="text-xs text-zinc-400 mb-1">Cortes/día proy.</p>
+                    <p className="text-base font-semibold text-white">
                       {temp.cortesDiaProyectados}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Cortes/día real</p>
+                    <p className="text-xs text-zinc-400 mb-1">Cortes/día real</p>
                     {esFutura || temp.cortesDiaReal === null ? (
-                      <p className="text-base font-semibold text-gray-300">—</p>
+                      <p className="text-base font-semibold text-zinc-600">—</p>
                     ) : (
-                      <p className="text-base font-semibold text-gray-900">
+                      <p className="text-base font-semibold text-white">
                         {temp.cortesDiaReal.toFixed(1)}
                       </p>
                     )}
@@ -124,17 +124,17 @@ export default async function TemporadasPage() {
 
                   {/* Precio */}
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Precio proy.</p>
-                    <p className="text-base font-semibold text-gray-900">
+                    <p className="text-xs text-zinc-400 mb-1">Precio proy.</p>
+                    <p className="text-base font-semibold text-white">
                       {formatARS(temp.precioBaseProyectado)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Precio real</p>
+                    <p className="text-xs text-zinc-400 mb-1">Precio real</p>
                     {esFutura || temp.precioPromedioReal === null ? (
-                      <p className="text-base font-semibold text-gray-300">—</p>
+                      <p className="text-base font-semibold text-zinc-600">—</p>
                     ) : (
-                      <p className="text-base font-semibold text-gray-900">
+                      <p className="text-base font-semibold text-white">
                         {formatARS(temp.precioPromedioReal)}
                       </p>
                     )}
@@ -142,17 +142,17 @@ export default async function TemporadasPage() {
 
                   {/* Ingreso casa */}
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Ingreso casa proy.</p>
-                    <p className="text-base font-semibold text-gray-900">
+                    <p className="text-xs text-zinc-400 mb-1">Ingreso casa proy.</p>
+                    <p className="text-base font-semibold text-white">
                       {formatARS(temp.ingresoCasaProyectado)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Ingreso casa real</p>
+                    <p className="text-xs text-zinc-400 mb-1">Ingreso casa real</p>
                     {esFutura || temp.ingresoCasaReal === null ? (
-                      <p className="text-base font-semibold text-gray-300">—</p>
+                      <p className="text-base font-semibold text-zinc-600">—</p>
                     ) : (
-                      <p className="text-base font-semibold text-gray-900">
+                      <p className="text-base font-semibold text-white">
                         {formatARS(temp.ingresoCasaReal)}
                       </p>
                     )}
@@ -162,12 +162,12 @@ export default async function TemporadasPage() {
                 {/* Desviación */}
                 {!esFutura && temp.desviacionPct !== null && (
                   <div
-                    className={`mt-4 pt-3 border-t border-gray-100 flex items-center justify-between`}
+                    className={`mt-4 pt-3 border-t border-zinc-800 flex items-center justify-between`}
                   >
-                    <p className="text-xs text-gray-500">Desviación vs proyectado</p>
+                    <p className="text-xs text-zinc-400">Desviación vs proyectado</p>
                     <span
                       className={`text-sm font-bold ${
-                        temp.desviacionPct >= 0 ? "text-green-700" : "text-red-700"
+                        temp.desviacionPct >= 0 ? "text-emerald-300" : "text-red-300"
                       }`}
                     >
                       {formatPct(temp.desviacionPct)}
@@ -176,7 +176,7 @@ export default async function TemporadasPage() {
                 )}
 
                 {!esFutura && temp.ingresoCasaReal === null && (
-                  <p className="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-100">
+                  <p className="text-xs text-zinc-400 mt-3 pt-3 border-t border-zinc-800">
                     Sin datos de atenciones registrados en este período.
                   </p>
                 )}

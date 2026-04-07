@@ -10,6 +10,7 @@ import {
   playPlaylist,
   playTrack,
   resumePlayback,
+  skipToPrevious,
   skipToNext,
   type SpotifyPlaybackState,
   type SpotifyPlaylist,
@@ -276,6 +277,11 @@ export const spotifyAdapter: MusicProviderAdapter = {
   async resume(deviceId?: string | null) {
     const connection = await requireAccessToken();
     await resumePlayback(connection.accessToken!, deviceId ?? null);
+  },
+
+  async skipPrevious(deviceId?: string | null) {
+    const connection = await requireAccessToken();
+    await skipToPrevious(connection.accessToken!, deviceId ?? null);
   },
 
   async skipNext(deviceId?: string | null) {

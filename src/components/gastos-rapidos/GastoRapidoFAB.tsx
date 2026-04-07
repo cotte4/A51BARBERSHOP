@@ -30,14 +30,14 @@ export default function GastoRapidoFAB({
   const [open, setOpen] = useState(false);
 
   const wrapperClassName = fixed
-    ? "fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2"
-    : "flex flex-col items-start gap-3";
+    ? "fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2 sm:bottom-5 sm:right-5"
+    : "flex flex-col items-stretch gap-3 sm:items-end";
 
   const resolvedButtonClassName =
     buttonClassName ??
     (fixed
       ? "neon-button min-h-[56px] rounded-full px-5 text-sm font-semibold shadow-xl"
-      : "neon-button inline-flex min-h-[52px] items-center justify-center rounded-2xl px-5 text-sm font-semibold");
+      : "neon-button inline-flex min-h-[52px] w-full items-center justify-center rounded-[20px] px-5 text-sm font-semibold sm:w-auto");
 
   return (
     <>
@@ -45,13 +45,18 @@ export default function GastoRapidoFAB({
         {showHistoryLink ? (
           <Link
             href={historyHref}
-            className="rounded-full bg-zinc-950 px-4 py-2 text-xs font-semibold text-zinc-300 shadow-lg ring-1 ring-zinc-800 transition hover:border-[#8cff59]/35 hover:text-[#8cff59]"
+            className="inline-flex min-h-[38px] items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 px-4 text-xs font-semibold text-zinc-300 shadow-lg ring-1 ring-zinc-800 transition hover:border-[#8cff59]/35 hover:text-[#8cff59]"
           >
             Ver gastos
           </Link>
         ) : null}
 
-        <button type="button" onClick={() => setOpen(true)} className={resolvedButtonClassName}>
+        <button
+          type="button"
+          aria-label={buttonLabel}
+          onClick={() => setOpen(true)}
+          className={resolvedButtonClassName}
+        >
           {buttonLabel}
         </button>
       </div>

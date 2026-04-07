@@ -9,6 +9,9 @@
   --muted: #a1a1aa;
   --brand: #8cff59;
   --brand-strong: #b6ff84;
+  --public-glow: rgba(140, 255, 89, 0.22);
+  --public-grid: rgba(255, 255, 255, 0.05);
+  --public-halo: rgba(140, 255, 89, 0.08);
 }
 
 @theme inline {
@@ -99,6 +102,48 @@ button {
   color: color-mix(in srgb, var(--muted) 82%, white);
   letter-spacing: 0.22em;
   text-transform: uppercase;
+}
+
+.public-shell {
+  background:
+    radial-gradient(circle at 20% 0%, var(--public-halo), transparent 28%),
+    radial-gradient(circle at 80% 10%, rgba(182, 255, 132, 0.06), transparent 24%),
+    linear-gradient(180deg, #101113 0%, #121212 52%, #141418 100%);
+}
+
+.public-grid {
+  background-image:
+    linear-gradient(to right, var(--public-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--public-grid) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+.public-badge {
+  border: 1px solid rgba(140, 255, 89, 0.22);
+  background: rgba(24, 24, 27, 0.84);
+  color: var(--brand);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.public-glow {
+  box-shadow:
+    0 0 0 1px rgba(140, 255, 89, 0.16),
+    0 0 48px var(--public-glow);
+}
+
+.public-glow-soft {
+  box-shadow: 0 0 0 1px rgba(140, 255, 89, 0.1);
+}
+
+.public-panel {
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  background: linear-gradient(180deg, rgba(24, 24, 27, 0.92), rgba(17, 17, 20, 0.92));
+}
+
+.public-vignette {
+  background:
+    radial-gradient(circle at center, transparent 46%, rgba(0, 0, 0, 0.34) 100%);
 }
 
 input,

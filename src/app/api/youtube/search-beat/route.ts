@@ -25,8 +25,12 @@ export async function GET(request: Request) {
     return Response.json({ error: "Busqueda invalida." }, { status: 400 });
   }
 
-  const apiKey = process.env.YOUTUBE_API_KEY;
+  const apiKey =
+    process.env.YOUTUBE_API_KEY ??
+    process.env.YOUTUBE_API_KEY_BEATS ??
+    process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
   if (!apiKey) {
+    console.error("YouTube beat search misconfigured: missing YOUTUBE_API_KEY env var.");
     return Response.json({ error: "YouTube API no configurada." }, { status: 500 });
   }
 

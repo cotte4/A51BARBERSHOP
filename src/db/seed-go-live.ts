@@ -100,6 +100,7 @@ const PRODUCTOS_DATA = [
     costoCompra: "1200.00",
     stockActual: 24,
     stockMinimo: 6,
+    esConsumicion: true,
   },
   {
     nombre: "Gaseosa",
@@ -108,6 +109,7 @@ const PRODUCTOS_DATA = [
     costoCompra: "1500.00",
     stockActual: 24,
     stockMinimo: 6,
+    esConsumicion: true,
   },
 ] as const;
 
@@ -705,6 +707,7 @@ async function seedProductos() {
           stockActual: product.stockActual,
           stockMinimo: product.stockMinimo,
           activo: true,
+          esConsumicion: "esConsumicion" in product ? product.esConsumicion : false,
         })
         .returning();
 
@@ -727,6 +730,7 @@ async function seedProductos() {
           costoCompra: product.costoCompra,
           stockMinimo: product.stockMinimo,
           activo: true,
+          esConsumicion: "esConsumicion" in product ? product.esConsumicion : false,
         })
         .where(eq(schema.productos.id, record.id))
         .returning();

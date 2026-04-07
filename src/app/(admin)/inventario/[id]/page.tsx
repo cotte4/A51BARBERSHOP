@@ -28,10 +28,10 @@ function formatFechaHora(value: Date | string | null | undefined): string {
 }
 
 const tipoBadge: Record<string, string> = {
-  entrada: "bg-green-50 text-green-700",
-  uso_interno: "bg-orange-50 text-orange-700",
-  ajuste: "bg-gray-100 text-gray-700",
-  venta: "bg-blue-50 text-blue-700",
+  entrada: "border-emerald-500/25 bg-emerald-500/10 text-emerald-200",
+  uso_interno: "border-amber-500/25 bg-amber-500/10 text-amber-200",
+  ajuste: "border-zinc-700 bg-zinc-900 text-zinc-300",
+  venta: "border-sky-500/25 bg-sky-500/10 text-sky-200",
 };
 
 const tipoLabel: Record<string, string> = {
@@ -64,141 +64,333 @@ export default async function ProductoDetallePage({ params }: Props) {
   const mediosPagoMap = new Map(
     mediosPagoList.map((medio) => [medio.id, medio.nombre ?? "Medio de pago"])
   );
-  const stockBajo = (producto.stockActual ?? 0) <= (producto.stockMinimo ?? 5);
+  const stockActual = Number(producto.stockActual ?? 0);
+  const stockMinimo = Number(producto.stockMinimo ?? 5);
+  const stockBajo = stockActual <= stockMinimo;
+  const precioVenta = Number(producto.precioVenta ?? 0);
+  const costoCompra = Number(producto.costoCompra ?? 0);
+  const margenUnitario =
+    producto.precioVenta !== null && producto.costoCompra !== null ? precioVenta - costoCompra : null;
+  const valorStockCosto = stockActual * costoCompra;
   const registrarConId = registrarMovimiento.bind(null, id);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white px-4 py-4">
-        <div className="mx-auto max-w-2xl">
-          <Link href="/inventario" className="mb-2 block text-sm text-gray-400 hover:text-gray-600">
-            ← Inventario
-          </Link>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-bold text-gray-900">{producto.nombre}</h1>
-                {producto.esConsumicion ? (
-                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
-                    Consumicion Marciano
-                  </span>
-                ) : null}
-                {stockBajo ? (
-                  <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700">
-                    Stock bajo
-                  </span>
-                ) : null}
-              </div>
-              <p className="mt-1 text-2xl font-bold text-gray-900">
-                {producto.stockActual ?? 0}{" "}
-                <span className="text-sm font-normal text-gray-500">en stock</span>
-              </p>
-            </div>
-            <Link
-              href={`/inventario/${id}/editar`}
-              className="inline-flex min-h-[44px] items-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Editar
-            </Link>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-zinc-950">
+      <main className="mx-auto max-w-6xl px-4 py-6 pb-24 sm:px-6 lg:px-8">
+        <section className="rounded-[32px] border border-zinc-800/80 bg-[radial-gradient(circle_at_top_left,_rgba(140,255,89,0.16),_transparent_36%),linear-gradient(180deg,_rgba(24,24,27,0.96),_rgba(9,9,11,0.98))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-7">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-4">
+              <Link
+                href="/inventario"
+                className="inline-flex items-center text-sm font-medium text-zinc-500 transition hover:text-zinc-200"
+              >
+                &larr; Inventario
+              </Link>
 
-      <main className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-6">
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-gray-700">Informacion</h2>
-          <div className="flex flex-col gap-2">
-            {producto.descripcion ? (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Descripcion</span>
-                <span className="max-w-[60%] text-right font-medium text-gray-900">
-                  {producto.descripcion}
+              <div className="space-y-3">
+                <p className="eyebrow text-[11px] font-semibold">Ficha de stock</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                    {producto.nombre}
+                  </h1>
+                  {producto.esConsumicion ? (
+                    <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+                      Consumicion Marciano
+                    </span>
+                  ) : null}
+                  {stockBajo ? (
+                    <span className="rounded-full border border-amber-500/25 bg-amber-500/12 px-3 py-1 text-xs font-semibold text-amber-200">
+                      Stock bajo
+                    </span>
+                  ) : null}
+                </div>
+                <p className="max-w-2xl text-sm leading-6 text-zinc-400 sm:text-base">
+                  Todo lo que necesita el equipo para leer el producto, tocar stock y registrar
+                  movimientos sin perder contexto.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-semibold text-zinc-300">
+                  {stockActual} en stock
+                </span>
+                <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-semibold text-zinc-300">
+                  Min {stockMinimo}
+                </span>
+                <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-semibold text-zinc-300">
+                  Margen {margenUnitario !== null ? formatARS(margenUnitario) : "N/A"}
                 </span>
               </div>
-            ) : null}
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Precio de venta</span>
-              <span className="font-medium text-gray-900">{formatARS(producto.precioVenta)}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Costo de compra</span>
-              <span className="font-medium text-gray-900">{formatARS(producto.costoCompra)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Stock minimo</span>
-              <span className="font-medium text-gray-900">{producto.stockMinimo ?? 5}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Tipo</span>
-              <span className="font-medium text-gray-900">
-                {producto.esConsumicion ? "Consumicion Marciano" : "Producto normal"}
-              </span>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href={`/inventario/${id}/editar`}
+                className="inline-flex min-h-[44px] items-center rounded-full bg-[#8cff59] px-4 text-sm font-semibold text-[#07130a] transition hover:bg-[#b6ff84]"
+              >
+                Editar
+              </Link>
+              <Link
+                href="/inventario/rotacion"
+                className="inline-flex min-h-[44px] items-center rounded-full border border-zinc-700 bg-zinc-900 px-4 text-sm font-medium text-zinc-200 transition hover:bg-zinc-800"
+              >
+                Ver rotacion
+              </Link>
             </div>
           </div>
-        </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-gray-700">Registrar movimiento</h2>
-          <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            Solo administracion puede tocar el stock manualmente.
-          </p>
-          <MovimientoForm registrarAction={registrarConId} />
-        </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              label="Stock actual"
+              value={stockActual}
+              helper={stockBajo ? "Reponer pronto" : "Saludable por ahora"}
+              tone={
+                stockBajo
+                  ? "border-amber-500/20 bg-amber-500/10 text-white"
+                  : "border-zinc-800 bg-zinc-950/70 text-white"
+              }
+            />
+            <StatCard
+              label="Precio venta"
+              value={producto.precioVenta ? formatARS(producto.precioVenta) : "Sin precio"}
+              helper="Valor mostrado en caja y fichas."
+            />
+            <StatCard
+              label="Costo compra"
+              value={producto.costoCompra ? formatARS(producto.costoCompra) : "Sin costo"}
+              helper={`Valor a costo del stock: ${formatARS(valorStockCosto)}`}
+            />
+            <StatCard
+              label="Tipo"
+              value={producto.esConsumicion ? "Consumicion" : "Producto"}
+              helper="Clasificacion operativa del item."
+            />
+          </div>
+        </section>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-gray-700">Ultimos movimientos</h2>
-          {movimientos.length === 0 ? (
-            <p className="text-sm text-gray-400">No hay movimientos registrados.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="pb-2 text-left text-xs font-medium text-gray-400">Fecha</th>
-                    <th className="pb-2 text-left text-xs font-medium text-gray-400">Tipo</th>
-                    <th className="pb-2 text-right text-xs font-medium text-gray-400">Cantidad</th>
-                    <th className="pb-2 pl-3 text-left text-xs font-medium text-gray-400">Notas</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {movimientos.map((movimiento) => (
-                    <tr key={movimiento.id}>
-                      <td className="whitespace-nowrap py-2 text-xs text-gray-500">
-                        {formatFechaHora(movimiento.fecha)}
-                      </td>
-                      <td className="py-2">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs ${
-                            tipoBadge[movimiento.tipo] ?? "bg-gray-100 text-gray-700"
-                          }`}
-                        >
-                          {tipoLabel[movimiento.tipo] ?? movimiento.tipo}
-                        </span>
-                      </td>
-                      <td
-                        className={`py-2 text-right font-medium ${
-                          (movimiento.cantidad ?? 0) >= 0 ? "text-green-700" : "text-red-700"
-                        }`}
+        <section className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+          <div className="space-y-5">
+            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="eyebrow text-xs font-semibold">Informacion</p>
+                  <h2 className="font-display mt-2 text-2xl font-semibold text-white">
+                    Datos clave del producto
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-zinc-400">
+                    La ficha se usa como referencia rapida para compras, caja y reposicion.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <InfoCard label="Descripcion" value={producto.descripcion ?? "Sin descripcion"} />
+                <InfoCard
+                  label="Stock minimo"
+                  value={String(producto.stockMinimo ?? 5)}
+                />
+                <InfoCard
+                  label="Precio de venta"
+                  value={producto.precioVenta ? formatARS(producto.precioVenta) : "Sin precio"}
+                />
+                <InfoCard
+                  label="Costo de compra"
+                  value={producto.costoCompra ? formatARS(producto.costoCompra) : "Sin costo"}
+                />
+              </div>
+            </section>
+
+            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="eyebrow text-xs font-semibold">Registrar</p>
+                  <h2 className="font-display mt-2 text-2xl font-semibold text-white">
+                    Movimiento manual
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-zinc-400">
+                    Solo administracion puede tocar el stock manualmente. Cada carga queda
+                    registrada para auditoria.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-[24px] border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                Usalo para entradas, bajas internas o ajustes puntuales cuando el stock real no
+                coincide con el sistema.
+              </div>
+
+              <div className="mt-5">
+                <MovimientoForm registrarAction={registrarConId} />
+              </div>
+            </section>
+
+            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="eyebrow text-xs font-semibold">Historial</p>
+                  <h2 className="font-display mt-2 text-2xl font-semibold text-white">
+                    Ultimos movimientos
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-zinc-400">
+                    La linea de tiempo muestra como se movio este producto en el tiempo.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {movimientos.length === 0 ? (
+                  <div className="rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/30 p-8 text-center text-sm text-zinc-400">
+                    No hay movimientos registrados.
+                  </div>
+                ) : (
+                  movimientos.map((movimiento) => {
+                    const qty = Number(movimiento.cantidad ?? 0);
+                    const isPositive = qty >= 0;
+
+                    return (
+                      <article
+                        key={movimiento.id}
+                        className="rounded-[24px] border border-zinc-800 bg-zinc-950/60 p-4"
                       >
-                        {(movimiento.cantidad ?? 0) > 0 ? "+" : ""}
-                        {movimiento.cantidad ?? 0}
-                      </td>
-                      <td className="py-2 pl-3 text-xs text-gray-500">
-                        {formatMovimientoNota(movimiento.tipo, movimiento.notas, mediosPagoMap)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span
+                                className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                                  tipoBadge[movimiento.tipo] ?? "border-zinc-700 bg-zinc-900 text-zinc-300"
+                                }`}
+                              >
+                                {tipoLabel[movimiento.tipo] ?? movimiento.tipo}
+                              </span>
+                              <span className="text-xs text-zinc-500">
+                                {formatFechaHora(movimiento.fecha)}
+                              </span>
+                            </div>
+                            <p className="mt-3 text-sm font-medium text-white">
+                              {formatMovimientoTitulo(
+                                movimiento.tipo,
+                                movimiento.notas,
+                                mediosPagoMap
+                              )}
+                            </p>
+                            {movimiento.notas?.trim() ? (
+                              <p className="mt-2 text-sm leading-6 text-zinc-400">
+                                {movimiento.notas}
+                              </p>
+                            ) : null}
+                          </div>
+
+                          <div className="rounded-[20px] border border-zinc-800 bg-zinc-900 px-4 py-3 text-right">
+                            <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                              Cantidad
+                            </p>
+                            <p
+                              className={`mt-2 text-2xl font-bold ${
+                                isPositive ? "text-emerald-200" : "text-red-200"
+                              }`}
+                            >
+                              {qty > 0 ? "+" : ""}
+                              {qty}
+                            </p>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+          </div>
+
+          <aside className="space-y-5">
+            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
+              <p className="eyebrow text-xs font-semibold">Lectura rapida</p>
+              <h2 className="font-display mt-2 text-xl font-semibold text-white">
+                Estado del item
+              </h2>
+              <div className="mt-4 grid gap-3">
+                <MiniStat label="Actual" value={String(stockActual)} />
+                <MiniStat label="Minimo" value={String(stockMinimo)} />
+                <MiniStat
+                  label="Valor a costo"
+                  value={formatARS(valorStockCosto)}
+                />
+                <MiniStat
+                  label="Margen unitario"
+                  value={margenUnitario !== null ? formatARS(margenUnitario) : "N/A"}
+                />
+              </div>
+            </section>
+
+            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
+              <p className="eyebrow text-xs font-semibold">Atajos</p>
+              <h2 className="font-display mt-2 text-xl font-semibold text-white">
+                Acciones seguras
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-400">
+                Volve al inventario general, ajusta la ficha o revisa la rotacion historica.
+              </p>
+              <div className="mt-4 flex flex-col gap-3">
+                <Link
+                  href={`/inventario/${id}/editar`}
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-[#8cff59] px-4 text-sm font-semibold text-[#07130a] transition hover:bg-[#b6ff84]"
+                >
+                  Editar ficha
+                </Link>
+                <Link
+                  href="/inventario/rotacion"
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-sm font-medium text-zinc-200 transition hover:bg-zinc-800"
+                >
+                  Ver rotacion
+                </Link>
+              </div>
+            </section>
+          </aside>
+        </section>
       </main>
     </div>
   );
 }
 
-function formatMovimientoNota(
+function StatCard({
+  label,
+  value,
+  helper,
+  tone = "border-zinc-800 bg-zinc-950/70 text-white",
+}: {
+  label: string;
+  value: string | number;
+  helper: string;
+  tone?: string;
+}) {
+  return (
+    <div className={`rounded-[24px] border px-4 py-4 ${tone}`}>
+      <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{label}</p>
+      <p className="mt-2 text-2xl font-bold text-white">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-zinc-400">{helper}</p>
+    </div>
+  );
+}
+
+function InfoCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/70 px-4 py-4">
+      <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{label}</p>
+      <p className="mt-2 text-sm leading-6 text-zinc-200">{value}</p>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/70 px-4 py-4">
+      <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{label}</p>
+      <p className="mt-2 text-lg font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
+function formatMovimientoTitulo(
   tipo: string,
   nota: string | null,
   mediosPagoMap: Map<string, string>
@@ -217,5 +409,5 @@ function formatMovimientoNota(
   if (tipo === "entrada") return "Reposicion manual";
   if (tipo === "uso_interno") return "Uso interno del salon";
   if (tipo === "ajuste") return "Ajuste manual";
-  return "—";
+  return "Movimiento";
 }

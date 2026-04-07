@@ -3,8 +3,9 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { musicEvents, pantallaEvents, turnos, turnosDisponibilidad } from "@/db/schema";
+import { pantallaEvents, turnos, turnosDisponibilidad } from "@/db/schema";
 import { requireAdminSession } from "@/lib/admin-action";
+import { handleClienteLlego } from "@/lib/music-engine";
 import { getTurnosActorContext } from "@/lib/turnos-access";
 import {
   TURNO_DURACIONES,
@@ -159,9 +160,12 @@ export async function clienteLlegoAction(
   turnoId: string,
   _prevState: TurnoActionState
 ): Promise<TurnoActionState> {
-  const { turno, allowed } = await getManagedTurno(turnoId);
+  const { actor, turno, allowed } = await getManagedTurno(turnoId);
   if (!turno) {
     return { error: "Turno no encontrado." };
+  }
+  if (!actor) {
+    return { error: "Necesitas iniciar sesion para avisar la llegada." };
   }
   if (!allowed) {
     return { error: "Solo podes gestionar tus propios turnos." };
@@ -172,35 +176,58 @@ export async function clienteLlegoAction(
 
   const cancion = turno.sugerenciaCancion?.trim();
   if (!cancion) {
-    return { error: "Ese turno no tiene sugerencia de canción." };
+    return { error: "Ese turno no tiene sugerencia de cancion." };
   }
 
   try {
-    await Promise.all([
-      db.insert(pantallaEvents).values({
-        turnoId,
-        cancion,
-        clienteNombre: turno.clienteNombre,
-      }),
-      db.insert(musicEvents).values({
-        eventType: "turno.cliente_llego",
-        payload: {
-          turnoId,
-          clienteNombre: turno.clienteNombre,
-          cancion,
-          spotifyTrackUri: turno.spotifyTrackUri ?? null,
-          barberoId: turno.barberoId,
-          proposalStatus: "pending",
-        },
-      }),
-    ]);
-  } catch (error) {
-    console.error("Error enviando evento a pantalla:", error);
-    return { error: "No pude avisarle a la pantalla. Intentá de nuevo." };
-  }
+    await db.insert(pantallaEvents).values({
+      turnoId,
+      cancion,
+      clienteNombre: turno.clienteNombre,
+    });
 
-  revalidatePath("/turnos");
-  return { success: "Canción enviada a la pantalla." };
+    const result = await handleClienteLlego({
+      turnoId,
+      clienteNombre: turno.clienteNombre,
+      cancion,
+      spotifyTrackUri: turno.spotifyTrackUri ?? null,
+      barberoId: turno.barberoId,
+      triggeredByUserId: actor.userId,
+      triggeredByBarberoId: actor.barberoId,
+    });
+
+    revalidatePath("/turnos");
+    revalidatePath("/musica");
+    revalidatePath("/configuracion/musica");
+
+    if (result.kind === "playback_started") {
+      return { success: "Suena ahora en el local. La llegada ya disparo reproduccion real." };
+    }
+
+    if (result.kind === "queued_in_jam") {
+      return { success: "La llegada entro a Jam y ya participa de la cola compartida." };
+    }
+
+    if (result.kind === "blocked_by_manual_dj") {
+      return { success: "DJ esta activo. La cancion quedo como propuesta para no pisar al operador." };
+    }
+
+    if (result.kind === "waiting_for_recovery") {
+      return { success: `La llegada quedo visible, pero Musica espera recuperacion: ${result.reason}` };
+    }
+
+    if (result.kind === "missing_track_uri") {
+      return {
+        success:
+          "La llegada quedo registrada, pero falta vincular la track de Spotify para sonar automatico.",
+      };
+    }
+
+    return { success: "La llegada quedo como propuesta en Musica." };
+  } catch (error) {
+    console.error("Error procesando llegada en turnos:", error);
+    return { error: "No pude procesar la llegada ni hablar con Musica. Intenta de nuevo." };
+  }
 }
 
 export async function crearDisponibilidadAction(
@@ -296,7 +323,11 @@ export async function eliminarDisponibilidadAction(slotId: string): Promise<void
     return;
   }
 
-  const [slot] = await db.select().from(turnosDisponibilidad).where(eq(turnosDisponibilidad.id, slotId)).limit(1);
+  const [slot] = await db
+    .select()
+    .from(turnosDisponibilidad)
+    .where(eq(turnosDisponibilidad.id, slotId))
+    .limit(1);
   if (!slot) {
     return;
   }

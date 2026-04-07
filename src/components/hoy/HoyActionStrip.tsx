@@ -33,68 +33,117 @@ export default function HoyActionStrip({
   const [showNueva, setShowNueva] = useState(false);
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {/* Cobro rápido — abre modal */}
-        <button
-          type="button"
-          onClick={() => setShowNueva(true)}
-          className="flex min-h-[88px] flex-col justify-between rounded-[24px] bg-[#8cff59] px-5 py-4 text-left text-[#07130a] shadow-[0_18px_36px_rgba(140,255,89,0.18)] transition hover:bg-[#a8ff80]"
-        >
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#07130a]/70">Primero</span>
+    <section id="comandos" className="space-y-4">
+      <div className="panel-card rounded-[32px] p-4 sm:p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xl font-semibold">Nueva atención</p>
-            <p className="mt-1 text-sm text-[#07130a]/75">Registrar servicio o cobro rápido.</p>
-          </div>
-        </button>
-
-        {/* Turnos */}
-        <button
-          type="button"
-          onClick={() => setShowTurnos((prev) => !prev)}
-          className="flex min-h-[88px] flex-col justify-between rounded-[24px] border border-zinc-800 bg-zinc-950/50 px-5 py-4 text-left text-white transition hover:border-[#8cff59]/30"
-        >
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Agenda</span>
-          <div>
-            <p className="text-xl font-semibold">Turnos de hoy</p>
+            <p className="eyebrow text-xs font-semibold">Centro de comandos</p>
+            <h2 className="font-display mt-2 text-2xl font-semibold text-white">Accion rapida</h2>
             <p className="mt-1 text-sm text-zinc-400">
-              {turnos.length > 0 ? `${turnos.length} turno${turnos.length === 1 ? "" : "s"} en foco` : "Sin turnos cargados"}
+              Una entrada clara para cobrar, abrir agenda, mover retail o revisar caja sin perder
+              tiempo.
             </p>
           </div>
-        </button>
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-400">
+            {turnos.length} turno{turnos.length === 1 ? "" : "s"} hoy
+          </span>
+        </div>
 
-        {/* Vender producto */}
-        <Link
-          href="/caja/vender"
-          className="flex min-h-[88px] flex-col justify-between rounded-[24px] border border-zinc-800 bg-zinc-950/50 px-5 py-4 text-left text-white transition hover:border-[#8cff59]/30"
-        >
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Retail</span>
-          <div>
-            <p className="text-xl font-semibold">Vender producto</p>
-            <p className="mt-1 text-sm text-zinc-400">Cobrar con stock disponible.</p>
-          </div>
-        </Link>
+        <div className="mt-5 grid gap-3 xl:grid-cols-4">
+          <button
+            type="button"
+            onClick={() => setShowNueva(true)}
+            className="group flex min-h-[118px] flex-col justify-between rounded-[28px] border border-[#8cff59]/20 bg-[linear-gradient(135deg,rgba(140,255,89,1),rgba(182,255,132,0.92))] px-5 py-4 text-left text-[#07130a] shadow-[0_18px_36px_rgba(140,255,89,0.18)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_40px_rgba(140,255,89,0.24)] xl:col-span-2"
+          >
+            <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#07130a]/70">
+              01 / Prioridad
+            </span>
+            <div>
+              <p className="font-display text-2xl font-semibold">Atencion express</p>
+              <p className="mt-1 text-sm text-[#07130a]/78">
+                Registrar servicio, cobro o una salida rapida desde un solo modal.
+              </p>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="rounded-full bg-[#07130a]/10 px-3 py-1 text-[11px] font-semibold">
+                Abrir modal
+              </span>
+              <span className="text-sm font-semibold">Cobrar ahora</span>
+            </div>
+          </button>
 
-        {/* Ver caja */}
-        <Link
-          href="/caja"
-          className="flex min-h-[88px] flex-col justify-between rounded-[24px] border border-zinc-800 bg-zinc-950/50 px-5 py-4 text-left text-white transition hover:border-[#8cff59]/30"
-        >
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Control</span>
-          <div>
-            <p className="text-xl font-semibold">Ver caja</p>
-            <p className="mt-1 text-sm text-zinc-400">Movimientos y estado del día.</p>
-          </div>
-        </Link>
+          <button
+            type="button"
+            onClick={() => setShowTurnos((prev) => !prev)}
+            className="group flex min-h-[118px] flex-col justify-between rounded-[28px] border border-zinc-800 bg-zinc-950/60 px-5 py-4 text-left text-white transition hover:-translate-y-0.5 hover:border-[#8cff59]/30"
+          >
+            <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-zinc-500">
+              02 / Agenda
+            </span>
+            <div>
+              <p className="font-display text-2xl font-semibold">Turnos de hoy</p>
+              <p className="mt-1 text-sm text-zinc-400">
+                {turnos.length > 0
+                  ? `${turnos.length} turno${turnos.length === 1 ? "" : "s"} en foco`
+                  : "Sin turnos cargados"}
+              </p>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-zinc-300">
+                Ver u ocultar
+              </span>
+              <span className="text-sm font-semibold text-[#8cff59]">Abrir agenda</span>
+            </div>
+          </button>
+
+          <Link
+            href="/caja/vender"
+            className="group flex min-h-[118px] flex-col justify-between rounded-[28px] border border-zinc-800 bg-zinc-950/60 px-5 py-4 text-left text-white transition hover:-translate-y-0.5 hover:border-[#8cff59]/30"
+          >
+            <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-zinc-500">
+              03 / Retail
+            </span>
+            <div>
+              <p className="font-display text-2xl font-semibold">Vender producto</p>
+              <p className="mt-1 text-sm text-zinc-400">
+                Cobro con stock disponible y salida clara.
+              </p>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-zinc-300">
+                Stock listo
+              </span>
+              <span className="text-sm font-semibold text-[#8cff59]">Abrir venta</span>
+            </div>
+          </Link>
+
+          <Link
+            href="/caja"
+            className="group flex min-h-[118px] flex-col justify-between rounded-[28px] border border-zinc-800 bg-zinc-950/60 px-5 py-4 text-left text-white transition hover:-translate-y-0.5 hover:border-[#8cff59]/30"
+          >
+            <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-zinc-500">
+              04 / Caja
+            </span>
+            <div>
+              <p className="font-display text-2xl font-semibold">Ver caja</p>
+              <p className="mt-1 text-sm text-zinc-400">Movimientos, cierre y estado del dia.</p>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-zinc-300">
+                Estado
+              </span>
+              <span className="text-sm font-semibold text-[#8cff59]">Abrir caja</span>
+            </div>
+          </Link>
+        </div>
       </div>
 
-      {/* Modal nueva atención */}
-      {showNueva && (
+      {showNueva ? (
         <Modal onClose={() => setShowNueva(false)}>
           <div className="mb-4">
             <p className="eyebrow text-xs font-semibold text-zinc-500">Caja</p>
             <h2 className="font-display mt-1 text-2xl font-semibold tracking-tight text-white">
-              Nueva atención
+              Atencion express
             </h2>
           </div>
           <QuickCheckoutPanel
@@ -104,21 +153,29 @@ export default function HoyActionStrip({
             returnTo="/hoy"
           />
         </Modal>
-      )}
+      ) : null}
 
-      {/* Panel de turnos */}
       {showTurnos ? (
-        <section className="rounded-[26px] border border-zinc-800 bg-zinc-950/50 p-5 text-white shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <section className="rounded-[28px] border border-zinc-800 bg-zinc-950/60 p-5 text-white shadow-sm">
+          <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Mini agenda</p>
-              <h3 className="mt-2 text-xl font-semibold">Lo próximo de hoy</h3>
+              <p className="eyebrow text-xs font-semibold">Mini agenda</p>
+              <h3 className="font-display mt-2 text-2xl font-semibold">Lo proximo de hoy</h3>
+              <p className="mt-1 text-sm text-zinc-400">
+                Clientes y horarios que conviene tener a la vista antes de volver al corte.
+              </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href="/turnos#agenda" className="inline-flex min-h-[44px] items-center rounded-xl bg-[#8cff59] px-4 text-sm font-semibold text-[#07130a]">
+              <Link
+                href="/turnos#agenda"
+                className="inline-flex min-h-[44px] items-center rounded-xl bg-[#8cff59] px-4 text-sm font-semibold text-[#07130a]"
+              >
                 + Nuevo turno
               </Link>
-              <Link href="/turnos" className="inline-flex min-h-[44px] items-center rounded-xl border border-zinc-700 px-4 text-sm font-medium text-zinc-200 hover:bg-white/5">
+              <Link
+                href="/turnos"
+                className="inline-flex min-h-[44px] items-center rounded-xl border border-zinc-700 px-4 text-sm font-medium text-zinc-200 hover:bg-white/5"
+              >
                 Ver todos
               </Link>
             </div>
@@ -131,11 +188,13 @@ export default function HoyActionStrip({
           ) : (
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {turnos.map((turno) => (
-                <div key={turno.id} className="rounded-[22px] border border-zinc-800 bg-zinc-950 px-4 py-4">
+                <div key={turno.id} className="rounded-[22px] border border-zinc-800 bg-zinc-950/80 px-4 py-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-lg font-semibold text-white">{turno.clienteNombre}</p>
-                      <p className="mt-1 text-sm text-zinc-400">{turno.horaInicio} · {turno.estado}</p>
+                      <p className="mt-1 text-sm text-zinc-400">
+                        {turno.horaInicio} · {turno.estado}
+                      </p>
                     </div>
                     <Link href="/turnos" className="text-sm font-medium text-[#8cff59] underline underline-offset-4">
                       Abrir
@@ -147,6 +206,6 @@ export default function HoyActionStrip({
           )}
         </section>
       ) : null}
-    </div>
+    </section>
   );
 }

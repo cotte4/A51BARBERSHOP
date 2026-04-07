@@ -38,15 +38,15 @@ function PLRow({ label, valor, indent, negativo, subtotal, total, signo }: PLRow
     <div
       className={`flex items-center justify-between py-2 px-4 ${
         total
-          ? "bg-gray-900 text-white rounded-lg font-bold text-base"
+          ? "bg-zinc-800 text-white rounded-lg font-bold text-base"
           : subtotal
-          ? "bg-gray-100 font-semibold text-gray-900 rounded-lg"
-          : "border-b border-gray-100"
+          ? "bg-zinc-800 font-semibold text-white rounded-lg"
+          : "border-b border-zinc-800"
       }`}
     >
       <span
         className={`${indent ? "pl-4" : ""} ${
-          total ? "text-white" : subtotal ? "text-gray-900" : "text-gray-700"
+          total ? "text-white" : subtotal ? "text-white" : "text-zinc-300"
         } text-sm`}
       >
         {signoLabel}{label}
@@ -59,11 +59,11 @@ function PLRow({ label, valor, indent, negativo, subtotal, total, signo }: PLRow
               : "text-red-300"
             : subtotal
             ? valorNum >= 0
-              ? "text-gray-900"
-              : "text-red-600"
+              ? "text-white"
+              : "text-red-400"
             : valorNum >= 0
-            ? "text-gray-900"
-            : "text-red-600"
+            ? "text-white"
+            : "text-red-400"
         }`}
       >
         {negativo ? formatARS(Math.abs(valor)) : formatARS(valorNum)}
@@ -96,21 +96,21 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
   const anioNext = mes === 12 ? anio + 1 : anio;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-4">
+    <div className="min-h-screen bg-zinc-950">
+      <header className="bg-zinc-900 border-b border-zinc-800 px-4 py-4">
         <div className="max-w-2xl mx-auto">
           <Link
             href="/dashboard"
-            className="text-gray-400 hover:text-gray-600 text-sm mb-2 block"
+            className="text-zinc-400 hover:text-[#8cff59] text-sm mb-2 block"
           >
             ← Dashboard
           </Link>
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-900">P&amp;L mensual</h1>
+            <h1 className="font-display text-xl font-bold text-white">P&amp;L mensual</h1>
             <div className="flex items-center gap-2">
               <a
                 href={`/api/export/csv/${anio}-${String(mes).padStart(2, "0")}`}
-                className="min-h-[36px] flex items-center gap-1.5 px-3 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                className="min-h-[36px] flex items-center gap-1.5 px-3 bg-zinc-900 border border-zinc-700 text-zinc-300 text-sm font-medium rounded-lg hover:bg-zinc-800 transition-colors"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -128,7 +128,7 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
               </a>
               <a
                 href={`/api/pdf/pl/${anio}-${String(mes).padStart(2, "0")}`}
-                className="min-h-[36px] flex items-center gap-1.5 px-3 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+                className="neon-button min-h-[36px] flex items-center gap-1.5 px-3 text-sm font-medium rounded-lg transition-colors"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -151,16 +151,16 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
         <div className="flex items-center justify-between">
           <Link
             href={`/dashboard/pl?mes=${mesPrev}&anio=${anioPrev}`}
-            className="min-h-[44px] flex items-center px-4 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+            className="min-h-[44px] flex items-center px-4 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 hover:bg-zinc-800"
           >
             ← Anterior
           </Link>
-          <span className="text-sm font-semibold text-gray-900 capitalize">
+          <span className="text-sm font-semibold text-white capitalize">
             {nombreMes(mes, anio)}
           </span>
           <Link
             href={`/dashboard/pl?mes=${mesNext}&anio=${anioNext}`}
-            className="min-h-[44px] flex items-center px-4 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+            className="min-h-[44px] flex items-center px-4 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 hover:bg-zinc-800"
           >
             Siguiente →
           </Link>
@@ -168,10 +168,10 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
 
         {/* Bloque: Resultado de la casa */}
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">
+          <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 px-1">
             Resultado casa
           </h2>
-          <div className="bg-white rounded-xl border border-gray-200 flex flex-col gap-0 overflow-hidden">
+          <div className="panel-card rounded-[28px] flex flex-col gap-0 overflow-hidden">
             <PLRow
               label="Cortes Gabote (bruto)"
               valor={pl.ingresosGaboteBruto}
@@ -224,10 +224,10 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
 
         {/* Bloque: Resultado personal Pinky */}
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">
+          <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 px-1">
             Resultado personal Pinky
           </h2>
-          <div className="bg-white rounded-xl border border-gray-200 flex flex-col gap-0 overflow-hidden">
+          <div className="panel-card rounded-[28px] flex flex-col gap-0 overflow-hidden">
             <PLRow
               label="Ingresos Pinky (neto)"
               valor={pl.ingresosNetosPinky}
@@ -262,7 +262,7 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
         {pl.ingresosGaboteBruto === 0 &&
           pl.ingresosNetosPinky === 0 &&
           pl.gastosFijosMes === 0 && (
-            <p className="text-sm text-gray-400 text-center">
+            <p className="text-sm text-zinc-400 text-center">
               No hay datos registrados para este mes.
             </p>
           )}

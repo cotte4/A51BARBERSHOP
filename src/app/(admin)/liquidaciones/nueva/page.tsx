@@ -17,28 +17,32 @@ export default async function NuevaLiquidacionPage({ searchParams }: NuevaLiquid
   const barberosLiquidables = barberosActivos.filter((barbero) => barbero.rol !== "admin");
 
   return (
-    <main className="min-h-screen bg-stone-100 px-4 py-6">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <section className="overflow-hidden rounded-[32px] bg-stone-950 text-stone-50 shadow-[0_24px_80px_rgba(28,25,23,0.2)]">
-          <div className="bg-[radial-gradient(circle_at_top_right,_rgba(251,191,36,0.26),_transparent_35%),radial-gradient(circle_at_bottom_left,_rgba(16,185,129,0.18),_transparent_30%)] p-6 sm:p-7">
-            <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="min-h-screen app-shell px-4 py-6 pb-24">
+      <div className="mx-auto flex max-w-5xl flex-col gap-5">
+        <Link href="/liquidaciones" className="eyebrow text-xs text-zinc-500 hover:text-zinc-300">
+          ← Liquidaciones
+        </Link>
+
+        <section className="panel-card overflow-hidden rounded-[32px]">
+          <div className="bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.14),_transparent_36%),radial-gradient(circle_at_bottom_left,_rgba(140,255,89,0.06),_transparent_28%)] p-6 sm:p-7">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-2xl">
-                <Link href="/liquidaciones" className="text-sm text-stone-300 hover:text-white">
-                  ← Liquidaciones
-                </Link>
-                <h1 className="mt-3 text-3xl font-semibold tracking-tight">Nueva liquidacion</h1>
-                <p className="mt-3 text-sm text-stone-300">
-                  Prepara el periodo, confirma a quien corresponde y genera una liquidacion lista
-                  para revisar sin pasar por un formulario gris de backoffice.
+                <p className="eyebrow text-xs">Nueva liquidacion</p>
+                <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                  Crear liquidacion
+                </h1>
+                <p className="mt-3 max-w-2xl text-sm text-zinc-300">
+                  Elegi a quien liquidar, define el periodo y revisa el preview antes de generar el
+                  registro. El flujo esta armado para que no haya dudas sobre lo que se esta cerrando.
                 </p>
               </div>
 
-              <div className="rounded-[24px] bg-white/10 px-5 py-4 text-sm text-stone-100 ring-1 ring-white/15">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-300">
-                  Liquidables hoy
+              <div className="panel-soft rounded-[24px] px-5 py-4 text-sm text-zinc-200">
+                <p className="eyebrow text-[10px]">Liquidables hoy</p>
+                <p className="mt-2 font-display text-3xl font-semibold tracking-tight text-[#8cff59]">
+                  {barberosLiquidables.length}
                 </p>
-                <p className="mt-2 text-2xl font-semibold">{barberosLiquidables.length}</p>
-                <p className="mt-1 text-stone-300">barberos activos disponibles</p>
+                <p className="mt-1 text-sm text-zinc-400">barberos activos disponibles</p>
               </div>
             </div>
           </div>
@@ -53,6 +57,6 @@ export default async function NuevaLiquidacionPage({ searchParams }: NuevaLiquid
           initialFecha={params.fecha}
         />
       </div>
-    </main>
+    </div>
   );
 }

@@ -29,15 +29,6 @@ function formatARS(value: number): string {
   }).format(value);
 }
 
-function formatFechaLarga(fecha: string): string {
-  return new Date(`${fecha}T12:00:00`).toLocaleDateString("es-AR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: "America/Argentina/Buenos_Aires",
-  });
-}
-
 function formatHora(date: Date | null | undefined): string {
   if (!date) return "--:--";
   return new Intl.DateTimeFormat("es-AR", {
@@ -65,6 +56,10 @@ function getPaymentMeta(nombre: string | null) {
     return { label: nombre ?? "Tarjeta" };
   }
   return { label: nombre ?? "Otro" };
+}
+
+function userLabelFromSession(barberoId: string | null | undefined) {
+  return barberoId ? "Barbero activo" : "Sesion operativa";
 }
 
 export default async function HoyPage() {
@@ -198,11 +193,6 @@ export default async function HoyPage() {
 
   const lowStockCount = productosList.filter((producto) => (producto.stockActual ?? 0) <= (producto.stockMinimo ?? 5)).length;
   const pendingTurnos = turnosHoy.filter((turno) => turno.estado === "pendiente").length;
-  const cierreHref = cierreHoy ? `/caja/cierre/${fechaHoy}` : actor.isAdmin ? "/caja/cierre" : undefined;
-  const cierreLabel = cierreHoy ? "Ver cierre de hoy" : "Cerrar caja";
-  const cierreDescription = cierreHoy
-    ? `Cerrada por ${cierreHoy.cerradoPorNombre ?? "el responsable"} a las ${formatHora(cierreHoy.cerradoEn)}.`
-    : "Confirma antes de cerrar. Queda logueado quien y a que hora.";
 
   let monthCard: {
     cortes: number;
@@ -234,30 +224,205 @@ export default async function HoyPage() {
     };
   }
 
+  const latestMovement = recentMovement[0] ?? null;
+  const nowFocus = pendingTurnos > 0
+    ? {
+        eyebrow: "Ahora",
+        title: "Revisar turnos pendientes",
+        body: `Tenes ${pendingTurnos} turno${pendingTurnos === 1 ? "" : "s"} esperando revision antes de seguir.`,
+        cta: "Ver pendientes",
+        href: "/turnos?estado=pendiente",
+        tone: "amber" as const,
+      }
+    : actor.isAdmin && lowStockCount > 0
+      ? {
+          eyebrow: "Ahora",
+          title: "Mirar inventario",
+          body: `${lowStockCount} producto${lowStockCount === 1 ? "" : "s"} estan por debajo del minimo.`,
+          cta: "Abrir inventario",
+          href: "/inventario",
+          tone: "amber" as const,
+        }
+      : !cierreHoy
+        ? {
+            eyebrow: "Ahora",
+            title: "Registrar atencion express",
+            body: "La caja sigue abierta y el comando rapido esta listo para cobrar o registrar.",
+            cta: "Abrir comandos",
+            href: "#comandos",
+            tone: "brand" as const,
+          }
+        : {
+            eyebrow: "Ahora",
+            title: "Caja cerrada",
+            body: "No hay urgencias activas. Podés revisar el cierre o el resumen de la jornada.",
+            cta: "Ver cierre",
+            href: `/caja/cierre/${fechaHoy}`,
+            tone: "neutral" as const,
+          };
+
+  const recentFocus = latestMovement
+    ? {
+        eyebrow: "Recien",
+        title: latestMovement.title,
+        body: latestMovement.detail,
+        cta: "Abrir caja",
+        href: "/caja",
+        meta: `${latestMovement.badge} · ${formatHora(latestMovement.time)}`,
+        tone: "neutral" as const,
+      }
+    : {
+        eyebrow: "Recien",
+        title: "Sin movimientos todavia",
+        body: "Cuando entre el primer servicio o venta, aparecera aca para leer el pulso del dia.",
+        cta: "Ir a caja",
+        href: "/caja",
+        meta: "Esperando actividad",
+        tone: "neutral" as const,
+      };
+
+  const attentionItems = [
+    pendingTurnos > 0 ? `${pendingTurnos} turno${pendingTurnos === 1 ? "" : "s"} pendientes` : null,
+    actor.isAdmin && lowStockCount > 0 ? `${lowStockCount} producto${lowStockCount === 1 ? "" : "s"} con stock bajo` : null,
+    cierreHoy ? `Caja cerrada a las ${formatHora(cierreHoy.cerradoEn)}` : "Caja abierta y lista para operar",
+  ].filter((item): item is string => Boolean(item));
+
+  const attentionFocus =
+    pendingTurnos > 0
+      ? {
+          cta: "Ver agenda",
+          href: "/turnos?estado=pendiente",
+          tone: "amber" as const,
+        }
+      : actor.isAdmin && lowStockCount > 0
+        ? {
+            cta: "Ver inventario",
+            href: "/inventario",
+            tone: "amber" as const,
+          }
+        : cierreHoy
+          ? {
+              cta: "Ver cierre",
+              href: `/caja/cierre/${fechaHoy}`,
+              tone: "neutral" as const,
+            }
+          : {
+              cta: "Ver caja",
+              href: "/caja",
+              tone: "brand" as const,
+            };
+
   return (
     <main className="app-shell min-h-screen px-4 py-6 pb-28">
       <div className="mx-auto max-w-6xl space-y-6">
-        <section className="overflow-hidden rounded-[32px] bg-stone-950 text-stone-50 shadow-[0_24px_80px_rgba(28,25,23,0.22)]">
-          <div className="bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.28),_transparent_32%),radial-gradient(circle_at_bottom_left,_rgba(245,158,11,0.18),_transparent_34%)] p-6 sm:p-7">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-300">Hoy</p>
-            <h1 className="mt-3 text-3xl font-semibold capitalize tracking-tight">{formatFechaLarga(fechaHoy)}</h1>
-            <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-              <span className="text-2xl font-bold text-[#8cff59]">{atencionesCount} {atencionesCount === 1 ? "corte" : "cortes"}</span>
-              {ingresosServicios + ingresosProductos > 0 ? (
-                <span className="text-lg font-semibold text-stone-200">{formatARS(ingresosServicios + ingresosProductos)} cobrado</span>
-              ) : (
-                <span className="text-sm text-stone-400">Sin movimiento todavía</span>
-              )}
+        <section className="panel-card overflow-hidden rounded-[34px]">
+          <div className="bg-[radial-gradient(circle_at_top_right,rgba(140,255,89,0.12),transparent_26%),radial-gradient(circle_at_bottom_left,rgba(140,255,89,0.06),transparent_30%)] p-6 sm:p-7">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="eyebrow text-xs font-semibold">Hoy</p>
+                <h1 className="font-display mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                  Jornada activa
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400 sm:text-base">
+                  Ves que hacer ahora, lo que paso recien y lo que merece atencion para no perder
+                  ritmo.
+                </p>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[320px]">
+                <div className="rounded-[24px] border border-white/10 bg-white/5 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                    Operador
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-white">
+                    {barberoActual?.nombre ?? userLabelFromSession(actor.barberoId)}
+                  </p>
+                </div>
+                <div className="rounded-[24px] border border-white/10 bg-white/5 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                    Estado
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-white">
+                    {cierreHoy ? "Caja cerrada" : "Caja abierta"}
+                  </p>
+                </div>
+                <div className="rounded-[24px] border border-white/10 bg-white/5 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                    Cortes
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-white">
+                    {atencionesCount} {atencionesCount === 1 ? "corte" : "cortes"}
+                  </p>
+                </div>
+                <div className="rounded-[24px] border border-white/10 bg-white/5 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                    Cobrado
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-white">
+                    {ingresosServicios + ingresosProductos > 0
+                      ? formatARS(ingresosServicios + ingresosProductos)
+                      : "Sin movimiento"}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className={`inline-flex min-h-[36px] items-center rounded-full px-3 text-sm font-medium ${cierreHoy ? "bg-white/12 text-white ring-1 ring-white/15" : "bg-emerald-400 text-emerald-950"}`}>
-                {cierreHoy ? "Caja cerrada" : "Caja abierta"}
-              </span>
-              {barberoActual ? (
-                <span className="inline-flex min-h-[36px] items-center rounded-full bg-white/10 px-3 text-sm text-stone-200 ring-1 ring-white/10">
-                  {barberoActual.nombre}
-                </span>
-              ) : null}
+
+            <div className="mt-6 grid gap-3 lg:grid-cols-[1.1fr_0.95fr_0.95fr]">
+              <FocusCard
+                eyebrow={nowFocus.eyebrow}
+                title={nowFocus.title}
+                body={nowFocus.body}
+                cta={nowFocus.cta}
+                href={nowFocus.href}
+                tone={nowFocus.tone}
+                meta={cierreHoy ? `Fecha ${fechaHoy}` : "Vista operativa"}
+              />
+              <FocusCard
+                eyebrow={recentFocus.eyebrow}
+                title={recentFocus.title}
+                body={recentFocus.body}
+                cta={recentFocus.cta}
+                href={recentFocus.href}
+                tone={recentFocus.tone}
+                meta={recentFocus.meta}
+              />
+              <div className="rounded-[28px] border border-white/10 bg-white/5 p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="eyebrow text-xs font-semibold">Atencion</p>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                    {attentionItems.length} aviso{attentionItems.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <p className="font-display mt-3 text-2xl font-semibold tracking-tight text-white">
+                  {actor.isAdmin && lowStockCount > 0
+                    ? "Revisar stock"
+                    : pendingTurnos > 0
+                      ? "Turnos por ordenar"
+                      : cierreHoy
+                        ? "Cierre resuelto"
+                        : "Sin urgencias"}
+                </p>
+                <ul className="mt-4 space-y-2 text-sm leading-6 text-zinc-300">
+                  {attentionItems.map((item) => (
+                    <li key={item} className="flex gap-3">
+                      <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[#8cff59] shadow-[0_0_10px_rgba(140,255,89,0.65)]" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href={attentionFocus.href}
+                  className={`mt-5 inline-flex min-h-11 items-center rounded-2xl px-4 text-sm font-semibold ${
+                    attentionFocus.tone === "brand"
+                      ? "neon-button"
+                      : attentionFocus.tone === "amber"
+                        ? "border border-amber-500/30 bg-[rgba(245,158,11,0.12)] text-amber-100 hover:bg-[rgba(245,158,11,0.18)]"
+                        : "ghost-button"
+                  }`}
+                >
+                  {attentionFocus.cta}
+                </Link>
+              </div>
             </div>
           </div>
         </section>
@@ -280,9 +445,11 @@ export default async function HoyPage() {
           <section className="panel-card rounded-[30px] p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="eyebrow text-xs font-semibold">Movimiento reciente</p>
-                <h2 className="font-display mt-2 text-2xl font-semibold text-white">Lo ultimo que paso</h2>
-                <p className="mt-1 text-sm text-zinc-400">Servicios, ventas y anulaciones mezcladas para leer el dia de un vistazo.</p>
+                <p className="eyebrow text-xs font-semibold">Recien paso</p>
+                <h2 className="font-display mt-2 text-2xl font-semibold text-white">Pulso reciente</h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Servicios, ventas y anulaciones mezcladas para leer el dia de un vistazo.
+                </p>
               </div>
               <Link href="/caja" className="panel-soft rounded-2xl px-4 py-3 text-sm text-zinc-300">
                 Ver caja completa
@@ -318,15 +485,37 @@ export default async function HoyPage() {
 
               <div className="mt-4 space-y-3">
                 {pendingTurnos > 0 ? (
-                  <AlertCard title="Turnos pendientes" body={`Tienes ${pendingTurnos} turno${pendingTurnos === 1 ? "" : "s"} pendiente${pendingTurnos === 1 ? "" : "s"} para revisar.`} href="/turnos?estado=pendiente" cta="Ir a turnos" />
+                  <AlertCard
+                    title="Turnos pendientes"
+                    body={`Tenes ${pendingTurnos} turno${pendingTurnos === 1 ? "" : "s"} pendiente${pendingTurnos === 1 ? "" : "s"} para revisar.`}
+                    href="/turnos?estado=pendiente"
+                    cta="Ir a turnos"
+                  />
                 ) : null}
                 {actor.isAdmin && lowStockCount > 0 ? (
-                  <AlertCard title="Stock bajo" body={`${lowStockCount} producto${lowStockCount === 1 ? "" : "s"} quedaron por debajo del minimo.`} href="/inventario" cta="Ver inventario" />
+                  <AlertCard
+                    title="Stock bajo"
+                    body={`${lowStockCount} producto${lowStockCount === 1 ? "" : "s"} quedaron por debajo del minimo.`}
+                    href="/inventario"
+                    cta="Ver inventario"
+                  />
                 ) : null}
                 {cierreHoy ? (
-                  <AlertCard title="Caja cerrada" body={`Cerrada por ${cierreHoy.cerradoPorNombre ?? "el responsable"} a las ${formatHora(cierreHoy.cerradoEn)}.`} href={`/caja/cierre/${fechaHoy}`} cta="Ver cierre" tone="success" />
+                  <AlertCard
+                    title="Caja cerrada"
+                    body={`Cerrada por ${cierreHoy.cerradoPorNombre ?? "el responsable"} a las ${formatHora(cierreHoy.cerradoEn)}.`}
+                    href={`/caja/cierre/${fechaHoy}`}
+                    cta="Ver cierre"
+                    tone="success"
+                  />
                 ) : (
-                  <AlertCard title="Caja abierta" body="El dia sigue operando. Cierra cuando no entren mas servicios ni ventas." href="/caja" cta="Ver caja" tone="neutral" />
+                  <AlertCard
+                    title="Caja abierta"
+                    body="El dia sigue operando. Cierra cuando no entren mas servicios ni ventas."
+                    href="/caja"
+                    cta="Ver caja"
+                    tone="neutral"
+                  />
                 )}
               </div>
             </section>
@@ -373,16 +562,71 @@ function StatCard({ eyebrow, label, value, helper }: { eyebrow: string; label: s
   );
 }
 
-function AlertCard({ title, body, href, cta, tone = "warning" }: { title: string; body: string; href: string; cta: string; tone?: "warning" | "success" | "neutral" }) {
+function FocusCard({
+  eyebrow,
+  title,
+  body,
+  cta,
+  href,
+  meta,
+  tone = "neutral",
+}: {
+  eyebrow: string;
+  title: string;
+  body: string;
+  cta: string;
+  href: string;
+  meta?: string;
+  tone?: "brand" | "amber" | "neutral";
+}) {
   const toneClass =
-    tone === "success"
-      ? "border-emerald-500/35 bg-emerald-500/10"
-      : tone === "neutral"
-        ? "border-zinc-800 bg-zinc-950/25"
-        : "border-amber-500/35 bg-amber-500/10";
+    tone === "brand"
+      ? "border-[#8cff59]/20 bg-[rgba(140,255,89,0.08)]"
+      : tone === "amber"
+        ? "border-amber-500/30 bg-[rgba(245,158,11,0.08)]"
+        : "border-white/10 bg-white/5";
 
   return (
-    <Link href={href} className={`block rounded-[24px] border p-4 transition hover:-translate-y-0.5 ${toneClass}`}>
+    <Link
+      href={href}
+      className={`group rounded-[28px] border p-5 transition hover:-translate-y-0.5 ${toneClass}`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <p className="eyebrow text-xs font-semibold">{eyebrow}</p>
+        {meta ? <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">{meta}</span> : null}
+      </div>
+      <p className="font-display mt-3 text-2xl font-semibold tracking-tight text-white">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-zinc-300">{body}</p>
+      <p className="mt-4 text-sm font-semibold text-[#8cff59]">{cta}</p>
+    </Link>
+  );
+}
+
+function AlertCard({
+  title,
+  body,
+  href,
+  cta,
+  tone = "warning",
+}: {
+  title: string;
+  body: string;
+  href: string;
+  cta: string;
+  tone?: "warning" | "success" | "neutral";
+}) {
+  const toneClass =
+    tone === "success"
+      ? "border-[#8cff59]/20 bg-[rgba(140,255,89,0.08)]"
+      : tone === "neutral"
+        ? "border-white/10 bg-white/5"
+        : "border-amber-500/30 bg-[rgba(245,158,11,0.08)]";
+
+  return (
+    <Link
+      href={href}
+      className={`block rounded-[24px] border p-4 transition hover:-translate-y-0.5 ${toneClass}`}
+    >
       <p className="font-semibold text-white">{title}</p>
       <p className="mt-2 text-sm text-zinc-300">{body}</p>
       <p className="mt-3 text-sm font-medium text-[#8cff59]">{cta}</p>

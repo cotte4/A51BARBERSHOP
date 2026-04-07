@@ -87,6 +87,19 @@ export type MusicProposalSummary = {
   status: "pending" | "accepted" | "dismissed";
 };
 
+export type MusicAutoResumeSummary = {
+  pending: boolean;
+  resumeMode: "auto";
+  resumeContextRef: string | null;
+  resumeContextLabel: string | null;
+  interruptionSource: string | null;
+  interruptionTrackRef: string | null;
+  interruptedAt: string | null;
+  resumedAt: string | null;
+  resumeAttempts: number;
+  lastError: string | null;
+};
+
 export type MusicDashboardState = {
   provider: {
     provider: MusicProvider;
@@ -113,6 +126,7 @@ export type MusicDashboardState = {
   };
   players: MusicPlayerSummary[];
   schedules: MusicScheduleRuleSummary[];
+  autoResume: MusicAutoResumeSummary;
   queue: {
     activeSessionId: string | null;
     items: MusicQueueItemSummary[];

@@ -42,5 +42,6 @@ export interface MusicProviderAdapter {
   enqueue(trackUri: string, deviceId?: string | null): Promise<void>;
   pause(deviceId?: string | null): Promise<void>;
   resume(deviceId?: string | null): Promise<void>;
+  skipPrevious(deviceId?: string | null): Promise<void>;
   skipNext(deviceId?: string | null): Promise<void>;
 }

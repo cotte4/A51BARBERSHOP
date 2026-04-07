@@ -65,6 +65,7 @@ export async function searchVisibleClients(
     .select({
       id: clients.id,
       name: clients.name,
+      email: clients.email,
       phoneRaw: clients.phoneRaw,
       avatarUrl: clients.avatarUrl,
       esMarciano: clients.esMarciano,
@@ -90,6 +91,7 @@ export async function searchVisibleClients(
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
+    email: row.email,
     phoneRaw: row.phoneRaw,
     avatarUrl: row.avatarUrl,
     esMarciano: row.esMarciano,
@@ -110,6 +112,7 @@ export async function getClientProfileForActor(
     .select({
       id: clients.id,
       name: clients.name,
+      email: clients.email,
       phoneRaw: clients.phoneRaw,
       avatarUrl: clients.avatarUrl,
       esMarciano: clients.esMarciano,
@@ -119,6 +122,7 @@ export async function getClientProfileForActor(
       notes: clients.notes,
       createdByUserId: clients.createdByUserId,
       createdByBarberoId: clients.createdByBarberoId,
+      userId: clients.userId,
       totalVisits: clients.totalVisits,
       lastVisitAt: clients.lastVisitAt,
       lastVisitBarberoNombre: barberos.nombre,
@@ -214,6 +218,7 @@ export async function getClientProfileForActor(
   return {
     id: client.id,
     name: client.name,
+    email: client.email,
     phoneRaw: client.phoneRaw,
     avatarUrl: client.avatarUrl,
     esMarciano: client.esMarciano,
@@ -223,6 +228,7 @@ export async function getClientProfileForActor(
     notes: client.notes,
     createdByUserId: client.createdByUserId,
     createdByBarberoId: client.createdByBarberoId,
+    userId: client.userId,
     totalVisits: client.totalVisits ?? 0,
     lastVisitAt: client.lastVisitAt,
     lastVisitBarberoNombre: client.lastVisitBarberoNombre,
@@ -289,6 +295,7 @@ export async function getRetentionCandidates(): Promise<ClientSummary[]> {
     .select({
       id: clients.id,
       name: clients.name,
+      email: clients.email,
       phoneRaw: clients.phoneRaw,
       esMarciano: clients.esMarciano,
       archivedAt: clients.archivedAt,
@@ -320,6 +327,7 @@ export async function getRetentionCandidates(): Promise<ClientSummary[]> {
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
+    email: row.email,
     phoneRaw: row.phoneRaw,
     esMarciano: row.esMarciano,
     archivedAt: row.archivedAt,

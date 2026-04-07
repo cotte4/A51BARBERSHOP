@@ -1,7 +1,7 @@
 // ————————————————————————————
 // Roles de usuario
 // ————————————————————————————
-export type Rol = "admin" | "barbero";
+export type Rol = "admin" | "barbero" | "marciano";
 
 // ————————————————————————————
 // Tipos del modelo financiero
@@ -59,6 +59,7 @@ export type ClientVipTag = string;
 export interface ClientSummary {
   id: string;
   name: string;
+  email: string | null;
   phoneRaw: string | null;
   avatarUrl?: string | null;
   esMarciano: boolean;
@@ -105,6 +106,7 @@ export interface ClientProfile extends ClientSummary {
   avatarUrl: string | null;
   tags: string[];
   notes: string | null;
+  userId: string | null;
   preferences: ClientPreferences | null;
   marcianoDesde: Date | null;
   createdByUserId: string;

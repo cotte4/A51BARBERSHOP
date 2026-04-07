@@ -29,6 +29,19 @@ type ProductoSeleccionadoState = {
   esMarcianoIncluido: boolean;
 };
 
+type EditContext = {
+  movementCode: string;
+  dateLabel: string;
+  timeLabel: string;
+  barberoLabel: string;
+  clientLabel: string;
+  servicioLabel: string;
+  medioPagoLabel: string;
+  serviceAmount: string;
+  productsAmount: string;
+  totalAmount: string;
+};
+
 interface AtencionFormProps {
   action: (
     prevState: AtencionFormState,
@@ -74,7 +87,9 @@ interface AtencionFormProps {
     }>;
   };
   submitLabel?: string;
+  cancelLabel?: string;
   cancelHref?: string;
+  editContext?: EditContext;
 }
 
 function formatARS(value: number): string {
@@ -189,7 +204,7 @@ function BarberoAvatarButton({
 }) {
   const classes = active
     ? "border-emerald-400 bg-emerald-400 text-emerald-950 shadow-[0_20px_40px_rgba(16,185,129,0.22)]"
-    : "border-stone-200 bg-white text-stone-900 hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50";
+    : "border-zinc-700 bg-zinc-900 text-white hover:-translate-y-0.5 hover:border-zinc-600 hover:bg-zinc-800";
 
   const content = (
     <>
@@ -197,17 +212,17 @@ function BarberoAvatarButton({
         className={`relative flex h-20 w-20 items-center justify-center rounded-full border text-xl font-semibold ${
           active
             ? "border-emerald-950/10 bg-emerald-950/10 text-emerald-950"
-            : "border-stone-200 bg-stone-100 text-stone-700"
+            : "border-zinc-700 bg-zinc-800 text-zinc-300"
         }`}
       >
         <span>{getInitials(nombre)}</span>
-        <span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border border-white bg-stone-950 text-xs font-semibold text-white">
+        <span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border border-white bg-zinc-950 text-xs font-semibold text-white">
           {emoji}
         </span>
       </div>
       <div className="mt-4 text-center">
         <p className="text-base font-semibold">{nombre}</p>
-        <p className={`mt-1 text-sm ${active ? "text-emerald-950/80" : "text-stone-500"}`}>
+        <p className={`mt-1 text-sm ${active ? "text-emerald-950/80" : "text-zinc-400"}`}>
           {subtitle}
         </p>
       </div>
@@ -240,7 +255,9 @@ export default function AtencionForm({
   isAdmin,
   initialData,
   submitLabel = "Confirmar",
+  cancelLabel = "Cancelar",
   cancelHref = "/caja",
+  editContext,
 }: AtencionFormProps) {
   const [barberoId, setBarberoId] = useState(initialData?.barberoId ?? preselectedBarberoId ?? "");
   const [selectedClient, setSelectedClient] = useState<ClientLookupItem | null>(
@@ -513,44 +530,125 @@ export default function AtencionForm({
       <input type="hidden" name="clientId" value={selectedClient?.id ?? ""} />
       <input type="hidden" name="productosSeleccionados" value={productosPayload} />
 
-      <section className="overflow-hidden rounded-[30px] bg-stone-950 text-stone-50 shadow-[0_24px_80px_rgba(28,25,23,0.18)]">
+      <section className="overflow-hidden rounded-[30px] bg-zinc-950 text-zinc-50 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
         <div className="bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.28),_transparent_32%),radial-gradient(circle_at_bottom_left,_rgba(14,165,233,0.18),_transparent_28%)] p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-300">
-                Smart POS
-              </p>
-              <h3 className="mt-2 text-3xl font-semibold tracking-tight">
-                Servicio, cliente y productos en un solo flujo.
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-stone-300">
-                Si el cliente es Marciano, las consumiciones incluidas quedan registradas sin romper stock ni caja.
-              </p>
-            </div>
+          {editContext ? (
+            <>
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                <div className="max-w-2xl">
+                  <p className="eyebrow text-xs font-semibold">Edicion de movimiento</p>
+                  <h3 className="font-display mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+                    Estás editando una atención ya registrada.
+                  </h3>
+                  <p className="mt-3 text-sm leading-6 text-zinc-300">
+                    Ajusta solo lo que cambie: barbero, cliente, servicio, productos,
+                    precio o medio de pago. Stock, comisiones y total se vuelven a
+                    calcular al guardar.
+                  </p>
 
-            <div className="grid min-w-[280px] gap-3 sm:grid-cols-3">
-              <div className="rounded-[24px] bg-white/10 p-4 backdrop-blur">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-300">
-                  Servicio
-                </p>
-                <p className="mt-2 text-lg font-semibold text-white">{formatARS(precioServicio)}</p>
+                  <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold">
+                    <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-300">
+                      Mov #{editContext.movementCode}
+                    </span>
+                    <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-300">
+                      {editContext.dateLabel}
+                    </span>
+                    <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-300">
+                      {editContext.timeLabel}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[380px]">
+                  <div className="rounded-[24px] border border-zinc-700 bg-white/5 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                      Servicio
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold text-white">{editContext.serviceAmount}</p>
+                    <p className="mt-1 text-sm text-zinc-400">{editContext.servicioLabel}</p>
+                  </div>
+                  <div className="rounded-[24px] border border-zinc-700 bg-white/5 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                      Productos
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold text-white">{editContext.productsAmount}</p>
+                    <p className="mt-1 text-sm text-zinc-400">Stock y consumos</p>
+                  </div>
+                  <div className="rounded-[24px] border border-emerald-500/25 bg-emerald-500/12 p-4 text-emerald-50 sm:col-span-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/80">
+                      Total del movimiento
+                    </p>
+                    <p className="mt-2 text-3xl font-semibold text-white">{editContext.totalAmount}</p>
+                    <p className="mt-1 text-sm text-emerald-100/80">
+                      Lo que ves aca es la base de la caja antes de guardar los cambios.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="rounded-[24px] bg-white/10 p-4 backdrop-blur">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-300">
-                  Productos
+
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                <div className="rounded-[22px] border border-zinc-700 bg-black/20 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                    Barbero
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-white">{editContext.barberoLabel}</p>
+                  <p className="mt-1 text-sm text-zinc-400">Define la comision del servicio</p>
+                </div>
+                <div className="rounded-[22px] border border-zinc-700 bg-black/20 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                    Cliente
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-white">{editContext.clientLabel}</p>
+                  <p className="mt-1 text-sm text-zinc-400">Marciano desbloquea consumiciones a $0</p>
+                </div>
+                <div className="rounded-[22px] border border-zinc-700 bg-black/20 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                    Medio de pago
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-white">{editContext.medioPagoLabel}</p>
+                  <p className="mt-1 text-sm text-zinc-400">Solo impacta la comision del cobro</p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="max-w-2xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-400">
+                  Smart POS
                 </p>
-                <p className="mt-2 text-lg font-semibold text-white">
-                  {subtotalProductos > 0 ? formatARS(subtotalProductos) : "$0"}
+                <h3 className="mt-2 text-3xl font-semibold tracking-tight">
+                  Servicio, cliente y productos en un solo flujo.
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-zinc-400">
+                  Si el cliente es Marciano, las consumiciones incluidas quedan registradas sin
+                  romper stock ni caja.
                 </p>
               </div>
-              <div className="rounded-[24px] bg-emerald-400 p-4 text-emerald-950">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-900/80">
-                  Total
-                </p>
-                <p className="mt-2 text-2xl font-bold">{formatARS(totalCobrar)}</p>
+
+              <div className="grid min-w-[280px] gap-3 sm:grid-cols-3">
+                <div className="rounded-[24px] bg-white/10 p-4 backdrop-blur">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                    Servicio
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-white">{formatARS(precioServicio)}</p>
+                </div>
+                <div className="rounded-[24px] bg-white/10 p-4 backdrop-blur">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                    Productos
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-white">
+                    {subtotalProductos > 0 ? formatARS(subtotalProductos) : "$0"}
+                  </p>
+                </div>
+                <div className="rounded-[24px] bg-emerald-400 p-4 text-emerald-950">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-900/80">
+                    Total
+                  </p>
+                  <p className="mt-2 text-2xl font-bold">{formatARS(totalCobrar)}</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -562,7 +660,7 @@ export default function AtencionForm({
             <p className="mt-1 text-sm text-zinc-400">
               {barberoBloqueado
                 ? "Tu perfil ya viene seleccionado."
-                : "Elegi quien esta atendiendo con un toque."}
+                : "Elegi quien esta atendiendo; define la comision principal del movimiento."}
             </p>
           </div>
           {state.fieldErrors?.barberoId ? (
@@ -598,7 +696,7 @@ export default function AtencionForm({
             <p className="eyebrow text-xs font-semibold">Paso 2</p>
             <h3 className="font-display mt-2 text-2xl font-semibold text-white">Cliente</h3>
             <p className="mt-1 text-sm text-zinc-400">
-              Opcional para caja comun. Requerido si queres registrar consumiciones Marciano incluidas.
+              Opcional en caja comun. Si el cliente es Marciano, habilita consumiciones incluidas y deja trazabilidad del movimiento.
             </p>
           </div>
           {state.fieldErrors?.clientId ? (
@@ -639,7 +737,7 @@ export default function AtencionForm({
                 onClick={clearSelectedClient}
                 className="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-sm font-medium text-zinc-300 transition hover:bg-zinc-900"
               >
-                Quitar cliente
+                Desvincular cliente
               </button>
             ) : null}
           </div>
@@ -688,7 +786,7 @@ export default function AtencionForm({
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-[18px] bg-black/15 px-3 py-3">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                    Modo de caja
+                    Estado de caja
                   </p>
                   <p className="mt-2 text-sm font-semibold text-white">
                     {selectedClient.esMarciano ? "Beneficios Marciano disponibles" : "Cobro tradicional"}
@@ -773,7 +871,7 @@ export default function AtencionForm({
             <p className="eyebrow text-xs font-semibold">Paso 3</p>
             <h3 className="font-display mt-2 text-2xl font-semibold text-white">Servicio</h3>
             <p className="mt-1 text-sm text-zinc-400">
-              El precio cobrado sigue representando solo el corte. Los productos van aparte.
+              El precio cobrado sigue representando solo el servicio. Los productos van aparte.
             </p>
           </div>
           {state.fieldErrors?.servicioId ? (
@@ -792,17 +890,17 @@ export default function AtencionForm({
                 className={`rounded-[26px] border p-5 text-left transition ${
                   active
                     ? "border-emerald-400 bg-emerald-400 text-emerald-950 shadow-[0_20px_40px_rgba(16,185,129,0.22)]"
-                    : "border-stone-200 bg-white text-stone-900 hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50"
+                    : "border-zinc-700 bg-zinc-900 text-white hover:-translate-y-0.5 hover:border-zinc-600 hover:bg-zinc-800"
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className={`text-sm font-semibold ${active ? "text-emerald-950/80" : "text-stone-500"}`}>
+                    <p className={`text-sm font-semibold ${active ? "text-emerald-950/80" : "text-zinc-400"}`}>
                       {getServicioEmoji(servicio.nombre)} Servicio
                     </p>
                     <p className="mt-3 text-xl font-semibold leading-tight">{servicio.nombre}</p>
                   </div>
-                  <span className="rounded-full bg-stone-950 px-3 py-1 text-xs font-semibold text-white">
+                  <span className="rounded-full bg-zinc-950 px-3 py-1 text-xs font-semibold text-white">
                     {formatARS(Number(servicio.precioBase ?? 0))}
                   </span>
                 </div>
@@ -817,11 +915,11 @@ export default function AtencionForm({
               <div>
                 <p className="text-sm font-semibold text-white">Extras del servicio</p>
                 <p className="mt-1 text-sm text-zinc-400">
-                  Sumalos con un toque y el precio sugerido del corte se recalcula.
+                  Sumalos con un toque y el precio sugerido del servicio se recalcula.
                 </p>
               </div>
               <div className="rounded-full bg-zinc-950 px-3 py-1 text-sm font-medium text-zinc-200 ring-1 ring-zinc-800">
-                Servicio sugerido {formatARS(precioSugerido)}
+                Precio sugerido {formatARS(precioSugerido)}
               </div>
             </div>
 
@@ -835,8 +933,8 @@ export default function AtencionForm({
                     onClick={() => toggleAdicional(adicional.id)}
                     className={`rounded-[22px] border px-4 py-4 text-left transition ${
                       checked
-                        ? "border-emerald-300 bg-emerald-50 text-emerald-950"
-                        : "border-stone-200 bg-white text-stone-700 hover:border-stone-300"
+                        ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-200"
+                        : "border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-600"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-3">
@@ -846,7 +944,9 @@ export default function AtencionForm({
                           +{formatARS(Number(adicional.precioExtra ?? 0))}
                         </p>
                       </div>
-                      <span className="text-xl">{checked ? "OK" : "+"}</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.14em]">
+                        {checked ? "Listo" : "Sumar"}
+                      </span>
                     </div>
                   </button>
                 );
@@ -861,12 +961,12 @@ export default function AtencionForm({
 
         <div className="mt-5 rounded-[26px] border border-zinc-800 bg-zinc-950/25 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-white">Productos</p>
-              <p className="mt-1 text-sm text-zinc-400">
-                Vendelos junto al corte sin pasar por otra pantalla.
-              </p>
-            </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Productos</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Sumalos junto al servicio sin sacar stock de contexto.
+                </p>
+              </div>
             <div className="flex flex-wrap items-center gap-2">
               {consumicionesIncluidasCount > 0 ? (
                 <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-200">
@@ -882,7 +982,7 @@ export default function AtencionForm({
                     : "border border-zinc-700 bg-zinc-950 text-zinc-300 hover:bg-zinc-900"
                 }`}
               >
-                {mostrarPanelProductos ? "Ocultar productos" : "+ Agregar producto"}
+                {mostrarPanelProductos ? "Ocultar catalogo" : "+ Agregar producto"}
               </button>
             </div>
           </div>
@@ -893,12 +993,12 @@ export default function AtencionForm({
                 <div>
                   <p className="font-semibold text-white">Marciano activado en esta caja</p>
                   <p className="mt-1 text-emerald-100/85">
-                    Los productos marcados como consumicion pueden pasar a $0 y se trackean en el mes del cliente.
+                    Los productos marcados como consumicion pueden pasar a $0 y quedan registrados en el mes del cliente.
                   </p>
                 </div>
                 <div className="rounded-[18px] bg-black/15 px-3 py-2 text-right">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-200/80">
-                    Ahorro actual
+                    Ahorro marciano
                   </p>
                   <p className="mt-1 text-sm font-semibold text-white">{formatARS(ahorroMarciano)}</p>
                 </div>
@@ -939,6 +1039,7 @@ export default function AtencionForm({
                         type="button"
                         onClick={() => cambiarCantidadProducto(producto.id, -1)}
                         className="flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900 text-sm font-semibold text-white"
+                        aria-label={`Disminuir ${producto.nombre}`}
                       >
                         -
                       </button>
@@ -948,6 +1049,7 @@ export default function AtencionForm({
                         onClick={() => cambiarCantidadProducto(producto.id, 1)}
                         disabled={producto.cantidad >= producto.stockActual}
                         className="flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label={`Sumar ${producto.nombre}`}
                       >
                         +
                       </button>
@@ -955,8 +1057,9 @@ export default function AtencionForm({
                         type="button"
                         onClick={() => removerProducto(producto.id)}
                         className="ml-1 flex h-10 w-10 items-center justify-center rounded-2xl border border-rose-500/35 bg-rose-500/10 text-sm font-semibold text-rose-200"
+                        aria-label={`Quitar ${producto.nombre}`}
                       >
-                        X
+                        Q
                       </button>
                     </div>
                   </div>
@@ -991,7 +1094,7 @@ export default function AtencionForm({
                             : "border border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
                         }`}
                       >
-                        {producto.esMarcianoIncluido ? "Quitar beneficio" : "Marcar como incluida"}
+                        {producto.esMarcianoIncluido ? "Sacar de Marciano" : "Incluir en Marciano"}
                       </button>
                     </div>
                   ) : null}
@@ -1011,7 +1114,7 @@ export default function AtencionForm({
               </span>
               {consumicionesIncluidasCount > 0 ? (
                 <span className="text-xs font-semibold text-emerald-200">
-                  Incluidas: {consumicionesIncluidasCount} • ahorro {formatARS(ahorroMarciano)}
+                  Incluidas: {consumicionesIncluidasCount} - ahorro {formatARS(ahorroMarciano)}
                 </span>
               ) : null}
             </div>
@@ -1034,8 +1137,8 @@ export default function AtencionForm({
                       agotado
                         ? "cursor-not-allowed border-zinc-800 bg-zinc-950/40 text-zinc-600"
                         : selected
-                          ? "border-emerald-300 bg-emerald-50 text-emerald-950"
-                          : "border-stone-200 bg-white text-stone-900 hover:border-stone-300 hover:bg-stone-50"
+                          ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-200"
+                          : "border-zinc-700 bg-zinc-900 text-white hover:border-zinc-600 hover:bg-zinc-800"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -1056,8 +1159,8 @@ export default function AtencionForm({
                           {selected ? ` - Seleccionado ${selected.cantidad}` : ""}
                         </p>
                       </div>
-                      <span className="rounded-full bg-stone-950 px-3 py-1 text-xs font-semibold text-white">
-                        {agotado ? "Sin stock" : "+1"}
+                      <span className="rounded-full bg-zinc-950 px-3 py-1 text-xs font-semibold text-white">
+                        {agotado ? "Sin stock" : "Agregar"}
                       </span>
                     </div>
                   </button>
@@ -1067,20 +1170,20 @@ export default function AtencionForm({
           ) : null}
         </div>
         <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-[26px] border border-stone-200 bg-stone-950 p-5 text-stone-50">
+          <div className="rounded-[26px] border border-zinc-700 bg-zinc-950 p-5 text-white">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-300">
-                  Precio del servicio
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+                  Ajuste del servicio
                 </p>
                 <p className="mt-2 text-3xl font-bold">{formatARS(precioServicio)}</p>
-                <p className="mt-2 text-sm text-stone-300">
+                <p className="mt-2 text-sm text-zinc-400">
                   {allowManualPrice
                     ? "Ajuste manual activo. Usalo solo si hay descuento o una excepcion."
                     : "Bloqueado en automatico. Solo se habilita si queres aplicar un ajuste."}
                 </p>
               </div>
-              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-stone-200">
+              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-zinc-200">
                 {precioEditado ? "Manual" : "Auto"}
               </span>
             </div>
@@ -1100,7 +1203,7 @@ export default function AtencionForm({
                     : "border border-zinc-700 bg-zinc-950 text-zinc-300 hover:bg-zinc-900"
                 }`}
               >
-                {allowManualPrice ? "Bloquear precio otra vez" : "Habilitar ajuste manual"}
+                {allowManualPrice ? "Volver al automatico" : "Permitir ajuste manual"}
               </button>
               {allowManualPrice ? (
                 <button
@@ -1172,17 +1275,17 @@ export default function AtencionForm({
                 onClick={() => setMedioPagoId(medio.id)}
                 className={`rounded-[24px] border px-5 py-5 text-left transition ${
                   active
-                    ? "border-stone-950 bg-stone-950 text-white shadow-[0_18px_35px_rgba(28,25,23,0.18)]"
-                    : "border-stone-200 bg-white text-stone-900 hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50"
+                    ? "border-zinc-600 bg-zinc-800 text-white shadow-[0_18px_35px_rgba(0,0,0,0.35)]"
+                    : "border-zinc-700 bg-zinc-900 text-white hover:-translate-y-0.5 hover:border-zinc-600 hover:bg-zinc-800"
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className={`text-sm font-semibold ${active ? "text-stone-300" : "text-stone-500"}`}>
+                    <p className={`text-sm font-semibold ${active ? "text-zinc-300" : "text-zinc-400"}`}>
                       Medio de pago
                     </p>
                     <p className="mt-3 text-xl font-semibold">{meta.emoji} {meta.label}</p>
-                    <p className={`mt-2 text-sm ${active ? "text-stone-300" : "text-stone-500"}`}>
+                    <p className={`mt-2 text-sm ${active ? "text-zinc-300" : "text-zinc-400"}`}>
                       {fee > 0 ? `${fee}% de comision` : "Sin comision"}
                     </p>
                   </div>
@@ -1195,56 +1298,56 @@ export default function AtencionForm({
       </section>
 
       {mostrarPreview ? (
-        <section className="rounded-[30px] border border-stone-200 bg-white p-5 shadow-sm">
+        <section className="panel-card rounded-[28px] p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-400">
-                Resumen express
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+                Chequeo final
               </p>
-              <h3 className="mt-2 text-2xl font-semibold text-stone-950">
-                Todo listo para guardar
+              <h3 className="mt-2 text-2xl font-semibold text-white">
+                Revisar antes de guardar
               </h3>
             </div>
-            <div className="rounded-full bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-200">
+            <div className="rounded-full bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-300 ring-1 ring-emerald-500/30">
               {barberoSeleccionado?.nombre ?? "Sin barbero"} - {medioPagoSeleccionado?.nombre ?? "Sin medio"}
             </div>
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-4">
-            <div className="rounded-[22px] bg-stone-100 p-4">
-              <p className="text-xs font-medium text-stone-500">Servicio</p>
-              <p className="mt-2 text-2xl font-bold text-stone-950">{formatARS(precioServicio)}</p>
+            <div className="rounded-[22px] bg-zinc-800 p-4">
+              <p className="text-xs font-medium text-zinc-400">Servicio</p>
+              <p className="mt-2 text-2xl font-bold text-white">{formatARS(precioServicio)}</p>
             </div>
-            <div className="rounded-[22px] bg-stone-100 p-4">
-              <p className="text-xs font-medium text-stone-500">Productos</p>
-              <p className="mt-2 text-2xl font-bold text-stone-950">{formatARS(subtotalProductos)}</p>
+            <div className="rounded-[22px] bg-zinc-800 p-4">
+              <p className="text-xs font-medium text-zinc-400">Productos</p>
+              <p className="mt-2 text-2xl font-bold text-white">{formatARS(subtotalProductos)}</p>
             </div>
-            <div className="rounded-[22px] bg-stone-100 p-4">
-              <p className="text-xs font-medium text-stone-500">Neto servicio</p>
-              <p className="mt-2 text-2xl font-bold text-stone-950">{formatARS(montoNeto)}</p>
+            <div className="rounded-[22px] bg-zinc-800 p-4">
+              <p className="text-xs font-medium text-zinc-400">Neto servicio</p>
+              <p className="mt-2 text-2xl font-bold text-white">{formatARS(montoNeto)}</p>
             </div>
-            <div className="rounded-[22px] bg-stone-950 p-4 text-white">
-              <p className="text-xs font-medium text-stone-400">Total a cobrar</p>
+            <div className="rounded-[22px] bg-zinc-950 p-4 text-white">
+              <p className="text-xs font-medium text-zinc-400">Total a cobrar</p>
               <p className="mt-2 text-2xl font-bold">{formatARS(totalCobrar)}</p>
             </div>
           </div>
 
-          <div className="mt-4 rounded-[22px] border border-stone-200 bg-stone-50 p-4 text-sm text-stone-600">
+          <div className="mt-4 rounded-[22px] border border-zinc-700 bg-zinc-900 p-4 text-sm text-zinc-400">
             <div className="flex items-center justify-between gap-3">
               <span>Servicio</span>
-              <span className="font-medium text-stone-900">
+              <span className="font-medium text-white">
                 {servicioSeleccionado?.nombre ?? "-"} - {formatARS(precioServicio)}
               </span>
             </div>
             <div className="mt-2 flex items-center justify-between gap-3">
               <span>Cliente</span>
-              <span className="font-medium text-stone-900">
+              <span className="font-medium text-white">
                 {selectedClient ? selectedClient.name : "Sin vincular"}
               </span>
             </div>
             <div className="mt-2 flex items-start justify-between gap-3">
               <span>Productos</span>
-              <div className="text-right font-medium text-stone-900">
+              <div className="text-right font-medium text-white">
                 {productosSeleccionados.length > 0 ? (
                   <>
                     <p>
@@ -1256,7 +1359,7 @@ export default function AtencionForm({
                         )
                         .join(" + ")}
                     </p>
-                    <p className="mt-1 text-xs text-stone-500">Subtotal {formatARS(subtotalProductos)}</p>
+                    <p className="mt-1 text-xs text-zinc-500">Subtotal {formatARS(subtotalProductos)}</p>
                   </>
                 ) : (
                   <p>Sin productos</p>
@@ -1265,23 +1368,23 @@ export default function AtencionForm({
             </div>
             <div className="mt-2 flex items-center justify-between gap-3">
               <span>Medio de pago</span>
-              <span className="font-medium text-stone-900">{medioPagoSeleccionado?.nombre ?? "-"}</span>
+              <span className="font-medium text-white">{medioPagoSeleccionado?.nombre ?? "-"}</span>
             </div>
             {comisionMpPct > 0 ? (
               <div className="mt-2 flex items-center justify-between gap-3">
                 <span>Comision del medio sobre servicio ({comisionMpPct}%)</span>
-                <span className="font-medium text-stone-900">-{formatARS(comisionMpMonto)}</span>
+                <span className="font-medium text-white">-{formatARS(comisionMpMonto)}</span>
               </div>
             ) : null}
             {barberoSeleccionado && comisionBarberoPct > 0 ? (
               <div className="mt-2 flex items-center justify-between gap-3">
                 <span>{barberoSeleccionado.nombre} ({comisionBarberoPct}%)</span>
-                <span className="font-medium text-stone-900">{formatARS(comisionBarberoMonto)}</span>
+                <span className="font-medium text-white">{formatARS(comisionBarberoMonto)}</span>
               </div>
             ) : null}
-            <div className="mt-3 flex items-center justify-between gap-3 border-t border-stone-200 pt-3">
-              <span className="font-semibold text-stone-900">Total a cobrar</span>
-              <span className="text-base font-bold text-stone-950">{formatARS(totalCobrar)}</span>
+            <div className="mt-3 flex items-center justify-between gap-3 border-t border-zinc-700 pt-3">
+              <span className="font-semibold text-white">Total a cobrar</span>
+              <span className="text-base font-bold text-white">{formatARS(totalCobrar)}</span>
             </div>
           </div>
         </section>
@@ -1297,9 +1400,12 @@ export default function AtencionForm({
           name="notas"
           rows={3}
           defaultValue={initialData?.notas ?? ""}
-          placeholder="Ej: descuento por cliente frecuente"
+          placeholder="Ej: ajuste, observacion o detalle interno"
           className="mt-3 w-full resize-none rounded-[22px] border border-zinc-700 bg-zinc-950/70 px-4 py-3 text-sm text-white outline-none focus:border-[#8cff59]"
         />
+        <p className="mt-2 text-xs text-zinc-500">
+          Las notas ayudan a entender el movimiento, pero no cambian comisiones ni stock.
+        </p>
       </section>
 
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -1314,7 +1420,7 @@ export default function AtencionForm({
           href={cancelHref}
           className="ghost-button inline-flex min-h-[58px] items-center justify-center rounded-[22px] px-6 text-base font-medium"
         >
-          Cancelar
+          {cancelLabel}
         </a>
       </div>
     </form>

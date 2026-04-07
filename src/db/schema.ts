@@ -455,6 +455,7 @@ export const clients = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
+    email: text("email"),
     phoneRaw: text("phone_raw"),
     phoneNormalized: text("phone_normalized"),
     avatarUrl: text("avatar_url"),
@@ -467,6 +468,7 @@ export const clients = pgTable(
       .notNull()
       .references(() => user.id),
     createdByBarberoId: uuid("created_by_barbero_id").references(() => barberos.id),
+    userId: text("user_id").references(() => user.id),
     totalVisits: integer("total_visits").notNull().default(0),
     lastVisitAt: timestamp("last_visit_at", { withTimezone: true }),
     lastVisitBarberoId: uuid("last_visit_barbero_id").references(() => barberos.id),
@@ -479,7 +481,9 @@ export const clients = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    uniqueIndex("clients_email_idx").on(table.email),
     uniqueIndex("clients_phone_normalized_idx").on(table.phoneNormalized),
+    uniqueIndex("clients_user_id_idx").on(table.userId),
     index("clients_name_idx").on(table.name),
     index("clients_last_visit_at_idx").on(table.lastVisitAt),
     index("clients_es_marciano_last_visit_at_idx").on(
@@ -899,6 +903,32 @@ export const musicRuntimeStatus = pgTable(
       "music_runtime_status_player_status_check",
       sql`${table.playerStatus} IN ('ready', 'missing', 'error')`
     ),
+  ]
+);
+
+export const musicAutoResumeState = pgTable(
+  "music_auto_resume_state",
+  {
+    id: text("id").primaryKey(),
+    resumeMode: text("resume_mode").notNull().default("auto"),
+    resumeContextRef: text("resume_context_ref"),
+    resumeContextLabel: text("resume_context_label"),
+    interruptionSource: text("interruption_source"),
+    interruptionTrackRef: text("interruption_track_ref"),
+    resumePending: boolean("resume_pending").notNull().default(false),
+    interruptedAt: timestamp("interrupted_at", { withTimezone: true }),
+    resumedAt: timestamp("resumed_at", { withTimezone: true }),
+    resumeAttempts: integer("resume_attempts").notNull().default(0),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "music_auto_resume_state_resume_mode_check",
+      sql`${table.resumeMode} IN ('auto')`
+    ),
+    index("music_auto_resume_state_pending_idx").on(table.resumePending, table.updatedAt),
   ]
 );
 

@@ -4,6 +4,7 @@ import { admin } from "better-auth/plugins/admin";
 import { createAccessControl } from "better-auth/plugins";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
+import { sendMarcianoPasswordResetEmail } from "@/lib/email";
 
 // Definir los statements y roles del sistema A51 Barber
 const ac = createAccessControl({
@@ -23,6 +24,12 @@ const barberoRole = ac.newRole({
   session: [],
 });
 
+// Rol marciano: acceso solo a su propio portal
+const marcianoRole = ac.newRole({
+  user: [],
+  session: [],
+});
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -34,6 +41,13 @@ export const auth = betterAuth({
   ].filter(Boolean),
   emailAndPassword: {
     enabled: true,
+    async sendResetPassword({ user, url }) {
+      await sendMarcianoPasswordResetEmail({
+        email: user.email,
+        name: user.name,
+        resetUrl: url,
+      });
+    },
   },
   plugins: [
     admin({
@@ -42,6 +56,7 @@ export const auth = betterAuth({
       roles: {
         admin: adminRole,
         barbero: barberoRole,
+        marciano: marcianoRole,
       },
     }),
   ],

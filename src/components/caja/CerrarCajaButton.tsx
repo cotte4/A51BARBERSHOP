@@ -1,4 +1,6 @@
 "use client";
+
+import { useEffect, useState } from "react";
 import { useActionState } from "react";
 import type { CierreFormState } from "@/app/(barbero)/caja/actions";
 
@@ -8,26 +10,70 @@ interface CerrarCajaButtonProps {
 
 export default function CerrarCajaButton({ cerrarAction }: CerrarCajaButtonProps) {
   const [state, formAction, isPending] = useActionState(cerrarAction, {});
+  const [armed, setArmed] = useState(false);
+
+  useEffect(() => {
+    if (state.error) {
+      setArmed(false);
+    }
+  }, [state.error]);
 
   return (
-    <form action={formAction}>
-      {state.error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
+    <form
+      action={formAction}
+      onSubmit={(event) => {
+        if (!armed) {
+          event.preventDefault();
+          setArmed(true);
+        }
+      }}
+      className="space-y-4"
+    >
+      {state.error ? (
+        <div className="rounded-2xl border border-red-500/30 bg-red-500/12 px-4 py-3 text-sm text-red-200">
           {state.error}
         </div>
-      )}
+      ) : null}
+
+      <section className="rounded-[28px] border border-amber-500/20 bg-amber-500/10 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-200">
+              Cierre final
+            </p>
+            <h3 className="mt-2 text-lg font-semibold text-white">Este paso deja la caja sellada</h3>
+            <p className="mt-1 text-sm leading-6 text-amber-100/80">
+              Guarda quien cerro, fija la hora y bloquea nuevos movimientos del dia.
+            </p>
+          </div>
+
+          <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-xs font-semibold text-amber-100">
+            Irreversible
+          </span>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300">
+          Primer click habilita la confirmacion. El segundo click ejecuta el cierre de verdad.
+        </div>
+      </section>
+
       <button
         type="submit"
         disabled={isPending}
-        onClick={(e) => {
-          if (!window.confirm("Estas seguro de cerrar la caja? Esta accion guarda quien la cerro, a que hora fue y no se puede deshacer.")) {
-            e.preventDefault();
-          }
-        }}
-        className="min-h-[44px] w-full bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors disabled:opacity-50"
+        className="neon-button min-h-[48px] w-full rounded-[20px] px-5 text-sm font-semibold text-[#07130a] disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isPending ? "Cerrando caja..." : "Confirmar cierre del dia"}
+        {isPending
+          ? "Cerrando caja..."
+          : armed
+            ? "Confirmar cierre del dia"
+            : "Revisar y habilitar cierre"}
       </button>
+
+      <p className="text-xs leading-5 text-zinc-500">
+        {armed
+          ? "Ahora ya podes confirmar sin perder el contexto."
+          : "Si queres volver atras, toca otro lugar antes de confirmar."}
+      </p>
     </form>
   );
 }

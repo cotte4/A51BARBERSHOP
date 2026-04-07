@@ -24,16 +24,16 @@ export default async function EditarProductoPage({ params }: Props) {
   const editarConId = editarProducto.bind(null, id);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-4">
+    <div className="min-h-screen bg-zinc-950">
+      <header className="bg-zinc-900 border-b border-zinc-800 px-4 py-4">
         <div className="max-w-2xl mx-auto">
-          <Link href={`/inventario/${id}`} className="text-gray-400 hover:text-gray-600 text-sm mb-2 block">← {producto.nombre}</Link>
-          <h1 className="text-xl font-bold text-gray-900">Editar producto</h1>
+          <Link href={`/inventario/${id}`} className="text-zinc-400 hover:text-[#8cff59] text-sm mb-2 block">← {producto.nombre}</Link>
+          <h1 className="font-display text-xl font-bold text-white">Editar producto</h1>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="panel-card rounded-[28px] p-5">
           <EditarProductoForm
             editarAction={editarConId}
             producto={{

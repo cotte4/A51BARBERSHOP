@@ -23,6 +23,26 @@ function formatPeriodo(inicio: string | null, fin: string | null) {
   return `${formatFecha(inicio)} - ${formatFecha(fin)}`;
 }
 
+function StatCard({
+  label,
+  value,
+  hint,
+  valueClassName = "text-white",
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="panel-soft rounded-[24px] p-4">
+      <p className="eyebrow text-[10px]">{label}</p>
+      <p className={`mt-3 font-display text-3xl font-semibold tracking-tight ${valueClassName}`}>{value}</p>
+      <p className="mt-2 text-sm text-zinc-400">{hint}</p>
+    </div>
+  );
+}
+
 export default async function LiquidacionesPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
@@ -37,77 +57,80 @@ export default async function LiquidacionesPage() {
   const pendientes = lista.filter((item) => !item.pagado);
   const historial = lista.filter((item) => item.pagado);
   const totalPendiente = pendientes.reduce((sum, item) => sum + Number(item.montoAPagar ?? 0), 0);
+  const totalPagado = historial.reduce((sum, item) => sum + Number(item.montoAPagar ?? 0), 0);
   const hayDeuda = totalPendiente > 0;
 
   return (
-    <div className="min-h-screen bg-zinc-950 px-4 py-6 pb-24">
-      <div className="mx-auto flex max-w-3xl flex-col gap-5">
+    <div className="min-h-screen app-shell px-4 py-6 pb-24">
+      <div className="mx-auto flex max-w-5xl flex-col gap-5">
+        <Link href="/dashboard" className="eyebrow text-xs text-zinc-500 hover:text-zinc-300">
+          ← Dashboard
+        </Link>
 
-        {/* Header */}
-        <div>
-          <Link href="/dashboard" className="text-xs text-zinc-600 hover:text-zinc-400">
-            ← Dashboard
-          </Link>
-          <h1 className="mt-2 text-2xl font-bold text-white">Liquidaciones</h1>
-          <p className="mt-1 text-sm text-zinc-500">Lo urgente es saber cuánto está pendiente de pago hoy.</p>
-        </div>
-
-        {/* Saldo pendiente hero */}
-        <section className={`overflow-hidden rounded-[28px] border ${hayDeuda ? "border-[#8cff59]/25 bg-zinc-900" : "border-zinc-800 bg-zinc-900"}`}>
-          <div className={hayDeuda ? "bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.08),_transparent_50%)] p-5" : "p-5"}>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-              Saldo pendiente
-            </p>
-
-            <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
-              <div>
-                {hayDeuda ? (
-                  <>
-                    <p className="text-4xl font-bold tracking-tight text-[#8cff59]">
-                      {formatARS(String(totalPendiente))}
-                    </p>
-                    <p className="mt-1 text-sm text-zinc-400">
-                      {pendientes.length} liquidación{pendientes.length !== 1 ? "es" : ""} esperando pago.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-4xl font-bold tracking-tight text-zinc-600">$0</p>
-                    <p className="mt-1 text-sm text-zinc-500">Todo lo generado ya fue pagado.</p>
-                  </>
-                )}
+        <section className="panel-card overflow-hidden rounded-[32px]">
+          <div className="bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.14),_transparent_36%),radial-gradient(circle_at_bottom_left,_rgba(140,255,89,0.06),_transparent_30%)] p-6 sm:p-7">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="max-w-2xl">
+                <p className="eyebrow text-xs">Liquidaciones</p>
+                <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                  Control de pagos
+                </h1>
+                <p className="mt-3 max-w-2xl text-sm text-zinc-300">
+                  Priorizamos lo pendiente, dejamos claro lo ya pagado y hacemos que cada
+                  liquidacion se abra con contexto suficiente para decidir rapido.
+                </p>
               </div>
 
               <Link
                 href="/liquidaciones/nueva"
-                className="inline-flex min-h-[44px] items-center rounded-2xl bg-[#8cff59] px-5 text-sm font-semibold text-[#07130a] hover:bg-[#a8ff80]"
+                className="neon-button inline-flex min-h-[44px] items-center rounded-2xl px-5 text-sm font-semibold"
               >
-                + Nueva liquidación
+                + Nueva liquidacion
               </Link>
+            </div>
+
+            <div className="mt-6 grid gap-3 md:grid-cols-3">
+              <StatCard
+                label="Saldo pendiente"
+                value={formatARS(String(totalPendiente))}
+                hint={hayDeuda ? "Listo para revisar y pagar." : "No hay deuda abierta hoy."}
+                valueClassName={hayDeuda ? "text-[#8cff59]" : "text-zinc-400"}
+              />
+              <StatCard
+                label="Pendientes"
+                value={String(pendientes.length)}
+                hint="Liquidaciones que todavia requieren accion."
+                valueClassName={pendientes.length > 0 ? "text-white" : "text-zinc-400"}
+              />
+              <StatCard
+                label="Pagadas"
+                value={String(historial.length)}
+                hint={`${formatARS(String(totalPagado))} ya cerrados en el historial.`}
+                valueClassName="text-emerald-300"
+              />
             </div>
           </div>
         </section>
 
-        {/* Pendientes */}
-        <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
+        <section className="panel-card rounded-[28px] p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-white">Pendientes</h2>
-              <p className="text-sm text-zinc-500">Lo que necesita acción ahora.</p>
+              <p className="eyebrow text-[10px]">Pendientes de pago</p>
+              <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-white">
+                Lo que pide accion ahora
+              </h2>
             </div>
-            {pendientes.length > 0 ? (
-              <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-400">
-                {pendientes.length} abiertas
-              </span>
-            ) : null}
+            <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300">
+              {pendientes.length} abiertas
+            </span>
           </div>
 
           {pendientes.length === 0 ? (
-            <div className="rounded-[20px] border border-dashed border-zinc-700 bg-zinc-950/50 p-6 text-sm text-zinc-500">
-              No hay liquidaciones pendientes.
+            <div className="rounded-[22px] border border-dashed border-zinc-700 bg-black/20 p-6 text-sm text-zinc-400">
+              No hay liquidaciones pendientes. Todo lo generado ya paso a historial.
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               {pendientes.map((liq) => {
                 const barbero = barberosMap.get(liq.barberoId ?? "");
                 const monto = Number(liq.montoAPagar ?? 0);
@@ -115,27 +138,38 @@ export default async function LiquidacionesPage() {
                   <Link
                     key={liq.id}
                     href={`/liquidaciones/${liq.id}`}
-                    className="rounded-[20px] border border-zinc-800 bg-zinc-950 p-4 transition hover:border-[#8cff59]/20 hover:bg-zinc-900"
+                    className="group block rounded-[24px] border border-zinc-800 bg-zinc-950 p-4 transition hover:border-[#8cff59]/30 hover:bg-zinc-900"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-white">{barbero?.nombre ?? "—"}</span>
-                          <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-400">
+                          <span className="truncate font-semibold text-white">
+                            {barbero?.nombre ?? "Sin barbero"}
+                          </span>
+                          <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300">
                             Pendiente
                           </span>
                         </div>
-                        <p className="mt-1 text-xs text-zinc-500">
+                        <p className="mt-1 text-xs text-zinc-400">
                           {formatPeriodo(liq.periodoInicio, liq.periodoFin)}
                         </p>
-                        <p className="mt-0.5 text-xs text-zinc-600">
-                          {liq.totalCortes ?? 0} cortes liquidados
-                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                          <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-zinc-400">
+                            {liq.totalCortes ?? 0} cortes
+                          </span>
+                          <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-zinc-400">
+                            Generada {formatFecha(liq.creadoEn)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs uppercase tracking-[0.14em] text-zinc-600">A pagar</p>
-                        <p className={`mt-1 text-xl font-bold ${monto > 0 ? "text-[#8cff59]" : "text-zinc-400"}`}>
+
+                      <div className="text-left sm:text-right">
+                        <p className="eyebrow text-[10px]">A pagar</p>
+                        <p className={`mt-1 font-display text-3xl font-semibold tracking-tight ${monto > 0 ? "text-[#8cff59]" : "text-zinc-400"}`}>
                           {formatARS(liq.montoAPagar)}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-500 group-hover:text-zinc-300">
+                          Abrir detalle
                         </p>
                       </div>
                     </div>
@@ -146,49 +180,63 @@ export default async function LiquidacionesPage() {
           )}
         </section>
 
-        {/* Historial */}
-        <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
+        <section className="panel-card rounded-[28px] p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-white">Historial</h2>
-              <p className="text-sm text-zinc-500">Liquidaciones ya pagadas.</p>
+              <p className="eyebrow text-[10px]">Historial</p>
+              <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-white">
+                Liquidaciones cerradas
+              </h2>
             </div>
-            {historial.length > 0 ? (
-              <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
-                {historial.length} pagadas
-              </span>
-            ) : null}
+            <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+              {historial.length} pagadas
+            </span>
           </div>
 
           {historial.length === 0 ? (
-            <div className="rounded-[20px] border border-dashed border-zinc-700 bg-zinc-950/50 p-6 text-sm text-zinc-500">
-              Todavía no hay liquidaciones pagadas.
+            <div className="rounded-[22px] border border-dashed border-zinc-700 bg-black/20 p-6 text-sm text-zinc-400">
+              Todavia no hay liquidaciones pagadas.
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               {historial.map((liq) => {
                 const barbero = barberosMap.get(liq.barberoId ?? "");
                 return (
                   <Link
                     key={liq.id}
                     href={`/liquidaciones/${liq.id}`}
-                    className="rounded-[20px] border border-zinc-800 bg-zinc-950 p-4 transition hover:bg-zinc-900"
+                    className="group block rounded-[24px] border border-zinc-800 bg-zinc-950 p-4 transition hover:border-zinc-700 hover:bg-zinc-900"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-white">{barbero?.nombre ?? "—"}</span>
-                          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-400">
-                            Pagado
+                          <span className="truncate font-semibold text-white">
+                            {barbero?.nombre ?? "Sin barbero"}
+                          </span>
+                          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300">
+                            Pagada
                           </span>
                         </div>
-                        <p className="mt-1 text-xs text-zinc-500">
+                        <p className="mt-1 text-xs text-zinc-400">
                           {formatPeriodo(liq.periodoInicio, liq.periodoFin)}
                         </p>
+                        <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                          <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-zinc-400">
+                            {liq.totalCortes ?? 0} cortes
+                          </span>
+                          <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-zinc-400">
+                            Pagada {formatFecha(liq.fechaPago)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-zinc-300">{formatARS(liq.montoAPagar)}</p>
-                        <p className="mt-0.5 text-xs text-zinc-600">{liq.totalCortes} cortes</p>
+
+                      <div className="text-left sm:text-right">
+                        <p className="font-display text-2xl font-semibold tracking-tight text-zinc-100">
+                          {formatARS(liq.montoAPagar)}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-500 group-hover:text-zinc-300">
+                          Revisar archivo
+                        </p>
                       </div>
                     </div>
                   </Link>

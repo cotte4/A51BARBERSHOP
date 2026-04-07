@@ -26,6 +26,45 @@ function formatDateTime(value: string | null) {
   }).format(new Date(value));
 }
 
+function formatShortDays(dayMask: WeekdayKey[]) {
+  if (dayMask.length === WEEKDAY_OPTIONS.length) return "Todos los dias";
+  if (dayMask.length === 0) return "Sin dias";
+  return dayMask.join(", ");
+}
+
+function StatCard({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-[24px] border border-zinc-800 bg-zinc-950/70 p-4">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">{label}</p>
+      <p className="mt-2 text-lg font-semibold text-white">{value}</p>
+      <p className="mt-1 text-sm text-zinc-400">{detail}</p>
+    </div>
+  );
+}
+
+function SummaryItem({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-[18px] border border-zinc-800 bg-zinc-950/60 px-4 py-3">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-400">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
 export default function MusicConfigPanel({ state, callbackMessage }: MusicConfigPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -35,8 +74,17 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
   const [endTime, setEndTime] = useState("13:00");
   const [providerPlaylistRef, setProviderPlaylistRef] = useState(state.playlists[0]?.uri ?? "");
   const [dayMask, setDayMask] = useState<WeekdayKey[]>(WEEKDAY_OPTIONS.map((option) => option.key));
+  const [disconnectArmed, setDisconnectArmed] = useState(false);
+
+  const playlistCount = state.playlists.length;
+  const scheduleCount = state.schedules.length;
+  const expectedPlayer = state.players.find((player) => player.isExpectedLocalPlayer) ?? null;
+  const selectedPlaylist =
+    state.playlists.find((playlist) => playlist.uri === providerPlaylistRef) ?? null;
+  const autoResumeLabel = state.autoResume.resumeContextLabel ?? "la playlist automatica";
 
   function runMutation(task: () => Promise<{ error?: string }>, successMessage: string) {
+    setDisconnectArmed(false);
     startTransition(async () => {
       const result = await task();
       if (result.error) {
@@ -57,6 +105,7 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
 
   function handleCreateRule(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     runMutation(
       () =>
         createScheduleRuleAction({
@@ -70,24 +119,42 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
     );
   }
 
+  function handleDisconnect() {
+    if (!disconnectArmed) {
+      setFeedback("Pulsa de nuevo para desconectar Spotify.");
+      setDisconnectArmed(true);
+      return;
+    }
+
+    runMutation(() => disconnectMusicProviderAction(), "Spotify desconectado del negocio.");
+  }
+
   return (
     <div className="space-y-6">
-      <section className="rounded-[30px] border border-zinc-800 bg-zinc-900/80 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.3)]">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-3">
+      <section className="panel-card rounded-[30px] p-6 sm:p-7">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-3xl space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <MusicStateBadge state={state.runtime.state} />
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-zinc-300">
                 Spotify {state.provider.connected ? "conectado" : "desconectado"}
               </span>
+              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs font-semibold text-zinc-300">
+                {playlistCount} playlists
+              </span>
             </div>
+
             <div>
-              <h2 className="text-2xl font-semibold text-white">Configuracion de Musica</h2>
+              <p className="eyebrow">Configuracion / Musica</p>
+              <h2 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                Musica del local
+              </h2>
               <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-                Acá definis el provider del local, el player esperado y las playlists que alimentan
-                el modo Auto.
+                Definimos proveedor, player esperado y franjas automaticas para que la musica
+                acompañe el ritmo del local sin dejar huecos raros ni estados confusos.
               </p>
             </div>
+
             {feedback ? (
               <p className="rounded-2xl border border-[#8cff59]/20 bg-[#8cff59]/10 px-4 py-3 text-sm text-[#d8ffc7]">
                 {feedback}
@@ -96,6 +163,12 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
             {!feedback && callbackMessage ? (
               <p className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100">
                 {callbackMessage}
+              </p>
+            ) : null}
+            {state.autoResume.pending ? (
+              <p className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100">
+                Auto esta interrumpido por una llegada y espera volver a{" "}
+                <span className="font-semibold text-white">{autoResumeLabel}</span>.
               </p>
             ) : null}
           </div>
@@ -117,56 +190,51 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
             <button
               type="button"
               disabled={isPending || !state.provider.connected}
-              onClick={() =>
-                runMutation(
-                  () => disconnectMusicProviderAction(),
-                  "Spotify desconectado del negocio.",
-                )
-              }
+              onClick={handleDisconnect}
               className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-100 hover:bg-red-500/20 disabled:opacity-50"
             >
-              Desconectar
+              {disconnectArmed ? "Confirmar desconexion" : "Desconectar"}
             </button>
           </div>
         </div>
 
-        <div className="mt-6 grid gap-3 md:grid-cols-4">
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Modo activo</p>
-            <p className="mt-2 text-lg font-semibold text-white">{state.mode.activeMode}</p>
-            <p className="mt-1 text-sm text-zinc-400">Auto: {state.mode.autoEnabled ? "si" : "no"}</p>
-          </div>
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Player esperado</p>
-            <p className="mt-2 text-lg font-semibold text-white">
-              {state.players.find((player) => player.isExpectedLocalPlayer)?.name ??
-                "Sin player elegido"}
-            </p>
-            <p className="mt-1 text-sm text-zinc-400">
-              Ultimo seen: {formatDateTime(state.players.find((player) => player.isExpectedLocalPlayer)?.lastSeenAt ?? null)}
-            </p>
-          </div>
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Ultimo playback</p>
-            <p className="mt-2 text-lg font-semibold text-white">
-              {formatDateTime(state.runtime.lastPlaybackSuccessAt)}
-            </p>
-            <p className="mt-1 text-sm text-zinc-400">Intento: {formatDateTime(state.runtime.lastPlaybackAttemptAt)}</p>
-          </div>
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Ultimo error</p>
-            <p className="mt-2 text-sm font-medium text-white">
-              {state.runtime.lastError ?? state.provider.lastError ?? "Sin errores"}
-            </p>
-            <p className="mt-1 text-sm text-zinc-400">{state.runtime.degradedReason ?? "Sistema estable"}</p>
-          </div>
+        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Modo activo"
+            value={state.mode.activeMode}
+            detail={`Auto ${state.mode.autoEnabled ? "habilitado" : "deshabilitado"}.`}
+          />
+          <StatCard
+            label="Player esperado"
+            value={expectedPlayer?.name ?? "Sin player elegido"}
+            detail={expectedPlayer ? `Visto ${formatDateTime(expectedPlayer.lastSeenAt)}` : "Elegilo para evitar desfasajes."}
+          />
+          <StatCard
+            label="Ultimo playback"
+            value={formatDateTime(state.runtime.lastPlaybackSuccessAt)}
+            detail={`Intento ${formatDateTime(state.runtime.lastPlaybackAttemptAt)}`}
+          />
+          <StatCard
+            label="Estado"
+            value={state.runtime.lastError ?? state.provider.lastError ?? "Sin errores"}
+            detail={
+              state.autoResume.pending
+                ? `Reanudacion pendiente hacia ${autoResumeLabel}.`
+                : state.runtime.degradedReason ?? "Sistema estable"
+            }
+          />
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+      <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
         <div className="rounded-[30px] border border-zinc-800 bg-zinc-900/80 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Player del local</p>
           <h3 className="mt-2 text-xl font-semibold text-white">Elegir dispositivo esperado</h3>
+          <p className="mt-2 text-sm text-zinc-400">
+            Este es el device que el sistema va a considerar como player principal. Si no aparece
+            ninguno, abrí Spotify en el celu o dispositivo del local y refrescá.
+          </p>
+
           <div className="mt-5 space-y-3">
             {state.players.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-950/60 p-5 text-sm text-zinc-400">
@@ -216,6 +284,11 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
         <div className="rounded-[30px] border border-zinc-800 bg-zinc-900/80 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Modo Auto</p>
           <h3 className="mt-2 text-xl font-semibold text-white">Franja automatica</h3>
+          <p className="mt-2 text-sm text-zinc-400">
+            Armamos una regla por dias y horario, usando una playlist concreta para que el
+            cambio de clima sea predecible.
+          </p>
+
           <form onSubmit={handleCreateRule} className="mt-5 space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="space-y-2 text-sm text-zinc-300">
@@ -265,9 +338,14 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
               </label>
             </div>
 
-            <div className="space-y-3">
-              <p className="text-sm text-zinc-300">Dias</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/60 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-zinc-300">Dias</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                  {dayMask.length} seleccionados
+                </p>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
                 {WEEKDAY_OPTIONS.map((option) => {
                   const active = dayMask.includes(option.key);
                   return (
@@ -275,7 +353,8 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
                       key={option.key}
                       type="button"
                       onClick={() => toggleDay(option.key)}
-                      className={`rounded-full border px-3 py-2 text-sm font-semibold ${
+                      aria-pressed={active}
+                      className={`rounded-full border px-3 py-2 text-sm font-semibold transition ${
                         active
                           ? "border-[#8cff59]/30 bg-[#8cff59]/10 text-[#d8ffc7]"
                           : "border-zinc-700 bg-zinc-950 text-zinc-400"
@@ -285,6 +364,16 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
                     </button>
                   );
                 })}
+              </div>
+            </div>
+
+            <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/60 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Preview</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <SummaryItem label="Playlist" value={selectedPlaylist?.name ?? "Elegir una playlist"} />
+                <SummaryItem label="Dias" value={formatShortDays(dayMask)} />
+                <SummaryItem label="Horario" value={`${startTime} a ${endTime}`} />
+                <SummaryItem label="Estado" value={playlistCount > 0 ? "Listo para guardar" : "Sin playlists"} />
               </div>
             </div>
 
@@ -301,7 +390,11 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
 
       <section className="rounded-[30px] border border-zinc-800 bg-zinc-900/80 p-6">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Programacion</p>
-        <h3 className="mt-2 text-xl font-semibold text-white">Franja cargadas</h3>
+        <h3 className="mt-2 text-xl font-semibold text-white">Franjas cargadas</h3>
+        <p className="mt-2 text-sm text-zinc-400">
+          {scheduleCount} reglas activas para el modo automatico del local.
+        </p>
+
         <div className="mt-5 space-y-3">
           {state.schedules.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-950/60 p-5 text-sm text-zinc-400">
@@ -312,13 +405,16 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
           {state.schedules.map((rule) => (
             <div
               key={rule.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4"
+              className="flex flex-col gap-3 rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-base font-semibold text-white">{rule.label}</p>
-                <p className="mt-1 text-sm text-zinc-400">
-                  {rule.startTime.slice(0, 5)}-{rule.endTime.slice(0, 5)} · {rule.dayMask.join(", ")}
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-base font-semibold text-white">{rule.label}</p>
+                  <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                    {rule.startTime.slice(0, 5)}-{rule.endTime.slice(0, 5)}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-zinc-400">{formatShortDays(rule.dayMask)}</p>
               </div>
               <button
                 type="button"

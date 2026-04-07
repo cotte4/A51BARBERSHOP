@@ -12,24 +12,44 @@ export default async function NuevoBarberoPage() {
   ]);
 
   return (
-    <div>
-      <div className="flex items-center gap-3 mb-6">
-        <Link
-          href="/configuracion/barberos"
-          className="text-gray-400 hover:text-gray-600 text-sm"
-        >
+    <div className="space-y-6">
+      <section className="panel-card rounded-[28px] p-6 sm:p-7">
+        <Link href="/configuracion/barberos" className="text-sm text-zinc-400 transition hover:text-[#8cff59]">
           ← Barberos
         </Link>
-      </div>
-      <h2 className="text-lg font-semibold text-gray-900 mb-6">Nuevo barbero</h2>
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <BarberoForm
-          action={crearBarbero}
-          serviciosOptions={serviciosActivos}
-          mediosPagoOptions={mediosPagoActivos}
-          submitLabel="Crear barbero"
-        />
-      </div>
+        <div className="mt-4 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+          <div className="max-w-2xl">
+            <p className="eyebrow">Configuracion / Barberos</p>
+            <h2 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              Nuevo barbero
+            </h2>
+            <p className="mt-3 text-sm text-zinc-400">
+              Definimos identidad, modelo y defaults de caja para que el perfil salga listo para
+              operar desde el primer guardado.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/60 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Requisito</p>
+              <p className="mt-2 text-sm font-medium text-white">Nombre, rol y modelo.</p>
+            </div>
+            <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/60 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Salida</p>
+              <p className="mt-2 text-sm font-medium text-white">
+                Perfil listo para caja y liquidacion.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <BarberoForm
+        action={crearBarbero}
+        serviciosOptions={serviciosActivos}
+        mediosPagoOptions={mediosPagoActivos}
+        submitLabel="Crear barbero"
+      />
     </div>
   );
 }

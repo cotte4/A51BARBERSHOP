@@ -2,6 +2,7 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
   barberos,
+  musicAutoResumeState,
   musicEvents,
   musicModeState,
   musicPlayers,
@@ -26,6 +27,7 @@ import { spotifyAdapter } from "@/lib/spotify-server";
 
 const MODE_SINGLETON_ID = "singleton";
 const RUNTIME_SINGLETON_ID = "singleton";
+const AUTO_RESUME_SINGLETON_ID = "singleton";
 const PROVIDER_CONNECTION_ID = "spotify";
 const ARGENTINA_TIME_ZONE = "America/Argentina/Buenos_Aires";
 
@@ -82,8 +84,24 @@ type TurnoProposalPayload = {
   cancion: string;
   spotifyTrackUri: string | null;
   barberoId: string | null;
+  outcome?:
+    | "proposal_created"
+    | "playback_started"
+    | "queued_in_jam"
+    | "waiting_for_recovery"
+    | "blocked_by_manual_dj"
+    | "missing_track_uri";
+  outcomeReason?: string | null;
   proposalStatus?: "pending" | "accepted" | "dismissed";
 };
+
+export type ClienteLlegoResult =
+  | { kind: "playback_started"; eventId: string; mode: "auto" }
+  | { kind: "queued_in_jam"; eventId: string; queueSessionId: string | null }
+  | { kind: "proposal_created"; eventId: string; reason: string }
+  | { kind: "waiting_for_recovery"; eventId: string; reason: string }
+  | { kind: "blocked_by_manual_dj"; eventId: string; reason: string }
+  | { kind: "missing_track_uri"; eventId: string };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -111,6 +129,16 @@ function parseTurnoProposalPayload(payload: unknown): TurnoProposalPayload | nul
     cancion,
     spotifyTrackUri: typeof payload.spotifyTrackUri === "string" ? payload.spotifyTrackUri : null,
     barberoId: typeof payload.barberoId === "string" ? payload.barberoId : null,
+    outcome:
+      payload.outcome === "proposal_created" ||
+      payload.outcome === "playback_started" ||
+      payload.outcome === "queued_in_jam" ||
+      payload.outcome === "waiting_for_recovery" ||
+      payload.outcome === "blocked_by_manual_dj" ||
+      payload.outcome === "missing_track_uri"
+        ? payload.outcome
+        : undefined,
+    outcomeReason: typeof payload.outcomeReason === "string" ? payload.outcomeReason : null,
     proposalStatus,
   };
 }
@@ -220,6 +248,17 @@ async function ensureBootstrap() {
       updatedAt: now,
     })
     .onConflictDoNothing();
+
+  await db
+    .insert(musicAutoResumeState)
+    .values({
+      id: AUTO_RESUME_SINGLETON_ID,
+      resumeMode: "auto",
+      resumePending: false,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoNothing();
 }
 
 async function getModeRow() {
@@ -238,6 +277,16 @@ async function getRuntimeRow() {
     .select()
     .from(musicRuntimeStatus)
     .where(eq(musicRuntimeStatus.id, RUNTIME_SINGLETON_ID))
+    .limit(1);
+  return row!;
+}
+
+async function getAutoResumeRow() {
+  await ensureBootstrap();
+  const [row] = await db
+    .select()
+    .from(musicAutoResumeState)
+    .where(eq(musicAutoResumeState.id, AUTO_RESUME_SINGLETON_ID))
     .limit(1);
   return row!;
 }
@@ -276,6 +325,32 @@ async function setModeState(input: Partial<typeof musicModeState.$inferInsert>) 
       updatedAt: new Date(),
     })
     .where(eq(musicModeState.id, MODE_SINGLETON_ID));
+}
+
+async function setAutoResumeState(
+  input: Partial<typeof musicAutoResumeState.$inferInsert>
+) {
+  await db
+    .update(musicAutoResumeState)
+    .set({
+      ...input,
+      updatedAt: new Date(),
+    })
+    .where(eq(musicAutoResumeState.id, AUTO_RESUME_SINGLETON_ID));
+}
+
+async function clearAutoResumeState() {
+  await setAutoResumeState({
+    resumeContextRef: null,
+    resumeContextLabel: null,
+    interruptionSource: null,
+    interruptionTrackRef: null,
+    resumePending: false,
+    interruptedAt: null,
+    resumedAt: new Date(),
+    resumeAttempts: 0,
+    lastError: null,
+  });
 }
 
 async function syncPlayersFromSpotify() {
@@ -474,6 +549,88 @@ async function ensureAutoPlayback(deviceId: string | null) {
     ruleId: rule.id,
     playlistRef: rule.providerPlaylistRef,
   });
+}
+
+async function attemptAutoResume(deviceId: string | null) {
+  if (!deviceId) return;
+
+  const resumeState = await getAutoResumeRow();
+  if (!resumeState.resumePending) {
+    return;
+  }
+
+  const playback = await spotifyAdapter.getPlaybackState().catch(() => null);
+  if (
+    resumeState.resumeContextRef &&
+    playback?.contextUri === resumeState.resumeContextRef &&
+    playback.isPlaying
+  ) {
+    await clearAutoResumeState();
+    await logMusicEvent("music.auto.resumed_after_arrival", {
+      resumeContextRef: resumeState.resumeContextRef,
+      interruptionTrackRef: resumeState.interruptionTrackRef,
+      completedWithoutCommand: true,
+    });
+    return;
+  }
+
+  if (
+    resumeState.interruptionTrackRef &&
+    playback?.item?.uri === resumeState.interruptionTrackRef &&
+    playback.isPlaying
+  ) {
+    return;
+  }
+
+  if (!resumeState.resumeContextRef) {
+    await clearAutoResumeState();
+    await logMusicEvent("music.auto.resume_cleared", {
+      reason: "missing_resume_context",
+      interruptionTrackRef: resumeState.interruptionTrackRef,
+    });
+    return;
+  }
+
+  try {
+    await updateRuntimeStatus({
+      providerStatus: "connected",
+      playerStatus: "ready",
+      lastPlaybackAttemptAt: new Date(),
+    });
+
+    await spotifyAdapter.play({
+      kind: "playlist",
+      uri: resumeState.resumeContextRef,
+      deviceId,
+    });
+
+    await updateRuntimeStatus({
+      providerStatus: "connected",
+      playerStatus: "ready",
+      lastPlaybackAttemptAt: new Date(),
+      lastPlaybackSuccessAt: new Date(),
+      lastError: null,
+    });
+
+    await clearAutoResumeState();
+    await logMusicEvent("music.auto.resumed_after_arrival", {
+      resumeContextRef: resumeState.resumeContextRef,
+      resumeContextLabel: resumeState.resumeContextLabel,
+      interruptionTrackRef: resumeState.interruptionTrackRef,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No pude reanudar AUTO.";
+    await setAutoResumeState({
+      resumeAttempts: (resumeState.resumeAttempts ?? 0) + 1,
+      lastError: message,
+    });
+
+    await logMusicEvent("music.auto.resume_failed", {
+      resumeContextRef: resumeState.resumeContextRef,
+      interruptionTrackRef: resumeState.interruptionTrackRef,
+      error: message,
+    });
+  }
 }
 
 async function getActiveQueueSession(mode: MusicMode) {
@@ -806,6 +963,7 @@ export async function syncMusicEngine() {
   await processPendingDjContext(runtime.activePlayerProviderId);
 
   if (mode.activeMode === "auto") {
+    await attemptAutoResume(runtime.activePlayerProviderId);
     await ensureAutoPlayback(runtime.activePlayerProviderId);
     return "ready";
   }
@@ -824,7 +982,7 @@ export async function getMusicDashboardState(options: { sync?: boolean } = {}): 
   }
 
   const mode = await getModeRow();
-  const [provider, runtime, players, schedules, playback, queueSession, playlists, recentEvents] = await Promise.all([
+  const [provider, runtime, players, schedules, autoResume, playback, queueSession, playlists, recentEvents] = await Promise.all([
     db
       .select()
       .from(musicProviderConnections)
@@ -845,6 +1003,7 @@ export async function getMusicDashboardState(options: { sync?: boolean } = {}): 
       .select()
       .from(musicScheduleRules)
       .orderBy(asc(musicScheduleRules.priority), asc(musicScheduleRules.startTime)),
+    getAutoResumeRow(),
     spotifyAdapter.getPlaybackState().catch(() => null),
     getActiveQueueSession(mode.activeMode as MusicMode),
     spotifyAdapter.listPlaylists().catch(() => []),
@@ -932,6 +1091,18 @@ export async function getMusicDashboardState(options: { sync?: boolean } = {}): 
       lastError: player.lastError,
     })),
     schedules: schedules.map(formatScheduleRule),
+    autoResume: {
+      pending: autoResume.resumePending,
+      resumeMode: "auto",
+      resumeContextRef: autoResume.resumeContextRef,
+      resumeContextLabel: autoResume.resumeContextLabel,
+      interruptionSource: autoResume.interruptionSource,
+      interruptionTrackRef: autoResume.interruptionTrackRef,
+      interruptedAt: isoOrNull(autoResume.interruptedAt),
+      resumedAt: isoOrNull(autoResume.resumedAt),
+      resumeAttempts: autoResume.resumeAttempts,
+      lastError: autoResume.lastError,
+    },
     queue: {
       activeSessionId,
       items: queueRows.map((item) => ({
@@ -1034,6 +1205,254 @@ export async function upsertSpotifyConnection(tokens: {
   await syncMusicEngine();
 }
 
+async function createTurnoArrivalEvent(input: {
+  turnoId: string;
+  clienteNombre: string;
+  cancion: string;
+  spotifyTrackUri: string | null;
+  barberoId: string | null;
+  proposalStatus: "pending" | "accepted" | "dismissed";
+  outcome: NonNullable<TurnoProposalPayload["outcome"]>;
+  outcomeReason?: string | null;
+}) {
+  const [event] = await db
+    .insert(musicEvents)
+    .values({
+      eventType: "turno.cliente_llego",
+      payload: {
+        turnoId: input.turnoId,
+        clienteNombre: input.clienteNombre,
+        cancion: input.cancion,
+        spotifyTrackUri: input.spotifyTrackUri,
+        barberoId: input.barberoId,
+        proposalStatus: input.proposalStatus,
+        outcome: input.outcome,
+        outcomeReason: input.outcomeReason ?? null,
+      },
+    })
+    .returning();
+
+  return event;
+}
+
+function getPreferredActivePlayerId(players: MusicDashboardState["players"]) {
+  return (
+    players.find((player) => player.isExpectedLocalPlayer && player.status === "ready")
+      ?.providerPlayerId ??
+    players.find((player) => player.isDefault && player.status === "ready")?.providerPlayerId ??
+    players.find((player) => player.status === "ready")?.providerPlayerId ??
+    null
+  );
+}
+
+export async function handleClienteLlego(input: {
+  turnoId: string;
+  clienteNombre: string;
+  cancion: string;
+  spotifyTrackUri: string | null;
+  barberoId: string | null;
+  triggeredByUserId: string;
+  triggeredByBarberoId: string | null;
+}): Promise<ClienteLlegoResult> {
+  await ensureBootstrap();
+  await syncMusicEngine();
+
+  const mode = await getModeRow();
+
+  if (!input.spotifyTrackUri) {
+    const event = await createTurnoArrivalEvent({
+      turnoId: input.turnoId,
+      clienteNombre: input.clienteNombre,
+      cancion: input.cancion,
+      spotifyTrackUri: null,
+      barberoId: input.barberoId,
+      proposalStatus: "pending",
+      outcome: "missing_track_uri",
+    });
+
+    await logMusicEvent("turno.cliente_llego.missing_track_uri", {
+      turnoId: input.turnoId,
+      eventId: event.id,
+      clienteNombre: input.clienteNombre,
+    });
+
+    return {
+      kind: "missing_track_uri",
+      eventId: event.id,
+    };
+  }
+
+  const dashboard = await getMusicDashboardState();
+  const providerReady = dashboard.provider.connected;
+  const runtimeReady = dashboard.runtime.state === "ready";
+  const activePlayerId = getPreferredActivePlayerId(dashboard.players);
+
+  if (!providerReady || !runtimeReady || !activePlayerId) {
+    const reason =
+      dashboard.runtime.degradedReason ??
+      (providerReady ? "No encontramos un player listo en el local." : "Spotify no esta conectado.");
+    const event = await createTurnoArrivalEvent({
+      turnoId: input.turnoId,
+      clienteNombre: input.clienteNombre,
+      cancion: input.cancion,
+      spotifyTrackUri: input.spotifyTrackUri,
+      barberoId: input.barberoId,
+      proposalStatus: "pending",
+      outcome: "waiting_for_recovery",
+      outcomeReason: reason,
+    });
+
+    await logMusicEvent("turno.cliente_llego.waiting_for_recovery", {
+      turnoId: input.turnoId,
+      eventId: event.id,
+      reason,
+    });
+
+    return {
+      kind: "waiting_for_recovery",
+      eventId: event.id,
+      reason,
+    };
+  }
+
+  if (mode.activeMode === "jam") {
+    const beforeState = await getMusicDashboardState();
+    await queueTrack({
+      mode: "jam",
+      userId: input.triggeredByUserId,
+      barberoId: input.barberoId ?? input.triggeredByBarberoId,
+      trackUri: input.spotifyTrackUri,
+      trackName: input.cancion,
+      artistName: null,
+    });
+
+    const afterState = await getMusicDashboardState();
+    const event = await createTurnoArrivalEvent({
+      turnoId: input.turnoId,
+      clienteNombre: input.clienteNombre,
+      cancion: input.cancion,
+      spotifyTrackUri: input.spotifyTrackUri,
+      barberoId: input.barberoId,
+      proposalStatus: "accepted",
+      outcome: "queued_in_jam",
+    });
+
+    await logMusicEvent("turno.cliente_llego.queued", {
+      turnoId: input.turnoId,
+      eventId: event.id,
+      mode: "jam",
+      queueBefore: beforeState.queue.items.length,
+      queueAfter: afterState.queue.items.length,
+      activeSessionId: afterState.queue.activeSessionId,
+    });
+
+    return {
+      kind: "queued_in_jam",
+      eventId: event.id,
+      queueSessionId: afterState.queue.activeSessionId,
+    };
+  }
+
+  if (mode.activeMode === "dj") {
+    const reason = "DJ esta activo; dejamos la cancion como propuesta para no pisar al operador.";
+    const event = await createTurnoArrivalEvent({
+      turnoId: input.turnoId,
+      clienteNombre: input.clienteNombre,
+      cancion: input.cancion,
+      spotifyTrackUri: input.spotifyTrackUri,
+      barberoId: input.barberoId,
+      proposalStatus: "pending",
+      outcome: "blocked_by_manual_dj",
+      outcomeReason: reason,
+    });
+
+    await logMusicEvent("turno.cliente_llego.blocked_by_manual_dj", {
+      turnoId: input.turnoId,
+      eventId: event.id,
+    });
+
+    return {
+      kind: "blocked_by_manual_dj",
+      eventId: event.id,
+      reason,
+    };
+  }
+
+  await updateRuntimeStatus({
+    providerStatus: "connected",
+    playerStatus: "ready",
+    lastPlaybackAttemptAt: new Date(),
+  });
+
+  const playbackBeforeArrival = await spotifyAdapter.getPlaybackState().catch(() => null);
+  const activeRule = await getCurrentScheduleRule();
+  const resumeContextRef = playbackBeforeArrival?.contextUri ?? activeRule?.providerPlaylistRef ?? null;
+  const resumeContextLabel = activeRule?.label ?? (resumeContextRef ? "AUTO" : null);
+
+  await setAutoResumeState({
+    resumeMode: "auto",
+    resumeContextRef,
+    resumeContextLabel,
+    interruptionSource: "turno_llego",
+    interruptionTrackRef: input.spotifyTrackUri,
+    resumePending: Boolean(resumeContextRef),
+    interruptedAt: new Date(),
+    resumedAt: null,
+    resumeAttempts: 0,
+    lastError: null,
+  });
+
+  await spotifyAdapter.play({
+    kind: "track",
+    uri: input.spotifyTrackUri,
+    deviceId: activePlayerId,
+  });
+
+  await updateRuntimeStatus({
+    providerStatus: "connected",
+    playerStatus: "ready",
+    lastPlaybackAttemptAt: new Date(),
+    lastPlaybackSuccessAt: new Date(),
+    lastError: null,
+  });
+
+  const event = await createTurnoArrivalEvent({
+    turnoId: input.turnoId,
+    clienteNombre: input.clienteNombre,
+    cancion: input.cancion,
+    spotifyTrackUri: input.spotifyTrackUri,
+    barberoId: input.barberoId,
+    proposalStatus: "accepted",
+    outcome: "playback_started",
+  });
+
+  await logMusicEvent("turno.cliente_llego.playback_started", {
+    turnoId: input.turnoId,
+    eventId: event.id,
+    mode: "auto",
+    playerId: activePlayerId,
+    trackUri: input.spotifyTrackUri,
+    resumeContextRef,
+    resumeContextLabel,
+  });
+
+  if (resumeContextRef) {
+    await logMusicEvent("music.auto.interrupted_for_arrival", {
+      turnoId: input.turnoId,
+      eventId: event.id,
+      interruptionTrackRef: input.spotifyTrackUri,
+      resumeContextRef,
+      resumeContextLabel,
+    });
+  }
+
+  return {
+    kind: "playback_started",
+    eventId: event.id,
+    mode: "auto",
+  };
+}
+
 export async function saveScheduleRule(input: {
   label: string;
   dayMask: WeekdayKey[];
@@ -1085,6 +1504,8 @@ export async function setAutoMode(userId: string) {
     updatedByUserId: userId,
   });
 
+  await clearAutoResumeState();
+
   await syncMusicEngine();
 }
 
@@ -1105,6 +1526,8 @@ export async function activateDjMode(input: {
     manualOwnerUserId: input.userId,
     updatedByUserId: input.userId,
   });
+
+  await clearAutoResumeState();
 }
 
 export async function activateJamMode(input: {
@@ -1125,6 +1548,8 @@ export async function activateJamMode(input: {
     manualOwnerUserId: input.userId,
     updatedByUserId: input.userId,
   });
+
+  await clearAutoResumeState();
 }
 
 export async function playPlaylistNow(input: {
@@ -1315,6 +1740,18 @@ export async function resumeMusic() {
     throw new Error("No encontramos un player activo.");
   }
   await spotifyAdapter.resume(activePlayer.providerPlayerId);
+}
+
+export async function previousMusic() {
+  const dashboard = await getMusicDashboardState({ sync: true });
+  const activePlayer =
+    dashboard.players.find((player) => player.isExpectedLocalPlayer) ??
+    dashboard.players.find((player) => player.isDefault) ??
+    dashboard.players[0];
+  if (!activePlayer) {
+    throw new Error("No encontramos un player activo.");
+  }
+  await spotifyAdapter.skipPrevious(activePlayer.providerPlayerId);
 }
 
 export async function skipMusic() {

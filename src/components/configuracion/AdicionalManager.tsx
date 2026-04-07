@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import type { AdicionalFormState } from "@/app/(admin)/configuracion/servicios/actions";
 
 interface AdicionalManagerProps {
@@ -35,17 +35,42 @@ function EliminarButton({
   eliminarAdicionalAction: (id: string, servicioId: string) => Promise<void>;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() =>
+            startTransition(() => {
+              eliminarAdicionalAction(id, servicioId);
+            })
+          }
+          className="min-h-[44px] rounded-lg bg-red-500/15 px-4 py-2 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-50"
+        >
+          {isPending ? "Eliminando..." : "Confirmar"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setConfirming(false)}
+          className="min-h-[44px] rounded-lg bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+        >
+          Cancelar
+        </button>
+      </div>
+    );
+  }
 
   return (
     <button
       type="button"
       disabled={isPending}
-      onClick={() =>
-        startTransition(() => eliminarAdicionalAction(id, servicioId))
-      }
-      className="min-h-[44px] px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors disabled:opacity-50"
+      onClick={() => setConfirming(true)}
+      className="min-h-[44px] rounded-lg bg-red-500/15 px-4 py-2 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-50"
     >
-      {isPending ? "Eliminando..." : "Eliminar"}
+      Eliminar
     </button>
   );
 }
@@ -58,26 +83,46 @@ export default function AdicionalManager({
 }: AdicionalManagerProps) {
   const crearConId = crearAdicionalAction.bind(null, servicioId);
   const [state, formAction, isPending] = useActionState(crearConId, initialState);
+  const totalExtra = adicionales.reduce(
+    (acc, adicional) => acc + Number(adicional.precioExtra ?? 0),
+    0
+  );
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Lista de adicionales existentes */}
+    <div className="space-y-4">
+      <div className="rounded-[24px] bg-zinc-950/80 p-4 ring-1 ring-zinc-800">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              Panel de adicionales
+            </p>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">
+              Los extras suman valor sin ensuciar la base. Mantenelos claros para que el cobro
+              sea rápido y la explicación al cliente no se vuelva una charla larga.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <StatPill label="Adicionales" value={`${adicionales.length}`} />
+            <StatPill label="Impacto total" value={formatARS(String(totalExtra))} accent />
+          </div>
+        </div>
+      </div>
+
       {adicionales.length === 0 ? (
-        <p className="text-sm text-gray-400">Sin adicionales cargados.</p>
+        <div className="rounded-[24px] border border-dashed border-zinc-800 bg-zinc-950/60 p-5 text-sm text-zinc-400">
+          Sin adicionales cargados. Acá podés sumar extras que la caja reconocerá como parte del
+          servicio.
+        </div>
       ) : (
         <ul className="flex flex-col gap-2">
           {adicionales.map((a) => (
             <li
               key={a.id}
-              className="flex items-center justify-between gap-3 bg-gray-50 rounded-lg px-4 py-3"
+              className="flex items-center justify-between gap-3 rounded-[20px] bg-zinc-900 px-4 py-3 ring-1 ring-zinc-800"
             >
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-medium text-gray-900">
-                  {a.nombre}
-                </span>
-                <span className="ml-2 text-sm text-gray-500">
-                  +{formatARS(a.precioExtra)}
-                </span>
+              <div className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-white">{a.nombre}</span>
+                <span className="mt-1 block text-sm text-zinc-400">+{formatARS(a.precioExtra)}</span>
               </div>
               <EliminarButton
                 id={a.id}
@@ -89,21 +134,32 @@ export default function AdicionalManager({
         </ul>
       )}
 
-      {/* Formulario para agregar nuevo adicional */}
-      <form action={formAction} className="flex flex-col gap-3">
-        {state.error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+      <form action={formAction} className="rounded-[24px] bg-zinc-950/80 p-4 ring-1 ring-zinc-800">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              Nuevo adicional
+            </p>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">
+              Sumá un extra puntual, como diseño o un servicio complementario.
+            </p>
+          </div>
+          {state.success ? (
+            <span className="rounded-full bg-[#8cff59]/10 px-3 py-1 text-xs font-semibold text-[#8cff59] ring-1 ring-[#8cff59]/20">
+              Agregado
+            </span>
+          ) : null}
+        </div>
+
+        {state.error ? (
+          <div className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/15 px-4 py-3 text-sm text-red-300">
             {state.error}
           </div>
-        )}
+        ) : null}
 
-        <div className="flex gap-2 flex-col sm:flex-row">
-          {/* Nombre */}
-          <div className="flex flex-col gap-1 flex-1">
-            <label
-              htmlFor="adicional-nombre"
-              className="text-sm font-medium text-gray-700"
-            >
+        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_180px]">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="adicional-nombre" className="text-sm font-medium text-zinc-300">
               Nombre <span className="text-red-500">*</span>
             </label>
             <input
@@ -111,20 +167,16 @@ export default function AdicionalManager({
               name="nombre"
               type="text"
               placeholder="Ej: Diseño de barba"
-              className="min-h-[44px] px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="min-h-[48px] rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-sm text-white placeholder:text-zinc-500 focus:border-[#8cff59]/60 focus:outline-none"
             />
           </div>
 
-          {/* Precio extra */}
-          <div className="flex flex-col gap-1 sm:w-40">
-            <label
-              htmlFor="adicional-precio"
-              className="text-sm font-medium text-gray-700"
-            >
+          <div className="flex flex-col gap-2">
+            <label htmlFor="adicional-precio" className="text-sm font-medium text-zinc-300">
               Precio extra <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-400">
                 $
               </span>
               <input
@@ -134,7 +186,7 @@ export default function AdicionalManager({
                 min="0"
                 step="1"
                 placeholder="0"
-                className="min-h-[44px] w-full px-4 py-2 pl-8 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="min-h-[48px] w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 pl-8 text-sm text-white placeholder:text-zinc-500 focus:border-[#8cff59]/60 focus:outline-none"
               />
             </div>
           </div>
@@ -143,11 +195,34 @@ export default function AdicionalManager({
         <button
           type="submit"
           disabled={isPending}
-          className="min-h-[44px] px-6 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50 self-start"
+          className="neon-button mt-4 inline-flex min-h-[48px] items-center justify-center rounded-2xl px-5 text-sm font-semibold transition disabled:opacity-50"
         >
           {isPending ? "Agregando..." : "+ Agregar adicional"}
         </button>
       </form>
+    </div>
+  );
+}
+
+function StatPill({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-[18px] px-4 py-3 ring-1 ${
+        accent ? "bg-[#8cff59]/10 ring-[#8cff59]/20" : "bg-white/5 ring-white/10"
+      }`}
+    >
+      <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">{label}</p>
+      <p className={`mt-2 text-sm font-semibold ${accent ? "text-[#8cff59]" : "text-white"}`}>
+        {value}
+      </p>
     </div>
   );
 }

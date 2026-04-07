@@ -13,6 +13,7 @@ import {
   getDefaultWeekdayMask,
   pauseMusic,
   playPlaylistNow,
+  previousMusic,
   queueTrack,
   resumeMusic,
   saveScheduleRule,
@@ -218,6 +219,17 @@ export async function resumeMusicAction(): Promise<ActionResult> {
     return { ok: true };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "No pude reanudar la musica." };
+  }
+}
+
+export async function previousMusicAction(): Promise<ActionResult> {
+  try {
+    await requireMusicActor();
+    await previousMusic();
+    revalidateMusicSurfaces();
+    return { ok: true };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No pude volver al track anterior." };
   }
 }
 

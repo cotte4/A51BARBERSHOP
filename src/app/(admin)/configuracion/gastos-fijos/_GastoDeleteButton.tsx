@@ -12,8 +12,8 @@ export default function GastoDeleteButton({ id }: GastoDeleteButtonProps) {
   return (
     <DeleteButton
       deleteAction={deleteAction}
-      label="Eliminar"
-      confirmMessage="¿Estás seguro que querés eliminar este gasto? Esta acción no se puede deshacer."
+      label="Eliminar gasto"
+      confirmMessage="Vas a eliminar este gasto fijo. Si era recurrente, vas a tener que volver a cargarlo manualmente. Esta accion no se puede deshacer."
     />
   );
 }

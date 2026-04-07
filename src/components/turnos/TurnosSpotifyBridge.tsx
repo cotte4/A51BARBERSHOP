@@ -6,6 +6,7 @@ type TurnoLlegoDetail = {
   turnoId: string;
   clienteNombre: string;
   cancion: string | null;
+  successMessage?: string;
 };
 
 type BridgeToast = {
@@ -36,7 +37,9 @@ export default function TurnosSpotifyBridge() {
 
       showToast({
         tone: "success",
-        message: `Llegada enviada para ${detail.clienteNombre}. La pantalla ya puede mostrar la cancion.`,
+        message:
+          detail.successMessage?.trim() ||
+          `Llegada registrada para ${detail.clienteNombre}. La pantalla ya puede mostrar la cancion.`,
       });
     }
 

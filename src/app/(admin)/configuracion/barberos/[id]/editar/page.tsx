@@ -33,52 +33,57 @@ export default async function EditarBarberoPage({ params }: EditarBarberoPagePro
   const editarConId = editarBarbero.bind(null, id);
 
   return (
-    <div>
-      <div className="mb-6 flex items-center gap-3">
-        <Link href="/configuracion/barberos" className="text-sm text-gray-400 hover:text-gray-600">
+    <div className="space-y-6">
+      <section className="panel-card rounded-[28px] p-6 sm:p-7">
+        <Link href="/configuracion/barberos" className="text-sm text-zinc-400 transition hover:text-[#8cff59]">
           ← Barberos
         </Link>
-      </div>
+        <div className="mt-4 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+          <div className="max-w-2xl">
+            <p className="eyebrow">Configuracion / Barberos</p>
+            <h2 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              Editar: {barbero.nombre}
+            </h2>
+            <p className="mt-3 text-sm text-zinc-400">
+              Los cambios sensibles de este perfil se resuelven desde esta pantalla, con el estado
+              activo visible y una lectura clara de impacto.
+            </p>
+          </div>
 
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Editar: {barbero.nombre}</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Los cambios sensibles de este perfil se resuelven desde esta pantalla.
-          </p>
-        </div>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
-            Acción sensible
-          </p>
-          <div className="mt-2">
-            <ToggleActivoButton
-              id={barbero.id}
-              activo={barbero.activo ?? true}
-              toggleAction={toggleActivoBarbero}
-            />
+          <div className="rounded-[24px] border border-amber-400/20 bg-amber-400/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">
+              Accion sensible
+            </p>
+            <p className="mt-2 text-sm text-amber-50/80">
+              Activar o desactivar este perfil impacta caja y liquidaciones.
+            </p>
+            <div className="mt-4">
+              <ToggleActivoButton
+                id={barbero.id}
+                activo={barbero.activo ?? true}
+                toggleAction={toggleActivoBarbero}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-5">
-        <BarberoForm
-          action={editarConId}
-          initialData={{
-            nombre: barbero.nombre,
-            rol: barbero.rol,
-            tipoModelo: barbero.tipoModelo ?? undefined,
-            porcentajeComision: barbero.porcentajeComision,
-            alquilerBancoMensual: barbero.alquilerBancoMensual,
-            sueldoMinimoGarantizado: barbero.sueldoMinimoGarantizado,
-            servicioDefectoId: barbero.servicioDefectoId,
-            medioPagoDefectoId: barbero.medioPagoDefectoId,
-          }}
-          serviciosOptions={serviciosActivos}
-          mediosPagoOptions={mediosPagoActivos}
-          submitLabel="Guardar cambios"
-        />
-      </div>
+      <BarberoForm
+        action={editarConId}
+        initialData={{
+          nombre: barbero.nombre,
+          rol: barbero.rol,
+          tipoModelo: barbero.tipoModelo ?? undefined,
+          porcentajeComision: barbero.porcentajeComision,
+          alquilerBancoMensual: barbero.alquilerBancoMensual,
+          sueldoMinimoGarantizado: barbero.sueldoMinimoGarantizado,
+          servicioDefectoId: barbero.servicioDefectoId,
+          medioPagoDefectoId: barbero.medioPagoDefectoId,
+        }}
+        serviciosOptions={serviciosActivos}
+        mediosPagoOptions={mediosPagoActivos}
+        submitLabel="Guardar cambios"
+      />
     </div>
   );
 }
