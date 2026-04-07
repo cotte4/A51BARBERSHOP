@@ -10,6 +10,7 @@ type TurnoCardProps = {
   completarAction: (prevState: TurnoActionState) => Promise<TurnoActionState>;
   rechazarAction: (prevState: TurnoActionState, formData: FormData) => Promise<TurnoActionState>;
   clienteLlegoAction?: (prevState: TurnoActionState) => Promise<TurnoActionState>;
+  compact?: boolean;
 };
 
 const initialState: TurnoActionState = {};
@@ -44,6 +45,13 @@ function actionToneClasses(estado: TurnoSummary["estado"]) {
   if (estado === "confirmado") return "border-emerald-400/20 bg-emerald-400/8";
   if (estado === "completado") return "border-zinc-700/80 bg-zinc-900/80";
   return "border-red-500/20 bg-red-500/8";
+}
+
+function statusBorderL(estado: TurnoSummary["estado"]) {
+  if (estado === "pendiente") return "border-l-amber-400";
+  if (estado === "confirmado") return "border-l-[#8cff59]";
+  if (estado === "completado") return "border-l-zinc-600";
+  return "border-l-red-500";
 }
 
 function compactActionSummary(estado: TurnoSummary["estado"]) {
@@ -105,6 +113,7 @@ export default function TurnoCard({
   completarAction,
   rechazarAction,
   clienteLlegoAction,
+  compact = false,
 }: TurnoCardProps) {
   const detailId = `turno-card-detail-${turno.id}`;
   const [showReject, setShowReject] = useState(false);
@@ -198,11 +207,15 @@ export default function TurnoCard({
   return (
     <article
       aria-busy={actionPending}
-      className={`rounded-[22px] border px-4 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)] transition ${
-        turno.prioridadAbsoluta
-          ? "border-amber-400/40 bg-gradient-to-br from-amber-500/10 via-fuchsia-500/5 to-zinc-950"
-          : "border-zinc-800 bg-zinc-950/95"
-      } ${isExpanded ? "ring-1 ring-[#8cff59]/12" : ""}`}
+      className={`transition ${
+        compact
+          ? `overflow-hidden rounded-xl border border-zinc-800/60 border-l-4 ${statusBorderL(turno.estado)} ${isExpanded ? "ring-1 ring-[#8cff59]/12" : ""}`
+          : `rounded-[22px] border px-4 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)] ${
+              turno.prioridadAbsoluta
+                ? "border-amber-400/40 bg-gradient-to-br from-amber-500/10 via-fuchsia-500/5 to-zinc-950"
+                : "border-zinc-800 bg-zinc-950/95"
+            } ${isExpanded ? "ring-1 ring-[#8cff59]/12" : ""}`
+      }`}
     >
       <div className="flex flex-col gap-3">
         <button
@@ -210,79 +223,106 @@ export default function TurnoCard({
           aria-expanded={isExpanded}
           aria-controls={detailId}
           onClick={() => setIsExpanded((prev) => !prev)}
-          className="group -m-1 rounded-[20px] p-1 text-left outline-none"
+          className={`group text-left outline-none ${compact ? "w-full px-3 py-2.5" : "-m-1 rounded-[20px] p-1"}`}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-display text-base font-semibold tracking-wide text-white sm:text-lg">
-                  {turno.clienteNombre}
-                </h3>
-                {turno.prioridadAbsoluta ? (
-                  <span className="rounded-full border border-amber-300/40 bg-amber-300/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200">
-                    Prioridad
-                  </span>
-                ) : null}
-                {turno.esMarcianoSnapshot ? (
-                  <span className="rounded-full border border-fuchsia-500/20 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.18em] text-fuchsia-400">
-                    Marciano
-                  </span>
-                ) : null}
-              </div>
-              <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
-                {turno.horaInicio} - {turno.duracionMinutos} min - {turno.barberoNombre}
-              </p>
-              {turno.servicioNombre || formattedPrecioEsperado ? (
-                <p className="mt-1 text-sm text-zinc-300">
-                  {[turno.servicioNombre, formattedPrecioEsperado].filter(Boolean).join(" - ")}
+          {compact ? (
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <h3 className="truncate text-sm font-semibold text-white">
+                    {turno.clienteNombre}
+                  </h3>
+                  {turno.prioridadAbsoluta ? (
+                    <span className="shrink-0 rounded-full border border-amber-300/40 bg-amber-300/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-200">!</span>
+                  ) : null}
+                  {turno.esMarcianoSnapshot ? (
+                    <span className="shrink-0 rounded-full border border-fuchsia-500/20 bg-fuchsia-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-400">M</span>
+                  ) : null}
+                </div>
+                <p className="mt-0.5 truncate text-[11px] text-zinc-500">
+                  {[turno.duracionMinutos + " min", turno.servicioNombre, turno.barberoNombre].filter(Boolean).join(" · ")}
                 </p>
-              ) : null}
-            </div>
-
-            <div className="flex shrink-0 items-start gap-2">
-              <div className="flex flex-col items-end gap-2">
-                <span
-                  className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusClasses(turno.estado)}`}
-                >
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusClasses(turno.estado)}`}>
                   {statusLabel(turno.estado)}
                 </span>
-                <p className="max-w-[10rem] text-right text-[11px] leading-4 text-zinc-500">
-                  {statusHint(turno.estado)}
-                </p>
+                <span className="rounded-full border border-white/10 bg-white/5 p-1 text-zinc-400">
+                  <ChevronIcon expanded={isExpanded} />
+                </span>
               </div>
-              <span className="mt-0.5 rounded-full border border-white/10 bg-white/5 p-2 text-zinc-400 transition group-hover:border-[#8cff59]/25 group-hover:text-[#8cff59]">
-                <ChevronIcon expanded={isExpanded} />
-              </span>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-display text-base font-semibold tracking-wide text-white sm:text-lg">
+                      {turno.clienteNombre}
+                    </h3>
+                    {turno.prioridadAbsoluta ? (
+                      <span className="rounded-full border border-amber-300/40 bg-amber-300/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200">
+                        Prioridad
+                      </span>
+                    ) : null}
+                    {turno.esMarcianoSnapshot ? (
+                      <span className="rounded-full border border-fuchsia-500/20 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.18em] text-fuchsia-400">
+                        Marciano
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
+                    {turno.horaInicio} - {turno.duracionMinutos} min - {turno.barberoNombre}
+                  </p>
+                  {turno.servicioNombre || formattedPrecioEsperado ? (
+                    <p className="mt-1 text-sm text-zinc-300">
+                      {[turno.servicioNombre, formattedPrecioEsperado].filter(Boolean).join(" - ")}
+                    </p>
+                  ) : null}
+                </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            {turno.clienteTelefonoRaw ? (
-              <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1 text-xs font-medium text-zinc-300">
-                {turno.clienteTelefonoRaw}
-              </span>
-            ) : null}
-            <span
-              className={`rounded-full border px-3 py-1 text-xs font-medium ${actionToneClasses(turno.estado)}`}
-            >
-              {compactActionSummary(turno.estado)}
-            </span>
-            {turno.sugerenciaCancion ? (
-              <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-200">
-                Musica cargada
-              </span>
-            ) : null}
-            {turno.extras.length > 0 ? (
-              <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1 text-xs font-medium text-zinc-300">
-                {turno.extras.length} extra{turno.extras.length === 1 ? "" : "s"}
-              </span>
-            ) : null}
-            {turno.notaCliente ? (
-              <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1 text-xs font-medium text-zinc-300">
-                Con nota
-              </span>
-            ) : null}
-          </div>
+                <div className="flex shrink-0 items-start gap-2">
+                  <div className="flex flex-col items-end gap-2">
+                    <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusClasses(turno.estado)}`}>
+                      {statusLabel(turno.estado)}
+                    </span>
+                    <p className="max-w-[10rem] text-right text-[11px] leading-4 text-zinc-500">
+                      {statusHint(turno.estado)}
+                    </p>
+                  </div>
+                  <span className="mt-0.5 rounded-full border border-white/10 bg-white/5 p-2 text-zinc-400 transition group-hover:border-[#8cff59]/25 group-hover:text-[#8cff59]">
+                    <ChevronIcon expanded={isExpanded} />
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {turno.clienteTelefonoRaw ? (
+                  <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1 text-xs font-medium text-zinc-300">
+                    {turno.clienteTelefonoRaw}
+                  </span>
+                ) : null}
+                <span className={`rounded-full border px-3 py-1 text-xs font-medium ${actionToneClasses(turno.estado)}`}>
+                  {compactActionSummary(turno.estado)}
+                </span>
+                {turno.sugerenciaCancion ? (
+                  <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-200">
+                    Musica cargada
+                  </span>
+                ) : null}
+                {turno.extras.length > 0 ? (
+                  <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1 text-xs font-medium text-zinc-300">
+                    {turno.extras.length} extra{turno.extras.length === 1 ? "" : "s"}
+                  </span>
+                ) : null}
+                {turno.notaCliente ? (
+                  <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1 text-xs font-medium text-zinc-300">
+                    Con nota
+                  </span>
+                ) : null}
+              </div>
+            </>
+          )}
         </button>
 
         {shouldRenderDetails ? (
@@ -293,7 +333,7 @@ export default function TurnoCard({
             }`}
           >
             <div className="min-h-0">
-              <div className="space-y-3 pt-1">
+              <div className={`space-y-3 ${compact ? "border-t border-zinc-800/60 px-3 pb-3 pt-2" : "pt-1"}`}>
                 {(turno.esMarcianoSnapshot || turno.sugerenciaCancion) ? (
                   <div className="rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(140,255,89,0.08),rgba(217,70,239,0.08))] px-3 py-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">

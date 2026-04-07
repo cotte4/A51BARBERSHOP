@@ -137,12 +137,6 @@ export default function RoleBottomNav({ isAdmin }: { isAdmin: boolean }) {
   return (
     <nav className="fixed inset-x-0 bottom-4 z-30 px-3 sm:px-4">
       <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
-        <div className="mb-2 flex items-center rounded-[20px] border border-white/6 bg-white/[0.03] px-3 py-2">
-          <span className="h-2 w-2 rounded-full bg-[#8cff59] shadow-[0_0_14px_rgba(140,255,89,0.85)]" />
-          <span className="ml-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-zinc-400">
-            A51
-          </span>
-        </div>
         <div className={`grid gap-1 ${isAdmin ? "grid-cols-6" : "grid-cols-5"}`}>
           {navItems.map((item) => {
             const active = item.isActive(pathname);

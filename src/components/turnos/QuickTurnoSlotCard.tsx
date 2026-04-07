@@ -37,51 +37,26 @@ export default function QuickTurnoSlotCard({
   }, [router, state.success]);
 
   return (
-    <div
-      className={`rounded-[22px] border transition ${
-        open
-          ? "border-[#8cff59]/30 bg-zinc-900 shadow-[0_18px_60px_rgba(0,0,0,0.22)]"
-          : "border-dashed border-zinc-700 bg-zinc-900/50 hover:border-zinc-600 hover:bg-zinc-900"
-      }`}
-    >
+    <div className={`rounded-xl border transition ${open ? "border-[#8cff59]/25 bg-zinc-900" : "border-dashed border-zinc-800 bg-transparent hover:border-zinc-700"}`}>
       <button
         type="button"
         onClick={() => setOpen((c) => !c)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
+        className="flex min-h-[44px] w-full items-center justify-center gap-2 px-3 py-1.5 text-center"
       >
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8cff59]">
-              Hueco libre
-            </p>
-            <span className="rounded-full border border-zinc-700 bg-zinc-950 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
-              {durationMinutos} min
-            </span>
-          </div>
-          <p className="mt-1 text-base font-semibold text-white">{time}</p>
-          <p className="mt-1 text-sm text-zinc-400">{barberName}</p>
-          <p className="mt-1 text-xs text-zinc-500">
-            Abrilo para crear un turno confirmado en este bloque sin salir de la agenda.
-          </p>
-        </div>
-        <span className="flex h-11 min-w-11 items-center justify-center rounded-2xl border border-[#8cff59]/20 bg-[#8cff59]/10 px-3 text-sm font-bold text-[#8cff59]">
-          {open ? "–" : "+"}
-        </span>
+        {open ? (
+          <span className="text-xs font-semibold text-[#8cff59]">– {time} · {durationMinutos} min · {barberName}</span>
+        ) : (
+          <>
+            <span className="text-base font-semibold text-zinc-600">+</span>
+            <span className="text-[11px] text-zinc-600">{durationMinutos} min · {barberName}</span>
+          </>
+        )}
       </button>
 
       {open ? (
-        <form id={panelId} action={formAction} className="space-y-3 border-t border-zinc-800 px-4 pb-4 pt-3">
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 px-3 py-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Nuevo turno en este hueco
-            </p>
-            <p className="mt-1 text-sm text-zinc-200">
-              {time} · {durationMinutos} min · {barberName}
-            </p>
-          </div>
-
+        <form id={panelId} action={formAction} className="space-y-3 border-t border-zinc-800 px-3 pb-3 pt-2.5">
           <div className="grid gap-2 sm:grid-cols-2">
             <input
               name="clienteNombre"
@@ -90,7 +65,7 @@ export default function QuickTurnoSlotCard({
               placeholder="Nombre del cliente"
               required
               aria-invalid={hasError}
-              className={`h-11 rounded-2xl border bg-zinc-950 px-3 text-sm text-white placeholder-zinc-600 outline-none ${
+              className={`h-11 rounded-xl border bg-zinc-950 px-3 text-sm text-white placeholder-zinc-600 outline-none ${
                 fieldError ? "border-red-500/40 focus:border-red-400" : "border-zinc-700 focus:border-[#8cff59]"
               }`}
             />
@@ -99,7 +74,7 @@ export default function QuickTurnoSlotCard({
               autoComplete="tel"
               inputMode="tel"
               placeholder="Telefono (opcional)"
-              className="h-11 rounded-2xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500"
+              className="h-11 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500"
             />
           </div>
 
@@ -107,26 +82,26 @@ export default function QuickTurnoSlotCard({
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-[#8cff59] px-4 text-sm font-semibold text-[#07130a] hover:bg-[#a8ff80] disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[#8cff59] px-4 text-sm font-semibold text-[#07130a] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {pending ? "Guardando..." : "Crear turno confirmado"}
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800 px-4 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-zinc-700 bg-zinc-800 px-4 text-sm font-medium text-zinc-300"
             >
-              Cerrar
+              Cancelar
             </button>
           </div>
 
           {state.error ? (
-            <p role="alert" className="rounded-2xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            <p role="alert" className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-200">
               {state.error}
             </p>
           ) : null}
           {fieldError ? (
-            <p role="alert" className="rounded-2xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            <p role="alert" className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-200">
               {fieldError}
             </p>
           ) : null}
