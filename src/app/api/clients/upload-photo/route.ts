@@ -53,9 +53,11 @@ export async function POST(request: Request) {
   try {
     const blob = await put(filename, file, { access: "public" });
     return Response.json({ url: blob.url });
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[upload-photo] Blob error:", message);
     return Response.json(
-      { error: "No se pudo subir la foto. Intenta de nuevo." },
+      { error: "No se pudo subir la foto. Intenta de nuevo.", detail: message },
       { status: 500 }
     );
   }
