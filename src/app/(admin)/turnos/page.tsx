@@ -351,8 +351,7 @@ function buildTurnosHref(fecha: string, estado?: string, scope?: string) {
 }
 
 function formatFechaCorta(fecha: string) {
-  const [year, month, day] = fecha.split("-").map(Number);
-  const parsed = new Date(Date.UTC(year, month - 1, day));
+  const parsed = new Date(`${fecha}T12:00:00Z`);
   return parsed.toLocaleDateString("es-AR", {
     weekday: "short",
     day: "numeric",
