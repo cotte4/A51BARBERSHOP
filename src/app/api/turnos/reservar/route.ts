@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { canAccessPublicReserva } from "@/lib/public-reserva-access";
 import { createTurnoReserva } from "@/lib/turnos-reserva";
 import {
   enforcePublicReservaRateLimit,
@@ -19,7 +20,12 @@ const reservaSchema = z.object({
   clienteTelefonoRaw: z.string().trim().optional().or(z.literal("")),
   notaCliente: z.string().trim().optional().or(z.literal("")),
   sugerenciaCancion: z.string().trim().optional().or(z.literal("")),
-  spotifyTrackUri: z.string().trim().regex(/^spotify:track:[A-Za-z0-9]+$/).optional().or(z.literal("")),
+  spotifyTrackUri: z
+    .string()
+    .trim()
+    .regex(/^spotify:track:[A-Za-z0-9]+$/)
+    .optional()
+    .or(z.literal("")),
   extras: z.array(extraSchema).default([]),
 });
 
@@ -44,9 +50,19 @@ export async function POST(request: Request) {
     return Response.json({ error: "Slug invalido." }, { status: 404 });
   }
 
+  if (!(await canAccessPublicReserva(barbero))) {
+    return Response.json(
+      { error: "Necesitas la clave de reserva o iniciar sesion." },
+      { status: 401 }
+    );
+  }
+
   const rateLimit = await enforcePublicReservaRateLimit(getRequestIp(request));
   if (!rateLimit.allowed) {
-    return Response.json({ error: "Llegaste al limite de reservas por hora. Intenta mas tarde." }, { status: 429 });
+    return Response.json(
+      { error: "Llegaste al limite de reservas por hora. Intenta mas tarde." },
+      { status: 429 }
+    );
   }
 
   const clientMatch = await findClientByPhone(parsed.data.clienteTelefonoRaw ?? null);

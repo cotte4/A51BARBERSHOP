@@ -13,6 +13,11 @@ type BlockedSlot = {
 
 type DisponibilidadGridProps = {
   barberoId: string;
+  services: Array<{
+    id: string;
+    nombre: string;
+    duracionMinutos: number;
+  }>;
   slots: DisponibilidadSlot[];
   blockedSlots: BlockedSlot[];
   createAction: (barberoId: string, prevState: TurnoActionState, formData: FormData) => Promise<TurnoActionState>;
@@ -24,15 +29,14 @@ type ShiftPreset = {
   label: string;
   start: string;
   end: string;
-  duration: "45" | "60";
 };
 
 const initialState: TurnoActionState = {};
 
 const SHIFT_PRESETS: ShiftPreset[] = [
-  { label: "Manana", start: "09:00", end: "13:00", duration: "45" },
-  { label: "Jornada completa", start: "09:00", end: "18:00", duration: "45" },
-  { label: "Tarde", start: "14:00", end: "20:00", duration: "45" },
+  { label: "Manana", start: "09:00", end: "13:00" },
+  { label: "Jornada completa", start: "09:00", end: "18:00" },
+  { label: "Tarde", start: "14:00", end: "20:00" },
 ];
 
 function timeToMinutes(value: string): number {
@@ -74,6 +78,7 @@ function formatDate(fecha: string) {
 
 export default function DisponibilidadGrid({
   barberoId,
+  services,
   slots,
   blockedSlots,
   createAction,
@@ -81,10 +86,17 @@ export default function DisponibilidadGrid({
   minDate,
 }: DisponibilidadGridProps) {
   const router = useRouter();
+  const recommendedDuracionMinutos = useMemo<"45" | "60">(() => {
+    const maxServiceDuration = services.reduce(
+      (currentMax, service) => Math.max(currentMax, service.duracionMinutos),
+      30
+    );
+    return maxServiceDuration > 45 ? "60" : "45";
+  }, [services]);
   const [fecha, setFecha] = useState(minDate);
   const [horaInicio, setHoraInicio] = useState("09:00");
   const [horaFin, setHoraFin] = useState("18:00");
-  const [duracionMinutos, setDuracionMinutos] = useState<"45" | "60">("45");
+  const [duracionMinutos, setDuracionMinutos] = useState<"45" | "60">(recommendedDuracionMinutos);
   const [state, formAction, isPending] = useActionState(createAction.bind(null, barberoId), initialState);
   const [isDeleting, startTransition] = useTransition();
 
@@ -102,6 +114,14 @@ export default function DisponibilidadGrid({
   const previewTimes = useMemo(
     () => getGeneratedTimes(horaInicio, horaFin, Number(duracionMinutos)),
     [duracionMinutos, horaFin, horaInicio]
+  );
+  const incompatibleServices = useMemo(
+    () => services.filter((service) => service.duracionMinutos > Number(duracionMinutos)),
+    [duracionMinutos, services]
+  );
+  const compatibleServices = useMemo(
+    () => services.filter((service) => service.duracionMinutos <= Number(duracionMinutos)),
+    [duracionMinutos, services]
   );
 
   const slotsByDate = useMemo(() => {
@@ -145,7 +165,7 @@ export default function DisponibilidadGrid({
               onClick={() => {
                 setHoraInicio(preset.start);
                 setHoraFin(preset.end);
-                setDuracionMinutos(preset.duration);
+                setDuracionMinutos(recommendedDuracionMinutos);
               }}
               className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-[#8cff59]/40 hover:text-white"
             >
@@ -228,6 +248,50 @@ export default function DisponibilidadGrid({
               ))
             )}
           </div>
+        </div>
+
+        <div className="mt-5 rounded-[24px] border border-zinc-800 bg-zinc-950/60 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-white">Compatibilidad con reservas</p>
+              <p className="mt-1 text-xs text-zinc-500">
+                El cliente solo ve slots cuya duracion alcanza para el servicio elegido.
+              </p>
+            </div>
+            <span className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/10 px-3 py-1 text-xs font-semibold text-[#d8ffc7]">
+              Recomendado: {recommendedDuracionMinutos} min
+            </span>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {compatibleServices.length === 0 ? (
+              <span className="rounded-xl border border-zinc-700 bg-[#27272a] px-3 py-2 text-sm text-zinc-400">
+                No hay servicios activos.
+              </span>
+            ) : (
+              compatibleServices.map((service) => (
+                <span
+                  key={service.id}
+                  className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200"
+                >
+                  {service.nombre} · {service.duracionMinutos} min
+                </span>
+              ))
+            )}
+          </div>
+
+          {incompatibleServices.length > 0 ? (
+            <div className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+              Con {duracionMinutos} min, el cliente no va a poder reservar estos servicios:
+              {" "}
+              {incompatibleServices.map((service) => `${service.nombre} (${service.duracionMinutos} min)`).join(", ")}.
+              {" "}Si queres que aparezcan en el Paso 2, genera el dia con {recommendedDuracionMinutos} min.
+            </div>
+          ) : (
+            <div className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+              Con esta configuracion, todos los servicios activos van a aparecer para reservar online.
+            </div>
+          )}
         </div>
 
         {state.error ? (

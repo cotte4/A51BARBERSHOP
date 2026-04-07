@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import type { BarberoFormState } from "@/app/(admin)/configuracion/barberos/actions";
 
 interface BarberoFormProps {
@@ -18,6 +18,9 @@ interface BarberoFormProps {
     sueldoMinimoGarantizado?: string | null;
     servicioDefectoId?: string | null;
     medioPagoDefectoId?: string | null;
+    publicSlug?: string | null;
+    publicReservaActiva?: boolean | null;
+    publicReservaPasswordConfigured?: boolean | null;
   };
   serviciosOptions: Array<{ id: string; nombre: string }>;
   mediosPagoOptions: Array<{ id: string; nombre: string | null }>;
@@ -53,6 +56,15 @@ export default function BarberoForm({
   const [sueldoMinimoGarantizado, setSueldoMinimoGarantizado] = useState(initialData?.sueldoMinimoGarantizado ?? "");
   const [servicioDefectoId, setServicioDefectoId] = useState(initialData?.servicioDefectoId ?? "");
   const [medioPagoDefectoId, setMedioPagoDefectoId] = useState(initialData?.medioPagoDefectoId ?? "");
+  const [publicReservaActiva, setPublicReservaActiva] = useState(
+    initialData?.publicReservaActiva ?? false
+  );
+  const [publicReservaRequiresPassword, setPublicReservaRequiresPassword] = useState(
+    initialData?.publicReservaPasswordConfigured ?? false
+  );
+  const [publicReservaPassword, setPublicReservaPassword] = useState("");
+  const [publicSlug, setPublicSlug] = useState(initialData?.publicSlug ?? "");
+  const [publicSlugEdited, setPublicSlugEdited] = useState(Boolean(initialData?.publicSlug));
 
   const servicioDefecto = serviciosOptions.find((servicio) => servicio.id === servicioDefectoId);
   const medioPagoDefecto = mediosPagoOptions.find((medio) => medio.id === medioPagoDefectoId);
@@ -68,6 +80,24 @@ export default function BarberoForm({
     if (tipoModelo === "fijo") return "Pago base con minimo garantizado.";
     return "Solo comision variable por venta.";
   }, [tipoModelo]);
+
+  const publicLink = publicSlug ? `/reservar/${publicSlug}` : "/reservar";
+
+  useEffect(() => {
+    if (publicSlugEdited) {
+      return;
+    }
+
+    const suggestedSlug = nombre
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48);
+
+    setPublicSlug(suggestedSlug);
+  }, [nombre, publicSlugEdited]);
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
@@ -316,6 +346,128 @@ export default function BarberoForm({
                 label="Accion rapida"
                 value={`${servicioDefecto?.nombre ?? "Sin servicio"} · ${medioPagoDefecto?.nombre ?? "Sin medio"}`}
                 detail="Defaults que aceleran la carga en caja."
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel-card rounded-[28px] p-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+          Reserva publica
+        </p>
+        <p className="mt-2 max-w-2xl text-sm text-zinc-400">
+          Desde aca dejamos listo el link de este barbero para la landing general de Area51 y, si
+          queres, le sumamos una clave simple para filtrar el acceso publico.
+        </p>
+
+        <div className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-4">
+            <label className="flex items-start gap-3 rounded-[24px] border border-zinc-800 bg-zinc-950/40 p-4">
+              <input
+                name="publicReservaActiva"
+                type="checkbox"
+                checked={publicReservaActiva}
+                onChange={(event) => setPublicReservaActiva(event.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-[#8cff59] focus:ring-[#8cff59]"
+              />
+              <div>
+                <p className="text-sm font-medium text-white">Publicar reserva para este barbero</p>
+                <p className="mt-1 text-xs text-zinc-400">
+                  Hace visible este perfil en `/reservar` y habilita su link directo.
+                </p>
+              </div>
+            </label>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="publicSlug" className="text-sm font-medium text-zinc-300">
+                Slug publico
+              </label>
+              <input
+                id="publicSlug"
+                name="publicSlug"
+                type="text"
+                value={publicSlug}
+                onChange={(event) => {
+                  setPublicSlugEdited(true);
+                  setPublicSlug(event.target.value);
+                }}
+                placeholder="Ej: pinky o gabote"
+                className="min-h-[48px] w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-sm text-white placeholder:text-zinc-500 focus:border-[#8cff59]/60 focus:outline-none"
+              />
+              <p className="text-xs text-zinc-500">
+                Lo usamos en el link directo del barbero. Ejemplo: `{publicLink}`.
+              </p>
+              {state.fieldErrors?.publicSlug ? (
+                <p className="text-xs text-red-500">{state.fieldErrors.publicSlug}</p>
+              ) : null}
+            </div>
+
+            <label className="flex items-start gap-3 rounded-[24px] border border-zinc-800 bg-zinc-950/40 p-4">
+              <input
+                name="publicReservaRequiresPassword"
+                type="checkbox"
+                checked={publicReservaRequiresPassword}
+                onChange={(event) => setPublicReservaRequiresPassword(event.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-[#8cff59] focus:ring-[#8cff59]"
+              />
+              <div>
+                <p className="text-sm font-medium text-white">Pedir clave para reservar</p>
+                <p className="mt-1 text-xs text-zinc-400">
+                  Si el cliente ya entra con cuenta, la clave se salta. Si entra publico, la
+                  necesitara antes de ver horarios y reservar.
+                </p>
+              </div>
+            </label>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="publicReservaPassword" className="text-sm font-medium text-zinc-300">
+                Clave publica
+              </label>
+              <input
+                id="publicReservaPassword"
+                name="publicReservaPassword"
+                type="text"
+                value={publicReservaPassword}
+                onChange={(event) => setPublicReservaPassword(event.target.value)}
+                placeholder={
+                  initialData?.publicReservaPasswordConfigured
+                    ? "Deja vacio para conservar la actual"
+                    : "Ej: area51-abril"
+                }
+                className="min-h-[48px] w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-sm text-white placeholder:text-zinc-500 focus:border-[#8cff59]/60 focus:outline-none"
+              />
+              <p className="text-xs text-zinc-500">
+                {initialData?.publicReservaPasswordConfigured
+                  ? "Si escribis una nueva, reemplaza la actual. Si desmarcas la clave, el acceso queda abierto."
+                  : "Se guarda protegida y solo la usamos para habilitar el flujo publico."}
+              </p>
+              {state.fieldErrors?.publicReservaPassword ? (
+                <p className="text-xs text-red-500">{state.fieldErrors.publicReservaPassword}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="rounded-[24px] bg-zinc-900 p-5 text-white">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+              Salida publica
+            </p>
+            <div className="mt-4 space-y-3">
+              <BarberStat
+                label="Estado"
+                value={publicReservaActiva ? "Publica activa" : "No publicada"}
+                detail="Controla si el barbero aparece en la landing general de reservas."
+              />
+              <BarberStat
+                label="Link"
+                value={publicLink}
+                detail="Link directo para compartir por WhatsApp o redes."
+              />
+              <BarberStat
+                label="Acceso"
+                value={publicReservaRequiresPassword ? "Con clave o cuenta" : "Link abierto"}
+                detail="Las cuentas logueadas entran sin clave."
+                strong={publicReservaRequiresPassword}
               />
             </div>
           </div>

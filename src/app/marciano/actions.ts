@@ -13,7 +13,7 @@ import { buildMarcianoResetRedirectUrl, isPasswordResetEmailConfigured } from "@
 import { getMarcianoTurnoById } from "@/lib/marciano-turnos";
 import { normalizeMarcianoEmail, requireMarcianoClient } from "@/lib/marciano-portal";
 import { normalizePhone } from "@/lib/phone";
-import { PUBLIC_RESERVA_SLUG, normalizeHora, resolvePublicBarberoBySlug } from "@/lib/turnos";
+import { getBarberosPublicosReserva, normalizeHora, resolvePublicBarberoBySlug } from "@/lib/turnos";
 import { createTurnoReserva } from "@/lib/turnos-reserva";
 
 export type MarcianoRegisterState = {
@@ -65,6 +65,7 @@ const registerSchema = z.object({
 });
 
 const marcianoReservaSchema = z.object({
+  slug: z.string().trim().min(1, "Elegi un barbero valido."),
   serviceId: z.string().uuid("Elegi un servicio valido."),
   slotId: z.string().uuid("Elegi un horario disponible."),
   notaCliente: z.string().trim().max(300).optional().or(z.literal("")),
@@ -250,6 +251,7 @@ export async function createMarcianoTurnoAction(
   }
 
   const parsed = marcianoReservaSchema.safeParse({
+    slug: String(formData.get("slug") ?? ""),
     serviceId: String(formData.get("serviceId") ?? ""),
     slotId: String(formData.get("slotId") ?? ""),
     notaCliente: String(formData.get("notaCliente") ?? ""),
@@ -282,7 +284,7 @@ export async function createMarcianoTurnoAction(
     };
   }
 
-  const barbero = await resolvePublicBarberoBySlug(PUBLIC_RESERVA_SLUG);
+  const barbero = await resolvePublicBarberoBySlug(parsed.data.slug);
   if (!barbero) {
     return {
       message: "No pudimos resolver la agenda disponible de A51.",
@@ -326,7 +328,8 @@ export async function createMarcianoTurnoAction(
   revalidatePath("/turnos");
   revalidatePath("/turnos/disponibilidad");
   revalidatePath("/hoy");
-  revalidatePath("/reservar/pinky");
+  revalidatePath("/reservar");
+  revalidatePath(`/reservar/${parsed.data.slug}`);
 
   redirect(`/marciano/turnos?estado=${turnoOriginal ? "reprogramado" : "reservado"}`);
 }
@@ -364,7 +367,14 @@ export async function cancelMarcianoTurnoAction(
   revalidatePath("/turnos");
   revalidatePath("/turnos/disponibilidad");
   revalidatePath("/hoy");
-  revalidatePath("/reservar/pinky");
+  revalidatePath("/reservar");
+
+  const barberosPublicos = await getBarberosPublicosReserva();
+  for (const barbero of barberosPublicos) {
+    if (barbero.publicSlug) {
+      revalidatePath(`/reservar/${barbero.publicSlug}`);
+    }
+  }
 
   redirect("/marciano/turnos?estado=cancelado");
 }

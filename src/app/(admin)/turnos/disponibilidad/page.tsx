@@ -8,6 +8,7 @@ import {
 import {
   getDisponibilidadAdminList,
   getFechaHoyArgentina,
+  getServiciosPublicos,
   getTurnosOcupadosDesde,
   resolvePublicBarberoBySlug,
 } from "@/lib/turnos";
@@ -31,9 +32,10 @@ export default async function DisponibilidadPage() {
   }
 
   const minDate = getFechaHoyArgentina();
-  const [slots, blockedSlots] = await Promise.all([
+  const [slots, blockedSlots, services] = await Promise.all([
     getDisponibilidadAdminList(pinky.id, minDate),
     getTurnosOcupadosDesde(pinky.id, minDate),
+    getServiciosPublicos(),
   ]);
 
   return (
@@ -48,6 +50,11 @@ export default async function DisponibilidadPage() {
 
         <DisponibilidadGrid
           barberoId={pinky.id}
+          services={services.map((service) => ({
+            id: service.id,
+            nombre: service.nombre,
+            duracionMinutos: service.duracionMinutos,
+          }))}
           slots={slots.map((slot) => ({
             ...slot,
             horaInicio: slot.horaInicio.slice(0, 5),

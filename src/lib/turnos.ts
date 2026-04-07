@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, count, desc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, lt } from "drizzle-orm";
 import { db } from "@/db";
 import {
   barberos,
@@ -14,7 +14,6 @@ import {
 } from "@/db/schema";
 
 export const TURNO_DURACIONES = [45, 60] as const;
-export const PUBLIC_RESERVA_SLUG = "pinky";
 
 export function getFechaHoyArgentina(): string {
   return new Date().toLocaleDateString("en-CA", {
@@ -27,9 +26,7 @@ export function normalizeHora(hora: string): string {
 }
 
 export async function resolvePublicBarberoBySlug(slug: string) {
-  if (slug !== PUBLIC_RESERVA_SLUG) {
-    return null;
-  }
+  const normalizedSlug = slug.trim().toLowerCase();
 
   const [barbero] = await db
     .select({
@@ -37,12 +34,42 @@ export async function resolvePublicBarberoBySlug(slug: string) {
       nombre: barberos.nombre,
       rol: barberos.rol,
       activo: barberos.activo,
+      publicSlug: barberos.publicSlug,
+      publicReservaActiva: barberos.publicReservaActiva,
+      publicReservaPasswordHash: barberos.publicReservaPasswordHash,
     })
     .from(barberos)
-    .where(and(eq(barberos.rol, "admin"), eq(barberos.activo, true)))
+    .where(
+      and(
+        eq(barberos.publicSlug, normalizedSlug),
+        eq(barberos.publicReservaActiva, true),
+        eq(barberos.activo, true)
+      )
+    )
     .limit(1);
 
   return barbero ?? null;
+}
+
+export async function getBarberosPublicosReserva() {
+  return db
+    .select({
+      id: barberos.id,
+      nombre: barberos.nombre,
+      rol: barberos.rol,
+      publicSlug: barberos.publicSlug,
+      publicReservaActiva: barberos.publicReservaActiva,
+      publicReservaPasswordHash: barberos.publicReservaPasswordHash,
+    })
+    .from(barberos)
+    .where(
+      and(
+        eq(barberos.publicReservaActiva, true),
+        eq(barberos.activo, true),
+        isNotNull(barberos.publicSlug)
+      )
+    )
+    .orderBy(barberos.nombre);
 }
 
 export async function isFechaCerrada(fecha: string): Promise<boolean> {

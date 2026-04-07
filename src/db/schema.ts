@@ -82,6 +82,9 @@ export const barberos = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     nombre: text("nombre").notNull(),
     rol: text("rol").notNull(),
+    publicSlug: text("public_slug"),
+    publicReservaActiva: boolean("public_reserva_activa").notNull().default(false),
+    publicReservaPasswordHash: text("public_reserva_password_hash"),
     // Modelo de compensación
     tipoModelo: text("tipo_modelo").$type<"variable" | "hibrido" | "fijo">(),
     porcentajeComision: numeric("porcentaje_comision", {
@@ -108,6 +111,7 @@ export const barberos = pgTable(
       "barberos_tipo_modelo_check",
       sql`${table.tipoModelo} IN ('variable', 'hibrido', 'fijo')`
     ),
+    uniqueIndex("barberos_public_slug_idx").on(table.publicSlug),
   ]
 );
 

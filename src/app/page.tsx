@@ -4,12 +4,11 @@ import { redirect } from "next/navigation";
 import PublicLandingDetails from "@/components/landing/PublicLandingDetails";
 import PublicLandingHero from "@/components/landing/PublicLandingHero";
 import { auth } from "@/lib/auth";
-import { PUBLIC_RESERVA_SLUG } from "@/lib/turnos";
 
 export default async function RootPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const role = (session?.user as { role?: string } | undefined)?.role;
-  const reserveHref = `/reservar/${PUBLIC_RESERVA_SLUG}`;
+  const reserveHref = "/reservar";
   const loginHref = "/login";
 
   if (role === "marciano") {

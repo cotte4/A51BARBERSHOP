@@ -2,10 +2,14 @@ import Link from "next/link";
 import MarcianoReservaForm from "@/components/marciano/MarcianoReservaForm";
 import { getMarcianoTurnoById } from "@/lib/marciano-turnos";
 import { requireMarcianoClient } from "@/lib/marciano-portal";
-import { getFechaHoyArgentina, getServiciosPublicos, PUBLIC_RESERVA_SLUG } from "@/lib/turnos";
+import {
+  getBarberosPublicosReserva,
+  getFechaHoyArgentina,
+  getServiciosPublicos,
+} from "@/lib/turnos";
 
 type MarcianoNuevoTurnoPageProps = {
-  searchParams: Promise<{ reprogramar?: string }>;
+  searchParams: Promise<{ reprogramar?: string; barbero?: string }>;
 };
 
 export default async function MarcianoNuevoTurnoPage({
@@ -13,11 +17,19 @@ export default async function MarcianoNuevoTurnoPage({
 }: MarcianoNuevoTurnoPageProps) {
   const { client } = await requireMarcianoClient();
   const params = await searchParams;
-  const services = await getServiciosPublicos();
+  const [services, barberosPublicos] = await Promise.all([
+    getServiciosPublicos(),
+    getBarberosPublicosReserva(),
+  ]);
   const fechaHoy = getFechaHoyArgentina();
   const turnoAReprogramar = params.reprogramar
     ? await getMarcianoTurnoById(client.id, params.reprogramar)
     : null;
+
+  const selectedBarbero =
+    barberosPublicos.find((barbero) => barbero.publicSlug === params.barbero) ??
+    barberosPublicos[0] ??
+    null;
 
   const initialFecha =
     turnoAReprogramar && turnoAReprogramar.fecha >= fechaHoy ? turnoAReprogramar.fecha : fechaHoy;
@@ -42,12 +54,40 @@ export default async function MarcianoNuevoTurnoPage({
           </div>
 
           <div className="grid gap-2 text-sm text-zinc-300 sm:min-w-[220px]">
-            <ReserveTip label="Paso 1" value="Elegir servicio" />
+            <ReserveTip label="Paso 1" value="Elegir barbero y servicio" />
             <ReserveTip label="Paso 2" value="Elegir fecha y horario" />
             <ReserveTip label="Paso 3" value="Confirmar solicitud" />
           </div>
         </div>
       </section>
+
+      {barberosPublicos.length > 0 ? (
+        <section className="public-panel rounded-[28px] p-5">
+          <p className="eyebrow text-zinc-500">Barbero</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            {barberosPublicos.map((barbero) => {
+              const selected = barbero.id === selectedBarbero?.id;
+              const href = `/marciano/turnos/nuevo?barbero=${encodeURIComponent(barbero.publicSlug ?? "")}${
+                params.reprogramar ? `&reprogramar=${encodeURIComponent(params.reprogramar)}` : ""
+              }`;
+
+              return (
+                <Link
+                  key={barbero.id}
+                  href={href}
+                  className={`rounded-[22px] border px-4 py-3 text-sm transition ${
+                    selected
+                      ? "border-[#8cff59]/35 bg-[#8cff59]/10 text-white"
+                      : "border-white/10 bg-white/5 text-zinc-300 hover:border-white/20 hover:bg-white/8"
+                  }`}
+                >
+                  {barbero.nombre}
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       {!client.phoneRaw ? (
         <section className="rounded-[28px] border border-amber-400/25 bg-amber-400/10 p-5 text-sm text-amber-100">
@@ -61,9 +101,13 @@ export default async function MarcianoNuevoTurnoPage({
         <section className="rounded-[28px] border border-amber-400/25 bg-amber-400/10 p-5 text-sm text-amber-100">
           {turnoAReprogramar.manageMessage ?? "Ese turno ya no admite cambios desde el portal."}
         </section>
+      ) : !selectedBarbero ? (
+        <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 text-sm text-zinc-300">
+          Todavia no hay barberos publicados para reserva.
+        </section>
       ) : (
         <MarcianoReservaForm
-          slug={PUBLIC_RESERVA_SLUG}
+          slug={selectedBarbero.publicSlug ?? ""}
           initialFecha={initialFecha}
           clientName={client.name}
           clientPhoneRaw={client.phoneRaw}

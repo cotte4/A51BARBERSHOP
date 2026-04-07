@@ -120,14 +120,16 @@ export default function PublicLandingHero({ reserveHref, loginHref }: PublicLand
               </div>
 
               <div className="rounded-[30px] border border-white/10 bg-white/5 p-5 backdrop-blur-sm sm:p-6">
-                <p className="eyebrow text-[11px] font-semibold">Public lane</p>
-                <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <p className="font-display text-3xl font-semibold text-white sm:text-4xl">Pinky online</p>
-                    <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-300">
-                      Turnos publicos con una ruta simple, rapida y lista para mobile.
-                    </p>
-                  </div>
+                    <p className="eyebrow text-[11px] font-semibold">Public lane</p>
+                    <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <p className="font-display text-3xl font-semibold text-white sm:text-4xl">
+                          Area51 booking lane
+                        </p>
+                        <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-300">
+                          Elegi barbero, entra por clave o cuenta y reserva desde una sola puerta.
+                        </p>
+                      </div>
 
                   <div className="grid gap-2 sm:min-w-32">
                     <div className="h-1.5 rounded-full bg-[rgba(140,255,89,0.65)] shadow-[0_0_14px_rgba(140,255,89,0.5)]" />

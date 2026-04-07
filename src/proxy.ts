@@ -28,7 +28,7 @@ export async function proxy(request: NextRequest) {
 
   if (pathname === "/") {
     if (!isAuthenticated) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return NextResponse.next();
     }
     return NextResponse.redirect(new URL(isMarciano ? "/marciano" : "/hoy", request.url));
   }

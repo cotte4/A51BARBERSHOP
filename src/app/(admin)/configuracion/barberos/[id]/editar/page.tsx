@@ -79,6 +79,9 @@ export default async function EditarBarberoPage({ params }: EditarBarberoPagePro
           sueldoMinimoGarantizado: barbero.sueldoMinimoGarantizado,
           servicioDefectoId: barbero.servicioDefectoId,
           medioPagoDefectoId: barbero.medioPagoDefectoId,
+          publicSlug: barbero.publicSlug,
+          publicReservaActiva: barbero.publicReservaActiva,
+          publicReservaPasswordConfigured: Boolean(barbero.publicReservaPasswordHash),
         }}
         serviciosOptions={serviciosActivos}
         mediosPagoOptions={mediosPagoActivos}

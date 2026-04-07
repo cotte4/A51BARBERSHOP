@@ -23,6 +23,10 @@ function modeloLabel(tipo: string | null) {
   return "—";
 }
 
+function publicLink(slug: string | null) {
+  return slug ? `/reservar/${slug}` : "Sin slug";
+}
+
 function initials(name: string | null) {
   const parts = (name ?? "Barbero")
     .split(" ")
@@ -39,6 +43,7 @@ export default async function BarberosPage() {
   const variables = lista.filter((barbero) => barbero.tipoModelo === "variable").length;
   const hibridos = lista.filter((barbero) => barbero.tipoModelo === "hibrido").length;
   const fijos = lista.filter((barbero) => barbero.tipoModelo === "fijo").length;
+  const publicos = lista.filter((barbero) => barbero.publicReservaActiva && barbero.publicSlug).length;
 
   return (
     <div className="space-y-6">
@@ -68,6 +73,9 @@ export default async function BarberosPage() {
               </span>
               <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-300">
                 {fijos} fijos
+              </span>
+              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-300">
+                {publicos} publicos
               </span>
             </div>
           </div>
@@ -124,6 +132,11 @@ export default async function BarberosPage() {
                     <div className="mt-2 grid gap-2 sm:grid-cols-2">
                       <InfoChip label="Modelo" value={modeloLabel(barbero.tipoModelo)} />
                       <InfoChip label="Comision" value={formatPct(barbero.porcentajeComision)} />
+                      <InfoChip
+                        label="Reserva"
+                        value={barbero.publicReservaActiva ? "Publica" : "Interna"}
+                      />
+                      <InfoChip label="Link" value={publicLink(barbero.publicSlug)} />
                       {barbero.alquilerBancoMensual ? (
                         <InfoChip
                           label="Alquiler"
@@ -139,8 +152,9 @@ export default async function BarberosPage() {
                     </div>
 
                     <p className="mt-3 text-xs text-zinc-400">
-                      La activacion y desactivacion se gestiona dentro de la edicion para evitar
-                      cambios accidentales.
+                      {barbero.publicReservaActiva
+                        ? `Visible en la landing publica${barbero.publicReservaPasswordHash ? " y protegida por clave." : "."}`
+                        : "La activacion y desactivacion se gestiona dentro de la edicion para evitar cambios accidentales."}
                     </p>
                   </div>
                 </div>

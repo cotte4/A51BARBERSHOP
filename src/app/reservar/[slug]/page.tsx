@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
+import PublicReservaAccessGate from "@/components/turnos/PublicReservaAccessGate";
 import ReservaForm from "@/components/turnos/ReservaForm";
+import { canAccessPublicReserva } from "@/lib/public-reserva-access";
 import {
   getFechaHoyArgentina,
   getProductosExtrasActivos,
@@ -19,11 +21,25 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
     notFound();
   }
 
+  const initialFecha = getFechaHoyArgentina();
+  const hasAccess = await canAccessPublicReserva(barbero);
+
+  if (!hasAccess) {
+    return (
+      <main className="public-shell min-h-screen text-white">
+        <div className="public-grid min-h-screen">
+          <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+            <PublicReservaAccessGate slug={slug} barberoNombre={barbero.nombre} />
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   const [productos, servicios] = await Promise.all([
     getProductosExtrasActivos(),
     getServiciosPublicos(),
   ]);
-  const initialFecha = getFechaHoyArgentina();
 
   return (
     <main className="public-shell min-h-screen text-white">
@@ -113,7 +129,8 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
                   Tu solicitud viaja con tus datos de contacto, el servicio elegido y la hora exacta.
                 </p>
                 <p className="mt-3 text-sm text-zinc-300">
-                  Si ya tenes una cuenta Marciana, esto queda alineado con tu agenda y tu historial.
+                  Si ya tenes una cuenta, la clave se salta y la reserva igual queda alineada con tu
+                  historial.
                 </p>
               </div>
             </aside>

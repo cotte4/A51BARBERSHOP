@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { canAccessPublicReserva } from "@/lib/public-reserva-access";
 import { getTurnosDisponibles, resolvePublicBarberoBySlug } from "@/lib/turnos";
 
 const querySchema = z.object({
@@ -21,12 +22,19 @@ export async function GET(request: Request) {
   });
 
   if (!parsed.success) {
-    return Response.json({ error: "Parametros inválidos." }, { status: 400 });
+    return Response.json({ error: "Parametros invalidos." }, { status: 400 });
   }
 
   const barbero = await resolvePublicBarberoBySlug(parsed.data.slug);
   if (!barbero) {
-    return Response.json({ error: "Slug inválido." }, { status: 404 });
+    return Response.json({ error: "Slug invalido." }, { status: 404 });
+  }
+
+  if (!(await canAccessPublicReserva(barbero))) {
+    return Response.json(
+      { error: "Necesitas la clave de reserva o iniciar sesion." },
+      { status: 401 }
+    );
   }
 
   const slots = await getTurnosDisponibles(

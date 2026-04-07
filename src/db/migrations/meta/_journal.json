@@ -64,6 +64,13 @@
       "when": 1775518047443,
       "tag": "0008_sloppy_ezekiel_stane",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1775590800000,
+      "tag": "0009_public_reserva_barberos",
+      "breakpoints": true
     }
   ]
 }

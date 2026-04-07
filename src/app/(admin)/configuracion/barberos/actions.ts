@@ -3,7 +3,11 @@
 import { db } from "@/db";
 import { barberos, mediosPago, servicios } from "@/db/schema";
 import { requireAdminSession } from "@/lib/admin-action";
-import { eq } from "drizzle-orm";
+import {
+  hashPublicReservaPassword,
+  normalizePublicReservaSlug,
+} from "@/lib/public-reserva-access";
+import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -32,6 +36,8 @@ export type BarberoFormState = {
     sueldoMinimoGarantizado?: string;
     servicioDefectoId?: string;
     medioPagoDefectoId?: string;
+    publicSlug?: string;
+    publicReservaPassword?: string;
   };
 };
 
@@ -46,6 +52,10 @@ function validarBarbero(formData: FormData): {
     sueldoMinimoStr: string;
     servicioDefectoId: string;
     medioPagoDefectoId: string;
+    publicReservaActiva: boolean;
+    publicSlug: string;
+    publicReservaRequiresPassword: boolean;
+    publicReservaPassword: string;
   };
 } {
   const nombre = (formData.get("nombre") as string) ?? "";
@@ -56,6 +66,11 @@ function validarBarbero(formData: FormData): {
   const sueldoMinimoStr = (formData.get("sueldoMinimoGarantizado") as string) ?? "";
   const servicioDefectoId = (formData.get("servicioDefectoId") as string) ?? "";
   const medioPagoDefectoId = (formData.get("medioPagoDefectoId") as string) ?? "";
+  const publicReservaActiva = formData.get("publicReservaActiva") === "on";
+  const publicReservaRequiresPassword = formData.get("publicReservaRequiresPassword") === "on";
+  const publicReservaPassword = ((formData.get("publicReservaPassword") as string) ?? "").trim();
+  const publicSlugInput = ((formData.get("publicSlug") as string) ?? "").trim();
+  const publicSlug = normalizePublicReservaSlug(publicSlugInput || nombre);
 
   const fieldErrors: BarberoFormState["fieldErrors"] = {};
 
@@ -77,6 +92,14 @@ function validarBarbero(formData: FormData): {
     fieldErrors.porcentajeComision = "Debe ser entre 0 y 100";
   }
 
+  if (publicReservaActiva && !publicSlug) {
+    fieldErrors.publicSlug = "Necesitamos un slug para publicar la reserva.";
+  }
+
+  if (publicReservaRequiresPassword && !publicReservaPassword) {
+    fieldErrors.publicReservaPassword = "Carga una clave para proteger la reserva publica.";
+  }
+
   if (Object.keys(fieldErrors).length > 0) {
     return { fieldErrors };
   }
@@ -94,6 +117,10 @@ function validarBarbero(formData: FormData): {
       sueldoMinimoStr,
       servicioDefectoId,
       medioPagoDefectoId,
+      publicReservaActiva,
+      publicSlug,
+      publicReservaRequiresPassword,
+      publicReservaPassword,
     },
   };
 }
@@ -121,8 +148,24 @@ export async function crearBarbero(
     sueldoMinimoStr,
     servicioDefectoId,
     medioPagoDefectoId,
+    publicReservaActiva,
+    publicSlug,
+    publicReservaRequiresPassword,
+    publicReservaPassword,
   } =
     resultado.values!;
+
+  if (publicSlug) {
+    const [existingBySlug] = await db
+      .select({ id: barberos.id })
+      .from(barberos)
+      .where(eq(barberos.publicSlug, publicSlug))
+      .limit(1);
+
+    if (existingBySlug) {
+      return { fieldErrors: { publicSlug: "Ese slug ya esta en uso por otro barbero." } };
+    }
+  }
 
   if (servicioDefectoId) {
     const [servicio] = await db.select({ id: servicios.id }).from(servicios).where(eq(servicios.id, servicioDefectoId)).limit(1);
@@ -149,12 +192,22 @@ export async function crearBarbero(
       servicioDefectoId: servicioDefectoId || null,
       medioPagoDefectoId: medioPagoDefectoId || null,
       activo: true,
+      publicSlug: publicSlug || null,
+      publicReservaActiva,
+      publicReservaPasswordHash:
+        publicReservaRequiresPassword && publicReservaPassword
+          ? hashPublicReservaPassword(publicReservaPassword)
+          : null,
     });
   } catch {
     return { error: "No se pudo guardar el barbero. Revisa los datos e intenta de nuevo." };
   }
 
   revalidatePath("/configuracion/barberos");
+  revalidatePath("/reservar");
+  if (publicSlug) {
+    revalidatePath(`/reservar/${publicSlug}`);
+  }
   redirect("/configuracion/barberos");
 }
 
@@ -182,8 +235,38 @@ export async function editarBarbero(
     sueldoMinimoStr,
     servicioDefectoId,
     medioPagoDefectoId,
+    publicReservaActiva,
+    publicSlug,
+    publicReservaRequiresPassword,
+    publicReservaPassword,
   } =
     resultado.values!;
+
+  const [existingBarbero] = await db
+    .select({
+      id: barberos.id,
+      publicSlug: barberos.publicSlug,
+      publicReservaPasswordHash: barberos.publicReservaPasswordHash,
+    })
+    .from(barberos)
+    .where(eq(barberos.id, id))
+    .limit(1);
+
+  if (!existingBarbero) {
+    return { error: "No encontramos ese barbero para editar." };
+  }
+
+  if (publicSlug) {
+    const [existingBySlug] = await db
+      .select({ id: barberos.id })
+      .from(barberos)
+      .where(and(eq(barberos.publicSlug, publicSlug), ne(barberos.id, id)))
+      .limit(1);
+
+    if (existingBySlug) {
+      return { fieldErrors: { publicSlug: "Ese slug ya esta en uso por otro barbero." } };
+    }
+  }
 
   if (servicioDefectoId) {
     const [servicio] = await db.select({ id: servicios.id }).from(servicios).where(eq(servicios.id, servicioDefectoId)).limit(1);
@@ -211,6 +294,13 @@ export async function editarBarbero(
         sueldoMinimoGarantizado: sueldoMinimoStr !== "" ? sueldoMinimoStr : null,
         servicioDefectoId: servicioDefectoId || null,
         medioPagoDefectoId: medioPagoDefectoId || null,
+        publicSlug: publicSlug || null,
+        publicReservaActiva,
+        publicReservaPasswordHash: publicReservaRequiresPassword
+          ? publicReservaPassword
+            ? hashPublicReservaPassword(publicReservaPassword)
+            : existingBarbero.publicReservaPasswordHash
+          : null,
       })
       .where(eq(barberos.id, id));
   } catch {
@@ -218,6 +308,13 @@ export async function editarBarbero(
   }
 
   revalidatePath("/configuracion/barberos");
+  revalidatePath("/reservar");
+  if (existingBarbero.publicSlug) {
+    revalidatePath(`/reservar/${existingBarbero.publicSlug}`);
+  }
+  if (publicSlug) {
+    revalidatePath(`/reservar/${publicSlug}`);
+  }
   redirect("/configuracion/barberos");
 }
 
@@ -229,6 +326,7 @@ export async function toggleActivoBarbero(id: string, activo: boolean) {
   await db.update(barberos).set({ activo: !activo }).where(eq(barberos.id, id));
 
   revalidatePath("/configuracion/barberos");
+  revalidatePath("/reservar");
   revalidatePath("/caja/nueva");
   revalidatePath("/liquidaciones/nueva");
 }
