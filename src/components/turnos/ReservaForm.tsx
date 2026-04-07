@@ -41,13 +41,12 @@ function formatARS(value: string | null) {
 }
 
 function formatDateLabel(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
   return new Intl.DateTimeFormat("es-AR", {
     weekday: "short",
     day: "numeric",
     month: "short",
     timeZone: "America/Argentina/Buenos_Aires",
-  }).format(new Date(Date.UTC(year, month - 1, day)));
+  }).format(new Date(`${value}T12:00:00Z`));
 }
 
 export default function ReservaForm({

@@ -514,8 +514,7 @@ function SummaryTile({
 }
 
 function formatTurnoDate(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("es-AR", {
+  return new Date(`${value}T12:00:00Z`).toLocaleDateString("es-AR", {
     day: "numeric",
     month: "long",
     timeZone: "America/Argentina/Buenos_Aires",

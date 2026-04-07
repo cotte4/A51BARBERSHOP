@@ -12,8 +12,7 @@ type MarcianoTurnoCardProps = {
 const initialState: MarcianoReservaState = {};
 
 function formatDateTime(turno: MarcianoTurnoItem) {
-  const [year, month, day] = turno.fecha.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
+  const date = new Date(`${turno.fecha}T12:00:00Z`);
   return `${date.toLocaleDateString("es-AR", {
     weekday: "long",
     day: "numeric",
