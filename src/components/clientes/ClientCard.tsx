@@ -111,7 +111,7 @@ export default function ClientCard({ client }: ClientCardProps) {
             Agendar turno
           </Link>
           <Link
-            href="/caja/nueva"
+            href={`/caja/nueva?clienteId=${client.id}`}
             className="neon-button inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 text-sm font-semibold"
           >
             Cobrar
