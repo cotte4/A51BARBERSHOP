@@ -26,11 +26,11 @@ export async function requireMarcianoClient() {
   const { session, isMarciano, role } = await getMarcianoPortalSession();
 
   if (!session?.user?.id) {
-    redirect("/marciano/login");
+    redirect("/marcianos");
   }
 
   if (!isMarciano) {
-    redirect(role === "admin" || role === "barbero" ? "/hoy" : "/marciano/login");
+    redirect(role === "admin" || role === "barbero" ? "/hoy" : "/marcianos");
   }
 
   const monthKey = new Date()
@@ -65,7 +65,7 @@ export async function requireMarcianoClient() {
     .limit(1);
 
   if (!client) {
-    redirect("/marciano/login");
+    redirect("/marcianos");
   }
 
   return {

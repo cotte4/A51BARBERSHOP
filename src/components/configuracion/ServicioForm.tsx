@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
+import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import type { ServicioFormState } from "@/app/(admin)/configuracion/servicios/actions";
 
 interface ServicioFormProps {
@@ -169,6 +170,20 @@ export default function ServicioForm({
             ) : (
               <PreviewRow label="Historial" value="Precio inicial sin cambios previos" />
             )}
+          </div>
+
+          <div className="mt-4">
+            <AlienSignalPanel
+              eyebrow="Ficha de servicio"
+              title="Senal de oferta"
+              detail="Precio, duración e impacto quedan a la vista para validar rápido si este servicio entra bien en caja, turnos y liquidaciones."
+              badges={[
+                `${duracionMinutos} min`,
+                formatARS(precioNumero),
+                showMotivoField ? "modo edicion" : "modo alta",
+              ]}
+              tone="fuchsia"
+            />
           </div>
         </div>
       </section>

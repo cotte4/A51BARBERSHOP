@@ -77,7 +77,7 @@ export default function LoadingScreen() {
             marginBottom: 36,
           }}
         >
-          {/* Scan line — clipped to this container */}
+          {/* Scan line clipped to this container */}
           <div
             style={{
               position: "absolute",
@@ -181,7 +181,7 @@ export default function LoadingScreen() {
               strokeWidth="1"
             />
 
-            {/* ── LEFT EYE ── */}
+            {/* Left eye */}
             {/* Socket shadow */}
             <ellipse
               cx="62"
@@ -242,7 +242,7 @@ export default function LoadingScreen() {
               className="a51-eye"
             />
 
-            {/* ── RIGHT EYE ── */}
+            {/* Right eye */}
             <ellipse
               cx="128"
               cy="104"
@@ -352,7 +352,7 @@ export default function LoadingScreen() {
               paddingLeft: "0.6em" /* optical balance for letter-spacing */,
             }}
           >
-            Área — 51
+            Area 51 signal
           </span>
 
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>

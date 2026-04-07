@@ -3,32 +3,37 @@ import Link from "next/link";
 
 import BrandMark from "@/components/BrandMark";
 
-const vibeTags = ["Reserva rapida", "Acceso interno", "Mobile first", "Dark neon"];
+const vibeTags = ["Reserva rapida", "Portal Marciano", "Mobile first", "Dark neon"];
 
 const consoleCards = [
   {
     label: "Reserva",
-    title: "Turno publico",
-    text: "Abri la agenda de A51 y dejalo listo en pocos pasos.",
+    title: "Slot en la nave",
+    text: "Cae al link, elige barbero y deja tu lugar marcado sin vueltas.",
   },
   {
-    label: "Ingreso",
-    title: "Base segura",
-    text: "Entrar a la operacion sin friccion ni rodeos.",
+    label: "Marcianos",
+    title: "Club orbital",
+    text: "Acceso VIP para los que ya juegan la liga de Area51.",
   },
   {
     label: "Pantalla",
-    title: "Thumb friendly",
-    text: "Botones grandes, lectura rapida y foco claro.",
+    title: "Touch de barrio",
+    text: "Pantallas rapidas, CTA grandes y lectura filosa en mobile.",
   },
 ] as const;
 
 type PublicLandingHeroProps = {
   reserveHref: string;
   loginHref: string;
+  marcianosHref: string;
 };
 
-export default function PublicLandingHero({ reserveHref, loginHref }: PublicLandingHeroProps) {
+export default function PublicLandingHero({
+  reserveHref,
+  loginHref,
+  marcianosHref,
+}: PublicLandingHeroProps) {
   return (
     <section className="app-shell relative isolate overflow-hidden">
       <div className="pointer-events-none absolute inset-0">
@@ -47,17 +52,17 @@ export default function PublicLandingHero({ reserveHref, loginHref }: PublicLand
             </div>
 
             <div className="mt-5">
-              <BrandMark subtitle="Base de control publica" compact />
+              <BrandMark subtitle="Area51 // entrada de calle" compact />
             </div>
 
             <h1 className="font-display mt-6 max-w-2xl text-5xl font-semibold leading-[0.92] text-white sm:text-6xl lg:text-7xl">
-              Reserva tu turno.
-              <span className="mt-2 block text-[#8cff59]">Entra a la base cuando toque operar.</span>
+              Cae con turno.
+              <span className="mt-2 block text-[#8cff59]">Sube a Marcianos si ya juegas en la crew.</span>
             </h1>
 
             <p className="mt-5 max-w-xl text-base leading-7 text-zinc-300 sm:text-lg">
-              Una entrada pensada para clientes y equipo: reservar es un paso, ingresar es el otro.
-              Todo con el pulso oscuro, neon e industrial de A51.
+              Tres puertas, cero mezcla: reserva publica para caer al corte, portal Marciano para
+              la gente del club y base interna para el staff. Noche, neón y código de Buenos Aires.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -66,7 +71,13 @@ export default function PublicLandingHero({ reserveHref, loginHref }: PublicLand
                 className="neon-button inline-flex min-h-12 items-center justify-center rounded-2xl px-6 text-base font-semibold"
                 aria-label="Reservar turno en A51 Barber Shop"
               >
-                Reservar ahora
+                Caer al turno
+              </Link>
+              <Link
+                href={marcianosHref}
+                className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 text-base font-semibold text-zinc-100 transition hover:border-[#8cff59]/30 hover:bg-white/10"
+              >
+                Subir a Marcianos
               </Link>
               <Link
                 href={loginHref}
@@ -78,7 +89,8 @@ export default function PublicLandingHero({ reserveHref, loginHref }: PublicLand
             </div>
 
             <p className="mt-4 max-w-lg text-sm text-zinc-400">
-              Ruta publica: <span className="text-zinc-200">{reserveHref}</span>. Acceso interno:{" "}
+              Reserva: <span className="text-zinc-200">{reserveHref}</span>. Marcianos:{" "}
+              <span className="text-zinc-200">{marcianosHref}</span>. Staff:{" "}
               <span className="text-zinc-200">{loginHref}</span>.
             </p>
 
@@ -124,10 +136,10 @@ export default function PublicLandingHero({ reserveHref, loginHref }: PublicLand
                     <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                       <div>
                         <p className="font-display text-3xl font-semibold text-white sm:text-4xl">
-                          Area51 booking lane
+                          Entrada de calle
                         </p>
                         <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-300">
-                          Elegi barbero, entra por clave o cuenta y reserva desde una sola puerta.
+                          Reserva por clave, entra al club por cuenta y no mezcles cliente con staff.
                         </p>
                       </div>
 
@@ -159,8 +171,8 @@ export default function PublicLandingHero({ reserveHref, loginHref }: PublicLand
                   </p>
                   <ul className="mt-3 space-y-2 text-sm text-zinc-200">
                     <li>1. Reserva sin friccion.</li>
-                    <li>2. Ingreso directo al staff.</li>
-                    <li>3. Lectura clara en un solo vistazo.</li>
+                    <li>2. Club Marciano por carril propio.</li>
+                    <li>3. Staff adentro, clientes afuera.</li>
                   </ul>
                 </div>
 
@@ -172,6 +184,10 @@ export default function PublicLandingHero({ reserveHref, loginHref }: PublicLand
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-sm text-zinc-300">Reserva publica</span>
                       <span className="text-sm font-semibold text-[#8cff59]">Active</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm text-zinc-300">Portal Marciano</span>
+                      <span className="text-sm font-semibold text-zinc-100">/marcianos</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-sm text-zinc-300">Ingreso interno</span>

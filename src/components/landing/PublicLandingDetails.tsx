@@ -79,11 +79,13 @@ function SignalPill({ children }: { children: ReactNode }) {
 type PublicLandingDetailsProps = {
   reserveHref: string;
   loginHref: string;
+  marcianosHref: string;
 };
 
 export default function PublicLandingDetails({
   reserveHref,
   loginHref,
+  marcianosHref,
 }: PublicLandingDetailsProps) {
   return (
     <section
@@ -199,7 +201,13 @@ export default function PublicLandingDetails({
                 href={reserveHref}
                 className="neon-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
               >
-                Reservar turno
+                Caer al turno
+              </Link>
+              <Link
+                href={marcianosHref}
+                className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-zinc-100 transition hover:border-[#8cff59]/30 hover:bg-white/10"
+              >
+                Club Marcianos
               </Link>
               <Link
                 href={loginHref}

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import { getFlujoMensual } from "@/lib/dashboard-queries";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
@@ -22,7 +23,7 @@ function nombreMes(mes: number, anio: number): string {
 }
 
 function formatDia(fechaStr: string): string {
-  return new Date(fechaStr + "T12:00:00").toLocaleDateString("es-AR", {
+  return new Date(`${fechaStr}T12:00:00`).toLocaleDateString("es-AR", {
     day: "numeric",
     month: "short",
     timeZone: "America/Argentina/Buenos_Aires",
@@ -51,20 +52,18 @@ export default async function FlujoPage({ searchParams }: { searchParams: Search
   const mesNext = mes === 12 ? 1 : mes + 1;
   const anioNext = mes === 12 ? anio + 1 : anio;
 
-  // Totales
   const totalIngresos = flujo.reduce((s, d) => s + d.ingresos, 0);
   const totalEgresos = flujo.reduce((s, d) => s + d.egresos, 0);
   const saldoFinal = flujo.length > 0 ? flujo[flujo.length - 1].saldoAcumulado : 0;
-
   const hayDatos = flujo.some((d) => d.ingresos > 0 || d.egresos > 0);
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      <header className="bg-zinc-900 border-b border-zinc-800 px-4 py-4">
-        <div className="max-w-2xl mx-auto">
+      <header className="border-b border-zinc-800 bg-zinc-900 px-4 py-4">
+        <div className="mx-auto max-w-2xl">
           <Link
             href="/dashboard"
-            className="text-zinc-400 hover:text-[#8cff59] text-sm mb-2 block"
+            className="mb-2 block text-sm text-zinc-400 hover:text-[#8cff59]"
           >
             ← Dashboard
           </Link>
@@ -72,81 +71,82 @@ export default async function FlujoPage({ searchParams }: { searchParams: Search
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-5">
-        {/* Selector de mes */}
+      <main className="mx-auto flex max-w-2xl flex-col gap-5 px-4 py-6">
         <div className="flex items-center justify-between">
           <Link
             href={`/dashboard/flujo?mes=${mesPrev}&anio=${anioPrev}`}
-            className="min-h-[44px] flex items-center px-4 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 hover:bg-zinc-800"
+            className="min-h-[44px] rounded-lg border border-zinc-800 bg-zinc-900 px-4 text-sm text-zinc-300 hover:bg-zinc-800"
           >
             ← Anterior
           </Link>
-          <span className="text-sm font-semibold text-white capitalize">
+          <span className="text-sm font-semibold capitalize text-white">
             {nombreMes(mes, anio)}
           </span>
           <Link
             href={`/dashboard/flujo?mes=${mesNext}&anio=${anioNext}`}
-            className="min-h-[44px] flex items-center px-4 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 hover:bg-zinc-800"
+            className="min-h-[44px] rounded-lg border border-zinc-800 bg-zinc-900 px-4 text-sm text-zinc-300 hover:bg-zinc-800"
           >
             Siguiente →
           </Link>
         </div>
 
-        {/* Resumen */}
+        <AlienSignalPanel
+          eyebrow="Orbita de flujo"
+          title="Senal de caja mensual"
+          detail="Ingresos, egresos y saldo acumulado viajan juntos para detectar rapido los dias que torcieron la ruta."
+          badges={[
+            nombreMes(mes, anio),
+            saldoFinal >= 0 ? "saldo positivo" : "saldo negativo",
+            hayDatos ? `${flujo.length} dias` : "sin datos",
+          ]}
+          tone="fuchsia"
+        />
+
         <div className="grid grid-cols-3 gap-3">
           <div className="panel-card rounded-[28px] p-4">
-            <p className="text-xs text-zinc-400 mb-1">Total ingresos</p>
+            <p className="mb-1 text-xs text-zinc-400">Total ingresos</p>
             <p className="text-lg font-bold text-white">{formatARS(totalIngresos)}</p>
           </div>
           <div className="panel-card rounded-[28px] p-4">
-            <p className="text-xs text-zinc-400 mb-1">Total egresos</p>
+            <p className="mb-1 text-xs text-zinc-400">Total egresos</p>
             <p className="text-lg font-bold text-red-300">{formatARS(totalEgresos)}</p>
           </div>
           <div
             className={`rounded-[28px] border p-4 ${
-              saldoFinal >= 0
-                ? "panel-card"
-                : "bg-red-500/15 border-red-500/30"
+              saldoFinal >= 0 ? "panel-card" : "border-red-500/30 bg-red-500/15"
             }`}
           >
-            <p className="text-xs text-zinc-400 mb-1">Saldo final</p>
-            <p
-              className={`text-lg font-bold ${
-                saldoFinal >= 0 ? "text-white" : "text-red-300"
-              }`}
-            >
+            <p className="mb-1 text-xs text-zinc-400">Saldo final</p>
+            <p className={`text-lg font-bold ${saldoFinal >= 0 ? "text-white" : "text-red-300"}`}>
               {formatARS(saldoFinal)}
             </p>
           </div>
         </div>
 
-        {/* Tabla de flujo */}
         {!hayDatos ? (
           <div className="panel-card rounded-[28px] p-8 text-center">
-            <p className="text-zinc-400 text-sm">No hay datos para este mes.</p>
+            <p className="text-sm text-zinc-400">No hay datos para este mes.</p>
           </div>
         ) : (
-          <div className="panel-card rounded-[28px] overflow-hidden">
-            {/* Header */}
-            <div className="grid grid-cols-5 gap-0 bg-zinc-950/50 border-b border-zinc-800">
-              <div className="px-3 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+          <div className="panel-card overflow-hidden rounded-[28px]">
+            <div className="grid grid-cols-5 gap-0 border-b border-zinc-800 bg-zinc-950/50">
+              <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                 Fecha
               </div>
-              <div className="px-3 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right">
+              <div className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-zinc-400">
                 Ingresos
               </div>
-              <div className="px-3 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right">
+              <div className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-zinc-400">
                 Egresos
               </div>
-              <div className="px-3 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right">
-                Saldo día
+              <div className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Saldo dia
               </div>
-              <div className="px-3 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider text-right">
+              <div className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-zinc-400">
                 Acumulado
               </div>
             </div>
 
-            {/* Filas — todos los días del mes */}
             {flujo.map((dia) => {
               const egresosSuperanIngresos = dia.egresos > dia.ingresos && dia.ingresos > 0;
               return (
@@ -156,13 +156,13 @@ export default async function FlujoPage({ searchParams }: { searchParams: Search
                     egresosSuperanIngresos ? "bg-red-500/10" : ""
                   }`}
                 >
-                  <div className="px-3 py-2.5 text-sm text-zinc-300 font-medium">
+                  <div className="px-3 py-2.5 text-sm font-medium text-zinc-300">
                     {formatDia(dia.fecha)}
                   </div>
-                  <div className="px-3 py-2.5 text-sm text-right text-white tabular-nums">
+                  <div className="px-3 py-2.5 text-right text-sm tabular-nums text-white">
                     {dia.ingresos > 0 ? formatARS(dia.ingresos) : "—"}
                   </div>
-                  <div className="px-3 py-2.5 text-sm text-right tabular-nums">
+                  <div className="px-3 py-2.5 text-right text-sm tabular-nums">
                     {dia.egresos > 0 ? (
                       <span className="text-red-300">{formatARS(dia.egresos)}</span>
                     ) : (
@@ -170,14 +170,14 @@ export default async function FlujoPage({ searchParams }: { searchParams: Search
                     )}
                   </div>
                   <div
-                    className={`px-3 py-2.5 text-sm text-right font-medium tabular-nums ${
+                    className={`px-3 py-2.5 text-right text-sm font-medium tabular-nums ${
                       dia.saldoDia >= 0 ? "text-white" : "text-red-300"
                     }`}
                   >
                     {formatARS(dia.saldoDia)}
                   </div>
                   <div
-                    className={`px-3 py-2.5 text-sm text-right font-semibold tabular-nums ${
+                    className={`px-3 py-2.5 text-right text-sm font-semibold tabular-nums ${
                       dia.saldoAcumulado >= 0 ? "text-white" : "text-red-300"
                     }`}
                   >
@@ -189,8 +189,8 @@ export default async function FlujoPage({ searchParams }: { searchParams: Search
           </div>
         )}
 
-        <p className="text-xs text-zinc-400 text-center">
-          Ingresos = cierres de caja. Egresos = gastos registrados. Días sin actividad muestran $0.
+        <p className="text-center text-xs text-zinc-400">
+          Ingresos = cierres de caja. Egresos = gastos registrados. Dias sin actividad muestran $0.
         </p>
       </main>
     </div>

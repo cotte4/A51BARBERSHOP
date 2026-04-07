@@ -1,4 +1,5 @@
 import Image from "next/image";
+import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import type { ClientProfile } from "@/lib/types";
 
 type ClientProfileHeaderProps = {
@@ -15,7 +16,7 @@ export default function ClientProfileHeader({ client }: ClientProfileHeaderProps
       .join("") || "CL";
 
   return (
-    <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
+    <section className="space-y-4 rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
           <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-800 text-base font-semibold text-white">
@@ -40,18 +41,34 @@ export default function ClientProfileHeader({ client }: ClientProfileHeaderProps
                 </span>
               ) : null}
             </div>
-            <p className="mt-1 text-sm text-zinc-500">{client.phoneRaw || "Sin teléfono"}</p>
+            <p className="mt-1 text-sm text-zinc-500">{client.phoneRaw || "Sin telefono"}</p>
           </div>
         </div>
 
         <div className="text-right text-xs text-zinc-500">
-          <p className="text-white font-medium">{client.totalVisits} visitas</p>
+          <p className="font-medium text-white">{client.totalVisits} visitas</p>
           <p className="mt-0.5">{client.lastVisitBarberoNombre || "Sin barbero previo"}</p>
         </div>
       </div>
 
+      <AlienSignalPanel
+        eyebrow="Ficha orbital"
+        title="Lectura del cliente"
+        detail={
+          client.esMarciano
+            ? "Perfil dentro de la nave: conviene mirar frecuencia, portal y retorno con lectura rapida."
+            : "Perfil de calle listo para volver a orbitar con memoria de corte y accion inmediata."
+        }
+        badges={[
+          `${client.totalVisits} visitas`,
+          client.lastVisitBarberoNombre || "sin barbero previo",
+          client.email ? "portal vinculado" : "sin portal",
+        ]}
+        tone={client.esMarciano ? "fuchsia" : "brand"}
+      />
+
       {client.tags.length > 0 ? (
-        <div className="mt-4 flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           {client.tags.map((tag) => (
             <span
               key={tag}

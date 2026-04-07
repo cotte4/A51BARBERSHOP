@@ -61,7 +61,7 @@ export default function MarcianoPasswordRecoveryForm() {
 
       <p className="text-center text-sm text-zinc-400">
         Ya recuperaste el acceso?{" "}
-        <Link href="/marciano/login" className="text-[#8cff59] hover:text-[#b6ff84]">
+        <Link href="/marcianos" className="text-[#8cff59] hover:text-[#b6ff84]">
           Volver al login
         </Link>
       </p>

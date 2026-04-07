@@ -10,6 +10,7 @@ export default async function RootPage() {
   const role = (session?.user as { role?: string } | undefined)?.role;
   const reserveHref = "/reservar";
   const loginHref = "/login";
+  const marcianosHref = "/marcianos";
 
   if (role === "marciano") {
     redirect("/marciano");
@@ -31,8 +32,16 @@ export default async function RootPage() {
       />
 
       <div className="relative">
-        <PublicLandingHero reserveHref={reserveHref} loginHref={loginHref} />
-        <PublicLandingDetails reserveHref={reserveHref} loginHref={loginHref} />
+        <PublicLandingHero
+          reserveHref={reserveHref}
+          loginHref={loginHref}
+          marcianosHref={marcianosHref}
+        />
+        <PublicLandingDetails
+          reserveHref={reserveHref}
+          loginHref={loginHref}
+          marcianosHref={marcianosHref}
+        />
 
         <footer className="px-4 pb-10 sm:px-6 lg:px-8">
           <div className="public-panel public-glow-soft mx-auto max-w-6xl rounded-[28px] px-5 py-5 sm:px-6">
@@ -49,13 +58,19 @@ export default async function RootPage() {
                   href={reserveHref}
                   className="neon-button inline-flex min-h-11 items-center justify-center rounded-2xl px-5 text-sm font-semibold"
                 >
-                  Abrir reserva publica
+                  Reservar turno
+                </Link>
+                <Link
+                  href={marcianosHref}
+                  className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 text-sm font-semibold text-zinc-100 transition hover:border-[#8cff59]/30 hover:bg-white/10"
+                >
+                  Portal Marciano
                 </Link>
                 <Link
                   href={loginHref}
                   className="ghost-button inline-flex min-h-11 items-center justify-center rounded-2xl px-5 text-sm font-semibold"
                 >
-                  Entrar a la base
+                  Ingreso staff
                 </Link>
               </div>
             </div>

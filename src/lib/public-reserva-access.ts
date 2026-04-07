@@ -75,7 +75,7 @@ export async function grantPublicReservaAccess(slug: string, passwordHash: strin
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
-    path: `/reservar/${slug}`,
+    path: "/",
     maxAge: PUBLIC_RESERVA_COOKIE_MAX_AGE,
   });
 }

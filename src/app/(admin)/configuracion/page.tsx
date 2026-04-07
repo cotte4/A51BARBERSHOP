@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import { db } from "@/db";
 import { barberos, gastos, mediosPago, servicios, temporadas } from "@/db/schema";
 
@@ -28,36 +29,42 @@ export default async function ConfiguracionPage() {
       title: "Barberos",
       stat: `${activeBarberos}/${barberosList.length}`,
       detail: "Perfiles, comisiones, modelo y defaults de caja.",
+      cta: "Ver barberos",
     },
     {
       href: "/configuracion/servicios",
       title: "Servicios",
       stat: `${activeServicios}/${serviciosList.length}`,
       detail: "Precios base, adicionales e historial de cambios.",
+      cta: "Ver servicios",
     },
     {
       href: "/configuracion/medios-de-pago",
       title: "Medios de pago",
       stat: `${activeMedios}/${mediosPagoList.length}`,
       detail: "Comisiones y estados activos para cobrar mejor.",
+      cta: "Ver medios de pago",
     },
     {
       href: "/configuracion/gastos-fijos",
       title: "Gastos fijos",
       stat: formatCount(recurrentes),
       detail: "Cargas recurrentes y egresos que no conviene perder de vista.",
+      cta: "Ver gastos fijos",
     },
     {
       href: "/configuracion/temporadas",
       title: "Temporadas",
       stat: temporadaActiva ? "1 activa" : "Sin activa",
       detail: "Ventanas de trabajo y proyecciones de ritmo/precio.",
+      cta: "Ver temporadas",
     },
     {
       href: "/configuracion/musica",
       title: "Musica",
       stat: "Auto",
       detail: "Spotify, player esperado y reglas que acompañan el local.",
+      cta: "Ver musica",
     },
   ];
 
@@ -101,9 +108,23 @@ export default async function ConfiguracionPage() {
               href="/configuracion/musica"
               className="inline-flex min-h-[52px] items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900 px-5 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-800"
             >
-              Abrir musica
+              Ver musica
             </Link>
           </div>
+        </div>
+
+        <div className="mt-5">
+          <AlienSignalPanel
+            eyebrow="Motor central"
+            title="Senal de configuracion"
+            detail="Barberos, servicios, cobros, temporadas y musica viven aca porque cualquier cambio pega en toda la cabina operativa."
+            badges={[
+              `${activeBarberos} activos`,
+              `${activeServicios} servicios`,
+              temporadaActiva ? "temporada activa" : "sin temporada",
+            ]}
+            tone="sky"
+          />
         </div>
       </section>
 
@@ -122,7 +143,7 @@ export default async function ConfiguracionPage() {
             </p>
             <p className="mt-3 text-sm text-zinc-400">{card.detail}</p>
             <span className="mt-5 inline-flex text-sm font-semibold text-[#8cff59] transition group-hover:translate-x-0.5">
-              Abrir modulo →
+              {card.cta} →
             </span>
           </Link>
         ))}

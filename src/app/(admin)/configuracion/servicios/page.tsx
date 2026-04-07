@@ -6,6 +6,7 @@ import {
 } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
+import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import { toggleActivoServicio } from "./actions";
 import ToggleActivoButton from "@/components/configuracion/ToggleActivoButton";
 
@@ -118,6 +119,19 @@ export default async function ServiciosPage() {
               </div>
             </div>
           </div>
+        </div>
+        <div className="mt-5">
+          <AlienSignalPanel
+            eyebrow="Cabina de oferta"
+            title="Senal de servicios"
+            detail="La nave junta precio, duración y extras para que la carta del local no pierda claridad ni trazabilidad."
+            badges={[
+              `${serviciosConDetalle.length} servicios`,
+              `${totalAdicionales} adicionales`,
+              `${activos} activos`,
+            ]}
+            tone="fuchsia"
+          />
         </div>
       </section>
 

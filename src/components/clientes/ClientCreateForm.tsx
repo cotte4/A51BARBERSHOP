@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, type ReactNode } from "react";
+import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import {
   createClientAction,
   type ClientFormState,
@@ -93,6 +94,20 @@ export default function ClientCreateForm({ isAdmin }: ClientCreateFormProps) {
             <p className="font-medium text-zinc-200">Orden sugerido</p>
             <p className="mt-1 leading-5">Nombre, telefono, foto y despues contexto.</p>
           </div>
+        </div>
+
+        <div className="mt-5">
+          <AlienSignalPanel
+            eyebrow="Alta de cliente"
+            title="Senal de ingreso"
+            detail="La cabina prioriza identidad, contacto y contexto para que el nuevo perfil entre limpio a turnos, caja y seguimiento."
+            badges={[
+              isAdmin ? "admin visible" : "modo barbero",
+              "foto opcional",
+              "portal marciano opcional",
+            ]}
+            tone="sky"
+          />
         </div>
 
         <div className="mt-5 space-y-5">

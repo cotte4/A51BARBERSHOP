@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import type { ClientSummary } from "@/lib/types";
 import ClientCard from "@/components/clientes/ClientCard";
 
@@ -183,6 +184,19 @@ export default function ClientSearch({
           </div>
         </div>
 
+        <div className="mt-4">
+          <AlienSignalPanel
+            eyebrow="Lectura de radar"
+            title="Busqueda en orbita"
+            detail="Escaneas por nombre o telefono y saltas directo a perfil, cobro o agenda sin perder la coordenada del cliente."
+            badges={[
+              view === "recent" ? "modo recientes" : "base completa",
+              `${visibleCount} visibles`,
+              queryTerm ? "filtro activo" : "sin filtro",
+            ]}
+          />
+        </div>
+
         <div className="relative mt-5">
           <SearchIcon />
           <input
@@ -233,10 +247,10 @@ export default function ClientSearch({
           <div className="panel-soft rounded-[28px] p-8 text-center">
             <p className="eyebrow text-[11px] font-semibold">Sin resultados</p>
             <h3 className="font-display mt-3 text-2xl font-semibold text-white">
-              No encontramos clientes con ese criterio.
+              El radar no detecto esa senal.
             </h3>
             <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-zinc-400">
-              Proba con un nombre, un numero de telefono o cambia el scope a la base completa.
+              Proba con otro nombre, un telefono o cambia la orbita a la base completa para ampliar el escaneo.
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-3">
               <button

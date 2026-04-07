@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { asc, eq } from "drizzle-orm";
+import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import { db } from "@/db";
 import { productos } from "@/db/schema";
 import InventoryQuickAdjust from "@/components/inventario/InventoryQuickAdjust";
@@ -165,11 +166,25 @@ export default async function InventarioPage() {
               helper="Valor estimado a costo de compra."
             />
           </div>
+
+          <div className="mt-4">
+            <AlienSignalPanel
+              eyebrow="Radar de stock"
+              title="Orbita de inventario"
+              detail="Esta cabina te marca reposicion, valor inmovilizado y consumiciones para que el stock no desaparezca por abajo del radar."
+              badges={[
+                `${totalProductos} skus`,
+                bajoMinimo > 0 ? `${bajoMinimo} alertas` : "sin alertas",
+                `${consumiciones} consumiciones`,
+              ]}
+              tone="sky"
+            />
+          </div>
         </section>
 
         {lista.length === 0 ? (
           <div className="mt-5 rounded-[28px] border border-zinc-800 bg-zinc-900 p-8 text-center">
-            <p className="text-zinc-400">No hay productos cargados todavia.</p>
+            <p className="text-zinc-400">La cabina todavia no detecta productos cargados.</p>
             <Link
               href="/inventario/nuevo"
               className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-full bg-[#8cff59] px-5 text-sm font-semibold text-[#07130a] transition hover:bg-[#b6ff84]"

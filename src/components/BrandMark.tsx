@@ -10,7 +10,7 @@ type BrandMarkProps = {
 export default function BrandMark({
   href,
   compact = false,
-  subtitle = "Base de control",
+  subtitle = "Base orbital",
 }: BrandMarkProps) {
   const content = (
     <div className="flex items-center gap-3">

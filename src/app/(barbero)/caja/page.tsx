@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { and, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import AnularButton from "@/components/caja/AnularButton";
 import QuickCheckoutPanel from "@/components/caja/QuickCheckoutPanel";
 import GastoRapidoFAB from "@/components/gastos-rapidos/GastoRapidoFAB";
@@ -498,6 +499,20 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                       ? `${atencionesAnuladas} anuladas para revisar antes de seguir.`
                       : 'Sin anulaciones registradas hasta ahora.'}
                 </p>
+
+                <div className="max-w-2xl">
+                  <AlienSignalPanel
+                    eyebrow="Radar de caja"
+                    title="Senal economica"
+                    detail="La cabina junta ingresos, retail, anulaciones y cierre para que puedas leer la plata del dia como una sola orbita."
+                    badges={[
+                      cierreHoy ? "cierre logueado" : "caja abierta",
+                      `${totalAtenciones} servicios`,
+                      totalProductos > 0 ? "retail activo" : "sin retail",
+                    ]}
+                    tone="sky"
+                  />
+                </div>
               </div>
 
               <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-black/20 p-4 backdrop-blur-sm">
@@ -576,7 +591,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                     : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
                 }`}
               >
-                Simple
+                Vista simple
               </Link>
               <Link
                 href="/caja?vista=detalle"
@@ -586,7 +601,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                     : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
                 }`}
               >
-                Detalle
+                Vista separada
               </Link>
             </div>
           </div>
@@ -665,6 +680,19 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                   <div className="panel-soft rounded-2xl px-4 py-3 text-sm text-zinc-300">
                     {mixedMovement.length > 0 ? `${mixedMovement.length} movimientos hoy` : 'Sin movimientos'}
                   </div>
+                </div>
+
+                <div className="mt-4">
+                  <AlienSignalPanel
+                    eyebrow="Ruta mezclada"
+                    title="Lectura del flujo"
+                    detail="Servicios y productos viajan por la misma linea para que puedas detectar al toque que entro, por donde entro y cuanto deja."
+                    badges={[
+                      `${mixedMovement.length} eventos`,
+                      paymentBreakdown.length > 0 ? `${paymentBreakdown.length} medios` : "sin medios",
+                      atencionesAnuladas > 0 ? `${atencionesAnuladas} anuladas` : "sin anuladas",
+                    ]}
+                  />
                 </div>
 
                 {mixedMovement.length === 0 ? (
@@ -877,6 +905,20 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                     Servicios, productos y comisiones separados para no mezclar lectura.
                   </p>
                 </div>
+              </div>
+
+              <div className="mt-4">
+                <AlienSignalPanel
+                  eyebrow="Mapa de cobro"
+                  title="Resumen en orbita"
+                  detail="Cada medio queda separado para que el neto no se mezcle y la cabina sepa rapido por donde se movio la jornada."
+                  badges={[
+                    `${paymentBreakdown.length} medios`,
+                    totalComisionesMp > 0 ? "hay comisiones" : "sin comisiones",
+                    cierreHoy ? "turno cerrado" : "turno abierto",
+                  ]}
+                  tone="fuchsia"
+                />
               </div>
 
               <div className="mt-4 space-y-2">

@@ -135,7 +135,7 @@ export default function LoginPage() {
                 disabled={loading}
                 className="neon-button h-12 w-full rounded-2xl text-base font-semibold disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {loading ? "Ingresando..." : "Entrar a la base"}
+                {loading ? "Ingresando..." : "Ingreso staff"}
               </button>
             </form>
           </div>

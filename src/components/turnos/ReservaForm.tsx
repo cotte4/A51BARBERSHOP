@@ -251,7 +251,7 @@ export default function ReservaForm({
         </p>
         <h2 className="mt-3 font-display text-3xl font-semibold text-white">Ya la recibimos</h2>
         <p className="mt-3 text-sm text-emerald-100">
-          {barberoNombre} va a revisar tu pedido y confirmar el turno desde el panel A51.
+          {barberoNombre} va a bajar la señal y confirmar el turno desde la base A51.
         </p>
         <div className="mt-5 rounded-[22px] border border-white/10 bg-black/20 px-4 py-3 text-left text-sm text-zinc-200">
           <p className="font-medium text-white">{selectedServicio?.nombre ?? "Servicio"}</p>
@@ -275,7 +275,7 @@ export default function ReservaForm({
                 Paso 1
               </p>
               <h2 className="mt-2 font-display text-2xl font-semibold text-white">
-                Elegi el servicio
+                Elige tu jugada
               </h2>
             </div>
             <div className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/10 px-3 py-2 text-xs font-semibold text-[#d8ffc7]">
@@ -313,7 +313,7 @@ export default function ReservaForm({
           {selectedServicio ? (
             <div className="mt-4 rounded-[22px] border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-300">
               <span className="font-medium text-white">{selectedServicio.nombre}</span> esta listo
-              para reservar con {selectedServicio.duracionMinutos} min de duracion.
+              para salir con {selectedServicio.duracionMinutos} min de duracion.
             </div>
           ) : null}
         </section>
@@ -325,7 +325,7 @@ export default function ReservaForm({
                 Paso 2
               </p>
               <h2 className="mt-2 font-display text-2xl font-semibold text-white">
-                Fecha y horario
+                Fecha y slot
               </h2>
             </div>
             <div className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-300">
@@ -350,7 +350,7 @@ export default function ReservaForm({
 
             <div>
               <div className="mb-2 flex items-center justify-between gap-3">
-                <label className="block text-sm font-medium text-zinc-300">Horarios</label>
+                <label className="block text-sm font-medium text-zinc-300">Slots</label>
                 {selectedServicio ? (
                   <span className="text-xs text-zinc-500">
                     {selectedServicio.duracionMinutos} min por slot
@@ -414,7 +414,7 @@ export default function ReservaForm({
                 Paso 3
               </p>
               <h2 className="mt-2 font-display text-2xl font-semibold text-white">
-                Tus datos y extras
+                Tus datos y el combo
               </h2>
             </div>
             <div className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-300">
@@ -495,7 +495,7 @@ export default function ReservaForm({
                 </p>
               ) : (
                 <p className="text-xs text-zinc-400">
-                  Si elegis un resultado de Spotify, la barberia la puede reproducir mas confiable.
+                  Si eliges un resultado de Spotify, la barberia la puede tirar mas confiable.
                 </p>
               )}
 
@@ -557,7 +557,7 @@ export default function ReservaForm({
 
       <aside className="space-y-4 xl:sticky xl:top-6 xl:self-start">
         <div className="public-panel rounded-[30px] border border-white/10 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Resumen</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Radar</p>
           <div className="mt-4 space-y-3">
             <SummaryRow
               label="Servicio"
@@ -565,18 +565,18 @@ export default function ReservaForm({
               detail={
                 selectedServicio
                   ? `${selectedServicio.duracionMinutos} min - ${formatARS(selectedServicio.precioBase) ?? "Precio a confirmar"}`
-                  : "Elegi uno para seguir"
+                  : "Marca uno para seguir"
               }
             />
             <SummaryRow
               label="Fecha"
               value={formatDateLabel(fecha)}
-              detail={selectedSlotItem ? "Horario listo para enviar" : "Esperando horario"}
+              detail={selectedSlotItem ? "Slot listo para mandar" : "Esperando slot"}
             />
             <SummaryRow
-              label="Horario"
+              label="Slot"
               value={selectedSlotItem?.horaInicio ?? "Pendiente"}
-              detail={selectedSlotItem ? `${selectedSlotItem.duracionMinutos} min de turno` : "Elegilo en el panel"}
+              detail={selectedSlotItem ? `${selectedSlotItem.duracionMinutos} min de turno` : "Eligelo en la grilla"}
             />
             <SummaryRow
               label="Contacto"
@@ -586,7 +586,7 @@ export default function ReservaForm({
             <SummaryRow
               label="Extras"
               value={`${selectedExtraCount} seleccionados`}
-              detail={spotifyTrackUri ? "Cancion vinculada a Spotify" : "Sin vinculo musical"}
+              detail={spotifyTrackUri ? "Tema clavado a Spotify" : "Sin codigo musical"}
             />
           </div>
         </div>
@@ -598,7 +598,7 @@ export default function ReservaForm({
           <div className="mt-4 space-y-2 text-sm text-zinc-200">
             <p>El boton final queda activo solo cuando elegiste servicio y horario.</p>
             <p>Tu nota y tu sugerencia musical viajan con la solicitud.</p>
-            <p>Si hace falta, el equipo confirma o ajusta desde adentro.</p>
+            <p>Si hace falta, la base ajusta o confirma desde adentro.</p>
           </div>
         </div>
 
@@ -607,7 +607,7 @@ export default function ReservaForm({
           disabled={submitting || servicios.length === 0}
           className="neon-button h-12 w-full rounded-[20px] text-sm font-medium disabled:opacity-50"
         >
-          {submitting ? "Enviando..." : "Enviar solicitud"}
+          {submitting ? "Mandando señal..." : "Mandar solicitud"}
         </button>
       </aside>
     </form>

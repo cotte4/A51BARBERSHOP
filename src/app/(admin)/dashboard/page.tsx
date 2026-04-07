@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
+import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import LogoutButton from "@/components/LogoutButton";
 import BrandMark from "@/components/BrandMark";
 import { auth } from "@/lib/auth";
@@ -203,6 +204,20 @@ export default async function DashboardPage() {
                       <p className="mt-2 text-sm leading-5 opacity-80">{accion.detail}</p>
                     </Link>
                   ))}
+                </div>
+
+                <div className="mt-4 max-w-3xl">
+                  <AlienSignalPanel
+                    eyebrow="Torre ejecutiva"
+                    title="Senal del negocio"
+                    detail="La base mezcla caja, cortes, stock y modulos criticos para que el owner lea la jornada como una sola orbita de control."
+                    badges={[
+                      kpisDia.cierreRealizado ? "cierre logueado" : "cierre abierto",
+                      `${kpisDia.atencionesHoy} cortes`,
+                      productosStockBajo.length > 0 ? `${productosStockBajo.length} alertas` : "stock estable",
+                    ]}
+                    tone="sky"
+                  />
                 </div>
               </div>
 
@@ -425,6 +440,20 @@ export default async function DashboardPage() {
               >
                 Ir a inventario
               </Link>
+            </div>
+
+            <div className="mt-4">
+              <AlienSignalPanel
+                eyebrow="Radar de alertas"
+                title="Orbita critica"
+                detail="Acá caen las señales que merecen lectura inmediata para que la cabina no se lleve sorpresas más tarde."
+                badges={[
+                  productosStockBajo.length > 0 ? `${productosStockBajo.length} stock bajo` : "sin stock bajo",
+                  kpisDia.cierreRealizado ? "caja cerrada" : "caja abierta",
+                  bep.sinReferencia ? "sin referencia bep" : `${bepProgress}% bep`,
+                ]}
+                tone="fuchsia"
+              />
             </div>
 
             {productosStockBajo.length > 0 ? (

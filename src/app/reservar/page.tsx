@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AlienCrewCard from "@/components/branding/AlienCrewCard";
 import { getBarberosPublicosReserva } from "@/lib/turnos";
 
 export default async function ReservarLandingPage() {
@@ -11,25 +12,29 @@ export default async function ReservarLandingPage() {
           <section className="public-panel public-glow rounded-[36px] border border-white/10 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-2xl space-y-4">
-                <p className="eyebrow text-[#8cff59]">Reservas Area51</p>
+                <p className="eyebrow text-[#8cff59]">Area51 // booking lane</p>
                 <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
-                  Elegi con quien queres reservar
+                  Elige tu nave y cae al turno
                 </h1>
                 <p className="max-w-xl text-sm text-zinc-300 sm:text-base">
-                  Esta es la puerta general de reservas de A51. Podes entrar por aca, elegir
-                  barbero y seguir con la agenda correcta sin acordarte de un link raro.
+                  Esta es la entrada de calle de A51. Tomas barbero, entras por tu carril y caes a
+                  la agenda correcta sin memorizar links raros.
                 </p>
               </div>
 
-              <div className="grid min-w-[220px] gap-2">
+              <div className="grid min-w-[280px] gap-3">
                 <div className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-3">
                   <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Barberos</p>
                   <p className="mt-2 text-lg font-semibold text-white">{barberos.length} disponibles</p>
                 </div>
                 <div className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-3">
                   <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Entrada</p>
-                  <p className="mt-2 text-lg font-semibold text-white">Publica + cuenta</p>
+                  <p className="mt-2 text-lg font-semibold text-white">Clave + club</p>
                 </div>
+                <AlienCrewCard
+                  title="Tripulacion en ronda"
+                  detail="Referencia alien para el booking lane: tres pilotos, una nave y distintas cabinas para caer al corte."
+                />
               </div>
             </div>
           </section>
@@ -54,7 +59,7 @@ export default async function ReservarLandingPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                          {barbero.rol === "admin" ? "Owner lane" : "Barbero lane"}
+                          {barbero.rol === "admin" ? "Cabina founder" : "Cabina barbero"}
                         </p>
                         <p className="mt-3 font-display text-2xl font-semibold text-white">
                           {barbero.nombre}
@@ -66,7 +71,8 @@ export default async function ReservarLandingPage() {
                     </div>
 
                     <p className="mt-4 text-sm leading-6 text-zinc-300">
-                      Link directo listo para compartir, con la agenda y los horarios de {barbero.nombre}.
+                      Link directo para compartir y caer al slot de {barbero.nombre} sin pasar por
+                      otra pantalla.
                     </p>
 
                     <div className="mt-5 space-y-2 rounded-[24px] border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
@@ -82,7 +88,7 @@ export default async function ReservarLandingPage() {
                     </div>
 
                     <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#8cff59]">
-                      Abrir reserva
+                      Subir a la cabina con {barbero.nombre}
                       <span className="transition group-hover:translate-x-1">→</span>
                     </div>
                   </Link>

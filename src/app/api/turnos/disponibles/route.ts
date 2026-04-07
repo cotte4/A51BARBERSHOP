@@ -32,7 +32,7 @@ export async function GET(request: Request) {
 
   if (!(await canAccessPublicReserva(barbero))) {
     return Response.json(
-      { error: "Necesitas la clave de reserva o iniciar sesion." },
+      { error: "Primero ingresa la clave de reserva de este barbero o entra con tu cuenta." },
       { status: 401 }
     );
   }

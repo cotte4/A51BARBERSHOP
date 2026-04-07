@@ -1,5 +1,6 @@
 ﻿import Link from "next/link";
 import { and, desc, eq, gte, lte } from "drizzle-orm";
+import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import HoyActionStrip from "@/components/hoy/HoyActionStrip";
 import { db } from "@/db";
 import {
@@ -239,7 +240,7 @@ export default async function HoyPage() {
           eyebrow: "Ahora",
           title: "Mirar inventario",
           body: `${lowStockCount} producto${lowStockCount === 1 ? "" : "s"} estan por debajo del minimo.`,
-          cta: "Abrir inventario",
+          cta: "Ver inventario",
           href: "/inventario",
           tone: "amber" as const,
         }
@@ -248,8 +249,8 @@ export default async function HoyPage() {
             eyebrow: "Ahora",
             title: "Registrar atencion express",
             body: "La caja sigue abierta y el comando rapido esta listo para cobrar o registrar.",
-            cta: "Abrir comandos",
-            href: "#comandos",
+            cta: "Ir a caja",
+            href: "/caja",
             tone: "brand" as const,
           }
         : {
@@ -266,7 +267,7 @@ export default async function HoyPage() {
         eyebrow: "Recien",
         title: latestMovement.title,
         body: latestMovement.detail,
-        cta: "Abrir caja",
+        cta: "Ir a caja",
         href: "/caja",
         meta: `${latestMovement.badge} · ${formatHora(latestMovement.time)}`,
         tone: "neutral" as const,
@@ -315,6 +316,13 @@ export default async function HoyPage() {
   return (
     <main className="app-shell min-h-screen px-4 py-6 pb-28">
       <div className="mx-auto max-w-6xl space-y-6">
+        <HoyActionStrip
+          turnos={turnosMini}
+          servicios={serviciosActivos.map((s) => ({ id: s.id, nombre: s.nombre, precioBase: s.precioBase }))}
+          mediosPago={mediosPagoActivos.map((m) => ({ id: m.id, nombre: m.nombre, comisionPorcentaje: m.comisionPorcentaje }))}
+          action={registrarAtencionExpressAction}
+        />
+
         <section className="panel-card overflow-hidden rounded-[34px]">
           <div className="bg-[radial-gradient(circle_at_top_right,rgba(140,255,89,0.12),transparent_26%),radial-gradient(circle_at_bottom_left,rgba(140,255,89,0.06),transparent_30%)] p-6 sm:p-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -386,53 +394,58 @@ export default async function HoyPage() {
                 tone={recentFocus.tone}
                 meta={recentFocus.meta}
               />
-              <div className="rounded-[28px] border border-white/10 bg-white/5 p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="eyebrow text-xs font-semibold">Atencion</p>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                    {attentionItems.length} aviso{attentionItems.length === 1 ? "" : "s"}
-                  </span>
+              <div className="space-y-3">
+                <AlienSignalPanel
+                  eyebrow="Radar de cabina"
+                  title="Senal del turno"
+                  detail="La tripu te avisa si la jornada viene limpia, si falta bajar pendientes o si una alarma de stock se mete en la orbita."
+                  badges={[
+                    pendingTurnos > 0 ? `${pendingTurnos} pendientes` : "agenda al dia",
+                    cierreHoy ? "caja cerrada" : "caja abierta",
+                    actor.isAdmin && lowStockCount > 0 ? `${lowStockCount} stock bajo` : "cabina estable",
+                  ]}
+                />
+                <div className="rounded-[28px] border border-white/10 bg-white/5 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="eyebrow text-xs font-semibold">Atencion</p>
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                      {attentionItems.length} aviso{attentionItems.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <p className="font-display mt-3 text-2xl font-semibold tracking-tight text-white">
+                    {actor.isAdmin && lowStockCount > 0
+                      ? "Revisar stock"
+                      : pendingTurnos > 0
+                        ? "Turnos por ordenar"
+                        : cierreHoy
+                          ? "Cierre resuelto"
+                          : "Sin urgencias"}
+                  </p>
+                  <ul className="mt-4 space-y-2 text-sm leading-6 text-zinc-300">
+                    {attentionItems.map((item) => (
+                      <li key={item} className="flex gap-3">
+                        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[#8cff59] shadow-[0_0_10px_rgba(140,255,89,0.65)]" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={attentionFocus.href}
+                    className={`mt-5 inline-flex min-h-11 items-center rounded-2xl px-4 text-sm font-semibold ${
+                      attentionFocus.tone === "brand"
+                        ? "neon-button"
+                        : attentionFocus.tone === "amber"
+                          ? "border border-amber-500/30 bg-[rgba(245,158,11,0.12)] text-amber-100 hover:bg-[rgba(245,158,11,0.18)]"
+                          : "ghost-button"
+                    }`}
+                  >
+                    {attentionFocus.cta}
+                  </Link>
                 </div>
-                <p className="font-display mt-3 text-2xl font-semibold tracking-tight text-white">
-                  {actor.isAdmin && lowStockCount > 0
-                    ? "Revisar stock"
-                    : pendingTurnos > 0
-                      ? "Turnos por ordenar"
-                      : cierreHoy
-                        ? "Cierre resuelto"
-                        : "Sin urgencias"}
-                </p>
-                <ul className="mt-4 space-y-2 text-sm leading-6 text-zinc-300">
-                  {attentionItems.map((item) => (
-                    <li key={item} className="flex gap-3">
-                      <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[#8cff59] shadow-[0_0_10px_rgba(140,255,89,0.65)]" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href={attentionFocus.href}
-                  className={`mt-5 inline-flex min-h-11 items-center rounded-2xl px-4 text-sm font-semibold ${
-                    attentionFocus.tone === "brand"
-                      ? "neon-button"
-                      : attentionFocus.tone === "amber"
-                        ? "border border-amber-500/30 bg-[rgba(245,158,11,0.12)] text-amber-100 hover:bg-[rgba(245,158,11,0.18)]"
-                        : "ghost-button"
-                  }`}
-                >
-                  {attentionFocus.cta}
-                </Link>
               </div>
             </div>
           </div>
         </section>
-
-        <HoyActionStrip
-          turnos={turnosMini}
-          servicios={serviciosActivos.map((s) => ({ id: s.id, nombre: s.nombre, precioBase: s.precioBase }))}
-          mediosPago={mediosPagoActivos.map((m) => ({ id: m.id, nombre: m.nombre, comisionPorcentaje: m.comisionPorcentaje }))}
-          action={registrarAtencionExpressAction}
-        />
 
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <StatCard eyebrow="Caja" label="Estado" value={cierreHoy ? "Cerrada" : "Operando"} helper={cierreHoy ? `Cerrada a las ${formatHora(cierreHoy.cerradoEn)}` : "Todavia admite movimientos"} />
@@ -527,7 +540,7 @@ export default async function HoyPage() {
                   <div className="mt-2 flex items-center justify-between gap-3">
                     <div>
                       <p className="font-display text-xl font-semibold text-white">Resumen personal</p>
-                      <p className="mt-1 text-sm text-zinc-400">Abrilo si quieres ver mas detalle.</p>
+                      <p className="mt-1 text-sm text-zinc-400">Expandir resumen del mes.</p>
                     </div>
                     <div className="rounded-2xl bg-[#8cff59] px-4 py-3 text-right text-[#07130a]">
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#07130a]/65">Comision</p>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState } from "react";
+import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import type { BarberoFormState } from "@/app/(admin)/configuracion/barberos/actions";
 
 interface BarberoFormProps {
@@ -346,6 +347,20 @@ export default function BarberoForm({
                 label="Accion rapida"
                 value={`${servicioDefecto?.nombre ?? "Sin servicio"} · ${medioPagoDefecto?.nombre ?? "Sin medio"}`}
                 detail="Defaults que aceleran la carga en caja."
+              />
+            </div>
+
+            <div className="mt-4">
+              <AlienSignalPanel
+                eyebrow="Ficha de crew"
+                title="Senal del perfil"
+                detail="Comisión, defaults y salida pública quedan resumidos para validar de un vistazo cómo va a operar este barbero en la nave."
+                badges={[
+                  rol === "admin" ? "modo admin" : "modo barbero",
+                  tipoModelo,
+                  publicReservaActiva ? "reserva publica" : "reserva interna",
+                ]}
+                tone="sky"
               />
             </div>
           </div>

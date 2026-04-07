@@ -2,6 +2,7 @@ import Link from "next/link";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import { db } from "@/db";
 import {
   atenciones,
@@ -173,8 +174,8 @@ function SmartCard({
         <div className="mt-5 flex items-center justify-between border-t border-white/8 pt-4 text-sm">
           <span className="text-zinc-400">{footer}</span>
           <span className="flex items-center gap-2 font-semibold text-[#8cff59] transition-transform duration-200 group-hover:translate-x-1">
-            Abrir
-            <span className="text-base">+</span>
+            {footer}
+            <span className="text-base">→</span>
           </span>
         </div>
       </div>
@@ -382,6 +383,20 @@ export default async function NegocioPage() {
                   {stockAlerts.length > 0 ? `${stockAlerts.length} cosas para reponer` : "Stock en orden"}
                 </span>
               </div>
+
+              <div className="mt-4 max-w-2xl">
+                <AlienSignalPanel
+                  eyebrow="Torre central"
+                  title="Cabina del negocio"
+                  detail="Caja, equipo, stock y deuda quedan bajo una misma senal para leer si la base esta firme o si hace falta mover algo del otro lado del mostrador."
+                  badges={[
+                    kpisDia.cierreRealizado ? "cierre hecho" : "cierre abierto",
+                    stockAlerts.length > 0 ? `${stockAlerts.length} alertas stock` : "stock estable",
+                    saldoPendienteUsd > 0 ? "deuda en orbita" : "sin deuda",
+                  ]}
+                  tone="sky"
+                />
+              </div>
             </div>
 
             <div className="grid gap-3">
@@ -503,7 +518,7 @@ export default async function NegocioPage() {
             kicker="Lo importante"
             title="Plata de hoy"
             detail="Ingreso, atenciones y BEP del dia en una sola tarjeta."
-            footer="Abrir panel diario"
+            footer="Ir al panel diario"
             className="min-h-[380px]"
             accentClassName="border-[#8cff59]/20 bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.16),_transparent_35%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
           >
@@ -592,7 +607,7 @@ export default async function NegocioPage() {
             kicker="Pagos"
             title="Pagos al equipo"
             detail="Pendientes, pagados y quien todavia espera cobro."
-            footer="Abrir liquidaciones"
+            footer="Ver liquidaciones"
             className="min-h-[380px]"
             accentClassName="border-[#8cff59]/18 bg-[radial-gradient(circle_at_top_right,_rgba(34,211,238,0.14),_transparent_38%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
           >
@@ -671,7 +686,7 @@ export default async function NegocioPage() {
             kicker={stockAlerts.length > 0 ? "Revisar" : "Todo bien"}
             title="Productos por mirar"
             detail="Solo lo que esta por terminarse o ya quedo en cero."
-            footer="Abrir inventario"
+            footer="Ver inventario"
             className="min-h-[340px]"
             accentClassName="border-[#8cff59]/16 bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.10),_transparent_34%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
           >
@@ -744,7 +759,7 @@ export default async function NegocioPage() {
             kicker={saldoPendienteUsd > 0 ? "Ojo" : "Tranquilo"}
             title="Gastos y cuotas"
             detail="Lo que ya salio hoy y lo proximo grande por pagar."
-            footer="Abrir gastos y deuda"
+            footer="Ver gastos y deuda"
             className="min-h-[340px]"
             accentClassName="border-[#8cff59]/16 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.10),_transparent_34%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
           >

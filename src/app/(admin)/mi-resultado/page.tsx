@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import IngresosSummary from "@/components/mi-resultado/IngresosSummary";
 import EgresosSummary from "@/components/mi-resultado/EgresosSummary";
 import ResultadoPersonal from "@/components/mi-resultado/ResultadoPersonal";
@@ -74,6 +75,18 @@ export default async function MiResultadoPage() {
                 <Pill label="Mes neto" value={formatARS(netoMes)} />
                 <Pill label="Gastos rapidos" value={formatARS(gastosRapidosMes)} />
               </div>
+
+              <AlienSignalPanel
+                eyebrow="Cabina personal"
+                title="Senal de resultado"
+                detail="Ingresos, egresos y gastos rapidos quedan en una sola lectura para saber si el mes viene oxigenado o apretado."
+                badges={[
+                  monthLabel,
+                  netoMes < 0 ? "mes en rojo" : "mes sano",
+                  `${gastos.length} movimientos`,
+                ]}
+                tone="sky"
+              />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[520px]">

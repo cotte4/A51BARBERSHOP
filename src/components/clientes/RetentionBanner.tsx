@@ -30,11 +30,11 @@ export default function RetentionBanner({ candidates }: RetentionBannerProps) {
   }
 
   return (
-    <div className="rounded-3xl border border-amber-500/35 bg-amber-500/10 p-5 shadow-sm">
+    <div className="rounded-3xl border border-amber-500/35 bg-[linear-gradient(135deg,rgba(245,158,11,0.12),rgba(217,70,239,0.08))] p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-amber-300">
-            Marcianos sin visitar en mas de 42 dias
+            Senal de reenganche en la orbita Marciano
           </p>
           <p className="mt-1 text-xs text-zinc-300">
             {candidates.length} cliente{candidates.length !== 1 ? "s" : ""} en riesgo de no volver.

@@ -28,7 +28,7 @@ export default function ClientCard({ client }: ClientCardProps) {
   const phoneHref = client.phoneRaw ? `tel:${client.phoneRaw.replace(/\D/g, "")}` : null;
 
   return (
-    <article className="panel-card rounded-[28px] p-4 sm:p-5 transition hover:border-[#8cff59]/25">
+    <article className="panel-card rounded-[28px] p-4 transition hover:border-[#8cff59]/25 sm:p-5">
       <div className="flex flex-col gap-4">
         <div className="flex items-start gap-3">
           <div className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#8cff59] text-sm font-semibold text-[#07130a] ring-1 ring-[#8cff59]/20">
@@ -83,6 +83,24 @@ export default function ClientCard({ client }: ClientCardProps) {
               <p className="mt-1 text-xs text-zinc-400">
                 {relativeLastVisit}
                 {client.lastVisitBarberoNombre ? ` con ${client.lastVisitBarberoNombre}` : ""}
+              </p>
+            </div>
+
+            <div className="mt-3 rounded-[20px] border border-[#8cff59]/14 bg-[linear-gradient(135deg,rgba(140,255,89,0.08),rgba(217,70,239,0.05))] p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                  Radar marciano
+                </p>
+                <div className="flex gap-1">
+                  <span className="h-2 w-2 rounded-full bg-[#8cff59] shadow-[0_0_10px_rgba(140,255,89,0.8)]" />
+                  <span className="h-2 w-2 rounded-full bg-fuchsia-400/80" />
+                  <span className="h-2 w-2 rounded-full bg-sky-300/80" />
+                </div>
+              </div>
+              <p className="mt-1 text-sm leading-6 text-zinc-300">
+                {client.esMarciano
+                  ? "Cliente dentro de la nave: vale cuidarlo con lectura rapida y seguimiento fino."
+                  : "Cliente de calle listo para volver a entrar en orbita con un nuevo turno."}
               </p>
             </div>
           </div>

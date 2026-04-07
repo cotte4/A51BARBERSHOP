@@ -92,7 +92,7 @@ export default function HoyActionStrip({
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-zinc-300">
                 Ver u ocultar
               </span>
-              <span className="text-sm font-semibold text-[#8cff59]">Abrir agenda</span>
+              <span className="text-sm font-semibold text-[#8cff59]">Mostrar turnos de hoy</span>
             </div>
           </button>
 
@@ -132,7 +132,7 @@ export default function HoyActionStrip({
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-zinc-300">
                 Estado
               </span>
-              <span className="text-sm font-semibold text-[#8cff59]">Abrir caja</span>
+              <span className="text-sm font-semibold text-[#8cff59]">Ir a caja</span>
             </div>
           </Link>
         </div>
@@ -197,7 +197,7 @@ export default function HoyActionStrip({
                       </p>
                     </div>
                     <Link href="/turnos" className="text-sm font-medium text-[#8cff59] underline underline-offset-4">
-                      Abrir
+                      Ir a turnos
                     </Link>
                   </div>
                 </div>
