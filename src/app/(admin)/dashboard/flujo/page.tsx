@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import { getFlujoMensual } from "@/lib/dashboard-queries";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
@@ -89,18 +88,6 @@ export default async function FlujoPage({ searchParams }: { searchParams: Search
             Siguiente →
           </Link>
         </div>
-
-        <AlienSignalPanel
-          eyebrow="Orbita de flujo"
-          title="Senal de caja mensual"
-          detail="Ingresos, egresos y saldo acumulado viajan juntos para detectar rapido los dias que torcieron la ruta."
-          badges={[
-            nombreMes(mes, anio),
-            saldoFinal >= 0 ? "saldo positivo" : "saldo negativo",
-            hayDatos ? `${flujo.length} dias` : "sin datos",
-          ]}
-          tone="fuchsia"
-        />
 
         <div className="grid grid-cols-3 gap-3">
           <div className="panel-card rounded-[28px] p-4">

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import { db } from "@/db";
 import {
   atenciones,
@@ -384,19 +383,6 @@ export default async function NegocioPage() {
                 </span>
               </div>
 
-              <div className="mt-4 max-w-2xl">
-                <AlienSignalPanel
-                  eyebrow="Torre central"
-                  title="Cabina del negocio"
-                  detail="Caja, equipo, stock y deuda quedan bajo una misma senal para leer si la base esta firme o si hace falta mover algo del otro lado del mostrador."
-                  badges={[
-                    kpisDia.cierreRealizado ? "cierre hecho" : "cierre abierto",
-                    stockAlerts.length > 0 ? `${stockAlerts.length} alertas stock` : "stock estable",
-                    saldoPendienteUsd > 0 ? "deuda en orbita" : "sin deuda",
-                  ]}
-                  tone="sky"
-                />
-              </div>
             </div>
 
             <div className="grid gap-3">

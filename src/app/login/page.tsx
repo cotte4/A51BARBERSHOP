@@ -23,7 +23,7 @@ export default function LoginPage() {
     });
 
     if (authError) {
-      setError("Email o contrasena incorrectos. Revisa los datos e intenta de nuevo.");
+      setError("Email o contraseña incorrectos. Revisá los datos e intentá de nuevo.");
       setLoading(false);
       return;
     }

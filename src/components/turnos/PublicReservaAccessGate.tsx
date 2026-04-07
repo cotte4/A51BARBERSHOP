@@ -76,7 +76,7 @@ export default function PublicReservaAccessGate({
             autoComplete="one-time-code"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="Escribe la clave que te pasaron"
+            placeholder="Escribí la clave que te pasaron"
             className="mt-3 min-h-[52px] w-full rounded-2xl border border-zinc-700 bg-zinc-950/80 px-4 text-white placeholder:text-zinc-500 outline-none focus:border-[#8cff59]/60"
           />
           <p className="mt-3 text-sm text-zinc-400">

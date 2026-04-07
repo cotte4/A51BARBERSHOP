@@ -2,7 +2,6 @@ import Link from "next/link";
 import { desc } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import { auth } from "@/lib/auth";
 import {
   calcularCuotaSiguiente,
@@ -172,17 +171,6 @@ export default async function RepagoPage() {
                   <Pill label="Cancelacion" value={fechaCancelacion} accent />
                 </div>
 
-                <AlienSignalPanel
-                  eyebrow="Orbita de deuda"
-                  title="Senal de repago"
-                  detail="La nave separa avance, saldo, cuota siguiente y cierre estimado para que el plan no se pierda entre números sueltos."
-                  badges={[
-                    repago.pagadoCompleto ? "deuda cerrada" : "plan activo",
-                    `${cuotasPagadas}/${cantidadCuotas} cuotas`,
-                    cuotaSiguiente ? "hay proxima cuota" : "sin cuota pendiente",
-                  ]}
-                  tone="fuchsia"
-                />
               </div>
 
               <aside className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
@@ -448,7 +436,7 @@ export default async function RepagoPage() {
                     Registrar pago
                   </h2>
                   <p className="mt-1 text-sm leading-6 text-zinc-400">
-                    Carga USD, tipo de cambio y notas. El formulario ya te deja ver el impacto en
+                    Cargá USD, tipo de cambio y notas. El formulario ya te deja ver el impacto en
                     ARS antes de confirmar.
                   </p>
                   <div className="mt-5">

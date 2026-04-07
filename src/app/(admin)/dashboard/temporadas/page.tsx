@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import { getComparativaTemporadas } from "@/lib/dashboard-queries";
 
 function formatARS(val: number): string {
@@ -54,18 +53,6 @@ export default async function TemporadasPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4">
-        <AlienSignalPanel
-          eyebrow="Radar de temporadas"
-          title="Senal de comparativa"
-          detail="La cabina alinea proyección y realidad para leer si cada temporada empuja, frena o se queda corta."
-          badges={[
-            `${temporadas.length} temporadas`,
-            temporadas.some((item) => item.estado === "activa") ? "hay activa" : "sin activa",
-            temporadas.some((item) => item.estado === "futura") ? "hay futura" : "sin futura",
-          ]}
-          tone="sky"
-        />
-
         {temporadas.length === 0 ? (
           <div className="panel-card rounded-[28px] p-8 text-center">
             <p className="text-zinc-400 text-sm">No hay temporadas configuradas.</p>

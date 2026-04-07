@@ -24,7 +24,7 @@ export default function MarcianoLoginPage() {
     });
 
     if (authError) {
-      setError("No pudimos validar tu acceso Marciano. Revisa tu email y contrasena.");
+      setError("No pudimos validar tu acceso Marciano. Revisá tu email y contraseña.");
       setLoading(false);
       return;
     }
@@ -38,12 +38,12 @@ export default function MarcianoLoginPage() {
       badge="Club Marciano"
       title="Sube a la nave"
       description="Usa el email que A51 cargo para tu membresia. Desde aca reservas, ves tus beneficios y te mueves por tu carril sin tocar la base interna."
-      sideTitle="La cabina VIP del club: turnos, beneficios y codigo propio."
+      sideTitle="El acceso VIP del club: turnos, beneficios y codigo propio."
       sideDescription="Esto no es el login del staff. Es la entrada Marciana: mas club, mas noche, mas acceso rapido para la gente que ya juega del lado de adentro."
       notes={[
         { label: "Ingreso", value: "Email y clave" },
         { label: "Ruta", value: "/marcianos" },
-        { label: "Codigo", value: "VIP orbital" },
+        { label: "Codigo", value: "VIP Marciano" },
         { label: "Uso", value: "Portal, turnos y seguridad" },
       ]}
       footer={

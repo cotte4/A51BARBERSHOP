@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import {
   createScheduleRuleAction,
   deleteScheduleRuleAction,
@@ -226,19 +225,6 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
           />
         </div>
 
-        <div className="mt-4">
-          <AlienSignalPanel
-            eyebrow="Cabina sonora"
-            title="Senal de configuracion musical"
-            detail="Proveedor, player, franjas y errores quedan en la misma frecuencia para que la música del local no se salga de órbita."
-            badges={[
-              state.provider.connected ? "spotify online" : "spotify offline",
-              `${playlistCount} playlists`,
-              `${scheduleCount} reglas`,
-            ]}
-            tone="sky"
-          />
-        </div>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">

@@ -14,7 +14,7 @@ function getDifferenceTone(difference: number, contadoReady: boolean) {
   if (!contadoReady) {
     return {
       label: "Pendiente",
-      hint: "Carga el efectivo fisico antes de cerrar.",
+      hint: "Cargá el efectivo físico antes de cerrar.",
       className: "border-zinc-800 bg-zinc-950/70 text-zinc-300",
     };
   }
@@ -106,7 +106,7 @@ export default function EfectivoChecker({
               value={contado}
               onChange={(e) => setContado(e.target.value)}
               placeholder="0"
-              className="min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-950/80 px-4 pl-8 text-sm text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60"
+              className="min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-950/80 px-4 pl-8 text-base text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60"
             />
           </div>
         </div>

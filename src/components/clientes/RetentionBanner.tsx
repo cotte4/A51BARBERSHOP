@@ -34,7 +34,7 @@ export default function RetentionBanner({ candidates }: RetentionBannerProps) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-amber-300">
-            Senal de reenganche en la orbita Marciano
+            Clientes Marciano en riesgo de no volver
           </p>
           <p className="mt-1 text-xs text-zinc-300">
             {candidates.length} cliente{candidates.length !== 1 ? "s" : ""} en riesgo de no volver.

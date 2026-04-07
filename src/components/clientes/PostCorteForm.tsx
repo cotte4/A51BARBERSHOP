@@ -164,7 +164,7 @@ export default function PostCorteForm({
               Cerramos la visita de {clientName}
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-              Carga lo esencial en el momento y deja el resto ordenado para volver a leerlo en el
+              Cargá lo esencial en el momento y dejá el resto ordenado para volver a leerlo en el
               siguiente turno.
             </p>
           </div>
@@ -189,10 +189,10 @@ export default function PostCorteForm({
                 name="barberNotes"
                 rows={5}
                 placeholder="Ej: pidio degradado mas alto, llego tarde, probar el nuevo producto..."
-                className="w-full resize-none rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60 focus:ring-0"
+                className="w-full resize-none rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60 focus:ring-0"
               />
               <p className="mt-2 text-xs leading-5 text-zinc-500">
-                Escribe corto y util. Esto vuelve a aparecer cuando abras el cliente.
+                Escribí corto y útil. Esto vuelve a aparecer cuando abras el cliente.
               </p>
             </div>
 
@@ -204,7 +204,7 @@ export default function PostCorteForm({
                 id="tags"
                 name="tags"
                 placeholder="degradado-alto, trajo-amigo, llego-tarde"
-                className="h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-4 text-sm text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60 focus:ring-0"
+                className="h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-4 text-base text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60 focus:ring-0"
               />
               <p className="mt-2 text-xs leading-5 text-zinc-500">
                 Separados por coma. Sirven para buscar patrones sin leer toda la nota.
@@ -226,7 +226,7 @@ export default function PostCorteForm({
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
               <p className="text-sm font-medium text-zinc-200">Propina</p>
               <p className="mt-2 text-xs leading-5 text-zinc-500">
-                Toca una opcion para marcar rapidamente la experiencia.
+                Tocá una opción para marcar rápidamente la experiencia.
               </p>
               <div className="mt-4">
                 <PropinaStars value={propina} onChange={setPropina} />

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { and, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import AnularButton from "@/components/caja/AnularButton";
 import QuickCheckoutPanel from "@/components/caja/QuickCheckoutPanel";
 import GastoRapidoFAB from "@/components/gastos-rapidos/GastoRapidoFAB";
@@ -38,6 +37,44 @@ type MovementItem = {
   tone: string;
   badge: string;
   detail: string;
+};
+
+type MovementDisclosureCardProps = {
+  timeLabel: string;
+  badge: string;
+  title: string;
+  subtitle: string;
+  detail: string;
+  amountLabel: string;
+  toneClassName: string;
+};
+
+type AtencionDisclosureCardProps = {
+  atencionId: string;
+  timeLabel: string;
+  statusLabel: string;
+  paymentLabel: string;
+  paymentClassName: string;
+  serviceName: string;
+  barberName: string;
+  brutoLabel: string;
+  netoLabel?: string | null;
+  comisionLabel?: string | null;
+  productosLabel?: string | null;
+  motivoAnulacion?: string | null;
+  notas?: string | null;
+  impactLabel: string;
+  impactHint: string;
+  toneWrapperClassName: string;
+  railClassName: string;
+  statusClassName: string;
+  titleClassName: string;
+  noteClassName: string;
+  amountClassName: string;
+  canEdit: boolean;
+  editHref: string;
+  isAdmin: boolean;
+  anularAction: typeof anularAtencion;
 };
 
 function formatARS(value: string | number | null | undefined): string {
@@ -142,6 +179,197 @@ function getProductoEmoji(nombre: string | undefined) {
   if (normalized.includes("toalla")) return "TO";
   if (normalized.includes("agua")) return "AG";
   return "PR";
+}
+
+function ChevronIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      aria-hidden="true"
+    >
+      <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function MovementDisclosureCard({
+  timeLabel,
+  badge,
+  title,
+  subtitle,
+  detail,
+  amountLabel,
+  toneClassName,
+}: MovementDisclosureCardProps) {
+  return (
+    <details className={`caja-disclosure rounded-[24px] border ${toneClassName}`}>
+      <summary className="flex cursor-pointer list-none items-start justify-between gap-4 px-4 py-4 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[#8cff59]/40">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-stone-950 px-3 py-1 text-xs font-semibold text-white">
+              {timeLabel}
+            </span>
+            <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-stone-800">
+              {badge}
+            </span>
+          </div>
+          <p className="mt-3 text-lg font-semibold tracking-tight">{title}</p>
+          <p className="mt-1 text-sm opacity-80">{subtitle}</p>
+        </div>
+
+        <div className="flex shrink-0 items-start gap-3">
+          <div className="text-right">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] opacity-55">
+              Impacto
+            </p>
+            <p className="mt-2 text-xl font-semibold tracking-tight">{amountLabel}</p>
+          </div>
+          <span className="caja-chevron rounded-full border border-white/10 bg-white/5 p-2 text-zinc-300">
+            <ChevronIcon />
+          </span>
+        </div>
+      </summary>
+
+      <div className="caja-panel px-4 pb-4">
+        <div className="caja-panel-inner">
+          <div className="rounded-[20px] border border-white/8 bg-black/20 px-4 py-3 text-sm leading-6 opacity-85">
+            {detail}
+          </div>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function AtencionDisclosureCard({
+  atencionId,
+  timeLabel,
+  statusLabel,
+  paymentLabel,
+  paymentClassName,
+  serviceName,
+  barberName,
+  brutoLabel,
+  netoLabel,
+  comisionLabel,
+  productosLabel,
+  motivoAnulacion,
+  notas,
+  impactLabel,
+  impactHint,
+  toneWrapperClassName,
+  railClassName,
+  statusClassName,
+  titleClassName,
+  noteClassName,
+  amountClassName,
+  canEdit,
+  editHref,
+  isAdmin,
+  anularAction,
+}: AtencionDisclosureCardProps) {
+  return (
+    <details
+      className={`caja-disclosure relative overflow-hidden rounded-[26px] border ${toneWrapperClassName}`}
+    >
+      <span className={`absolute inset-y-0 left-0 w-1.5 ${railClassName}`} aria-hidden="true" />
+
+      <summary className="ml-2 flex cursor-pointer list-none flex-wrap items-start justify-between gap-4 px-5 py-5 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[#8cff59]/40">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-stone-900 px-3 py-1 text-sm font-semibold text-white">
+              {timeLabel}
+            </span>
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusClassName}`}>
+              {statusLabel}
+            </span>
+            <span className={`rounded-full px-3 py-1 text-xs font-medium ${paymentClassName}`}>
+              {paymentLabel}
+            </span>
+          </div>
+
+          <h3 className={`mt-4 text-xl font-semibold tracking-tight ${titleClassName}`}>
+            {serviceName}
+          </h3>
+          <p className="mt-1 text-sm text-zinc-400">{barberName}</p>
+        </div>
+
+        <div className="flex min-w-[170px] items-start justify-end gap-3">
+          <div className="rounded-[22px] bg-zinc-950/45 px-4 py-3 text-left sm:text-right">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-400">
+              Impacto
+            </p>
+            <p className={`mt-2 text-2xl font-semibold tracking-tight ${amountClassName}`}>
+              {impactLabel}
+            </p>
+            <p className="mt-1 text-sm text-zinc-400">{impactHint}</p>
+          </div>
+          <span className="caja-chevron rounded-full border border-white/10 bg-white/5 p-2 text-zinc-300">
+            <ChevronIcon />
+          </span>
+        </div>
+      </summary>
+
+      <div className="caja-panel ml-2 px-5 pb-5">
+        <div className="caja-panel-inner">
+          <div className="space-y-4 border-t border-white/8 pt-4">
+            <div className="flex flex-wrap gap-2 text-sm text-zinc-300">
+              <span className="rounded-full bg-zinc-900/70 px-3 py-1">Bruto {brutoLabel}</span>
+              {netoLabel ? (
+                <span className="rounded-full bg-zinc-900/70 px-3 py-1">Neto {netoLabel}</span>
+              ) : null}
+              {comisionLabel ? (
+                <span className="rounded-full bg-zinc-900/70 px-3 py-1">{comisionLabel}</span>
+              ) : null}
+              {productosLabel ? (
+                <span className="rounded-full bg-zinc-900/70 px-3 py-1">{productosLabel}</span>
+              ) : null}
+            </div>
+
+            {motivoAnulacion ? (
+              <div
+                className={`rounded-[20px] border border-white/8 bg-black/15 px-4 py-3 text-sm ${noteClassName}`}
+              >
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                  Motivo
+                </span>
+                <p className="mt-2 leading-6">{motivoAnulacion}</p>
+              </div>
+            ) : null}
+
+            {notas ? (
+              <div
+                className={`rounded-[20px] border border-white/8 bg-black/15 px-4 py-3 text-sm ${noteClassName}`}
+              >
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                  Notas
+                </span>
+                <p className="mt-2 leading-6">{notas}</p>
+              </div>
+            ) : null}
+
+            {canEdit ? (
+              <div className="flex flex-wrap gap-2 sm:justify-end">
+                <Link
+                  href={editHref}
+                  className="neon-button inline-flex min-h-[44px] items-center justify-center rounded-2xl px-4 text-sm font-medium"
+                >
+                  Editar
+                </Link>
+                {isAdmin ? (
+                  <AnularButton atencionId={atencionId} anularAction={anularAction} />
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </details>
+  );
 }
 
 export default async function CajaPage({ searchParams }: CajaPageProps) {
@@ -330,7 +558,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
           ? "border-red-500/30 bg-red-500/10 text-red-300"
           : "border-zinc-700 bg-zinc-900 text-white",
         badge: atencion.anulado ? "Anulada" : "Servicio",
-        detail: `${accent.label} Â· ${atencion.anulado ? "fuera de caja" : "entra al neto"}`,
+        detail: `${accent.label} - ${atencion.anulado ? "fuera de caja" : "entra al neto"}`,
       };
     }),
     ...ventasProductosDia.map((venta) => {
@@ -437,8 +665,8 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
       value: totalProductos > 0 ? formatARS(totalProductos) : "Sin ventas",
       helper:
         ventasProductosDia.length > 0
-          ? `${ventasProductosDia.length} movimientos retail hoy`
-          : "Todavia no hubo retail",
+          ? `${ventasProductosDia.length} movimientos de productos hoy`
+          : "Todavia no hubo ventas de productos",
     },
     {
       eyebrow: "Control",
@@ -467,7 +695,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
 
                 <div className="space-y-3">
                   <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                    Cockpit del dia
+                    Resumen del dia
                   </h1>
                   <p className="max-w-2xl text-sm leading-6 text-stone-300 sm:text-base">
                     Una sola vista para entender rapido plata, ritmo y control antes de cerrar.
@@ -500,19 +728,6 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                       : 'Sin anulaciones registradas hasta ahora.'}
                 </p>
 
-                <div className="max-w-2xl">
-                  <AlienSignalPanel
-                    eyebrow="Radar de caja"
-                    title="Senal economica"
-                    detail="La cabina junta ingresos, retail, anulaciones y cierre para que puedas leer la plata del dia como una sola orbita."
-                    badges={[
-                      cierreHoy ? "cierre logueado" : "caja abierta",
-                      `${totalAtenciones} servicios`,
-                      totalProductos > 0 ? "retail activo" : "sin retail",
-                    ]}
-                    tone="sky"
-                  />
-                </div>
               </div>
 
               <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-black/20 p-4 backdrop-blur-sm">
@@ -533,7 +748,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                     </p>
                   </div>
                   <div className="rounded-[22px] bg-white/5 px-4 py-3">
-                    <p className="text-xs uppercase tracking-[0.18em] text-stone-400">Retail</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-stone-400">Productos</p>
                     <p className="mt-2 text-xl font-semibold text-white">
                       {totalProductos > 0 ? formatARS(totalProductos) : 'Sin ventas'}
                     </p>
@@ -616,7 +831,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                   Registrar una atencion express
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-zinc-400">
-                  Sin salir del cockpit, con servicio, medio de pago y neto listos para guardar.
+                  Con servicio, medio de pago y neto listos para guardar.
                 </p>
               </div>
               <div className="panel-soft rounded-2xl px-4 py-3 text-sm text-zinc-300">
@@ -682,19 +897,6 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <AlienSignalPanel
-                    eyebrow="Ruta mezclada"
-                    title="Lectura del flujo"
-                    detail="Servicios y productos viajan por la misma linea para que puedas detectar al toque que entro, por donde entro y cuanto deja."
-                    badges={[
-                      `${mixedMovement.length} eventos`,
-                      paymentBreakdown.length > 0 ? `${paymentBreakdown.length} medios` : "sin medios",
-                      atencionesAnuladas > 0 ? `${atencionesAnuladas} anuladas` : "sin anuladas",
-                    ]}
-                  />
-                </div>
-
                 {mixedMovement.length === 0 ? (
                   <div className="mt-5 rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/25 p-10 text-center text-sm text-zinc-400">
                     No hay movimiento registrado hoy.
@@ -702,27 +904,16 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                 ) : (
                   <div className="mt-5 space-y-3">
                     {mixedMovement.map((item) => (
-                      <article key={item.id} className={`rounded-[24px] border px-4 py-4 ${item.tone}`}>
-                        <div className="flex flex-wrap items-start justify-between gap-4">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="rounded-full bg-stone-950 px-3 py-1 text-xs font-semibold text-white">
-                                {item.timeLabel}
-                              </span>
-                              <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-stone-800">
-                                {item.badge}
-                              </span>
-                            </div>
-                            <p className="mt-3 text-lg font-semibold">{item.title}</p>
-                            <p className="mt-1 text-sm opacity-80">{item.subtitle}</p>
-                            <p className="mt-2 text-sm opacity-75">{item.detail}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm uppercase tracking-[0.18em] opacity-55">Impacto</p>
-                            <p className="mt-2 text-xl font-semibold">{formatARS(item.amount)}</p>
-                          </div>
-                        </div>
-                      </article>
+                      <MovementDisclosureCard
+                        key={item.id}
+                        timeLabel={item.timeLabel}
+                        badge={item.badge}
+                        title={item.title}
+                        subtitle={item.subtitle}
+                        detail={item.detail}
+                        amountLabel={formatARS(item.amount)}
+                        toneClassName={item.tone}
+                      />
                     ))}
                   </div>
                 )}
@@ -905,20 +1096,6 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                     Servicios, productos y comisiones separados para no mezclar lectura.
                   </p>
                 </div>
-              </div>
-
-              <div className="mt-4">
-                <AlienSignalPanel
-                  eyebrow="Mapa de cobro"
-                  title="Resumen en orbita"
-                  detail="Cada medio queda separado para que el neto no se mezcle y la cabina sepa rapido por donde se movio la jornada."
-                  badges={[
-                    `${paymentBreakdown.length} medios`,
-                    totalComisionesMp > 0 ? "hay comisiones" : "sin comisiones",
-                    cierreHoy ? "turno cerrado" : "turno abierto",
-                  ]}
-                  tone="fuchsia"
-                />
               </div>
 
               <div className="mt-4 space-y-2">

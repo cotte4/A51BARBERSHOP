@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useId, useState } from "react";
 import type { ClientSummary } from "@/lib/types";
 
 type ClientCardProps = {
@@ -7,6 +10,7 @@ type ClientCardProps = {
 };
 
 export default function ClientCard({ client }: ClientCardProps) {
+  const detailId = useId();
   const lastVisitLabel = client.lastVisitAt
     ? new Intl.DateTimeFormat("es-AR", {
         day: "numeric",
@@ -26,9 +30,35 @@ export default function ClientCard({ client }: ClientCardProps) {
   const barberMemory = client.lastVisitNote?.trim() || "Sin nota del ultimo corte";
   const relativeLastVisit = client.lastVisitAt ? formatRelativeVisit(client.lastVisitAt) : "Todavia no vino";
   const phoneHref = client.phoneRaw ? `tel:${client.phoneRaw.replace(/\D/g, "")}` : null;
+  const hasExpandableDetails = Boolean(client.lastVisitNote?.trim()) || client.esMarciano;
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [shouldRenderDetails, setShouldRenderDetails] = useState(false);
+
+  useEffect(() => {
+    if (isExpanded) {
+      setShouldRenderDetails(true);
+      return;
+    }
+
+    if (!shouldRenderDetails) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShouldRenderDetails(false);
+    }, 220);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isExpanded, shouldRenderDetails]);
 
   return (
-    <article className="panel-card rounded-[28px] p-4 transition hover:border-[#8cff59]/25 sm:p-5">
+    <article
+      className={`panel-card rounded-[28px] p-4 transition hover:border-[#8cff59]/25 sm:p-5 ${
+        isExpanded ? "ring-1 ring-[#8cff59]/10" : ""
+      }`}
+    >
       <div className="flex flex-col gap-4">
         <div className="flex items-start gap-3">
           <div className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#8cff59] text-sm font-semibold text-[#07130a] ring-1 ring-[#8cff59]/20">
@@ -72,38 +102,21 @@ export default function ClientCard({ client }: ClientCardProps) {
               <span className="text-zinc-600">-</span>
               <span>{client.totalVisits} visitas</span>
             </div>
-
-            <div className="mt-3 rounded-[20px] border border-white/6 bg-white/[0.03] p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                Memoria del barbero
-              </p>
-              <p className="mt-1 text-sm leading-6 text-zinc-300">
-                Ultimo corte: <span className="font-medium text-white">{barberMemory}</span>
-              </p>
-              <p className="mt-1 text-xs text-zinc-400">
-                {relativeLastVisit}
-                {client.lastVisitBarberoNombre ? ` con ${client.lastVisitBarberoNombre}` : ""}
-              </p>
-            </div>
-
-            <div className="mt-3 rounded-[20px] border border-[#8cff59]/14 bg-[linear-gradient(135deg,rgba(140,255,89,0.08),rgba(217,70,239,0.05))] p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                  Radar marciano
-                </p>
-                <div className="flex gap-1">
-                  <span className="h-2 w-2 rounded-full bg-[#8cff59] shadow-[0_0_10px_rgba(140,255,89,0.8)]" />
-                  <span className="h-2 w-2 rounded-full bg-fuchsia-400/80" />
-                  <span className="h-2 w-2 rounded-full bg-sky-300/80" />
-                </div>
-              </div>
-              <p className="mt-1 text-sm leading-6 text-zinc-300">
-                {client.esMarciano
-                  ? "Cliente dentro de la nave: vale cuidarlo con lectura rapida y seguimiento fino."
-                  : "Cliente de calle listo para volver a entrar en orbita con un nuevo turno."}
-              </p>
-            </div>
           </div>
+
+          {hasExpandableDetails ? (
+            <button
+              type="button"
+              onClick={() => setIsExpanded((current) => !current)}
+              aria-expanded={isExpanded}
+              aria-controls={detailId}
+              className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-[#8cff59] transition hover:border-[#8cff59]/25 hover:bg-[#8cff59]/10"
+            >
+              <span className="text-lg leading-none transition-transform duration-300">
+                {isExpanded ? "-" : "+"}
+              </span>
+            </button>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
@@ -114,6 +127,50 @@ export default function ClientCard({ client }: ClientCardProps) {
             {client.lastVisitBarberoNombre || "Sin barbero previo"}
           </span>
         </div>
+
+        {shouldRenderDetails && hasExpandableDetails ? (
+          <div
+            id={detailId}
+            className={`grid overflow-hidden transition-all duration-300 ease-out ${
+              isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+            }`}
+          >
+            <div className="min-h-0">
+              <div className="space-y-3 pt-1">
+                <div className="rounded-[20px] border border-white/6 bg-white/[0.03] p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                    Memoria del barbero
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-zinc-300">
+                    Ultimo corte: <span className="font-medium text-white">{barberMemory}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-zinc-400">
+                    {relativeLastVisit}
+                    {client.lastVisitBarberoNombre ? ` con ${client.lastVisitBarberoNombre}` : ""}
+                  </p>
+                </div>
+
+                {client.esMarciano ? (
+                  <div className="rounded-[20px] border border-[#8cff59]/14 bg-[linear-gradient(135deg,rgba(140,255,89,0.08),rgba(217,70,239,0.05))] p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                        Estado Marciano
+                      </p>
+                      <div className="flex gap-1">
+                        <span className="h-2 w-2 rounded-full bg-[#8cff59] shadow-[0_0_10px_rgba(140,255,89,0.8)]" />
+                        <span className="h-2 w-2 rounded-full bg-fuchsia-400/80" />
+                        <span className="h-2 w-2 rounded-full bg-sky-300/80" />
+                      </div>
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-zinc-300">
+                      Cliente Marciano: vale cuidarlo con lectura rapida y seguimiento fino.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className="grid gap-2 sm:grid-cols-3">
           <Link

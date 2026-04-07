@@ -198,7 +198,7 @@ export default function MusicOperationConsole({ state }: OperationConsoleProps) 
                 <div>
                   <p className="eyebrow text-zinc-500">Operacion</p>
                   <h2 className="mt-2 font-display text-3xl font-semibold text-white sm:text-4xl">
-                    Cabina musical
+                    Musica
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm text-zinc-400">
                     Auto resuelve playlists por horario, Soy DJ pisa el automatico y Jam alterna la
@@ -361,7 +361,7 @@ export default function MusicOperationConsole({ state }: OperationConsoleProps) 
                   <input
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Busca un tema, artista o remix"
+                    placeholder="Buscá un tema, artista o remix"
                     className="min-h-[52px] flex-1 rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#8cff59]"
                   />
                   <button
@@ -382,7 +382,7 @@ export default function MusicOperationConsole({ state }: OperationConsoleProps) 
                 <div className="mt-5 grid gap-3">
                   {searchResults.length === 0 && !searchError ? (
                     <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-950/60 p-5 text-sm text-zinc-400">
-                      Busca un tema para mandarlo a DJ o a Jam.
+                      Buscá un tema para mandarlo a DJ o a Jam.
                     </div>
                   ) : null}
 

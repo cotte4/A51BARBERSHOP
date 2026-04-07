@@ -30,7 +30,7 @@ export default async function ConfiguracionLayout({
             <div>
               <p className="eyebrow">Configuracion segura</p>
               <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-                Cabina de ajustes
+                Ajustes del sistema
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-zinc-400">
                 Barberos, musica, pagos y reglas sensibles del negocio en un solo lugar, con

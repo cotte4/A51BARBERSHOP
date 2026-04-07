@@ -1,7 +1,6 @@
 import { db } from "@/db";
 import { barberos } from "@/db/schema";
 import Link from "next/link";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 
 function formatPct(value: string | null) {
   if (!value) return "—";
@@ -89,19 +88,6 @@ export default async function BarberosPage() {
           </Link>
         </div>
 
-        <div className="mt-5">
-          <AlienSignalPanel
-            eyebrow="Cabina de crew"
-            title="Senal de barberos"
-            detail="Acá se ordenan perfiles, modelos de comisión y accesos públicos para que cada miembro de la tripu tenga su órbita bien definida."
-            badges={[
-              `${activos} activos`,
-              `${publicos} publicos`,
-              `${variables + hibridos + fijos} modelos`,
-            ]}
-            tone="sky"
-          />
-        </div>
       </section>
 
       {lista.length === 0 ? (

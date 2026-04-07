@@ -417,7 +417,7 @@ export default function MarcianoReservaForm({
                   value={cancion}
                   onChange={(event) => handleSongInputChange(event.target.value)}
                   placeholder="Tema, artista o cancion favorita"
-                  className="min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-[#8cff59]/60"
+                  className="min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-base text-white placeholder:text-zinc-500 outline-none focus:border-[#8cff59]/60"
                 />
                 <button
                   type="button"

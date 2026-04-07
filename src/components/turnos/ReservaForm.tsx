@@ -347,7 +347,7 @@ export default function ReservaForm({
                   setFecha(event.target.value);
                   setSelectedSlot("");
                 }}
-                className="h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-950/75 px-4 text-sm text-zinc-50 outline-none focus:border-[#8cff59] focus:ring-2 focus:ring-[#8cff59]/20"
+                className="h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-950/75 px-4 text-base text-zinc-50 outline-none focus:border-[#8cff59] focus:ring-2 focus:ring-[#8cff59]/20"
               />
             </div>
 
@@ -427,7 +427,7 @@ export default function ReservaForm({
                 onChange={(event) => setNombre(event.target.value)}
                 required
                 autoComplete="name"
-                className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-[#8cff59]/60 focus:outline-none"
+                className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-base text-white placeholder:text-zinc-500 outline-none focus:border-[#8cff59]/60 focus:outline-none"
               />
             </div>
 
@@ -441,7 +441,7 @@ export default function ReservaForm({
                 onChange={(event) => setTelefono(event.target.value)}
                 required
                 autoComplete="tel"
-                className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-[#8cff59]/60 focus:outline-none"
+                className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-base text-white placeholder:text-zinc-500 outline-none focus:border-[#8cff59]/60 focus:outline-none"
               />
             </div>
           </div>
@@ -456,7 +456,7 @@ export default function ReservaForm({
               onChange={(event) => setNota(event.target.value)}
               rows={3}
               placeholder="Alguna aclaracion que le sirva al equipo."
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-[#8cff59]/60 focus:outline-none"
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none focus:border-[#8cff59]/60 focus:outline-none"
             />
           </div>
 
@@ -471,7 +471,7 @@ export default function ReservaForm({
                   value={cancion}
                   onChange={(event) => handleSongInputChange(event.target.value)}
                   placeholder="Tema, artista o cancion favorita"
-                  className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-[#8cff59]/60 focus:outline-none"
+                  className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-base text-white placeholder:text-zinc-500 outline-none focus:border-[#8cff59]/60 focus:outline-none"
                 />
                 <button
                   type="button"
@@ -551,7 +551,7 @@ export default function ReservaForm({
 
       <aside className="space-y-4 xl:sticky xl:top-6 xl:self-start">
         <div className="public-panel rounded-[30px] border border-white/10 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Radar</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Resumen</p>
           <div className="mt-4 space-y-3">
             <SummaryRow
               label="Servicio"
@@ -570,7 +570,7 @@ export default function ReservaForm({
             <SummaryRow
               label="Slot"
               value={selectedSlotItem?.horaInicio ?? "Pendiente"}
-              detail={selectedSlotItem ? `${selectedSlotItem.duracionMinutos} min de turno` : "Eligelo en la grilla"}
+              detail={selectedSlotItem ? `${selectedSlotItem.duracionMinutos} min de turno` : "Elegilo en la grilla"}
             />
             <SummaryRow
               label="Contacto"

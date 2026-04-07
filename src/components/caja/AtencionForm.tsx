@@ -729,7 +729,7 @@ export default function AtencionForm({
                 }
               }}
               placeholder="Ej: Juan o 11 5555 1234"
-              className="h-12 flex-1 rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-sm text-white outline-none transition focus:border-[#8cff59]"
+              className="h-12 flex-1 rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-base text-white outline-none transition focus:border-[#8cff59]"
             />
             {selectedClient ? (
               <button
@@ -1038,7 +1038,7 @@ export default function AtencionForm({
                       <button
                         type="button"
                         onClick={() => cambiarCantidadProducto(producto.id, -1)}
-                        className="flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900 text-sm font-semibold text-white"
+                        className="flex h-11 w-11 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900 text-sm font-semibold text-white"
                         aria-label={`Disminuir ${producto.nombre}`}
                       >
                         -
@@ -1048,7 +1048,7 @@ export default function AtencionForm({
                         type="button"
                         onClick={() => cambiarCantidadProducto(producto.id, 1)}
                         disabled={producto.cantidad >= producto.stockActual}
-                        className="flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                        className="flex h-11 w-11 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label={`Sumar ${producto.nombre}`}
                       >
                         +
@@ -1056,7 +1056,7 @@ export default function AtencionForm({
                       <button
                         type="button"
                         onClick={() => removerProducto(producto.id)}
-                        className="ml-1 flex h-10 w-10 items-center justify-center rounded-2xl border border-rose-500/35 bg-rose-500/10 text-sm font-semibold text-rose-200"
+                        className="ml-1 flex h-11 w-11 items-center justify-center rounded-2xl border border-rose-500/35 bg-rose-500/10 text-sm font-semibold text-rose-200"
                         aria-label={`Quitar ${producto.nombre}`}
                       >
                         Q
@@ -1081,14 +1081,14 @@ export default function AtencionForm({
                         ) : canUseMarcianoConsumiciones ? (
                           "Podes incluir esta consumicion dentro del beneficio Marciano."
                         ) : (
-                          "Selecciona un cliente Marciano para habilitar la consumicion incluida."
+                          "Seleccioná un cliente Marciano para habilitar la consumición incluida."
                         )}
                       </div>
                       <button
                         type="button"
                         onClick={() => toggleProductoMarciano(producto.id)}
                         disabled={!canUseMarcianoConsumiciones}
-                        className={`inline-flex min-h-[42px] items-center justify-center rounded-2xl px-4 text-sm font-semibold transition ${
+                        className={`inline-flex min-h-[44px] items-center justify-center rounded-2xl px-4 text-sm font-semibold transition ${
                           producto.esMarcianoIncluido
                             ? "bg-emerald-300 text-emerald-950"
                             : "border border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -1103,7 +1103,7 @@ export default function AtencionForm({
             </div>
           ) : (
             <div className="mt-4 rounded-[22px] border border-dashed border-zinc-700 bg-zinc-950/40 px-4 py-4 text-sm text-zinc-400">
-              Sin productos agregados. Si el cliente tambien compra retail o usa una consumicion, lo sumas aca.
+              Sin productos agregados. Si el cliente tambien compra productos o usa una consumicion, lo sumas aca.
             </div>
           )}
 
@@ -1401,7 +1401,7 @@ export default function AtencionForm({
           rows={3}
           defaultValue={initialData?.notas ?? ""}
           placeholder="Ej: ajuste, observacion o detalle interno"
-          className="mt-3 w-full resize-none rounded-[22px] border border-zinc-700 bg-zinc-950/70 px-4 py-3 text-sm text-white outline-none focus:border-[#8cff59]"
+          className="mt-3 w-full resize-none rounded-[22px] border border-zinc-700 bg-zinc-950/70 px-4 py-3 text-base text-white outline-none focus:border-[#8cff59]"
         />
         <p className="mt-2 text-xs text-zinc-500">
           Las notas ayudan a entender el movimiento, pero no cambian comisiones ni stock.

@@ -70,7 +70,7 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
             </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              {["Elige el servicio", "Marca tu slot", "Recibe la señal"].map((item, index) => (
+              {["Elegí el servicio", "Marcá tu slot", "Recibí la señal"].map((item, index) => (
                 <div key={item} className="rounded-[22px] border border-white/10 bg-black/20 px-4 py-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Paso {index + 1}</p>
                   <p className="mt-2 text-sm font-medium text-white">{item}</p>
@@ -86,7 +86,7 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
                   Importante
                 </p>
                 <p className="mt-3">
-                  Si no ves slot, cambia fecha o vuelve mas tarde. Nada despega hasta tocar el boton
+                  Si no ves slot, cambiá la fecha o volvé más tarde. Nada despega hasta tocar el botón
                   final.
                 </p>
               </div>
@@ -114,9 +114,9 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
                   Rapido, claro y sin humo
                 </p>
                 <div className="mt-4 space-y-3 text-sm text-zinc-300">
-                  <p>Eliges un servicio y la grilla te muestra solo slots que cierran.</p>
-                  <p>Sumas nota, musica y extras sin romper el ritmo del flujo.</p>
-                  <p>Cuando lo mandas, A51 baja la señal y confirma desde la base.</p>
+                  <p>Elegís un servicio y la grilla te muestra solo slots que cierran.</p>
+                  <p>Sumás nota, música y extras sin romper el ritmo del flujo.</p>
+                  <p>Cuando lo mandás, A51 baja la señal y confirma desde la base.</p>
                 </div>
               </div>
 

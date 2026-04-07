@@ -19,7 +19,7 @@ export default function MovimientoForm({ registrarAction }: Props) {
           <p className="eyebrow text-[11px] font-semibold">Movimiento manual</p>
           <h3 className="mt-2 text-lg font-semibold text-white">Registrar entrada o salida</h3>
           <p className="mt-1 text-sm text-zinc-400">
-            Elige cantidad, escribe una nota corta y usa el boton que describe la accion real.
+            Elegí cantidad, escribí una nota corta y usá el botón que describe la acción real.
           </p>
         </div>
 

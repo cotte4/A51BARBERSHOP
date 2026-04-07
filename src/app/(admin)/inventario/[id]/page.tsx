@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import { db } from "@/db";
 import { mediosPago, productos, stockMovimientos } from "@/db/schema";
 import { registrarMovimiento } from "../actions";
@@ -168,19 +167,6 @@ export default async function ProductoDetallePage({ params }: Props) {
             />
           </div>
 
-          <div className="mt-4">
-            <AlienSignalPanel
-              eyebrow="Cabina del item"
-              title="Senal de inventario"
-              detail="Stock, margen, tipo y movimientos quedan en la misma órbita para decidir rápido si este producto necesita compra, ajuste o venta."
-              badges={[
-                stockBajo ? "stock bajo" : "stock estable",
-                producto.esConsumicion ? "consumicion" : "producto",
-                `${movimientos.length} movimientos`,
-              ]}
-              tone="sky"
-            />
-          </div>
         </section>
 
         <section className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">

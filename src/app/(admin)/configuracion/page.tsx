@@ -1,5 +1,4 @@
 import Link from "next/link";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import { db } from "@/db";
 import { barberos, gastos, mediosPago, servicios, temporadas } from "@/db/schema";
 
@@ -113,19 +112,6 @@ export default async function ConfiguracionPage() {
           </div>
         </div>
 
-        <div className="mt-5">
-          <AlienSignalPanel
-            eyebrow="Motor central"
-            title="Senal de configuracion"
-            detail="Barberos, servicios, cobros, temporadas y musica viven aca porque cualquier cambio pega en toda la cabina operativa."
-            badges={[
-              `${activeBarberos} activos`,
-              `${activeServicios} servicios`,
-              temporadaActiva ? "temporada activa" : "sin temporada",
-            ]}
-            tone="sky"
-          />
-        </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

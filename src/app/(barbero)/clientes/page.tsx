@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import ClientSearch from "@/components/clientes/ClientSearch";
 import RetentionBanner from "@/components/clientes/RetentionBanner";
 import { getClientActorContext } from "@/lib/client-access";
@@ -77,19 +76,6 @@ export default async function ClientesPage() {
           </div>
         </div>
 
-        <div className="mt-4">
-          <AlienSignalPanel
-            eyebrow="Radar de clientes"
-            title="Senales de la base"
-            detail="Esta cabina junta memoria del ultimo corte, retencion y accesos rapidos para que cada cliente vuelva a orbitar sin frenar el ritmo."
-            badges={[
-              `${totalCount} perfiles`,
-              `${recentCount} recientes`,
-              retentionCount > 0 ? `${retentionCount} para reactivar` : "retencion estable",
-            ]}
-            tone="sky"
-          />
-        </div>
       </section>
 
       {actor.isAdmin && retentionCandidates.length > 0 ? (

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import MusicStateBadge from "@/components/musica/MusicStateBadge";
 import { getMusicDashboardState } from "@/lib/music-engine";
 import MusicOperationConsole from "@/components/musica/MusicOperationConsole";
@@ -87,17 +86,6 @@ export default async function MusicaPage() {
                       "Sin player definido"}
                   </p>
                 </div>
-                <AlienSignalPanel
-                  eyebrow="Cabina sonora"
-                  title="Crew en frecuencia"
-                  detail="Auto, DJ y Jam quedan con lectura rapida para que la musica siga en orbita mientras cortas."
-                  badges={[
-                    `modo ${modeLabel(state.mode.activeMode).toLowerCase()}`,
-                    state.provider.connected ? "spotify online" : "spotify offline",
-                    `${state.queue.items.length} en cola`,
-                  ]}
-                  tone="fuchsia"
-                />
               </div>
             </div>
           </section>

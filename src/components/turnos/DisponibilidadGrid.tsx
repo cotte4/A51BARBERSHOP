@@ -147,7 +147,7 @@ export default function DisponibilidadGrid({
             <p className="eyebrow text-xs font-semibold">Turno de trabajo</p>
             <h2 className="mt-2 text-xl font-semibold text-white">Genera un dia completo en un click</h2>
             <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-              Carga inicio, fin e intervalo. El sistema crea automaticamente todos los slots del rango.
+              Cargá inicio, fin e intervalo. El sistema crea automáticamente todos los slots del rango.
             </p>
           </div>
           <div className="rounded-2xl border border-[#8cff59]/20 bg-[#8cff59]/10 px-4 py-3 text-right">
@@ -227,7 +227,7 @@ export default function DisponibilidadGrid({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-medium text-white">Vista previa del {formatDate(fecha)}</p>
-              <p className="text-xs text-zinc-500">Toca un preset o ajusta horario para cambiar la jornada.</p>
+              <p className="text-xs text-zinc-500">Tocá un preset o ajustá el horario para cambiar la jornada.</p>
             </div>
             <span className="text-xs text-zinc-500">
               {horaInicio} a {horaFin}

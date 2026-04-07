@@ -1,5 +1,4 @@
 import Image from "next/image";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import type { ClientProfile } from "@/lib/types";
 
 type ClientProfileHeaderProps = {
@@ -50,22 +49,6 @@ export default function ClientProfileHeader({ client }: ClientProfileHeaderProps
           <p className="mt-0.5">{client.lastVisitBarberoNombre || "Sin barbero previo"}</p>
         </div>
       </div>
-
-      <AlienSignalPanel
-        eyebrow="Ficha orbital"
-        title="Lectura del cliente"
-        detail={
-          client.esMarciano
-            ? "Perfil dentro de la nave: conviene mirar frecuencia, portal y retorno con lectura rapida."
-            : "Perfil de calle listo para volver a orbitar con memoria de corte y accion inmediata."
-        }
-        badges={[
-          `${client.totalVisits} visitas`,
-          client.lastVisitBarberoNombre || "sin barbero previo",
-          client.email ? "portal vinculado" : "sin portal",
-        ]}
-        tone={client.esMarciano ? "fuchsia" : "brand"}
-      />
 
       {client.tags.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">

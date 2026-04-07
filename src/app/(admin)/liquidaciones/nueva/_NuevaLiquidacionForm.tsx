@@ -335,7 +335,7 @@ export default function NuevaLiquidacionForm({
                     ? durationDays === 1
                       ? "Liquidacion diaria"
                       : `${durationDays} dias incluidos`
-                    : "Revisa el rango"
+                    : "Revisá el rango"
                 }
                 ok={Boolean(durationDays)}
               />

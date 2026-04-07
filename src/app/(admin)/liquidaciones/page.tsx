@@ -2,7 +2,6 @@ import Link from "next/link";
 import { desc } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { barberos, liquidaciones } from "@/db/schema";
@@ -111,19 +110,6 @@ export default async function LiquidacionesPage() {
               />
             </div>
 
-            <div className="mt-4">
-              <AlienSignalPanel
-                eyebrow="Cabina de pagos"
-                title="Senal de liquidaciones"
-                detail="La nave separa deuda viva, historial pagado y volumen por barbero para decidir rapido a quién liberar primero."
-                badges={[
-                  hayDeuda ? "deuda en orbita" : "sin deuda",
-                  `${pendientes.length} pendientes`,
-                  `${historial.length} pagadas`,
-                ]}
-                tone="fuchsia"
-              />
-            </div>
           </div>
         </section>
 

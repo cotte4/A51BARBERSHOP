@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import ClientProfileAuditLog from "@/components/clientes/ClientProfileAuditLog";
 import ClientAvatarUploader from "@/components/clientes/ClientAvatarUploader";
 import ClientProfileHeader from "@/components/clientes/ClientProfileHeader";
@@ -106,19 +105,6 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
               </span>
             </div>
 
-            <div className="max-w-2xl">
-              <AlienSignalPanel
-                eyebrow="Cabina del perfil"
-                title="Senal de cliente"
-                detail="Desde aca el barbero puede leer estado, beneficios, memoria del corte y acciones rapidas sin salir de la misma orbita."
-                badges={[
-                  client.esMarciano ? "modo marciano" : "modo calle",
-                  client.userId ? "portal activo" : "sin portal",
-                  client.archivedAt ? "perfil pausado" : "perfil operativo",
-                ]}
-                tone={client.esMarciano ? "fuchsia" : "sky"}
-              />
-            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

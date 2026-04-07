@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import type { TurnoSummary } from "@/lib/types";
 import TurnoCard from "@/components/turnos/TurnoCard";
 import TurnosSpotifyBridge from "@/components/turnos/TurnosSpotifyBridge";
@@ -187,19 +186,6 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
               />
             </div>
 
-            <div className="mt-4">
-              <AlienSignalPanel
-                eyebrow="Radar de agenda"
-                title="Orbita de turnos"
-                detail="La cabina mezcla pendientes, confirmados, huecos libres y solicitudes Marciano para que el equipo vea rapido donde cae la siguiente jugada."
-                badges={[
-                  `${turnos.length} lecturas`,
-                  pendingMarcianos.length > 0 ? `${pendingMarcianos.length} marciano` : "sin marcianos",
-                  slotsLibres.length > 0 ? `${slotsLibres.length} huecos` : "sin huecos",
-                ]}
-                tone="fuchsia"
-              />
-            </div>
           </div>
         </section>
 

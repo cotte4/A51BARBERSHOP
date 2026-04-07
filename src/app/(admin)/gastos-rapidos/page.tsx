@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import GastoRapidoFAB from "@/components/gastos-rapidos/GastoRapidoFAB";
 import GastoRapidoList from "@/components/gastos-rapidos/GastoRapidoList";
 import { auth } from "@/lib/auth";
@@ -161,18 +160,6 @@ export default async function GastosRapidosPage({
                   helper={topCategory ? formatARS(topCategory.total) : "Todavia no hay gastos"}
                 />
               </div>
-
-              <AlienSignalPanel
-                eyebrow="Radar de egresos"
-                title="Senal de gastos"
-                detail="La cabina ordena categorias, promedio y presión por rubro para que los gastos chicos no se vuelvan ruido invisible."
-                badges={[
-                  monthLabel,
-                  categoriaActiva?.label ?? "todas las categorias",
-                  `${gastosFiltrados.length} movimientos`,
-                ]}
-                tone="sky"
-              />
 
               <div className="flex flex-wrap gap-2">
                 <CategoryChip

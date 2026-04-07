@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState } from "react";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import type { BarberoFormState } from "@/app/(admin)/configuracion/barberos/actions";
 
 interface BarberoFormProps {
@@ -152,7 +151,7 @@ export default function BarberoForm({
                 <option value="admin">Admin (dueno)</option>
               </select>
               <p className="text-xs text-zinc-500">
-                Define permisos y el alcance de la cabina para este perfil.
+                Define permisos y el alcance del acceso para este perfil.
               </p>
               {state.fieldErrors?.rol ? (
                 <p className="text-xs text-red-500">{state.fieldErrors.rol}</p>
@@ -322,7 +321,7 @@ export default function BarberoForm({
               Lectura rapida
             </p>
             <p className="mt-2 text-sm text-zinc-400">
-              Revisa esta columna para confirmar como va a caer el perfil en operacion.
+              Revisá esta columna para confirmar cómo va a caer el perfil en operación.
             </p>
             <div className="mt-4 space-y-3">
               <BarberStat
@@ -350,19 +349,6 @@ export default function BarberoForm({
               />
             </div>
 
-            <div className="mt-4">
-              <AlienSignalPanel
-                eyebrow="Ficha de crew"
-                title="Senal del perfil"
-                detail="Comisión, defaults y salida pública quedan resumidos para validar de un vistazo cómo va a operar este barbero en la nave."
-                badges={[
-                  rol === "admin" ? "modo admin" : "modo barbero",
-                  tipoModelo,
-                  publicReservaActiva ? "reserva publica" : "reserva interna",
-                ]}
-                tone="sky"
-              />
-            </div>
           </div>
         </div>
       </section>

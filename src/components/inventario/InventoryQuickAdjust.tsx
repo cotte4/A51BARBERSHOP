@@ -79,7 +79,7 @@ export default function InventoryQuickAdjust({
               : "Sin minimo configurado"}
           </p>
           <p className="mt-1 text-xs text-zinc-500">
-            Ajuste de cabina para mover stock sin salir de la tarjeta.
+            Ajuste rapido para mover stock sin salir de la tarjeta.
           </p>
         </div>
 

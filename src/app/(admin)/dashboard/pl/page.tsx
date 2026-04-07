@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import { getPL } from "@/lib/dashboard-queries";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
@@ -144,18 +143,6 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
             Siguiente →
           </Link>
         </div>
-
-        <AlienSignalPanel
-          eyebrow="Radar mensual"
-          title="Senal de P&L"
-          detail="Ingresos, costos, resultado casa y resultado personal quedan en la misma orbita para leer el mes sin perder jerarquia."
-          badges={[
-            nombreMes(mes, anio),
-            pl.resultadoCasa >= 0 ? "casa en verde" : "casa en rojo",
-            pl.resultadoPersonalPinky >= 0 ? "pinky en verde" : "pinky en rojo",
-          ]}
-          tone="sky"
-        />
 
         <section>
           <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-zinc-400">

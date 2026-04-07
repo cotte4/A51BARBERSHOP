@@ -177,7 +177,7 @@ export default function VentaProductoForm({
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-zinc-400">
-                  Toca una card. Si el stock es bajo, te lo marcamos antes de cobrar.
+                  Tocá una card. Si el stock es bajo, te lo marcamos antes de cobrar.
                 </p>
                 <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs text-zinc-400">
                   {productosList.length} opciones
@@ -292,7 +292,7 @@ export default function VentaProductoForm({
                     max={productoSeleccionado?.stockActual ?? undefined}
                     value={cantidad}
                     onChange={(event) => setCantidad(event.target.value)}
-                    className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-sm text-white outline-none transition focus:border-[#8cff59]/60"
+                    className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-base text-white outline-none transition focus:border-[#8cff59]/60"
                   />
                   {productoSeleccionado ? (
                     <p className="text-xs text-zinc-500">
@@ -326,7 +326,7 @@ export default function VentaProductoForm({
                       step="1"
                       value={precioCobrado}
                       onChange={(event) => setPrecioCobrado(event.target.value)}
-                      className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 pl-8 text-sm text-white outline-none transition focus:border-[#8cff59]/60"
+                      className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 pl-8 text-base text-white outline-none transition focus:border-[#8cff59]/60"
                     />
                   </div>
                   <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-xs leading-5 text-zinc-400">

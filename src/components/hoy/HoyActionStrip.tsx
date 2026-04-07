@@ -40,7 +40,7 @@ export default function HoyActionStrip({
             <p className="eyebrow text-xs font-semibold">Centro de comandos</p>
             <h2 className="font-display mt-2 text-2xl font-semibold text-white">Accion rapida</h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Una entrada clara para cobrar, abrir agenda, mover retail o revisar caja sin perder
+              Una entrada clara para cobrar, abrir agenda, vender productos o revisar caja sin perder
               tiempo.
             </p>
           </div>
@@ -101,7 +101,7 @@ export default function HoyActionStrip({
             className="group flex min-h-[118px] flex-col justify-between rounded-[28px] border border-zinc-800 bg-zinc-950/60 px-5 py-4 text-left text-white transition hover:-translate-y-0.5 hover:border-[#8cff59]/30"
           >
             <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-zinc-500">
-              03 / Retail
+              03 / Productos
             </span>
             <div>
               <p className="font-display text-2xl font-semibold">Vender producto</p>

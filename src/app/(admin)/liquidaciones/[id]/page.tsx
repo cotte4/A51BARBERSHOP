@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import AlienSignalPanel from "@/components/branding/AlienSignalPanel";
 import { db } from "@/db";
 import { barberos, liquidaciones } from "@/db/schema";
 import { formatFecha, formatFechaHora } from "@/lib/fecha";
@@ -154,19 +153,6 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
               />
             </div>
 
-            <div className="mt-4">
-              <AlienSignalPanel
-                eyebrow="Cabina de pago"
-                title="Senal de liquidacion"
-                detail="Monto, estado, riesgo y periodo quedan juntos para que la confirmación no dependa de leer varios bloques separados."
-                badges={[
-                  liq.pagado ? "pagada" : "pendiente",
-                  `${liq.totalCortes ?? 0} cortes`,
-                  periodoNegativo ? "resultado negativo" : "resultado positivo",
-                ]}
-                tone="fuchsia"
-              />
-            </div>
           </div>
         </section>
 

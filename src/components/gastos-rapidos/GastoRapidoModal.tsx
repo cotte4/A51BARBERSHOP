@@ -141,7 +141,7 @@ export default function GastoRapidoModal({
                       Monto
                     </label>
                     <p className="mt-1 text-xs leading-5 text-zinc-500">
-                      Carga el valor exacto para no mezclarlo con reportes ni caja.
+                      Cargá el valor exacto para no mezclarlo con reportes ni caja.
                     </p>
                     <div className="relative mt-4">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-500">

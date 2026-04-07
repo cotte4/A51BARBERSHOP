@@ -8,12 +8,12 @@ const vibeTags = ["Reserva rapida", "Portal Marciano", "Mobile first", "Dark neo
 const consoleCards = [
   {
     label: "Reserva",
-    title: "Slot en la nave",
+    title: "Tu lugar en A51",
     text: "Cae al link, elige barbero y deja tu lugar marcado sin vueltas.",
   },
   {
     label: "Marcianos",
-    title: "Club orbital",
+    title: "Club Marciano",
     text: "Acceso VIP para los que ya juegan la liga de Area51.",
   },
   {
@@ -57,7 +57,7 @@ export default function PublicLandingHero({
 
             <h1 className="font-display mt-6 max-w-2xl text-5xl font-semibold leading-[0.92] text-white sm:text-6xl lg:text-7xl">
               Cae con turno.
-              <span className="mt-2 block text-[#8cff59]">Subite a Marcianos si ya jugás en la crew.</span>
+              <span className="mt-2 block text-[#8cff59]">Subite a Marcianos si ya sos del club.</span>
             </h1>
 
             <p className="mt-5 max-w-xl text-base leading-7 text-zinc-300 sm:text-lg">
