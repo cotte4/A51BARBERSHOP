@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import AlienCrewCard from "@/components/branding/AlienCrewCard";
 
 type MarcianoPublicShellProps = {
   badge: string;
@@ -45,11 +44,6 @@ export default function MarcianoPublicShell({
             </div>
 
             <div className="space-y-4">
-              <AlienCrewCard
-                title="Marcianos al volante"
-                detail="Referencia de crew orbital: baja mas cartoon, mas calle y mas club para que la entrada se sienta propia."
-              />
-
               <div className="grid gap-3 sm:grid-cols-2">
                 {notes.map((note) => (
                   <div

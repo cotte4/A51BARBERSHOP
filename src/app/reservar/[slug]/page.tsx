@@ -48,13 +48,12 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
           <section className="public-panel public-glow rounded-[36px] border border-white/10 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-2xl space-y-4">
-                <p className="eyebrow text-[#8cff59]">Cabina publica</p>
+                <p className="eyebrow text-[#8cff59]">Nave pública</p>
                 <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
                   Cae con {barbero.nombre}
                 </h1>
                 <p className="max-w-xl text-sm text-zinc-300 sm:text-base">
-                  Elige servicio, marca slot y manda la solicitud. La base de A51 la toma desde
-                  adentro y te confirma el movimiento.
+                  Elegí servicio, marcá horario y mandá la solicitud. La base de A51 la toma desde adentro y te confirma el movimiento.
                 </p>
               </div>
 

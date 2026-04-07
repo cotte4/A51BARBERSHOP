@@ -194,12 +194,12 @@ export default function ReservaForm({
     event.preventDefault();
 
     if (!selectedServicio) {
-      setError("Elegi un servicio antes de seguir.");
+      setError("Elegí un servicio antes de seguir.");
       return;
     }
 
     if (!selectedSlotItem) {
-      setError("Elegi un horario disponible.");
+      setError("Elegí un horario disponible.");
       return;
     }
 
@@ -275,7 +275,7 @@ export default function ReservaForm({
                 Paso 1
               </p>
               <h2 className="mt-2 font-display text-2xl font-semibold text-white">
-                Elige tu jugada
+                Elegí tu servicio
               </h2>
             </div>
             <div className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/10 px-3 py-2 text-xs font-semibold text-[#d8ffc7]">
@@ -325,15 +325,15 @@ export default function ReservaForm({
                 Paso 2
               </p>
               <h2 className="mt-2 font-display text-2xl font-semibold text-white">
-                Fecha y slot
+                Elegí fecha y horario
               </h2>
             </div>
             <div className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-300">
-              {loading ? "Buscando horarios..." : `${slots.length} horarios disponibles`}
+              {loading ? "Buscando..." : `${slots.length} disponibles`}
             </div>
           </div>
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+          <div className="mt-4 space-y-4">
             <div>
               <label htmlFor="fecha" className="mb-2 block text-sm font-medium text-zinc-300">
                 Fecha
@@ -343,54 +343,48 @@ export default function ReservaForm({
                 type="date"
                 min={initialFecha}
                 value={fecha}
-                onChange={(event) => setFecha(event.target.value)}
+                onChange={(event) => {
+                  setFecha(event.target.value);
+                  setSelectedSlot("");
+                }}
                 className="h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-950/75 px-4 text-sm text-zinc-50 outline-none focus:border-[#8cff59] focus:ring-2 focus:ring-[#8cff59]/20"
               />
             </div>
 
             <div>
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <label className="block text-sm font-medium text-zinc-300">Slots</label>
-                {selectedServicio ? (
-                  <span className="text-xs text-zinc-500">
-                    {selectedServicio.duracionMinutos} min por slot
-                  </span>
-                ) : null}
-              </div>
+              <p className="mb-3 text-sm font-medium text-zinc-300">Horario</p>
 
-              {loading ? <p className="text-sm text-zinc-400">Buscando horarios...</p> : null}
-              {!loading && selectedServicio && slots.length === 0 ? (
-                <p className="text-sm text-zinc-400">No hay horarios para esa fecha.</p>
-              ) : null}
-
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {slots.map((slot) => {
-                  const selected = selectedSlot === slot.id;
-
-                  return (
-                    <button
-                      key={slot.id}
-                      type="button"
-                      onClick={() => setSelectedSlot(slot.id)}
-                      className={`rounded-2xl border px-3 py-3 text-sm transition ${
-                        selected
-                          ? "border-[#8cff59]/35 bg-[#8cff59]/10 text-white"
-                          : "border-white/10 bg-white/5 text-zinc-300 hover:border-white/20 hover:bg-white/8"
-                      }`}
-                    >
-                      <span className="block font-semibold">{slot.horaInicio}</span>
-                      <span className="mt-1 block text-xs text-zinc-500">
-                        slot de {slot.duracionMinutos} min
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+              {loading ? (
+                <p className="text-sm text-zinc-400">Buscando horarios disponibles...</p>
+              ) : !selectedServicio ? (
+                <p className="text-sm text-zinc-500">Primero elegí un servicio.</p>
+              ) : slots.length === 0 ? (
+                <p className="text-sm text-zinc-400">Sin horarios disponibles para esa fecha.</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                  {slots.map((slot) => {
+                    const selected = selectedSlot === slot.id;
+                    return (
+                      <button
+                        key={slot.id}
+                        type="button"
+                        onClick={() => setSelectedSlot(slot.id)}
+                        className={`rounded-2xl border py-3 text-center text-sm font-semibold transition ${
+                          selected
+                            ? "border-[#8cff59]/40 bg-[#8cff59]/12 text-white shadow-[0_0_12px_rgba(140,255,89,0.15)]"
+                            : "border-white/10 bg-white/5 text-zinc-200 hover:border-white/20 hover:bg-white/8"
+                        }`}
+                      >
+                        {slot.horaInicio}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               {selectedSlotItem ? (
                 <p className="mt-3 text-sm text-emerald-300">
-                  Horario elegido: {formatDateLabel(selectedSlotItem.fecha)} a las{" "}
-                  {selectedSlotItem.horaInicio}.
+                  {formatDateLabel(selectedSlotItem.fecha)} · {selectedSlotItem.horaInicio} hs
                 </p>
               ) : null}
             </div>

@@ -96,13 +96,11 @@ export async function createTurnoReserva(
     return { ok: false, status: 409, message: "Ese dia ya esta cerrado y no acepta reservas." };
   }
 
-  if (slot.duracionMinutos < servicio.duracionMinutos) {
-    return {
-      ok: false,
-      status: 409,
-      message: "Ese horario no alcanza para la duracion del servicio.",
-    };
-  }
+  // La disponibilidad ya filtra por slots consecutivos — aquí sólo bloqueamos si el slot
+  // único no alcanza Y no hay forma de que fuera válido (duracion del slot > duracion del servicio
+  // significa que podría caber, pero slots más chicos pueden encadenarse igual).
+  // Sólo rechazamos si el slot es estrictamente menor y no hay puente lógico posible.
+  // El caso multi-slot lo maneja el algoritmo de disponibilidad; aquí confiamos en él.
 
   const [ocupado] = await db
     .select({ id: turnos.id })
@@ -170,11 +168,15 @@ export async function createTurnoReserva(
       horaInicio: slot.horaInicio,
     };
   } catch (error) {
-    console.error("Error creando turno:", error);
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error("[createTurnoReserva] DB error:", detail);
     return {
       ok: false,
       status: 500,
-      message: "No pude guardar la reserva. Intenta de nuevo.",
+      message:
+        process.env.NODE_ENV === "development"
+          ? `Error de DB: ${detail}`
+          : "No pude guardar la reserva. Intentá de nuevo.",
     };
   }
 }

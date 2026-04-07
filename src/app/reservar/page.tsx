@@ -1,5 +1,4 @@
 import Link from "next/link";
-import AlienCrewCard from "@/components/branding/AlienCrewCard";
 import { getBarberosPublicosReserva } from "@/lib/turnos";
 
 export default async function ReservarLandingPage() {
@@ -14,7 +13,7 @@ export default async function ReservarLandingPage() {
               <div className="max-w-2xl space-y-4">
                 <p className="eyebrow text-[#8cff59]">Area51 // booking lane</p>
                 <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
-                  Elige tu nave y cae al turno
+                  Elegí tu nave y caé al turno
                 </h1>
                 <p className="max-w-xl text-sm text-zinc-300 sm:text-base">
                   Esta es la entrada de calle de A51. Tomas barbero, entras por tu carril y caes a
@@ -31,10 +30,6 @@ export default async function ReservarLandingPage() {
                   <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Entrada</p>
                   <p className="mt-2 text-lg font-semibold text-white">Clave + club</p>
                 </div>
-                <AlienCrewCard
-                  title="Tripulacion en ronda"
-                  detail="Referencia alien para el booking lane: tres pilotos, una nave y distintas cabinas para caer al corte."
-                />
               </div>
             </div>
           </section>
@@ -59,7 +54,7 @@ export default async function ReservarLandingPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                          {barbero.rol === "admin" ? "Cabina founder" : "Cabina barbero"}
+                          {barbero.rol === "admin" ? "Nave founder" : "Nave barbero"}
                         </p>
                         <p className="mt-3 font-display text-2xl font-semibold text-white">
                           {barbero.nombre}
@@ -75,20 +70,8 @@ export default async function ReservarLandingPage() {
                       otra pantalla.
                     </p>
 
-                    <div className="mt-5 space-y-2 rounded-[24px] border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
-                      <p>
-                        Ruta directa: <span className="text-white">{href}</span>
-                      </p>
-                      <p>
-                        Acceso:{" "}
-                        <span className="text-white">
-                          {requiresPassword ? "clave o cuenta" : "link abierto"}
-                        </span>
-                      </p>
-                    </div>
-
                     <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#8cff59]">
-                      Subir a la cabina con {barbero.nombre}
+                      Subir a la nave con {barbero.nombre}
                       <span className="transition group-hover:translate-x-1">→</span>
                     </div>
                   </Link>

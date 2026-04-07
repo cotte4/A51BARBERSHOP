@@ -57,7 +57,7 @@ export default function PublicLandingHero({
 
             <h1 className="font-display mt-6 max-w-2xl text-5xl font-semibold leading-[0.92] text-white sm:text-6xl lg:text-7xl">
               Cae con turno.
-              <span className="mt-2 block text-[#8cff59]">Sube a Marcianos si ya juegas en la crew.</span>
+              <span className="mt-2 block text-[#8cff59]">Subite a Marcianos si ya jugás en la crew.</span>
             </h1>
 
             <p className="mt-5 max-w-xl text-base leading-7 text-zinc-300 sm:text-lg">
@@ -88,11 +88,7 @@ export default function PublicLandingHero({
               </Link>
             </div>
 
-            <p className="mt-4 max-w-lg text-sm text-zinc-400">
-              Reserva: <span className="text-zinc-200">{reserveHref}</span>. Marcianos:{" "}
-              <span className="text-zinc-200">{marcianosHref}</span>. Staff:{" "}
-              <span className="text-zinc-200">{loginHref}</span>.
-            </p>
+
 
             <div className="mt-8 flex flex-wrap gap-2">
               {vibeTags.map((tag) => (

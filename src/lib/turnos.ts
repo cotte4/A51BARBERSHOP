@@ -82,6 +82,11 @@ export async function isFechaCerrada(fecha: string): Promise<boolean> {
   return !!cierre;
 }
 
+function timeToMinutes(hora: string): number {
+  const [h, m] = hora.split(":").map(Number);
+  return (h ?? 0) * 60 + (m ?? 0);
+}
+
 export async function getTurnosDisponibles(
   barberoId: string,
   fecha: string,
@@ -117,14 +122,42 @@ export async function getTurnosDisponibles(
 
   const ocupadas = new Set(ocupados.map((slot) => normalizeHora(slot.horaInicio)));
 
-  return slots
-    .filter((slot) => (duracionMinutos ? slot.duracionMinutos >= duracionMinutos : true))
-    .filter((slot) => !ocupadas.has(normalizeHora(slot.horaInicio)))
-    .sort((a, b) => normalizeHora(a.horaInicio).localeCompare(normalizeHora(b.horaInicio)))
-    .map((slot) => ({
-      ...slot,
-      horaInicio: normalizeHora(slot.horaInicio),
-    }));
+  const todosOrdenados = slots
+    .map((slot) => ({ ...slot, horaInicio: normalizeHora(slot.horaInicio) }))
+    .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+
+  if (!duracionMinutos) {
+    return todosOrdenados.filter((slot) => !ocupadas.has(slot.horaInicio));
+  }
+
+  // Para cada slot libre, verificar si slots consecutivos libres cubren la duración del servicio
+  const disponibles: typeof todosOrdenados = [];
+
+  for (let i = 0; i < todosOrdenados.length; i++) {
+    const startSlot = todosOrdenados[i];
+    if (ocupadas.has(startSlot.horaInicio)) continue;
+
+    const startMin = timeToMinutes(startSlot.horaInicio);
+    const requiredEnd = startMin + duracionMinutos;
+    let coveredUntil = startMin;
+
+    for (let j = i; j < todosOrdenados.length; j++) {
+      const slot = todosOrdenados[j];
+      const slotStart = timeToMinutes(slot.horaInicio);
+
+      if (slotStart > coveredUntil) break; // hay un hueco — no se puede encadenar
+      if (ocupadas.has(slot.horaInicio)) break; // slot tomado
+
+      coveredUntil = Math.max(coveredUntil, slotStart + slot.duracionMinutos);
+
+      if (coveredUntil >= requiredEnd) {
+        disponibles.push(startSlot);
+        break;
+      }
+    }
+  }
+
+  return disponibles;
 }
 
 export async function getServiciosPublicos() {
