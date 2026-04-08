@@ -2,6 +2,9 @@ import Link from "next/link";
 import { getMarcianoUpcomingTurno } from "@/lib/marciano-turnos";
 import { getMarcianoDashboardData, requireMarcianoClient } from "@/lib/marciano-portal";
 import { MARCIANO_BENEFICIOS } from "@/lib/marciano-config";
+import StyleDNACard from "@/components/marciano/StyleDNACard";
+import MarcianoTimelineVisual from "@/components/marciano/MarcianoTimelineVisual";
+import type { StyleProfile, FaceShape, MarcianoVisit } from "@/lib/types";
 
 function formatARS(value: string | null) {
   const amount = Number(value ?? 0);
@@ -36,6 +39,42 @@ export default async function MarcianoPortalPage() {
 
   return (
     <div className="space-y-6">
+      {/* Perfil Marciano CTA or card */}
+      {!client.styleCompletedAt ? (
+        <section className="panel-card rounded-[28px] p-5">
+          <p className="eyebrow text-xs text-[#8cff59]">Nuevo</p>
+          <h2 className="mt-2 font-display text-2xl font-semibold text-white">
+            Descubrí tu Perfil Marciano
+          </h2>
+          <p className="mt-2 text-sm text-zinc-400">
+            5 preguntas + análisis de rostro. Conocé tu estilo dominante.
+          </p>
+          <Link
+            href="/marciano/estilo"
+            className="neon-button mt-4 inline-block rounded-[20px] px-6 py-3 text-sm font-semibold text-[#07130a]"
+          >
+            Empezar ahora
+          </Link>
+        </section>
+      ) : client.styleProfile ? (
+        <section>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <span />
+            <Link
+              href="/marciano/estilo"
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition"
+            >
+              Editar
+            </Link>
+          </div>
+          <StyleDNACard
+            profile={client.styleProfile as StyleProfile}
+            faceShape={client.faceShape as FaceShape | null}
+            totalVisits={client.totalVisits}
+          />
+        </section>
+      ) : null}
+
       <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="public-panel rounded-[32px] p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -127,34 +166,7 @@ export default async function MarcianoPortalPage() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[1fr_0.95fr]">
-        <article className="public-panel rounded-[28px] p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="eyebrow text-zinc-500">Historial</p>
-              <h3 className="mt-1 text-xl font-semibold text-white">Tus ultimas visitas</h3>
-            </div>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-              {data.visits.length} registros
-            </span>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {data.visits.length ? (
-              data.visits.map((visit) => (
-                <div key={visit.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-sm font-medium text-white">{formatDate(visit.visitedAt)}</p>
-                  <p className="mt-1 text-sm text-zinc-400">
-                    {visit.barberoNombre ? `Te atendio ${visit.barberoNombre}` : "Visita registrada"}
-                  </p>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-zinc-400">
-                Todavia no tenemos visitas cargadas en tu historial.
-              </p>
-            )}
-          </div>
-        </article>
+        <MarcianoTimelineVisual visits={data.visits as MarcianoVisit[]} />
 
         <article className="public-panel rounded-[28px] p-5">
           <div>

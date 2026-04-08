@@ -51,6 +51,9 @@ export async function requireMarcianoClient() {
       totalVisits: clients.totalVisits,
       lastVisitAt: clients.lastVisitAt,
       archivedAt: clients.archivedAt,
+      styleCompletedAt: clients.styleCompletedAt,
+      styleProfile: clients.styleProfile,
+      faceShape: clients.faceShape,
       usageMes: marcianoBeneficiosUso.mes,
       cortesUsados: marcianoBeneficiosUso.cortesUsados,
       consumicionesUsadas: marcianoBeneficiosUso.consumicionesUsadas,
@@ -133,6 +136,9 @@ export async function getMarcianoDashboardData(userId: string) {
         id: visitLogs.id,
         visitedAt: visitLogs.visitedAt,
         barberoNombre: barberos.nombre,
+        photoUrls: visitLogs.photoUrls,
+        corteNombre: visitLogs.corteNombre,
+        tags: visitLogs.tags,
       })
       .from(visitLogs)
       .leftJoin(barberos, eq(barberos.id, visitLogs.createdByBarberoId))

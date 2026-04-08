@@ -97,6 +97,7 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState("");
+  const [corteNombre, setCorteNombre] = useState("");
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -186,6 +187,7 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
         tags,
         photoUrls: uploadedUrls,
         propinaEstrellas: propina,
+        corteNombre: corteNombre.trim() || null,
       });
 
       if (result?.error) {
@@ -253,6 +255,17 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
           <p className="mt-2 text-xs text-zinc-500">
             Deja una nota corta y accionable para el proximo barbero.
           </p>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-zinc-300">Nombre del corte</label>
+          <input
+            type="text"
+            placeholder="Ej: Taper Fade bajo, French Crop..."
+            value={corteNombre}
+            onChange={(e) => setCorteNombre(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-white placeholder:text-zinc-500 focus:border-[#8cff59]/60 focus:outline-none"
+          />
         </div>
 
         <div>

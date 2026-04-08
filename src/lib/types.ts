@@ -189,3 +189,42 @@ export interface QuickActionDefaults {
   medioPagoNombre: string;
   comisionMedioPagoPct: number;
 }
+
+// ————————————————————————————
+// Perfil Marciano (Style DNA)
+// ————————————————————————————
+export type FaceShape = 'oval' | 'cuadrado' | 'redondo' | 'corazon' | 'diamante';
+
+export type InterrogatoryAnswers = {
+  lifestyle: 'minimal' | 'nocturno' | 'outdoor' | 'formal';
+  morningMinutes: 0 | 3 | 5 | 10;
+  arrival: 'caminando' | 'auto' | 'apurado' | 'con-tiempo';
+  perfectCut: 'otros-notan' | 'lo-siento' | 'dura-semanas';
+  turnoff: 'musica-boluda' | 'gente-de-mas' | 'apuro' | 'charla-forzada';
+};
+
+export type StyleDominante = 'Comandante' | 'Capitán' | 'Piloto' | 'Navegante' | 'Explorador';
+
+export type StyleProfile = {
+  version: 1;
+  dominantStyle: StyleDominante;
+  recommendedCuts: string[];
+  chairTimeMin: number;
+  idealBarberoId: string | null;
+  faceMetrics: {
+    widthHeightRatio: number;
+    jawWidthRatio: number;
+    foreheadChinRatio: number;
+  } | null;
+  answers: InterrogatoryAnswers;
+  generatedAt: string;
+};
+
+export interface MarcianoVisit {
+  id: string;
+  visitedAt: Date;
+  barberoNombre: string | null;
+  photoUrls: string[];
+  corteNombre: string | null;
+  tags: string[];
+}

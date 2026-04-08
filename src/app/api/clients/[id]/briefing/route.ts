@@ -40,6 +40,8 @@ function buildPrompt(params: {
   preferences: Record<string, unknown> | null;
   notes: string | null;
   daysSinceLastVisit: number | null;
+  faceShape: string | null;
+  styleProfile: import("@/lib/types").StyleProfile | null;
   visits: Array<{
     visitedAt: Date;
     barberNotes: string | null;
@@ -72,6 +74,16 @@ function buildPrompt(params: {
   if (prefs?.productPreferences) lines.push(`Preferencias de producto: ${prefs.productPreferences}`);
   if (prefs?.extraNotes) lines.push(`Otras preferencias: ${prefs.extraNotes}`);
   if (params.notes) lines.push(`Nota general del equipo: ${params.notes}`);
+
+  if (params.styleProfile) {
+    const sp = params.styleProfile;
+    lines.push("", "PERFIL MARCIANO (Style DNA):");
+    lines.push(`- Tipo de rostro: ${params.faceShape ?? "no analizado"}`);
+    lines.push(`- Estilo dominante: ${sp.dominantStyle}`);
+    lines.push(`- Cortes recomendados: ${sp.recommendedCuts.join(", ")}`);
+    lines.push(`- Tiempo al pelo por mañana: ${sp.answers.morningMinutes} min`);
+    lines.push(`- Lo que le baja: ${sp.answers.turnoff}`);
+  }
 
   if (params.daysSinceLastVisit !== null) {
     lines.push(`Días desde última visita: ${params.daysSinceLastVisit}`);
@@ -111,7 +123,19 @@ export async function POST(
 
   // Load client
   const [client] = await db
-    .select()
+    .select({
+      id: clients.id,
+      name: clients.name,
+      esMarciano: clients.esMarciano,
+      marcianoDesde: clients.marcianoDesde,
+      tags: clients.tags,
+      preferences: clients.preferences,
+      notes: clients.notes,
+      updatedAt: clients.updatedAt,
+      faceShape: clients.faceShape,
+      styleProfile: clients.styleProfile,
+      styleCompletedAt: clients.styleCompletedAt,
+    })
     .from(clients)
     .where(eq(clients.id, clientId))
     .limit(1);
@@ -166,6 +190,7 @@ export async function POST(
     MODEL,
     client.updatedAt.getTime(),
     lastVisit?.visitedAt?.getTime() ?? 0,
+    client.styleCompletedAt?.getTime() ?? 0,
     viewerScope,
     viewerBarberoId ?? "admin",
   ].join(":");
@@ -227,6 +252,8 @@ export async function POST(
     preferences: client.preferences as Record<string, unknown> | null,
     notes: client.notes,
     daysSinceLastVisit: daysSince(lastVisit?.visitedAt ?? null),
+    faceShape: client.faceShape ?? null,
+    styleProfile: client.styleProfile as import("@/lib/types").StyleProfile | null,
     visits: visits.map((v) => ({
       visitedAt: v.visitedAt,
       barberNotes: v.barberNotes,

@@ -71,6 +71,13 @@
       "when": 1775590800000,
       "tag": "0009_public_reserva_barberos",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1775688851160,
+      "tag": "0010_heavy_steve_rogers",
+      "breakpoints": true
     }
   ]
 }

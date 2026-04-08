@@ -388,6 +388,7 @@ export async function createVisitLogAction(
     tags: string[];
     photoUrls: string[];
     propinaEstrellas: number;
+    corteNombre?: string | null;
   }
 ): Promise<{ error: string } | undefined> {
   const actor = await getClientActorContext();
@@ -413,6 +414,7 @@ export async function createVisitLogAction(
     tags: data.tags,
     photoUrls: data.photoUrls,
     propinaEstrellas: data.propinaEstrellas,
+    corteNombre: data.corteNombre ?? null,
   });
 
   await recalculateClientMetrics(clientId);

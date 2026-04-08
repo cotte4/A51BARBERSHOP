@@ -483,6 +483,9 @@ export const clients = pgTable(
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    faceShape: text("face_shape"),
+    styleProfile: jsonb("style_profile").$type<import("@/lib/types").StyleProfile>(),
+    styleCompletedAt: timestamp("style_completed_at", { withTimezone: true }),
   },
   (table) => [
     uniqueIndex("clients_email_idx").on(table.email),
@@ -495,6 +498,9 @@ export const clients = pgTable(
       table.lastVisitAt
     ),
     index("clients_created_by_barbero_id_idx").on(table.createdByBarberoId),
+    check("clients_face_shape_check",
+      sql`${table.faceShape} IN ('oval', 'cuadrado', 'redondo', 'corazon', 'diamante') OR ${table.faceShape} IS NULL`
+    ),
   ]
 );
 
@@ -652,6 +658,7 @@ export const visitLogs = pgTable(
     propinaEstrellas: integer("propina_estrellas").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    corteNombre: text("corte_nombre"),
   },
   (table) => [
     check(
