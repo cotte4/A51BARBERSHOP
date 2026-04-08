@@ -6,43 +6,79 @@ import { createVisitLogAction } from "@/app/(barbero)/clientes/actions";
 
 type PostCorteFormProps = {
   clientId: string;
-  clientName: string;
-  clientIsMarciano: boolean;
 };
 
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+const QUICK_TAGS = [
+  "Fade alto",
+  "Tijera",
+  "Barba",
+  "Trajo amigo",
+  "Llegó tarde",
+  "Producto nuevo",
+  "Degradado suave",
+  "Pelo corto",
+];
+
+function CameraIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
+  );
 }
 
-function PropinaStars({
+function PropinaSelector({
   value,
   onChange,
 }: {
   value: number;
   onChange: (n: number) => void;
 }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {[1, 2, 3, 4, 5].map((n) => {
-        const selected = n <= value;
+  const levels = [
+    {
+      n: 1,
+      label: "Bronce",
+      stars: "★",
+      activeClass:
+        "border-amber-500/60 bg-amber-500/15 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.12)]",
+    },
+    {
+      n: 2,
+      label: "Plata",
+      stars: "★★",
+      activeClass:
+        "border-sky-400/60 bg-sky-400/15 text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.12)]",
+    },
+    {
+      n: 3,
+      label: "Verde",
+      stars: "★★★",
+      activeClass:
+        "border-[#8cff59]/50 bg-[#8cff59]/12 text-[#b9ff96] shadow-[0_0_12px_rgba(140,255,89,0.1)]",
+    },
+  ];
 
+  return (
+    <div className="flex gap-3">
+      {levels.map(({ n, label, stars, activeClass }) => {
+        const selected = value === n;
         return (
           <button
             key={n}
             type="button"
             onClick={() => onChange(value === n ? 0 : n)}
-            aria-label={`${n} estrella${n !== 1 ? "s" : ""}`}
+            aria-label={label}
             aria-pressed={selected}
             className={[
-              "flex h-12 w-12 items-center justify-center rounded-2xl border text-lg font-semibold transition",
+              "flex flex-1 flex-col items-center gap-1.5 rounded-2xl border py-3 transition",
               selected
-                ? "border-[#8cff59]/40 bg-[#8cff59]/12 text-[#b9ff96] shadow-[0_0_0_1px_rgba(140,255,89,0.08)]"
-                : "border-zinc-700 bg-zinc-900 text-amber-300 hover:border-zinc-600 hover:bg-zinc-800",
+                ? activeClass
+                : "border-zinc-700 bg-zinc-900 text-zinc-500 hover:border-zinc-600 hover:bg-zinc-800 hover:text-zinc-300",
             ].join(" ")}
           >
-            {n}
+            <span className="text-xl">{stars}</span>
+            <span className="text-xs font-medium">{label}</span>
           </button>
         );
       })}
@@ -50,11 +86,7 @@ function PropinaStars({
   );
 }
 
-export default function PostCorteForm({
-  clientId,
-  clientName,
-  clientIsMarciano,
-}: PostCorteFormProps) {
+export default function PostCorteForm({ clientId }: PostCorteFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -62,8 +94,49 @@ export default function PostCorteForm({
   const [isPending, startTransition] = useTransition();
   const [propina, setPropina] = useState(0);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [thumbnails, setThumbnails] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
+  const [customTagInput, setCustomTagInput] = useState("");
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  function toggleTag(tag: string) {
+    setTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  }
+
+  function addCustomTag() {
+    const trimmed = customTagInput.trim();
+    if (trimmed && !tags.includes(trimmed)) {
+      setTags((prev) => [...prev, trimmed]);
+    }
+    setCustomTagInput("");
+  }
+
+  function removeTag(tag: string) {
+    setTags((prev) => prev.filter((t) => t !== tag));
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    skipPhotoUploadRef.current = false;
+    const files = Array.from(e.target.files ?? []);
+    setSelectedFiles(files);
+    setError(null);
+
+    const urls: string[] = new Array(files.length).fill("");
+    let loaded = 0;
+    files.forEach((file, i) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        urls[i] = ev.target?.result as string;
+        loaded += 1;
+        if (loaded === files.length) setThumbnails([...urls]);
+      };
+      reader.readAsDataURL(file);
+    });
+    if (files.length === 0) setThumbnails([]);
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -71,14 +144,8 @@ export default function PostCorteForm({
 
     const formEl = e.currentTarget;
     const fd = new FormData(formEl);
-
     const barberNotes = String(fd.get("barberNotes") ?? "").trim() || null;
-    const tagsRaw = String(fd.get("tags") ?? "").trim();
-    const tags = tagsRaw
-      ? tagsRaw.split(",").map((tag) => tag.trim()).filter(Boolean)
-      : [];
     const filesToUpload = skipPhotoUploadRef.current ? [] : selectedFiles;
-
     skipPhotoUploadRef.current = false;
 
     const uploadedUrls: string[] = [];
@@ -99,9 +166,7 @@ export default function PostCorteForm({
 
           if (!res.ok) {
             const body = (await res.json()) as { error?: string };
-            setError(
-              body.error ?? "No se pudo subir la foto. Podras intentar de nuevo o guardar sin imagen."
-            );
+            setError(body.error ?? "No se pudo subir la foto.");
             setUploadProgress(null);
             return;
           }
@@ -114,7 +179,6 @@ export default function PostCorteForm({
           return;
         }
       }
-
       setUploadProgress(null);
     }
 
@@ -139,13 +203,10 @@ export default function PostCorteForm({
   function handleSaveWithoutPhoto() {
     skipPhotoUploadRef.current = true;
     setSelectedFiles([]);
+    setThumbnails([]);
     setUploadProgress(null);
     setError(null);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-
+    if (fileInputRef.current) fileInputRef.current.value = "";
     formRef.current?.requestSubmit();
   }
 
@@ -154,135 +215,131 @@ export default function PostCorteForm({
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
-      <div className="panel-card rounded-[28px] p-5">
-        <div className="flex flex-col gap-2 border-b border-zinc-800 pb-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">
-              Registro rapido
-            </p>
-            <h2 className="mt-2 text-lg font-semibold text-white">
-              Cerramos la visita de {clientName}
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-              Cargá lo esencial en el momento y dejá el resto ordenado para volver a leerlo en el
-              siguiente turno.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-xs text-zinc-400">
-            <p className="uppercase tracking-[0.24em] text-zinc-500">Estado</p>
-            <p className="mt-1 font-semibold text-white">
-              {clientIsMarciano ? "Cliente Marciano" : "Cliente regular"}
-            </p>
-            <p className="mt-1">El guardado admite fotos opcionales.</p>
-          </div>
+      <div className="panel-card rounded-[28px] p-5 space-y-6">
+        {/* Notas del corte */}
+        <div>
+          <label htmlFor="barberNotes" className="mb-1.5 block text-sm font-medium text-zinc-300">
+            Notas del corte
+          </label>
+          <textarea
+            id="barberNotes"
+            name="barberNotes"
+            rows={4}
+            placeholder="Ej: pidio degradado mas alto, llego tarde, probar el nuevo producto..."
+            className="w-full resize-none rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60"
+          />
         </div>
 
-        <div className="mt-5 grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-5">
-            <div>
-              <label htmlFor="barberNotes" className="mb-1 block text-sm font-medium text-zinc-300">
-                Notas del corte
-              </label>
-              <textarea
-                id="barberNotes"
-                name="barberNotes"
-                rows={5}
-                placeholder="Ej: pidio degradado mas alto, llego tarde, probar el nuevo producto..."
-                className="w-full resize-none rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60 focus:ring-0"
-              />
-              <p className="mt-2 text-xs leading-5 text-zinc-500">
-                Escribí corto y útil. Esto vuelve a aparecer cuando abras el cliente.
-              </p>
-            </div>
-
-            <div>
-              <label htmlFor="tags" className="mb-1 block text-sm font-medium text-zinc-300">
-                Tags de esta visita
-              </label>
-              <input
-                id="tags"
-                name="tags"
-                placeholder="degradado-alto, trajo-amigo, llego-tarde"
-                className="h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-4 text-base text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60 focus:ring-0"
-              />
-              <p className="mt-2 text-xs leading-5 text-zinc-500">
-                Separados por coma. Sirven para buscar patrones sin leer toda la nota.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
-              <p className="text-sm font-medium text-zinc-200">Checklist mental</p>
-              <div className="mt-3 grid gap-2 text-sm text-zinc-400 sm:grid-cols-2">
-                <p>Notas breves del corte.</p>
-                <p>Tags faciles de buscar.</p>
-                <p>Propina si hubo.</p>
-                <p>Fotos si suman contexto.</p>
-              </div>
-            </div>
+        {/* Tags */}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-zinc-300">Tags</label>
+          <div className="flex flex-wrap gap-2">
+            {QUICK_TAGS.map((tag) => {
+              const active = tags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={[
+                    "rounded-full border px-3 py-1.5 text-sm font-medium transition",
+                    active
+                      ? "border-[#8cff59]/40 bg-[#8cff59]/12 text-[#b9ff96]"
+                      : "border-zinc-700 bg-zinc-900 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200",
+                  ].join(" ")}
+                >
+                  {tag}
+                </button>
+              );
+            })}
           </div>
 
-          <div className="space-y-5">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
-              <p className="text-sm font-medium text-zinc-200">Propina</p>
-              <p className="mt-2 text-xs leading-5 text-zinc-500">
-                Tocá una opción para marcar rápidamente la experiencia.
-              </p>
-              <div className="mt-4">
-                <PropinaStars value={propina} onChange={setPropina} />
-              </div>
-              <p className="mt-3 text-xs text-zinc-400">
-                {propina === 0
-                  ? "Sin propina registrada"
-                  : `${propina} punto${propina !== 1 ? "s" : ""} registrado${propina !== 1 ? "s" : ""}`}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
-              <label htmlFor="photos" className="block text-sm font-medium text-zinc-200">
-                Fotos del corte
-              </label>
-              <p className="mt-2 text-xs leading-5 text-zinc-500">
-                JPG, PNG o WEBP. Podes subir varias imagenes.
-              </p>
-              <input
-                ref={fileInputRef}
-                id="photos"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                onChange={(e) => {
-                  skipPhotoUploadRef.current = false;
-                  setSelectedFiles(Array.from(e.target.files ?? []));
-                  setError(null);
-                }}
-                className="mt-4 w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-zinc-300 file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-800 file:px-3 file:py-1 file:text-sm file:font-medium file:text-zinc-200"
-              />
-
-              {selectedFiles.length > 0 ? (
-                <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3">
-                  <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">Archivos listos</p>
-                  <ul className="mt-3 space-y-2">
-                    {selectedFiles.map((file) => (
-                      <li
-                        key={`${file.name}-${file.size}-${file.lastModified}`}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/70 px-3 py-2 text-sm text-zinc-300"
-                      >
-                        <span className="truncate">{file.name}</span>
-                        <span className="shrink-0 text-xs text-zinc-500">
-                          {formatFileSize(file.size)}
-                        </span>
-                      </li>
-                  ))}
-                </ul>
-              </div>
-              ) : (
-                <p className="mt-4 text-xs leading-5 text-zinc-500">
-                  Si no agregas fotos, la visita se guarda igual.
-                </p>
-              )}
-            </div>
+          <div className="mt-3 flex gap-2">
+            <input
+              value={customTagInput}
+              onChange={(e) => setCustomTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addCustomTag();
+                }
+              }}
+              placeholder="Tag personalizado..."
+              className="h-10 flex-1 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 text-sm text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60"
+            />
+            <button
+              type="button"
+              onClick={addCustomTag}
+              className="h-10 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-800"
+            >
+              + Agregar
+            </button>
           </div>
+
+          {tags.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#8cff59]/25 bg-[#8cff59]/8 px-2.5 py-0.5 text-xs font-medium text-[#8cff59]"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    aria-label={`Quitar ${tag}`}
+                    className="leading-none text-[#8cff59]/60 hover:text-[#8cff59]"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        {/* Propina */}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-zinc-300">Propina</label>
+          <PropinaSelector value={propina} onChange={setPropina} />
+        </div>
+
+        {/* Fotos */}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-zinc-300">Fotos del corte</label>
+          <input
+            ref={fileInputRef}
+            id="photos"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            onChange={handleFileChange}
+            className="sr-only"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-zinc-700 bg-zinc-900 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-800 hover:text-white"
+          >
+            <CameraIcon />
+            {selectedFiles.length > 0
+              ? `${selectedFiles.length} foto${selectedFiles.length !== 1 ? "s" : ""} seleccionada${selectedFiles.length !== 1 ? "s" : ""}`
+              : "Tomar / Subir fotos"}
+          </button>
+
+          {thumbnails.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {thumbnails.map((src, i) => (
+                <div
+                  key={i}
+                  className="relative h-20 w-20 overflow-hidden rounded-xl border border-zinc-700"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
 
