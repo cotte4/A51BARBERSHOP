@@ -13,7 +13,7 @@ const QUICK_TAGS = [
   "Tijera",
   "Barba",
   "Trajo amigo",
-  "Llegó tarde",
+  "Llego tarde",
   "Producto nuevo",
   "Degradado suave",
   "Pelo corto",
@@ -39,21 +39,21 @@ function PropinaSelector({
     {
       n: 1,
       label: "Bronce",
-      stars: "★",
+      stars: "\u2605",
       activeClass:
         "border-amber-500/60 bg-amber-500/15 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.12)]",
     },
     {
       n: 2,
       label: "Plata",
-      stars: "★★",
+      stars: "\u2605\u2605",
       activeClass:
         "border-sky-400/60 bg-sky-400/15 text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.12)]",
     },
     {
       n: 3,
       label: "Verde",
-      stars: "★★★",
+      stars: "\u2605\u2605\u2605",
       activeClass:
         "border-[#8cff59]/50 bg-[#8cff59]/12 text-[#b9ff96] shadow-[0_0_12px_rgba(140,255,89,0.1)]",
     },
@@ -101,9 +101,7 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
   const [error, setError] = useState<string | null>(null);
 
   function toggleTag(tag: string) {
-    setTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
+    setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   }
 
   function addCustomTag() {
@@ -215,24 +213,56 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
-      <div className="panel-card rounded-[28px] p-5 space-y-6">
-        {/* Notas del corte */}
+      <section className="rounded-[28px] border border-zinc-800 bg-[linear-gradient(180deg,rgba(24,24,27,0.98),rgba(9,9,11,0.98))] p-5 shadow-[0_18px_36px_rgba(0,0,0,0.26)]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+              Sesion
+            </p>
+            <h2 className="mt-1 text-lg font-semibold text-white">Cerrar corte y guardar memoria</h2>
+          </div>
+          <div className="flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.16em] text-zinc-500">
+            <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1">notas</span>
+            <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1">tags</span>
+            <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1">fotos</span>
+          </div>
+        </div>
+      </section>
+
+      <div className="panel-card space-y-6 rounded-[28px] p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+              Libro de cortes
+            </p>
+            <h3 className="mt-1 text-lg font-semibold text-white">Que paso en esta sesion</h3>
+          </div>
+        </div>
+
         <div>
           <label htmlFor="barberNotes" className="mb-1.5 block text-sm font-medium text-zinc-300">
-            Notas del corte
+            Brief del corte
           </label>
           <textarea
             id="barberNotes"
             name="barberNotes"
             rows={4}
-            placeholder="Ej: pidio degradado mas alto, llego tarde, probar el nuevo producto..."
+            placeholder="Ej: pidio degradado mas alto, vino apurado, mantener laterales cortos, ofrecer producto nuevo..."
             className="w-full resize-none rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60"
           />
+          <p className="mt-2 text-xs text-zinc-500">
+            Deja una nota corta y accionable para el proximo barbero.
+          </p>
         </div>
 
-        {/* Tags */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-300">Tags</label>
+          <div className="mb-1.5 space-y-1">
+            <label className="block text-sm font-medium text-zinc-300">Tags</label>
+            <p className="text-xs text-zinc-500">
+              Marca rapido el tipo de corte, contexto o comportamiento.
+            </p>
+          </div>
+
           <div className="flex flex-wrap gap-2">
             {QUICK_TAGS.map((tag) => {
               const active = tags.includes(tag);
@@ -290,7 +320,7 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
                     aria-label={`Quitar ${tag}`}
                     className="leading-none text-[#8cff59]/60 hover:text-[#8cff59]"
                   >
-                    ×
+                    x
                   </button>
                 </span>
               ))}
@@ -298,15 +328,22 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
           ) : null}
         </div>
 
-        {/* Propina */}
         <div>
           <label className="mb-1.5 block text-sm font-medium text-zinc-300">Propina</label>
           <PropinaSelector value={propina} onChange={setPropina} />
+          <p className="mt-2 text-xs text-zinc-500">
+            Usalo como termometro rapido de la experiencia.
+          </p>
         </div>
 
-        {/* Fotos */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-300">Fotos del corte</label>
+          <div className="mb-1.5 space-y-1">
+            <label className="block text-sm font-medium text-zinc-300">Fotos del corte</label>
+            <p className="text-xs text-zinc-500">
+              Una buena foto convierte este corte en referencia real para la proxima visita.
+            </p>
+          </div>
+
           <input
             ref={fileInputRef}
             id="photos"
@@ -379,7 +416,7 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
         disabled={isSubmitting}
         className="neon-button flex h-14 w-full items-center justify-center rounded-[20px] text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {statusText ?? "Guardar visita"}
+        {statusText ?? "Cerrar y guardar sesion"}
       </button>
     </form>
   );

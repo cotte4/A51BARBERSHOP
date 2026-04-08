@@ -91,6 +91,7 @@ export default async function NuevaAtencionModal({ searchParams }: Props) {
           servicios={serviciosActivos.map((s) => ({ id: s.id, nombre: s.nombre, precioBase: s.precioBase }))}
           mediosPago={mediosPagoActivos.map((m) => ({ id: m.id, nombre: m.nombre, comisionPorcentaje: m.comisionPorcentaje }))}
           action={registrarAtencionExpressAction}
+          variant="embedded"
         />
 
         <div className="rounded-[24px] border border-zinc-800 bg-zinc-900/60 p-5">

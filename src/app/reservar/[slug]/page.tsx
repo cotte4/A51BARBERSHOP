@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import PublicReservaAccessGate from "@/components/turnos/PublicReservaAccessGate";
-import ReservaForm from "@/components/turnos/ReservaForm";
+import ReservaForm from "../../../components/turnos/ReservaForm";
 import { canAccessPublicReserva } from "@/lib/public-reserva-access";
 import {
-  getFechaHoyArgentina,
+  getFechaMananaArgentina,
   getProductosExtrasActivos,
   getServiciosPublicos,
   resolvePublicBarberoBySlug,
@@ -21,7 +21,7 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
     notFound();
   }
 
-  const initialFecha = getFechaHoyArgentina();
+  const initialFecha = getFechaMananaArgentina();
   const hasAccess = await canAccessPublicReserva(barbero);
 
   if (!hasAccess) {
@@ -48,12 +48,13 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
           <section className="public-panel public-glow rounded-[36px] border border-white/10 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-2xl space-y-4">
-                <p className="eyebrow text-[#8cff59]">Nave pública</p>
+                <p className="eyebrow text-[#8cff59]">Nave publica</p>
                 <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
                   Cae con {barbero.nombre}
                 </h1>
                 <p className="max-w-xl text-sm text-zinc-300 sm:text-base">
-                  Elegí servicio, marcá horario y mandá la solicitud. La base de A51 la toma desde adentro y te confirma el movimiento.
+                  Elegi servicio, marca horario y manda la solicitud. La base de A51 la toma desde
+                  adentro y te confirma el movimiento sin mezclar musica con reserva.
                 </p>
               </div>
 
@@ -66,11 +67,15 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
                   <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Extras</p>
                   <p className="mt-2 text-lg font-semibold text-white">{productos.length} opcionales</p>
                 </div>
+                <div className="rounded-[22px] border border-[#8cff59]/20 bg-[#8cff59]/8 px-4 py-3 sm:col-span-2 lg:col-span-1">
+                  <p className="text-xs uppercase tracking-[0.18em] text-[#8cff59]">Agenda</p>
+                  <p className="mt-2 text-lg font-semibold text-white">Desde manana</p>
+                </div>
               </div>
             </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              {["Elegí el servicio", "Marcá tu slot", "Recibí la señal"].map((item, index) => (
+              {["Elegi el servicio", "Marca tu slot", "Recibi la senal"].map((item, index) => (
                 <div key={item} className="rounded-[22px] border border-white/10 bg-black/20 px-4 py-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Paso {index + 1}</p>
                   <p className="mt-2 text-sm font-medium text-white">{item}</p>
@@ -81,16 +86,6 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
 
           <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
             <div className="space-y-5">
-              <div className="rounded-[30px] border border-white/10 bg-black/25 p-5 text-sm text-zinc-300">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                  Importante
-                </p>
-                <p className="mt-3">
-                  Si no ves slot, cambiá la fecha o volvé más tarde. Nada despega hasta tocar el botón
-                  final.
-                </p>
-              </div>
-
               <ReservaForm
                 slug={slug}
                 barberoNombre={barbero.nombre}
@@ -108,15 +103,15 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
             <aside className="space-y-4 xl:sticky xl:top-6">
               <div className="public-panel rounded-[30px] border border-white/10 p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                  Tu vuelo
+                  Como viaja
                 </p>
                 <p className="mt-2 font-display text-2xl font-semibold text-white">
-                  Rapido, claro y sin humo
+                  Flujo corto y sin rebote
                 </p>
                 <div className="mt-4 space-y-3 text-sm text-zinc-300">
-                  <p>Elegís un servicio y la grilla te muestra solo slots que cierran.</p>
-                  <p>Sumás nota, música y extras sin romper el ritmo del flujo.</p>
-                  <p>Cuando lo mandás, A51 baja la señal y confirma desde la base.</p>
+                  <p>Elegis un servicio y la grilla te muestra solo slots que cierran.</p>
+                  <p>La fecha sale desde manana y la musica queda separada del envio final.</p>
+                  <p>Cuando lo mandas, A51 baja la senal y confirma desde la base.</p>
                 </div>
               </div>
 
@@ -125,10 +120,11 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
                   Confianza
                 </p>
                 <p className="mt-2 text-sm text-zinc-200">
-                  Tu solicitud viaja con tus datos de contacto, el servicio elegido y la hora exacta.
+                  Tu solicitud viaja con tus datos de contacto, el servicio elegido y la hora
+                  exacta.
                 </p>
                 <p className="mt-3 text-sm text-zinc-300">
-                  Si ya tienes cuenta, te saltas la clave y el movimiento queda alineado con tu
+                  Si ya tenes cuenta, te saltas la clave y el movimiento queda alineado con tu
                   historial Marciano.
                 </p>
               </div>

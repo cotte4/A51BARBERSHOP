@@ -100,6 +100,23 @@ export type MusicAutoResumeSummary = {
   lastError: string | null;
 };
 
+export type MusicJamParticipantSummary = {
+  barberoId: string;
+  nombre: string;
+  joinedAt: string | null;
+  isHost: boolean;
+  trackCount: number;
+};
+
+export type MusicJamSessionSummary = {
+  active: boolean;
+  sessionId: string | null;
+  hostBarberoId: string | null;
+  hostBarberoNombre: string | null;
+  startedAt: string | null;
+  participants: MusicJamParticipantSummary[];
+};
+
 export type MusicDashboardState = {
   provider: {
     provider: MusicProvider;
@@ -127,6 +144,7 @@ export type MusicDashboardState = {
   players: MusicPlayerSummary[];
   schedules: MusicScheduleRuleSummary[];
   autoResume: MusicAutoResumeSummary;
+  jam: MusicJamSessionSummary;
   queue: {
     activeSessionId: string | null;
     items: MusicQueueItemSummary[];

@@ -32,7 +32,11 @@ function BanknoteIcon() {
 function ArrowLeftRightIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
-      <path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -78,6 +82,7 @@ type Props = {
   mediosPago: MedioPago[];
   action: (prevState: AtencionRapidaState, formData: FormData) => Promise<AtencionRapidaState>;
   returnTo?: string;
+  variant?: "standalone" | "embedded";
 };
 
 const initialState: AtencionRapidaState = {};
@@ -91,35 +96,42 @@ function formatARS(value: number): string {
 }
 
 function getMedioPagoIcon(nombre: string | null) {
-  const n = (nombre ?? "").toLowerCase();
-  if (n.includes("efectivo")) return <BanknoteIcon />;
-  if (n.includes("transf")) return <ArrowLeftRightIcon />;
+  const normalized = (nombre ?? "").toLowerCase();
+  if (normalized.includes("efectivo")) return <BanknoteIcon />;
+  if (normalized.includes("transf")) return <ArrowLeftRightIcon />;
   return <CreditCardIcon />;
 }
 
 function getMedioPagoLabel(nombre: string | null): string {
-  const n = (nombre ?? "").toLowerCase();
-  if (n.includes("efectivo")) return "Efectivo";
-  if (n.includes("transf")) return "Transferencia";
-  if (n.includes("posnet") || n.includes("tarjeta")) return "Tarjeta";
-  if (n.includes("mp") || n.includes("mercado")) return "Mercado Pago";
+  const normalized = (nombre ?? "").toLowerCase();
+  if (normalized.includes("efectivo")) return "Efectivo";
+  if (normalized.includes("transf")) return "Transferencia";
+  if (normalized.includes("posnet") || normalized.includes("tarjeta")) return "Tarjeta";
+  if (normalized.includes("mp") || normalized.includes("mercado")) return "Mercado Pago";
   return nombre ?? "Otro";
 }
 
 function esCorteYBarba(nombre: string): boolean {
-  const n = nombre.toLowerCase();
-  return n.includes("barba") || n.includes("beard");
+  const normalized = nombre.toLowerCase();
+  return normalized.includes("barba") || normalized.includes("beard");
 }
 
-export default function QuickCheckoutPanel({ servicios, mediosPago, action, returnTo }: Props) {
+export default function QuickCheckoutPanel({
+  servicios,
+  mediosPago,
+  action,
+  returnTo,
+  variant = "standalone",
+}: Props) {
   const [state, formAction, isPending] = useActionState(action, initialState);
   const [selectedServicioId, setSelectedServicioId] = useState<string | null>(null);
   const [selectedMedioPagoId, setSelectedMedioPagoId] = useState<string | null>(null);
 
-  const selectedServicio = servicios.find((s) => s.id === selectedServicioId) ?? null;
-  const selectedMedioPago = mediosPago.find((m) => m.id === selectedMedioPagoId) ?? null;
+  const selectedServicio = servicios.find((servicio) => servicio.id === selectedServicioId) ?? null;
+  const selectedMedioPago = mediosPago.find((medio) => medio.id === selectedMedioPagoId) ?? null;
   const precio = Number(selectedServicio?.precioBase ?? 0);
   const listo = selectedServicioId !== null && selectedMedioPagoId !== null;
+  const embedded = variant === "embedded";
 
   const missingSteps: string[] = [];
   if (!selectedServicio) missingSteps.push("servicio");
@@ -135,31 +147,47 @@ export default function QuickCheckoutPanel({ servicios, mediosPago, action, retu
   const helperText = isPending
     ? "Estamos registrando el cobro. No cierres la pantalla."
     : listo
-      ? "El monto ya está listo para cobrar. Revisá el medio antes de confirmar."
+      ? "El monto ya esta listo para cobrar. Revisa el medio antes de confirmar."
       : `Te falta ${missingSteps.join(" y ")} para habilitar el cobro.`;
 
   const submitLabel = isPending
     ? "Registrando..."
     : listo
       ? `Cobrar ${formatARS(precio)}`
-      : "Seleccioná servicio y pago";
+      : "Selecciona servicio y pago";
 
   return (
-    <section className="overflow-hidden rounded-[30px] border border-[#8cff59]/20 bg-zinc-950 shadow-[0_0_40px_rgba(140,255,89,0.08)]">
+    <section
+      className={
+        embedded
+          ? "overflow-hidden rounded-[26px] border border-zinc-800 bg-zinc-950/60"
+          : "overflow-hidden rounded-[30px] border border-[#8cff59]/20 bg-zinc-950 shadow-[0_0_40px_rgba(140,255,89,0.08)]"
+      }
+    >
       <div className={`p-5 sm:p-6 ${isPending ? "opacity-80" : ""}`}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="eyebrow text-xs font-semibold text-zinc-500">Cobro rápido</p>
-            <h2 className="font-display mt-2 text-2xl font-semibold text-white">
-              Seleccioná, mirá el monto y cobrá sin dudar
-            </h2>
+        {embedded ? (
+          <div className="flex justify-end">
+            <span
+              className={`inline-flex min-h-[36px] items-center rounded-full px-3 text-xs font-semibold uppercase tracking-[0.18em] ${statusClassName}`}
+            >
+              {statusLabel}
+            </span>
           </div>
-          <span
-            className={`inline-flex min-h-[36px] items-center rounded-full px-3 text-xs font-semibold uppercase tracking-[0.18em] ${statusClassName}`}
-          >
-            {statusLabel}
-          </span>
-        </div>
+        ) : (
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="eyebrow text-xs font-semibold text-zinc-500">Cobro rapido</p>
+              <h2 className="font-display mt-2 text-2xl font-semibold text-white">
+                Selecciona, mira el monto y cobra sin dudar
+              </h2>
+            </div>
+            <span
+              className={`inline-flex min-h-[36px] items-center rounded-full px-3 text-xs font-semibold uppercase tracking-[0.18em] ${statusClassName}`}
+            >
+              {statusLabel}
+            </span>
+          </div>
+        )}
 
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <div className="panel-soft rounded-[22px] px-4 py-3">
@@ -179,7 +207,7 @@ export default function QuickCheckoutPanel({ servicios, mediosPago, action, retu
           <div className="panel-soft rounded-[22px] px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Monto</p>
             <p className="mt-2 text-lg font-semibold text-[#8cff59]">
-              {selectedServicio ? formatARS(precio) : "—"}
+              {selectedServicio ? formatARS(precio) : "--"}
             </p>
           </div>
         </div>
@@ -197,7 +225,6 @@ export default function QuickCheckoutPanel({ servicios, mediosPago, action, retu
           {helperText}
         </div>
 
-        {/* Servicios */}
         <div className="mt-5 grid grid-cols-2 gap-3">
           {servicios.map((servicio) => {
             const isSelected = selectedServicioId === servicio.id;
@@ -216,18 +243,16 @@ export default function QuickCheckoutPanel({ servicios, mediosPago, action, retu
                     : "border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900 hover:text-white"
                 }`}
               >
-                {isSelected && (
+                {isSelected ? (
                   <span className="absolute right-3 top-3">
                     <CheckIcon className="text-[#8cff59]" />
                   </span>
-                )}
+                ) : null}
                 <span className="flex items-center gap-0.5">
                   <ScissorsIcon />
-                  {doble && <ScissorsIcon className="opacity-60" />}
+                  {doble ? <ScissorsIcon className="opacity-60" /> : null}
                 </span>
-                <span className="text-center text-sm font-semibold leading-tight">
-                  {servicio.nombre}
-                </span>
+                <span className="text-center text-sm font-semibold leading-tight">{servicio.nombre}</span>
                 <span className={`text-xs ${isSelected ? "text-[#8cff59]/80" : "text-zinc-500"}`}>
                   {formatARS(Number(servicio.precioBase ?? 0))}
                 </span>
@@ -236,7 +261,6 @@ export default function QuickCheckoutPanel({ servicios, mediosPago, action, retu
           })}
         </div>
 
-        {/* Medios de pago */}
         <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
           {mediosPago.map((medio) => {
             const isSelected = selectedMedioPagoId === medio.id;
@@ -257,16 +281,16 @@ export default function QuickCheckoutPanel({ servicios, mediosPago, action, retu
                     : "border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-900 hover:text-white"
                 }`}
               >
-                {isSelected && (
+                {isSelected ? (
                   <span className="absolute right-2 top-2">
                     <CheckIcon className="text-zinc-600" />
                   </span>
-                )}
+                ) : null}
                 {icon}
                 <span className="text-xs font-medium leading-tight">{label}</span>
                 {commission > 0 ? (
                   <span className={`text-[11px] ${isSelected ? "text-zinc-700" : "text-zinc-500"}`}>
-                    {commission}% comisión
+                    {commission}% comision
                   </span>
                 ) : null}
               </button>
@@ -274,7 +298,6 @@ export default function QuickCheckoutPanel({ servicios, mediosPago, action, retu
           })}
         </div>
 
-        {/* Error */}
         {state.error ? (
           <p
             className="mt-4 rounded-[18px] border border-rose-500/35 bg-rose-500/10 px-4 py-3 text-sm text-rose-300"
@@ -284,12 +307,11 @@ export default function QuickCheckoutPanel({ servicios, mediosPago, action, retu
           </p>
         ) : null}
 
-        {/* Botón cobrar */}
         <form action={formAction} className="mt-4">
           <input type="hidden" name="servicioId" value={selectedServicioId ?? ""} />
           <input type="hidden" name="medioPagoId" value={selectedMedioPagoId ?? ""} />
           <input type="hidden" name="precioCobrado" value={precio} />
-          {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
+          {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
 
           <button
             type="submit"

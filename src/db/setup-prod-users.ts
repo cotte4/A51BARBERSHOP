@@ -81,7 +81,6 @@ async function setupUser({
     console.log(`  ✓ ${name} creado (ID: ${created.user.id})`);
   } else {
     // Usuario ya existe — actualizar password y rol
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (auth.api.setPassword as any)({
       body: { newPassword: password, userId: existing.id },
     });

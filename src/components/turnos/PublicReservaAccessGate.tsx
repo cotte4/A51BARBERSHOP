@@ -66,7 +66,10 @@ export default function PublicReservaAccessGate({
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(300px,0.95fr)]">
-        <form onSubmit={handleSubmit} className="rounded-[30px] border border-white/10 bg-black/25 p-5">
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-[30px] border border-white/10 bg-black/25 p-5"
+        >
           <label htmlFor="publicReservaPassword" className="text-sm font-medium text-zinc-300">
             Clave de acceso
           </label>
@@ -76,11 +79,12 @@ export default function PublicReservaAccessGate({
             autoComplete="one-time-code"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="Escribí la clave que te pasaron"
+            placeholder="Escribi la clave que te pasaron"
             className="mt-3 min-h-[52px] w-full rounded-2xl border border-zinc-700 bg-zinc-950/80 px-4 text-white placeholder:text-zinc-500 outline-none focus:border-[#8cff59]/60"
           />
           <p className="mt-3 text-sm text-zinc-400">
-            Cuando valida, la nave queda abierta en este dispositivo y no la volvés a cargar cada rato.
+            Cuando valida, la nave queda abierta en este dispositivo y no la volves a cargar cada
+            rato.
           </p>
 
           {error ? (
@@ -101,12 +105,12 @@ export default function PublicReservaAccessGate({
         <aside className="space-y-4">
           <div className="rounded-[30px] border border-white/10 bg-white/5 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-              Cómo funciona
+              Como funciona
             </p>
             <div className="mt-4 space-y-3 text-sm text-zinc-300">
-              <p>Si tenés link y clave, caés directo.</p>
-              <p>Si ya estás logueado, la puerta se abre sola.</p>
-              <p>Después ves los horarios, elegís servicio y mandás la solicitud.</p>
+              <p>Si tenes link y clave, caes directo.</p>
+              <p>Si ya estas logueado, la puerta se abre sola.</p>
+              <p>Despues ves los horarios, elegis servicio y mandas la solicitud.</p>
             </div>
           </div>
 
@@ -117,7 +121,7 @@ export default function PublicReservaAccessGate({
             <p className="mt-2 text-sm text-zinc-200">
               {allowAuthenticatedBypass
                 ? "Las cuentas autenticadas entran sin necesitar la clave."
-                : "Si no tenés cuenta, pedí la clave al local o a tu barbero."}
+                : "Si no tenes cuenta, pedi la clave al local o a tu barbero."}
             </p>
           </div>
         </aside>

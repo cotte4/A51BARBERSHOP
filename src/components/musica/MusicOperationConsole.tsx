@@ -7,6 +7,7 @@ import {
   activateDjModeAction,
   activateJamModeAction,
   dismissMusicProposalAction,
+  joinJamSessionAction,
   pauseMusicAction,
   playPlaylistNowAction,
   previousMusicAction,
@@ -17,7 +18,12 @@ import {
   syncMusicDashboardAction,
 } from "@/app/(barbero)/musica/actions";
 import BeatsStudio from "@/components/musica/BeatsStudio";
-import MusicStateBadge from "@/components/musica/MusicStateBadge";
+import {
+  MusicOverviewSection,
+  MusicPlaylistsSection,
+  MusicProposalsSection,
+  MusicQueueSection,
+} from "@/components/musica/MusicOperationConsoleSections";
 import type { MusicDashboardState } from "@/lib/music-types";
 
 type MusicTab = "spotify" | "beats";
@@ -33,6 +39,7 @@ type SearchTrackResult = {
 
 type OperationConsoleProps = {
   state: MusicDashboardState;
+  viewerBarberoId: string | null;
 };
 
 function modeLabel(mode: MusicDashboardState["mode"]["activeMode"]) {
@@ -47,24 +54,6 @@ function formatDateTime(value: string | null) {
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(value));
-}
-
-function MetricCard({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-4">
-      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{label}</p>
-      <p className="mt-2 text-lg font-semibold text-white">{value}</p>
-      <p className="mt-1 text-sm text-zinc-400">{detail}</p>
-    </div>
-  );
 }
 
 function ActionButton({
@@ -85,7 +74,10 @@ function ActionButton({
   );
 }
 
-export default function MusicOperationConsole({ state }: OperationConsoleProps) {
+export default function MusicOperationConsole({
+  state,
+  viewerBarberoId,
+}: OperationConsoleProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -155,6 +147,26 @@ export default function MusicOperationConsole({ state }: OperationConsoleProps) 
     state.players.find((player) => player.isDefault) ??
     null;
   const nowPlayingArtist = state.nowPlaying?.artists.join(", ") ?? "Esperando ordenes";
+  const jamHostName = state.jam.hostBarberoNombre ?? "otro operador";
+  const viewerIsJamHost = Boolean(viewerBarberoId && viewerBarberoId === state.jam.hostBarberoId);
+  const viewerJoinedJam = Boolean(
+    viewerBarberoId &&
+      state.jam.participants.some((participant) => participant.barberoId === viewerBarberoId),
+  );
+  const viewerCanJoinJam = state.jam.active && Boolean(viewerBarberoId) && !viewerJoinedJam;
+  const jamNeedsJoinBeforeAdding = viewerCanJoinJam;
+  const jamStatusLabel = state.jam.active
+    ? `${state.jam.participants.length} ${
+        state.jam.participants.length === 1 ? "barbero" : "barberos"
+      } en la sesion`
+    : "Sin sesion activa";
+  const jamHelpText = !state.jam.active
+    ? "Activa Jam para que cualquier barbero arranque la sesion compartida del local."
+    : viewerIsJamHost
+      ? "Estas hosteando la Jam. Los demas pueden sumarse sin sacarte el lugar."
+      : viewerJoinedJam
+        ? `Ya estas dentro de la Jam de ${jamHostName}. Lo que agregues queda como aporte tuyo.`
+        : `Pinky u otro barbero ya iniciaron la Jam. Puedes unirte sin reemplazar al host.`;
 
   return (
     <div className="space-y-6">
@@ -183,95 +195,114 @@ export default function MusicOperationConsole({ state }: OperationConsoleProps) 
 
       {activeTab === "spotify" ? (
         <div className="space-y-6">
-          <section className="rounded-[30px] border border-zinc-800 bg-zinc-900/80 p-5 shadow-[0_24px_60px_rgba(0,0,0,0.28)] sm:p-6">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <MusicStateBadge state={state.runtime.state} />
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-zinc-300">
-                    Modo {modeLabel(state.mode.activeMode)}
-                  </span>
-                  <span className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/10 px-3 py-1 text-xs font-semibold text-[#d8ffc7]">
-                    {state.queue.items.length} en cola
-                  </span>
-                </div>
-                <div>
-                  <p className="eyebrow text-zinc-500">Operacion</p>
-                  <h2 className="mt-2 font-display text-3xl font-semibold text-white sm:text-4xl">
-                    Musica
-                  </h2>
-                  <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-                    Auto resuelve playlists por horario, Soy DJ pisa el automatico y Jam alterna la
-                    cola entre barberos.
-                  </p>
-                </div>
-                {state.runtime.degradedReason ? (
-                  <p className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-                    {state.runtime.degradedReason}
-                  </p>
-                ) : null}
-                {state.autoResume.pending ? (
-                  <p className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100">
-                    Auto quedo interrumpido por una llegada y esta esperando retomar{" "}
-                    <span className="font-semibold text-white">{autoResumeLabel}</span>.
-                  </p>
-                ) : null}
-                {!state.autoResume.pending && state.autoResume.resumedAt ? (
-                  <p className="rounded-2xl border border-[#8cff59]/15 bg-[#8cff59]/5 px-4 py-3 text-sm text-zinc-300">
-                    Auto ya recupero su contexto. Ultima reanudacion:{" "}
-                    <span className="font-semibold text-white">
-                      {formatDateTime(state.autoResume.resumedAt)}
-                    </span>
-                    .
-                  </p>
-                ) : null}
-                {feedback ? (
-                  <p className="rounded-2xl border border-[#8cff59]/20 bg-[#8cff59]/10 px-4 py-3 text-sm text-[#d8ffc7]">
-                    {feedback}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="grid min-w-[230px] gap-2 sm:grid-cols-2 lg:grid-cols-1">
-                <MetricCard
-                  label="Provider"
-                  value={state.provider.connected ? "Spotify conectado" : "Spotify desconectado"}
-                  detail={`Expira: ${formatDateTime(state.provider.expiresAt)}`}
-                />
-                <MetricCard
-                  label="Player"
-                  value={activePlayer?.name ?? "Sin player definido"}
-                  detail={`Ultimo playback: ${formatDateTime(state.runtime.lastPlaybackSuccessAt)}`}
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-3 md:grid-cols-4">
-              <MetricCard
-                label="Ahora suena"
-                value={state.nowPlaying?.trackName ?? "Nada reproduciendose"}
-                detail={nowPlayingArtist}
-              />
-              <MetricCard
-                label="Cola activa"
-                value={queueSummary}
-                detail={`Ultimo intento: ${formatDateTime(state.runtime.lastPlaybackAttemptAt)}`}
-              />
-              <MetricCard
-                label="Estado"
-                value={state.runtime.state === "ready" ? "Listo para operar" : "Requiere atencion"}
-                detail={state.runtime.lastError ?? state.provider.lastError ?? "Sistema estable"}
-              />
-              <MetricCard
-                label="Auto resume"
-                value={state.autoResume.pending ? "Esperando retomar" : "Sin espera"}
-                detail={state.autoResume.pending ? autoResumeLabel : "Listo para seguir"}
-              />
-            </div>
-          </section>
+          <MusicOverviewSection
+            state={state}
+            modeLabel={modeLabel(state.mode.activeMode)}
+            queueSummary={queueSummary}
+            autoResumeLabel={autoResumeLabel}
+            activePlayerName={activePlayer?.name ?? "Sin player definido"}
+            nowPlayingArtist={nowPlayingArtist}
+            nowPlayingTrackName={state.nowPlaying?.trackName ?? "Nada reproduciendose"}
+            lastProviderExpiryLabel={formatDateTime(state.provider.expiresAt)}
+            lastPlaybackSuccessLabel={formatDateTime(state.runtime.lastPlaybackSuccessAt)}
+            lastPlaybackAttemptLabel={formatDateTime(state.runtime.lastPlaybackAttemptAt)}
+            resumedAtLabel={formatDateTime(state.autoResume.resumedAt)}
+            feedback={feedback}
+            formatDateTime={formatDateTime}
+          />
 
           <section className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
             <div className="space-y-6">
+              <section className="rounded-[30px] border border-cyan-400/20 bg-cyan-500/8 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-cyan-200/70">Sesion Jam</p>
+                    <h3 className="mt-2 text-xl font-semibold text-white">
+                      {state.jam.active
+                        ? `Jam compartida de ${jamHostName}`
+                        : "Jam compartida lista para arrancar"}
+                    </h3>
+                    <p className="mt-2 max-w-2xl text-sm text-cyan-50/80">{jamHelpText}</p>
+                  </div>
+                  <span className="rounded-full border border-cyan-300/20 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-100">
+                    {jamStatusLabel}
+                  </span>
+                </div>
+
+                {state.jam.active ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {state.jam.participants.map((participant) => (
+                      <span
+                        key={participant.barberoId}
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                          participant.isHost
+                            ? "border-[#8cff59]/30 bg-[#8cff59]/10 text-[#d8ffc7]"
+                            : "border-white/10 bg-white/5 text-zinc-200"
+                        }`}
+                      >
+                        {participant.nombre}
+                        {participant.isHost ? " host" : ""}
+                        {participant.trackCount > 0 ? ` · ${participant.trackCount} temas` : ""}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {!state.jam.active || state.mode.activeMode !== "jam" ? (
+                    <ActionButton
+                      disabled={isPending}
+                      onClick={() =>
+                        runMutation(
+                          () => activateJamModeAction(),
+                          "Jam activa. Esta sesion queda lista para que otros se sumen.",
+                        )
+                      }
+                      className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-3 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/20 disabled:opacity-60"
+                    >
+                      Iniciar Jam
+                    </ActionButton>
+                  ) : null}
+
+                  {viewerCanJoinJam ? (
+                    <ActionButton
+                      disabled={isPending}
+                      onClick={() =>
+                        runMutation(
+                          () => joinJamSessionAction(),
+                          `Te sumaste a la Jam de ${jamHostName}.`,
+                        )
+                      }
+                      className="rounded-2xl border border-[#8cff59]/30 bg-[#8cff59]/10 px-4 py-3 text-sm font-semibold text-[#d8ffc7] hover:bg-[#8cff59]/20 disabled:opacity-60"
+                    >
+                      Unirme a la Jam
+                    </ActionButton>
+                  ) : null}
+
+                  {viewerIsJamHost ? (
+                    <span className="rounded-2xl border border-[#8cff59]/20 bg-[#8cff59]/8 px-4 py-3 text-sm font-semibold text-[#d8ffc7]">
+                      Sos el host de esta sesion
+                    </span>
+                  ) : null}
+
+                  {!viewerIsJamHost && viewerJoinedJam ? (
+                    <span className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-100">
+                      Ya estas unido a la Jam
+                    </span>
+                  ) : null}
+
+                  {state.jam.active && !viewerBarberoId ? (
+                    <span className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300">
+                      Esta sesion admite participantes con perfil de barbero activo.
+                    </span>
+                  ) : null}
+                </div>
+
+                <p className="mt-4 text-sm text-cyan-50/75">
+                  Para sumar temas: unite a la Jam y despues usa <span className="font-semibold text-white">Cola Jam</span> en el buscador de Spotify.
+                </p>
+              </section>
+
               <section className="rounded-[30px] border border-zinc-800 bg-zinc-900/80 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -307,10 +338,17 @@ export default function MusicOperationConsole({ state }: OperationConsoleProps) 
                   </ActionButton>
                   <ActionButton
                     disabled={isPending}
-                    onClick={() => runMutation(() => activateJamModeAction(), "Jam activo.")}
+                    onClick={() =>
+                      runMutation(
+                        () => activateJamModeAction(),
+                        state.jam.active
+                          ? "Jam sigue activa. Puedes seguir sumando gente y temas."
+                          : "Jam activa.",
+                      )
+                    }
                     className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-3 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/20 disabled:opacity-60"
                   >
-                    Jam
+                    {state.mode.activeMode === "jam" ? "Jam activa" : "Jam"}
                   </ActionButton>
                 </div>
 
@@ -380,6 +418,11 @@ export default function MusicOperationConsole({ state }: OperationConsoleProps) 
                 ) : null}
 
                 <div className="mt-5 grid gap-3">
+                  {jamNeedsJoinBeforeAdding ? (
+                    <div className="rounded-3xl border border-cyan-400/20 bg-cyan-500/8 p-4 text-sm text-cyan-50/85">
+                      Primero unite a la Jam actual y despues se habilita <span className="font-semibold text-white">Cola Jam</span>.
+                    </div>
+                  ) : null}
                   {searchResults.length === 0 && !searchError ? (
                     <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-950/60 p-5 text-sm text-zinc-400">
                       Buscá un tema para mandarlo a DJ o a Jam.
@@ -417,7 +460,7 @@ export default function MusicOperationConsole({ state }: OperationConsoleProps) 
                           Cola DJ
                         </ActionButton>
                         <ActionButton
-                          disabled={isPending}
+                          disabled={isPending || jamNeedsJoinBeforeAdding}
                           onClick={() =>
                             runMutation(
                               () =>
@@ -427,12 +470,14 @@ export default function MusicOperationConsole({ state }: OperationConsoleProps) 
                                   trackName: track.name,
                                   artistName: track.artistNames.join(", "),
                                 }),
-                              `Tema ${track.name} agregado a Jam.`,
+                              state.jam.active
+                                ? `Tema ${track.name} agregado a la Jam compartida.`
+                                : `Tema ${track.name} agregado a Jam.`,
                             )
                           }
                           className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-3 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/20 disabled:opacity-60"
                         >
-                          Cola Jam
+                          {jamNeedsJoinBeforeAdding ? "Unite primero" : "Cola Jam"}
                         </ActionButton>
                       </div>
                     </div>
@@ -442,175 +487,46 @@ export default function MusicOperationConsole({ state }: OperationConsoleProps) 
             </div>
 
             <div className="space-y-6">
-              <section className="rounded-[30px] border border-zinc-800 bg-zinc-900/80 p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Propuestas</p>
-                    <h3 className="mt-2 text-xl font-semibold text-white">Cliente llego</h3>
-                  </div>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                    {state.proposals.length} pendientes
-                  </span>
-                </div>
+              <MusicProposalsSection
+                proposals={state.proposals}
+                isPending={isPending}
+                jamNeedsJoinBeforeAdding={jamNeedsJoinBeforeAdding}
+                onAcceptProposal={(proposalId, mode, clientName) =>
+                  runMutation(
+                    () => acceptMusicProposalAction({ eventId: proposalId }, mode),
+                    `Propuesta de ${clientName} enviada a ${mode === "dj" ? "DJ" : "Jam"}.`,
+                  )
+                }
+                onDismissProposal={(proposalId) =>
+                  runMutation(
+                    () => dismissMusicProposalAction({ eventId: proposalId }),
+                    "Propuesta ocultada.",
+                  )
+                }
+                formatDateTime={formatDateTime}
+              />
 
-                <div className="mt-5 space-y-3">
-                  {state.proposals.length === 0 ? (
-                    <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-950/60 p-5 text-sm text-zinc-400">
-                      No hay propuestas nuevas desde Turnos.
-                    </div>
-                  ) : null}
+              <MusicPlaylistsSection
+                playlists={state.playlists}
+                isPending={isPending}
+                onPlayPlaylist={(playlistUri, playlistName) =>
+                  runMutation(
+                    () =>
+                      playPlaylistNowAction({
+                        playlistUri,
+                        playlistName,
+                      }),
+                    `Playlist ${playlistName} enviada al modo DJ.`,
+                  )
+                }
+              />
 
-                  {state.proposals.map((proposal) => (
-                    <div
-                      key={proposal.id}
-                      className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-base font-semibold text-white">{proposal.cancion}</p>
-                          <p className="mt-1 text-sm text-zinc-400">
-                            {proposal.clienteNombre} - {formatDateTime(proposal.createdAt)}
-                          </p>
-                          {!proposal.spotifyTrackUri ? (
-                            <p className="mt-2 text-xs text-amber-300">
-                              Falta track vinculada en Spotify. Si queres usarla, buscalo manualmente
-                              abajo.
-                            </p>
-                          ) : null}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <ActionButton
-                            disabled={isPending || !proposal.spotifyTrackUri}
-                            onClick={() =>
-                              runMutation(
-                                () => acceptMusicProposalAction({ eventId: proposal.id }, "dj"),
-                                `Propuesta de ${proposal.clienteNombre} enviada a DJ.`,
-                              )
-                            }
-                            className="rounded-2xl border border-[#8cff59]/30 bg-[#8cff59]/10 px-4 py-3 text-sm font-semibold text-[#d8ffc7] hover:bg-[#8cff59]/20 disabled:opacity-50"
-                          >
-                            A DJ
-                          </ActionButton>
-                          <ActionButton
-                            disabled={isPending || !proposal.spotifyTrackUri}
-                            onClick={() =>
-                              runMutation(
-                                () => acceptMusicProposalAction({ eventId: proposal.id }, "jam"),
-                                `Propuesta de ${proposal.clienteNombre} enviada a Jam.`,
-                              )
-                            }
-                            className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-3 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/20 disabled:opacity-50"
-                          >
-                            A Jam
-                          </ActionButton>
-                          <ActionButton
-                            disabled={isPending}
-                            onClick={() =>
-                              runMutation(
-                                () => dismissMusicProposalAction({ eventId: proposal.id }),
-                                "Propuesta ocultada.",
-                              )
-                            }
-                            className="rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-300 hover:bg-zinc-800 disabled:opacity-50"
-                          >
-                            Ocultar
-                          </ActionButton>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="rounded-[30px] border border-zinc-800 bg-zinc-900/80 p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Playlists</p>
-                    <h3 className="mt-2 text-xl font-semibold text-white">Modo Auto y Soy DJ</h3>
-                  </div>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                    {state.playlists.length} playlists
-                  </span>
-                </div>
-
-                <div className="mt-5 grid gap-3">
-                  {state.playlists.length === 0 ? (
-                    <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-950/60 p-5 text-sm text-zinc-400">
-                      Conecta Spotify y refresca para traer playlists del negocio.
-                    </div>
-                  ) : null}
-
-                  {state.playlists.map((playlist) => (
-                    <div
-                      key={playlist.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-base font-semibold text-white">{playlist.name}</p>
-                        <p className="mt-1 text-sm text-zinc-400">
-                          {playlist.ownerName ?? "Spotify"} - {playlist.trackCount} tracks
-                        </p>
-                      </div>
-                      <ActionButton
-                        disabled={isPending}
-                        onClick={() =>
-                          runMutation(
-                            () =>
-                              playPlaylistNowAction({
-                                playlistUri: playlist.uri,
-                                playlistName: playlist.name,
-                              }),
-                            `Playlist ${playlist.name} enviada al modo DJ.`,
-                          )
-                        }
-                        className="rounded-2xl bg-[#8cff59] px-4 py-3 text-sm font-semibold text-[#07130a] hover:bg-[#b6ff84] disabled:opacity-60"
-                      >
-                        Poner ahora
-                      </ActionButton>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="rounded-[30px] border border-zinc-800 bg-zinc-900/80 p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Cola</p>
-                    <h3 className="mt-2 text-xl font-semibold text-white">Jam y cola manual</h3>
-                  </div>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                    {state.queue.items.length} items
-                  </span>
-                </div>
-
-                <div className="mt-5 space-y-3">
-                  {state.queue.items.length === 0 ? (
-                    <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-950/60 p-5 text-sm text-zinc-400">
-                      Todavia no hay temas en la cola activa.
-                    </div>
-                  ) : null}
-
-                  {state.queue.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-base font-semibold text-white">{item.displayTitle}</p>
-                          <p className="mt-1 text-sm text-zinc-400">
-                            {item.displayArtist ?? "Artista desconocido"} -{" "}
-                            {item.ownerBarberoNombre ?? "Sistema"}
-                          </p>
-                        </div>
-                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                          {item.state}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
+              <MusicQueueSection
+                queueItems={state.queue.items}
+                jamActive={state.jam.active}
+                jamHostName={jamHostName}
+                jamHostBarberoId={state.jam.hostBarberoId}
+              />
             </div>
           </section>
         </div>

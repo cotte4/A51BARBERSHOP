@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { canAccessPublicReserva } from "@/lib/public-reserva-access";
-import { getTurnosDisponibles, resolvePublicBarberoBySlug } from "@/lib/turnos";
+import {
+  canReserveOnPublicFecha,
+  getFechaMananaArgentina,
+  getTurnosDisponibles,
+  resolvePublicBarberoBySlug,
+} from "@/lib/turnos";
 
 const querySchema = z.object({
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -23,6 +28,15 @@ export async function GET(request: Request) {
 
   if (!parsed.success) {
     return Response.json({ error: "Parametros invalidos." }, { status: 400 });
+  }
+
+  if (!canReserveOnPublicFecha(parsed.data.fecha)) {
+    return Response.json(
+      {
+        error: `La reserva publica arranca desde ${getFechaMananaArgentina()}. Elegi una fecha posterior.`,
+      },
+      { status: 400 }
+    );
   }
 
   const barbero = await resolvePublicBarberoBySlug(parsed.data.slug);

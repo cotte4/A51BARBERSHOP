@@ -1,7 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { productos, servicios, turnos, turnosDisponibilidad, turnosExtras } from "@/db/schema";
-import { isFechaCerrada } from "@/lib/turnos";
+import { canReserveOnPublicFecha, isFechaCerrada } from "@/lib/turnos";
 import type { TurnoExtraInput } from "@/lib/types";
 
 export type TurnoClientContext = {
@@ -85,6 +85,14 @@ export async function createTurnoReserva(
   const slot = slotRows[0];
   if (!slot) {
     return { ok: false, status: 409, message: "Ese horario ya no esta disponible." };
+  }
+
+  if (!canReserveOnPublicFecha(slot.fecha)) {
+    return {
+      ok: false,
+      status: 409,
+      message: "La reserva publica solo acepta turnos desde manana en adelante.",
+    };
   }
 
   const servicio = servicioRows[0];

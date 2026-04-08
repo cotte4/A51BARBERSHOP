@@ -4,12 +4,12 @@ import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { pantallaEvents, turnos, turnosDisponibilidad } from "@/db/schema";
-import { requireAdminSession } from "@/lib/admin-action";
 import { handleClienteLlego } from "@/lib/music-engine";
 import { getTurnosActorContext } from "@/lib/turnos-access";
 import {
   TURNO_DURACIONES,
   findClientByPhone,
+  getBarberoAgendaProfile,
   getFechaHoyArgentina,
   isFechaCerrada,
 } from "@/lib/turnos";
@@ -235,8 +235,12 @@ export async function crearDisponibilidadAction(
   _prevState: TurnoActionState,
   formData: FormData
 ): Promise<TurnoActionState> {
-  if (!(await requireAdminSession())) {
-    return { error: "Solo el admin puede gestionar disponibilidad." };
+  const actor = await getTurnosActorContext();
+  if (!actor) {
+    return { error: "Necesitas iniciar sesion para gestionar disponibilidad." };
+  }
+  if (!actor.isAdmin && actor.barberoId !== barberoId) {
+    return { error: "Solo podes gestionar tu propia disponibilidad." };
   }
 
   const fecha = String(formData.get("fecha") ?? "");
@@ -308,8 +312,14 @@ export async function crearDisponibilidadAction(
     return { error: "Ese rango ya estaba cargado completo." };
   }
 
+  const agendaBarbero = await getBarberoAgendaProfile(barberoId);
+
+  revalidatePath("/turnos");
+  revalidatePath("/hoy");
   revalidatePath("/turnos/disponibilidad");
-  revalidatePath("/reservar/pinky");
+  if (agendaBarbero?.publicSlug) {
+    revalidatePath(`/reservar/${agendaBarbero.publicSlug}`);
+  }
   return {
     success:
       createdCount === 1
@@ -319,7 +329,8 @@ export async function crearDisponibilidadAction(
 }
 
 export async function eliminarDisponibilidadAction(slotId: string): Promise<void> {
-  if (!(await requireAdminSession())) {
+  const actor = await getTurnosActorContext();
+  if (!actor) {
     return;
   }
 
@@ -329,6 +340,9 @@ export async function eliminarDisponibilidadAction(slotId: string): Promise<void
     .where(eq(turnosDisponibilidad.id, slotId))
     .limit(1);
   if (!slot) {
+    return;
+  }
+  if (!actor.isAdmin && actor.barberoId !== slot.barberoId) {
     return;
   }
 
@@ -351,8 +365,14 @@ export async function eliminarDisponibilidadAction(slotId: string): Promise<void
 
   await db.delete(turnosDisponibilidad).where(eq(turnosDisponibilidad.id, slotId));
 
+  const agendaBarbero = await getBarberoAgendaProfile(slot.barberoId);
+
+  revalidatePath("/turnos");
+  revalidatePath("/hoy");
   revalidatePath("/turnos/disponibilidad");
-  revalidatePath("/reservar/pinky");
+  if (agendaBarbero?.publicSlug) {
+    revalidatePath(`/reservar/${agendaBarbero.publicSlug}`);
+  }
 }
 
 export async function crearTurnoRapidoAction(

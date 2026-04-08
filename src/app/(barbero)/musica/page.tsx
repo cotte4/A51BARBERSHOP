@@ -91,7 +91,10 @@ export default async function MusicaPage() {
           </section>
 
           <div className="mt-6">
-            <MusicOperationConsole state={state} />
+            <MusicOperationConsole
+              state={state}
+              viewerBarberoId={actor.barberoId}
+            />
           </div>
         </div>
       </div>

@@ -15,10 +15,28 @@ import {
 
 export const TURNO_DURACIONES = [45, 60] as const;
 
-export function getFechaHoyArgentina(): string {
-  return new Date().toLocaleDateString("en-CA", {
+function formatFechaArgentina(date: Date): string {
+  return date.toLocaleDateString("en-CA", {
     timeZone: "America/Argentina/Buenos_Aires",
   });
+}
+
+function getFechaArgentina(daysFromToday = 0): string {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + daysFromToday);
+  return formatFechaArgentina(date);
+}
+
+export function getFechaHoyArgentina(): string {
+  return getFechaArgentina();
+}
+
+export function getFechaMananaArgentina(): string {
+  return getFechaArgentina(1);
+}
+
+export function canReserveOnPublicFecha(fecha: string): boolean {
+  return fecha >= getFechaMananaArgentina();
 }
 
 export function normalizeHora(hora: string): string {
@@ -46,6 +64,23 @@ export async function resolvePublicBarberoBySlug(slug: string) {
         eq(barberos.activo, true)
       )
     )
+    .limit(1);
+
+  return barbero ?? null;
+}
+
+export async function getBarberoAgendaProfile(barberoId: string) {
+  const [barbero] = await db
+    .select({
+      id: barberos.id,
+      nombre: barberos.nombre,
+      rol: barberos.rol,
+      activo: barberos.activo,
+      publicSlug: barberos.publicSlug,
+      publicReservaActiva: barberos.publicReservaActiva,
+    })
+    .from(barberos)
+    .where(and(eq(barberos.id, barberoId), eq(barberos.activo, true)))
     .limit(1);
 
   return barbero ?? null;

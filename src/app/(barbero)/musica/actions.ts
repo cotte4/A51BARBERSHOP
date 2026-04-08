@@ -11,6 +11,7 @@ import {
   deleteScheduleRule,
   disconnectMusicProvider,
   getDefaultWeekdayMask,
+  joinActiveJamSession,
   pauseMusic,
   playPlaylistNow,
   previousMusic,
@@ -23,6 +24,7 @@ import {
   syncMusicEngine,
 } from "@/lib/music-engine";
 import type { WeekdayKey } from "@/lib/music-types";
+import type { TurnosActorContext } from "@/lib/turnos-access";
 import { getTurnosActorContext } from "@/lib/turnos-access";
 
 type ActionResult = {
@@ -49,6 +51,17 @@ async function requireMusicAdmin() {
     throw new Error("Solo el admin puede cambiar esta configuracion.");
   }
   return admin;
+}
+
+async function requireMusicBarberoActor(): Promise<TurnosActorContext & { barberoId: string }> {
+  const actor = await requireMusicActor();
+  if (!actor.barberoId) {
+    throw new Error("Necesitas un perfil de barbero activo para unirte a Jam.");
+  }
+  return {
+    ...actor,
+    barberoId: actor.barberoId,
+  };
 }
 
 const queueTrackSchema = z.object({
@@ -126,6 +139,20 @@ export async function activateJamModeAction(): Promise<ActionResult> {
     return { ok: true };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "No pude activar Jam." };
+  }
+}
+
+export async function joinJamSessionAction(): Promise<ActionResult> {
+  try {
+    const actor = await requireMusicBarberoActor();
+    await joinActiveJamSession({
+      userId: actor.userId,
+      barberoId: actor.barberoId,
+    });
+    revalidateMusicSurfaces();
+    return { ok: true };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No pude sumarte a la Jam." };
   }
 }
 

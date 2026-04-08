@@ -29,7 +29,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-// â”€â”€â”€ Tipos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ������ Tipos ��������������������������������������������������������������������������������������
 
 export type CierreFormState = {
   error?: string;
@@ -47,7 +47,7 @@ export type AtencionFormState = {
   };
 };
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ������ Helpers ����������������������������������������������������������������������������������
 
 function getFechaHoy(): string {
   return getFechaHoyArgentina();
@@ -92,7 +92,7 @@ function parseProductosSeleccionados(formData: FormData): ProductoSeleccionadoIn
   }
 }
 
-// â”€â”€â”€ registrarAtencion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ������ registrarAtencion ����������������������������������������������������������������
 
 export async function registrarAtencion(
   prevState: AtencionFormState,
@@ -100,7 +100,7 @@ export async function registrarAtencion(
 ): Promise<AtencionFormState> {
   const actor = await getCajaActorContext();
   if (!actor) {
-    return { error: "DebÃ©s iniciar sesiÃ³n para registrar atenciones." };
+    return { error: "Debes iniciar sesion para registrar atenciones." };
   }
 
   // Leer campos
@@ -110,16 +110,16 @@ export async function registrarAtencion(
   const clientId = clientIdRaw.trim() || null;
   const medioPagoId = formData.get("medioPagoId") as string;
   const precioCobradoStr = formData.get("precioCobrado") as string;
-  const adicionalesIds = formData.getAll("adicionalesIds") as string[]; // mÃºltiples
+  const adicionalesIds = formData.getAll("adicionalesIds") as string[]; // multiples
   const notas = formData.get("notas") as string | null;
 
   const productosSeleccionados = parseProductosSeleccionados(formData);
 
   // Validaciones
   const fieldErrors: AtencionFormState["fieldErrors"] = {};
-  if (!barberoId) fieldErrors.barberoId = "SeleccionÃ¡ un barbero";
-  if (!servicioId) fieldErrors.servicioId = "SeleccionÃ¡ un servicio";
-  if (!medioPagoId) fieldErrors.medioPagoId = "SeleccionÃ¡ un medio de pago";
+  if (!barberoId) fieldErrors.barberoId = "Selecciona un barbero";
+  if (!servicioId) fieldErrors.servicioId = "Selecciona un servicio";
+  if (!medioPagoId) fieldErrors.medioPagoId = "Selecciona un medio de pago";
   if (precioCobradoStr === "" || precioCobradoStr === null || isNaN(Number(precioCobradoStr))) {
     fieldErrors.precioCobrado = "El precio es requerido";
   } else if (Number(precioCobradoStr) < 0) {
@@ -131,7 +131,7 @@ export async function registrarAtencion(
       return { error: "Tu usuario no tiene un barbero activo vinculado." };
     }
     if (barberoId && barberoId !== actor.barberoId) {
-      fieldErrors.barberoId = "Solo podÃ©s registrar atenciones para tu perfil.";
+      fieldErrors.barberoId = "Solo podes registrar atenciones para tu perfil.";
     }
   }
 
@@ -158,7 +158,7 @@ export async function registrarAtencion(
   } catch (e) {
     console.error("Error registrando atencion:", e);
     return {
-      error: e instanceof Error ? e.message : "No se pudo registrar la atención. Intentá de nuevo.",
+      error: e instanceof Error ? e.message : "No se pudo registrar la atencion. Intenta de nuevo.",
     };
   }
 
@@ -173,7 +173,7 @@ export async function registrarAtencion(
   redirect("/caja");
 }
 
-// â”€â”€â”€ editarAtencion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ������ editarAtencion ����������������������������������������������������������������������
 
 export type AtencionRapidaState = {
   error?: string;
@@ -187,16 +187,16 @@ async function registrarAtencionRapidaInterna(
   const userRole = (session?.user as { role?: string } | undefined)?.role;
 
   if (!userId) {
-    return { error: "DebÃƒÂ©s iniciar sesiÃƒÂ³n para registrar una atenciÃƒÂ³n." };
+    return { error: "Debes iniciar sesion para registrar una atencion." };
   }
 
   if (await hasCajaCerradaHoy()) {
-    return { error: "La caja del dÃƒÂ­a ya fue cerrada. No se pueden registrar nuevas atenciones." };
+    return { error: "La caja del dia ya fue cerrada. No se pueden registrar nuevas atenciones." };
   }
 
   const barberoId = await resolveCajaActorBarberoId(userId, userRole === "admin");
   if (!barberoId) {
-    return { error: "No encontrÃƒÂ© un barbero activo vinculado para usar la acciÃƒÂ³n rÃƒÂ¡pida." };
+    return { error: "No encontre un barbero activo vinculado para usar la accion rapida." };
   }
 
   const defaults = await getQuickActionDefaultsForBarbero(barberoId);
@@ -213,7 +213,7 @@ async function registrarAtencionRapidaInterna(
     });
   } catch (error) {
     console.error("Error registrando atencion rapida:", error);
-    return { error: "No se pudo registrar la atenciÃƒÂ³n rÃƒÂ¡pida. IntentÃƒÂ¡ de nuevo." };
+    return { error: "No se pudo registrar la atencion rapida. Intenta de nuevo." };
   }
 
   revalidatePath("/caja");
@@ -249,7 +249,7 @@ function sanitizeReturnTo(value: string | null): string {
   return "/caja";
 }
 
-// Acción express: acepta servicioId + medioPagoId explícitos desde el panel de caja
+// Accion express: acepta servicioId + medioPagoId explicitos desde el panel de caja
 export async function registrarAtencionExpressAction(
   prevState: AtencionRapidaState,
   formData: FormData
@@ -258,23 +258,23 @@ export async function registrarAtencionExpressAction(
   const userId = session?.user?.id;
   const userRole = (session?.user as { role?: string } | undefined)?.role;
 
-  if (!userId) return { error: "Debés iniciar sesión para registrar una atención." };
-  if (await hasCajaCerradaHoy()) return { error: "La caja del día ya fue cerrada." };
+  if (!userId) return { error: "Debes iniciar sesion para registrar una atencion." };
+  if (await hasCajaCerradaHoy()) return { error: "La caja del dia ya fue cerrada." };
 
   const barberoId = await resolveCajaActorBarberoId(userId, userRole === "admin");
-  if (!barberoId) return { error: "No encontré un barbero activo vinculado." };
+  if (!barberoId) return { error: "No encontre un barbero activo vinculado." };
 
   const servicioId = formData.get("servicioId") as string | null;
   const medioPagoId = formData.get("medioPagoId") as string | null;
   const precioCobradoStr = formData.get("precioCobrado") as string | null;
   const returnTo = formData.get("returnTo") as string | null;
 
-  if (!servicioId) return { error: "Seleccioná un servicio." };
-  if (!medioPagoId) return { error: "Seleccioná un medio de pago." };
+  if (!servicioId) return { error: "Selecciona un servicio." };
+  if (!medioPagoId) return { error: "Selecciona un medio de pago." };
 
   const precioCobrado = Number(precioCobradoStr ?? 0);
   if (!precioCobradoStr || isNaN(precioCobrado) || precioCobrado <= 0) {
-    return { error: "El precio del servicio no es válido." };
+    return { error: "El precio del servicio no es valido." };
   }
 
   try {
@@ -282,7 +282,7 @@ export async function registrarAtencionExpressAction(
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("Error registrando atencion express:", message);
-    return { error: "No se pudo registrar la atención. Intentá de nuevo." };
+    return { error: "No se pudo registrar la atencion. Intenta de nuevo." };
   }
 
   revalidatePath("/caja");
@@ -298,7 +298,7 @@ export async function editarAtencion(
 ): Promise<AtencionFormState> {
   const actor = await getCajaActorContext();
   if (!actor) {
-    return { error: "DebÃ©s iniciar sesiÃ³n para editar atenciones." };
+    return { error: "Debes iniciar sesion para editar atenciones." };
   }
 
   const barberoId = formData.get("barberoId") as string;
@@ -317,16 +317,16 @@ export async function editarAtencion(
     .where(eq(atenciones.id, id))
     .limit(1);
 
-  if (!atencionExistente) return { error: "AtenciÃ³n no encontrada." };
-  if (atencionExistente.anulado) return { error: "No se puede editar una atenciÃ³n anulada." };
+  if (!atencionExistente) return { error: "Atencion no encontrada." };
+  if (atencionExistente.anulado) return { error: "No se puede editar una atencion anulada." };
   if (atencionExistente.fecha !== getFechaHoy()) {
-    return { error: "Solo se pueden editar atenciones del dÃ­a de hoy." };
+    return { error: "Solo se pueden editar atenciones del dia de hoy." };
   }
 
   const fieldErrors: AtencionFormState["fieldErrors"] = {};
-  if (!barberoId) fieldErrors.barberoId = "SeleccionÃ¡ un barbero";
-  if (!servicioId) fieldErrors.servicioId = "SeleccionÃ¡ un servicio";
-  if (!medioPagoId) fieldErrors.medioPagoId = "SeleccionÃ¡ un medio de pago";
+  if (!barberoId) fieldErrors.barberoId = "Selecciona un barbero";
+  if (!servicioId) fieldErrors.servicioId = "Selecciona un servicio";
+  if (!medioPagoId) fieldErrors.medioPagoId = "Selecciona un medio de pago";
   if (precioCobradoStr === "" || isNaN(Number(precioCobradoStr))) {
     fieldErrors.precioCobrado = "El precio es requerido";
   } else if (Number(precioCobradoStr) < 0) {
@@ -337,10 +337,10 @@ export async function editarAtencion(
       return { error: "Tu usuario no tiene un barbero activo vinculado." };
     }
     if (atencionExistente.barberoId !== actor.barberoId) {
-      return { error: "Solo podÃ©s editar atenciones de tu perfil." };
+      return { error: "Solo podes editar atenciones de tu perfil." };
     }
     if (barberoId && barberoId !== actor.barberoId) {
-      fieldErrors.barberoId = "Solo podÃ©s editar atenciones de tu perfil.";
+      fieldErrors.barberoId = "Solo podes editar atenciones de tu perfil.";
     }
   }
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
@@ -359,24 +359,24 @@ export async function editarAtencion(
   }
 
   try {
-    // Verificar que la atenciÃ³n existe y es de hoy
+    // Verificar que la atencion existe y es de hoy
     const [atencionExistente] = await db
       .select()
       .from(atenciones)
       .where(eq(atenciones.id, id))
       .limit(1);
 
-    if (!atencionExistente) return { error: "AtenciÃ³n no encontrada." };
-    if (atencionExistente.anulado) return { error: "No se puede editar una atenciÃ³n anulada." };
+    if (!atencionExistente) return { error: "Atencion no encontrada." };
+    if (atencionExistente.anulado) return { error: "No se puede editar una atencion anulada." };
     if (atencionExistente.fecha !== getFechaHoy()) {
-      return { error: "Solo se pueden editar atenciones del dÃ­a de hoy." };
+      return { error: "Solo se pueden editar atenciones del dia de hoy." };
     }
 
     const [barbero] = await db.select().from(barberos).where(eq(barberos.id, barberoId)).limit(1);
     const [medioPago] = await db.select().from(mediosPago).where(eq(mediosPago.id, medioPagoId)).limit(1);
     const [servicio] = await db.select().from(servicios).where(eq(servicios.id, servicioId)).limit(1);
 
-    if (!barbero || !medioPago || !servicio) return { error: "Datos invÃ¡lidos." };
+    if (!barbero || !medioPago || !servicio) return { error: "Datos invalidos." };
 
     const precioCobrado = Number(precioCobradoStr);
     const comisionMpPct = Number(medioPago.comisionPorcentaje ?? 0);
@@ -429,7 +429,7 @@ export async function editarAtencion(
   } catch (e) {
     console.error("Error editando atencion:", e);
     return {
-      error: e instanceof Error ? e.message : "No se pudo actualizar la atención. Intentá de nuevo.",
+      error: e instanceof Error ? e.message : "No se pudo actualizar la atencion. Intenta de nuevo.",
     };
   }
 
@@ -447,7 +447,7 @@ export async function editarAtencion(
   redirect("/caja");
 }
 
-// â”€â”€â”€ anularAtencion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ������ anularAtencion ����������������������������������������������������������������������
 
 export async function anularAtencion(
   id: string,
@@ -463,7 +463,7 @@ export async function anularAtencion(
 
   const motivoAnulacion = formData.get("motivoAnulacion") as string;
   if (!motivoAnulacion || motivoAnulacion.trim() === "") {
-    return { fieldErrors: { motivoAnulacion: "El motivo de anulaciÃ³n es requerido" } };
+    return { fieldErrors: { motivoAnulacion: "El motivo de anulacion es requerido" } };
   }
 
   try {
@@ -473,10 +473,10 @@ export async function anularAtencion(
       .where(eq(atenciones.id, id))
       .limit(1);
 
-    if (!atencionExistente) return { error: "AtenciÃ³n no encontrada." };
-    if (atencionExistente.anulado) return { error: "Esta atenciÃ³n ya estÃ¡ anulada." };
+    if (!atencionExistente) return { error: "Atencion no encontrada." };
+    if (atencionExistente.anulado) return { error: "Esta atencion ya esta anulada." };
     if (atencionExistente.fecha !== getFechaHoy()) {
-      return { error: "Solo se pueden anular atenciones del dÃ­a de hoy." };
+      return { error: "Solo se pueden anular atenciones del dia de hoy." };
     }
 
     await db.update(atenciones).set({
@@ -485,21 +485,21 @@ export async function anularAtencion(
     }).where(eq(atenciones.id, id));
   } catch (e) {
     console.error("Error anulando atencion:", e);
-    return { error: "No se pudo anular la atenciÃ³n. IntentÃ¡ de nuevo." };
+    return { error: "No se pudo anular la atencion. Intenta de nuevo." };
   }
 
   revalidatePath("/caja");
   revalidatePath("/hoy");
-  return {}; // No redirect â€” el usuario sigue en la pÃ¡gina de caja
+  return {}; // No redirect: el usuario sigue en la pagina de caja
 }
 
-// â”€â”€â”€ cerrarCaja â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ������ cerrarCaja ������������������������������������������������������������������������������
 
 export async function cerrarCaja(
   prevState: CierreFormState,
   formData: FormData
 ): Promise<CierreFormState> {
-  // 1. Verificar sesiÃ³n admin
+  // 1. Verificar sesion admin
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
   if (userRole !== "admin") {
@@ -522,7 +522,7 @@ export async function cerrarCaja(
   }
 
   try {
-    // 3. Traer todas las atenciones no anuladas del dÃ­a
+    // 3. Traer todas las atenciones no anuladas del dia
     const atencionesDelDia = await db
       .select()
       .from(atenciones)
@@ -532,7 +532,7 @@ export async function cerrarCaja(
     const mediosPagoList = await db.select().from(mediosPago);
     const cantidadAtenciones = atencionesDelDia.length;
 
-    // 4. Calcular totales generales y caja neta real del dÃ­a
+    // 4. Calcular totales generales y caja neta real del dia
     const fechaHoyDate = new Date(fechaHoy + "T00:00:00-03:00");
     const finDia = new Date(fechaHoy + "T23:59:59-03:00");
     const ventasProductos = await db.select().from(stockMovimientos)
@@ -561,7 +561,7 @@ export async function cerrarCaja(
     const totalComisionesMedios = cierreResumen.totales.totalComisionesMediosDia;
     const totalNeto = cierreResumen.totales.cajaNetaDia;
 
-    // 5. Totales por medio de pago â€” servicios + productos
+    // 5. Totales por medio de pago: servicios + productos
     const mediosPagoMap = new Map(mediosPagoList.map(m => [m.id, m]));
 
     // Acumular por nombre de medio de pago
@@ -629,7 +629,7 @@ export async function cerrarCaja(
     }
   } catch (e) {
     console.error("Error cerrando caja:", e);
-    return { error: "No se pudo cerrar la caja. IntentÃ¡ de nuevo." };
+    return { error: "No se pudo cerrar la caja. Intenta de nuevo." };
   }
 
   revalidatePath("/caja");
@@ -637,7 +637,7 @@ export async function cerrarCaja(
   redirect(`/caja/cierre/${getFechaHoy()}`);
 }
 
-// â”€â”€â”€ registrarVentaProducto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ������ registrarVentaProducto ������������������������������������������������������
 
 export type VentaProductoFormState = {
   error?: string;
@@ -661,7 +661,7 @@ export async function registrarVentaProducto(
 
   // Validaciones
   const fieldErrors: VentaProductoFormState["fieldErrors"] = {};
-  if (!productoId) fieldErrors.productoId = "SeleccionÃ¡ un producto";
+  if (!productoId) fieldErrors.productoId = "Selecciona un producto";
   if (!cantidadStr || isNaN(Number(cantidadStr)) || Number(cantidadStr) < 1) {
     fieldErrors.cantidad = "La cantidad debe ser al menos 1";
   }
@@ -670,14 +670,14 @@ export async function registrarVentaProducto(
   } else if (Number(precioCobradoStr) < 0) {
     fieldErrors.precioCobrado = "El precio no puede ser negativo";
   }
-  if (!medioPagoId) fieldErrors.medioPagoId = "SeleccionÃ¡ un medio de pago";
+  if (!medioPagoId) fieldErrors.medioPagoId = "Selecciona un medio de pago";
 
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
-  // Verificar sesiÃ³n
+  // Verificar sesion
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
-    return { error: "DebÃ©s iniciar sesiÃ³n para realizar esta operaciÃ³n." };
+    return { error: "Debes iniciar sesion para realizar esta operacion." };
   }
 
   // Verificar que no hay cierre para hoy
@@ -695,7 +695,7 @@ export async function registrarVentaProducto(
   const cantidad = parseInt(cantidadStr, 10);
   const precioCobrado = Number(precioCobradoStr);
 
-  // Verificar que el producto exista, estÃ© activo y tenga stock suficiente
+  // Verificar que el producto exista, este activo y tenga stock suficiente
   const [producto] = await db
     .select()
     .from(productos)
@@ -703,7 +703,7 @@ export async function registrarVentaProducto(
     .limit(1);
 
   if (!producto) return { fieldErrors: { productoId: "Producto no encontrado" } };
-  if (!producto.activo) return { fieldErrors: { productoId: "El producto no estÃ¡ activo" } };
+  if (!producto.activo) return { fieldErrors: { productoId: "El producto no esta activo" } };
   if ((producto.stockActual ?? 0) < cantidad) {
     return { error: `Sin stock disponible. Stock actual: ${producto.stockActual ?? 0}` };
   }
@@ -728,7 +728,7 @@ export async function registrarVentaProducto(
     });
   } catch (e) {
     console.error("Error registrando venta de producto:", e);
-    return { error: "No se pudo registrar la venta. IntentÃ¡ de nuevo." };
+    return { error: "No se pudo registrar la venta. Intenta de nuevo." };
   }
 
   revalidatePath("/caja");

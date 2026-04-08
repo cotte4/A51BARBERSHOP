@@ -46,11 +46,6 @@ export default async function BarberoLayout({ children }: { children: React.Reac
                   {operatingDate}
                 </span>
               </div>
-
-              <p className="max-w-2xl text-sm leading-6 text-zinc-400">
-                Estas en la sala de control del dia. Ves que hacer ahora, lo que paso recien y lo
-                que merece atencion.
-              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 lg:justify-end">

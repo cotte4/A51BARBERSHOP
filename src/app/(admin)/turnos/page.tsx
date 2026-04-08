@@ -65,9 +65,14 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
   const pendientes = turnos.filter((turno) => turno.estado === "pendiente").length;
   const confirmados = turnos.filter((turno) => turno.estado === "confirmado").length;
   const completados = turnos.filter((turno) => turno.estado === "completado").length;
-  const actorBarbero = actor.barberoId ? barberos.find((barbero) => barbero.id === actor.barberoId) : null;
+  const actorBarbero = actor.barberoId
+    ? barberos.find((barbero) => barbero.id === actor.barberoId)
+    : null;
   const showScopeToggle = actor.isAdmin && actor.barberoId;
-  const priorityCount = turnos.filter((turno) => turno.estado === "pendiente" && turno.prioridadAbsoluta).length;
+  const priorityCount = turnos.filter(
+    (turno) => turno.estado === "pendiente" && turno.prioridadAbsoluta
+  ).length;
+  const canManageAvailability = actor.isAdmin || !!actor.barberoId;
 
   if (!actor.isAdmin && !actor.barberoId) {
     return (
@@ -93,12 +98,38 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
     <main className="app-shell min-h-screen">
       <TurnosSpotifyBridge />
 
-      {/* ─── Toolbar compacta ─────────────────────────────────── */}
-      <div className="sticky top-0 z-20 border-b border-zinc-800/60 bg-zinc-950/95 px-4 pb-3 pt-3 backdrop-blur-sm">
-        {/* Fila 1: nav fecha */}
+      <section className="mx-4 mt-4 rounded-[32px] border border-zinc-800/80 bg-[radial-gradient(circle_at_top_left,_rgba(140,255,89,0.12),_transparent_30%),linear-gradient(180deg,_rgba(24,24,27,0.96),_rgba(9,9,11,0.98))] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.32)] sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">
+              Agenda viva
+            </p>
+            <h1 className="text-2xl font-semibold text-white sm:text-3xl">
+              {scope === "equipo" ? "Turnos del equipo" : `Turnos de ${actorBarbero?.nombre ?? "hoy"}`}
+            </h1>
+            <p className="max-w-2xl text-sm text-zinc-400">
+              Lee pendientes, huecos libres y prioridades sin salir del flujo operativo.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300">
+              {pendientes} pendientes
+            </span>
+            <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+              {confirmados} confirmados
+            </span>
+            <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-semibold text-zinc-300">
+              {slotsLibres.length} libres
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <div className="sticky top-3 z-20 mx-4 mt-4 rounded-[28px] border border-zinc-800/70 bg-zinc-950/95 px-4 pb-3 pt-3 shadow-[0_18px_40px_rgba(0,0,0,0.24)] backdrop-blur-sm">
         <div className="flex items-center justify-between gap-3">
           <Link href="/hoy" className="text-xs font-semibold text-zinc-500 hover:text-zinc-300">
-            ← Hoy
+            &larr; Hoy
           </Link>
 
           <div className="flex items-center gap-1.5">
@@ -106,34 +137,42 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
               href={buildTurnosHref(shiftDate(fecha, -1), estado, scope)}
               className="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
             >
-              ‹
+              &lsaquo;
             </Link>
             <span className="min-w-[152px] text-center text-sm font-semibold text-white">
-              {isToday ? "Hoy · " : ""}{formatFechaCorta(fecha)}
+              {isToday ? "Hoy | " : ""}
+              {formatFechaCorta(fecha)}
             </span>
             <Link
               href={buildTurnosHref(shiftDate(fecha, 1), estado, scope)}
               className="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
             >
-              ›
+              &rsaquo;
             </Link>
           </div>
 
-          <Link
-            href={slotsLibres.length > 0 ? "#agenda" : "/turnos/disponibilidad"}
-            className="rounded-xl border border-[#8cff59]/25 bg-[#8cff59]/10 px-3 py-1.5 text-xs font-semibold text-[#8cff59]"
-          >
-            + Nuevo
-          </Link>
+          {canManageAvailability ? (
+            <Link
+              href="/turnos/disponibilidad"
+              className="rounded-xl border border-[#8cff59]/25 bg-[#8cff59]/10 px-3 py-1.5 text-xs font-semibold text-[#8cff59]"
+            >
+              Disponibilidad
+            </Link>
+          ) : (
+            <span className="h-8 w-8" aria-hidden="true" />
+          )}
         </div>
 
-        {/* Fila 2: contadores + filtros de estado */}
         <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             {pendientes > 0 ? (
               <Link
                 href={buildTurnosHref(fecha, estado === "pendiente" ? undefined : "pendiente", scope)}
-                className={`rounded-full px-2.5 py-1 font-semibold transition ${estado === "pendiente" ? "bg-amber-400/20 text-amber-100" : "bg-amber-400/10 text-amber-300"}`}
+                className={`rounded-full px-2.5 py-1 font-semibold transition ${
+                  estado === "pendiente"
+                    ? "bg-amber-400/20 text-amber-100"
+                    : "bg-amber-400/10 text-amber-300"
+                }`}
               >
                 {pendientes} pend.{priorityCount > 0 ? ` (${priorityCount}!)` : ""}
               </Link>
@@ -141,7 +180,11 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
             {confirmados > 0 ? (
               <Link
                 href={buildTurnosHref(fecha, estado === "confirmado" ? undefined : "confirmado", scope)}
-                className={`rounded-full px-2.5 py-1 font-semibold transition ${estado === "confirmado" ? "bg-emerald-400/20 text-emerald-100" : "bg-emerald-400/10 text-emerald-300"}`}
+                className={`rounded-full px-2.5 py-1 font-semibold transition ${
+                  estado === "confirmado"
+                    ? "bg-emerald-400/20 text-emerald-100"
+                    : "bg-emerald-400/10 text-emerald-300"
+                }`}
               >
                 {confirmados} conf.
               </Link>
@@ -170,7 +213,6 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
           </div>
         </div>
 
-        {/* Scope toggle (solo admin con barbero propio) */}
         {showScopeToggle ? (
           <div className="mt-2 flex gap-1">
             <ScopeLink
@@ -187,7 +229,6 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
         ) : null}
       </div>
 
-      {/* ─── Alertas Marciano ─────────────────────────────────── */}
       {pendingMarcianos.length > 0 ? (
         <div className="mx-4 mt-3 rounded-2xl border border-fuchsia-400/20 bg-fuchsia-400/8 px-3 py-2.5">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -196,17 +237,16 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
             </p>
             {pendingMarcianos.map((t) => (
               <span key={t.id} className="rounded-full bg-fuchsia-400/10 px-2.5 py-1 text-[11px] text-fuchsia-200">
-                {t.horaInicio} · {t.clienteNombre}
+                {t.horaInicio} | {t.clienteNombre}
               </span>
             ))}
           </div>
         </div>
       ) : null}
 
-      {/* ─── Timeline ─────────────────────────────────────────── */}
       {timelineSlots.length === 0 ? (
         <div className="mx-4 mt-4 rounded-2xl border border-dashed border-zinc-700 bg-zinc-950/50 p-8 text-center">
-          <p className="text-sm text-zinc-500">Sin turnos ni disponibilidad para este día.</p>
+          <p className="text-sm text-zinc-500">Sin turnos ni disponibilidad para este dia.</p>
           <Link
             href="/turnos/disponibilidad"
             className="ghost-button mt-3 inline-flex min-h-[44px] items-center rounded-2xl px-4 text-sm font-semibold"
