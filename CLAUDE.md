@@ -150,3 +150,52 @@ import MyComponent from "@/components/feature/MyComponent";
 - **Don't** use emoji icons inside SVG nav — inline SVG only for navigation and UI icons.
 - **Don't** add `console.log` or debug code to commits.
 - **Don't** create new Tailwind config overrides — use CSS variables and the existing tokens.
+
+---
+
+## Architecture
+
+### Route Groups & Permissions
+- `src/app/(admin)/` — owner-only routes (dashboard, liquidaciones, inventario, negocio, configuracion, etc.)
+- `src/app/(barbero)/` — barber-facing routes (hoy, caja, clientes, turnos, musica)
+- `src/proxy.ts` — middleware that protects admin surfaces; don't bypass it
+- Access validation for Server Actions: use `src/lib/admin-action.ts` (admin check) and `src/lib/caja-access.ts` (barber-owns-entry check) — never skip these
+
+### Navigation
+- `src/components/navigation/RoleBottomNav.tsx` is the **only** bottom nav. It renders 5 tabs for barbero and 6 for admin.
+- `AdminBottomNav` was deleted. Never recreate it.
+- `/negocio` is the admin hub — all owner-only tools live there, not in the bottom nav directly.
+
+### Auth
+- Stack: **Better Auth** (`src/lib/auth.ts`, `src/lib/auth-client.ts`)
+- No Supabase auth — any reference to it in old docs is stale.
+- Session reads happen server-side via `auth()` from `src/lib/auth.ts`.
+
+### Key Lib Files
+| File | Purpose |
+|---|---|
+| `src/lib/music-engine.ts` | Provider-agnostic music motor (modes: Auto, Soy DJ, Jam) |
+| `src/lib/music-types.ts` | All music system types |
+| `src/lib/music-provider.ts` | Provider interface (Spotify adapter in `spotify-*.ts`) |
+| `src/lib/caja-finance.ts` | Cierre diario financial formulas |
+| `src/lib/dashboard-queries.ts` | All financial KPI queries |
+| `src/lib/bep.ts` | Break-even point logic |
+| `src/lib/turnos.ts` | Turnos list queries and visibility rules |
+| `src/lib/caja-atencion.ts` | Registro de atención + Marciano consumiciones |
+| `src/lib/marciano-config.ts` | Marciano membership config |
+| `src/lib/types.ts` | Shared domain types |
+
+### Music Engine
+- Architecture is provider-agnostic (Strategy pattern). Don't hardcode Spotify — go through the engine.
+- Beats Mode (YouTube) is intentionally **separate** from the Music Engine for now — it lives in `BeatsStudio.tsx` only.
+- Real-time updates use **polling every 3s** — SSE and WebSockets were discarded (incompatible with Vercel serverless). Don't introduce them.
+
+### Date / Timezone
+- Always use `"America/Argentina/Buenos_Aires"` for date formatting.
+- UTC midnight bug: `new Date(dateString)` on a `YYYY-MM-DD` string parses as UTC midnight → shows previous day in Argentina. Fix: parse with explicit time or use `Date.UTC` correctly. This bug has been fixed across the codebase — don't reintroduce it.
+
+### Marciano (VIP membership)
+- Membership is activated manually by admin. Tracked in `marciano_beneficios_uso` (cortes + consumiciones per month).
+- Briefing pre-corte exists only for Marcianos, cached in `client_briefing_cache`.
+- `prioridad_absoluta` field in `turnos` — set automatically when a Marciano books.
+- Consumiciones: only products with `esConsumicion = true` qualify; toggle only shows if `clientId` is set and client is Marciano.
