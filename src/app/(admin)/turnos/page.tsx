@@ -6,7 +6,7 @@ import TurnosSpotifyBridge from "@/components/turnos/TurnosSpotifyBridge";
 import QuickTurnoSlotCard from "@/components/turnos/QuickTurnoSlotCard";
 import {
   clienteLlegoAction,
-  completarTurnoAction,
+  cobrarYCompletarTurnoAction,
   confirmarTurnoAction,
   crearTurnoRapidoAction,
   rechazarTurnoAction,
@@ -15,8 +15,12 @@ import {
   getBarberosActivosTurnos,
   getDisponibilidadLibrePorFecha,
   getFechaHoyArgentina,
+  getServiciosPublicos,
   getTurnosVisibleList,
 } from "@/lib/turnos";
+import { db } from "@/db";
+import { mediosPago } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { getTurnosActorContext } from "@/lib/turnos-access";
 
 type TurnosPageProps = {
@@ -50,10 +54,15 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
   const scope = actor.isAdmin && params.scope === "equipo" ? "equipo" : "mio";
   const visibleBarberoId = scope === "mio" ? actor.barberoId ?? undefined : undefined;
 
-  const [turnos, barberos, slotsLibres] = await Promise.all([
+  const [turnos, barberos, slotsLibres, mediosPagoList, serviciosList] = await Promise.all([
     getTurnosVisibleList(fecha, estado, visibleBarberoId),
     getBarberosActivosTurnos(),
     getDisponibilidadLibrePorFecha(fecha, visibleBarberoId),
+    db.select({ id: mediosPago.id, nombre: mediosPago.nombre })
+      .from(mediosPago)
+      .where(eq(mediosPago.activo, true))
+      .then((rows) => rows.map((r) => ({ id: r.id, nombre: r.nombre ?? "" }))),
+    getServiciosPublicos(),
   ]);
 
   const fechaHoy = getFechaHoyArgentina();
@@ -269,9 +278,16 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
                       turno={turno}
                       compact
                       confirmarAction={confirmarTurnoAction.bind(null, turno.id)}
-                      completarAction={completarTurnoAction.bind(null, turno.id)}
                       rechazarAction={rechazarTurnoAction.bind(null, turno.id)}
+                      cobrarAction={cobrarYCompletarTurnoAction.bind(null, turno.id)}
                       clienteLlegoAction={clienteLlegoAction.bind(null, turno.id)}
+                      mediosPago={mediosPagoList}
+                      servicios={serviciosList.map((s) => ({
+                        id: s.id,
+                        nombre: s.nombre,
+                        precioBase: s.precioBase,
+                      }))}
+                      canCobrar={actor.barberoId === turno.barberoId}
                     />
                   ))}
                   {slot.freeSlots.map((freeSlot) => (
@@ -280,6 +296,11 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
                       time={freeSlot.horaInicio}
                       barberName={freeSlot.barberoNombre}
                       durationMinutos={freeSlot.duracionMinutos}
+                      servicios={serviciosList.map((s) => ({
+                        id: s.id,
+                        nombre: s.nombre,
+                        precioBase: s.precioBase,
+                      }))}
                       action={crearTurnoRapidoAction.bind(
                         null,
                         freeSlot.barberoId,

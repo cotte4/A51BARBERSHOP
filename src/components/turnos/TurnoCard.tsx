@@ -4,18 +4,39 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import type { TurnoActionState } from "@/app/(admin)/turnos/actions";
 import type { TurnoSummary } from "@/lib/types";
 
+type MedioPagoOption = {
+  id: string;
+  nombre: string;
+};
+
+type ServicioOption = {
+  id: string;
+  nombre: string;
+  precioBase: string | null;
+};
+
 type TurnoCardProps = {
   turno: TurnoSummary;
   confirmarAction: (prevState: TurnoActionState) => Promise<TurnoActionState>;
-  completarAction: (prevState: TurnoActionState) => Promise<TurnoActionState>;
   rechazarAction: (prevState: TurnoActionState, formData: FormData) => Promise<TurnoActionState>;
+  cobrarAction: (prevState: TurnoActionState, formData: FormData) => Promise<TurnoActionState>;
   clienteLlegoAction?: (prevState: TurnoActionState) => Promise<TurnoActionState>;
+  mediosPago?: MedioPagoOption[];
+  servicios?: ServicioOption[];
   compact?: boolean;
+  canCobrar?: boolean;
 };
 
 const initialState: TurnoActionState = {};
 
 async function noopTurnoAction(_prevState: TurnoActionState): Promise<TurnoActionState> {
+  return {};
+}
+
+async function noopFormTurnoAction(
+  _prevState: TurnoActionState,
+  _formData: FormData
+): Promise<TurnoActionState> {
   return {};
 }
 
@@ -107,24 +128,39 @@ function ChevronIcon({ expanded }: { expanded: boolean }) {
   );
 }
 
+function formatARS(value: string | null | undefined) {
+  if (!value) return "";
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    minimumFractionDigits: 0,
+  }).format(Number(value));
+}
+
 export default function TurnoCard({
   turno,
   confirmarAction,
-  completarAction,
   rechazarAction,
+  cobrarAction,
   clienteLlegoAction,
+  mediosPago = [],
+  servicios = [],
   compact = false,
+  canCobrar = false,
 }: TurnoCardProps) {
   const detailId = `turno-card-detail-${turno.id}`;
   const [showReject, setShowReject] = useState(false);
+  const [showCobrar, setShowCobrar] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [shouldRenderDetails, setShouldRenderDetails] = useState(false);
+  const [cobrarServicioId, setCobrarServicioId] = useState(turno.servicioNombre ? "" : "");
+  const [cobrarPrecio, setCobrarPrecio] = useState(turno.precioEsperado ?? "");
   const [confirmState, confirmFormAction, confirmPending] = useActionState(
     confirmarAction,
     initialState
   );
-  const [completeState, completeFormAction, completePending] = useActionState(
-    completarAction,
+  const [cobrarState, cobrarFormAction, cobrarPending] = useActionState(
+    cobrarAction ?? noopFormTurnoAction,
     initialState
   );
   const [rejectState, rejectFormAction, rejectPending] = useActionState(
@@ -138,9 +174,9 @@ export default function TurnoCard({
   const dispatchedSuccessRef = useRef<string | null>(null);
 
   const actionError =
-    confirmState.error ?? completeState.error ?? rejectState.error ?? llegoState.error;
-  const actionSuccess = llegoState.success;
-  const actionPending = confirmPending || completePending || rejectPending || llegoPending;
+    confirmState.error ?? cobrarState.error ?? rejectState.error ?? llegoState.error;
+  const actionSuccess = llegoState.success ?? cobrarState.success;
+  const actionPending = confirmPending || cobrarPending || rejectPending || llegoPending;
   const cancionUrl =
     buildSpotifyTrackUrl(turno.spotifyTrackUri) ??
     (turno.sugerenciaCancion ? buildSpotifySearchUrl(turno.sugerenciaCancion) : null);
@@ -177,7 +213,16 @@ export default function TurnoCard({
     if (turno.estado !== "pendiente") {
       setShowReject(false);
     }
+    if (turno.estado === "completado") {
+      setShowCobrar(false);
+    }
   }, [turno.estado]);
+
+  useEffect(() => {
+    if (cobrarState.success) {
+      setShowCobrar(false);
+    }
+  }, [cobrarState.success]);
 
   useEffect(() => {
     if (isExpanded) {
@@ -199,10 +244,10 @@ export default function TurnoCard({
   }, [isExpanded, shouldRenderDetails]);
 
   useEffect(() => {
-    if (showReject || actionError || actionSuccess) {
+    if (showReject || showCobrar || actionError || actionSuccess) {
       setIsExpanded(true);
     }
-  }, [actionError, actionSuccess, showReject]);
+  }, [actionError, actionSuccess, showReject, showCobrar]);
 
   return (
     <article
@@ -496,19 +541,122 @@ export default function TurnoCard({
                             Abrir cancion
                           </a>
                         ) : null}
-                        <form action={completeFormAction}>
+                        {canCobrar ? (
                           <button
-                            type="submit"
-                            disabled={completePending || actionPending}
-                            className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/20 px-4 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+                            type="button"
+                            onClick={() => setShowCobrar((prev) => !prev)}
+                            disabled={actionPending}
+                            className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-[#8cff59] px-4 text-sm font-semibold text-[#07130a] hover:bg-[#a8ff80] disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            {completePending ? "Completando..." : "Marcar completado"}
+                            {showCobrar ? "Cancelar cobro" : "Cobrar turno"}
                           </button>
-                        </form>
+                        ) : null}
                       </>
                     ) : null}
                   </div>
                 </div>
+
+                {showCobrar && canCobrar ? (
+                  <form
+                    action={cobrarFormAction}
+                    className="space-y-3 rounded-[20px] border border-[#8cff59]/20 bg-[#8cff59]/6 p-3"
+                  >
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8cff59]">
+                        Cobrar turno
+                      </p>
+                      <p className="mt-1 text-sm text-zinc-300">
+                        Confirmá los datos y elegí el medio de pago para cerrar el turno y registrar en caja.
+                      </p>
+                    </div>
+
+                    <input type="hidden" name="servicioId" value={cobrarServicioId || (turno.servicioNombre ? "" : "")} />
+
+                    {!turno.servicioNombre && servicios.length > 0 ? (
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-zinc-400">Servicio</label>
+                        <select
+                          name="servicioId"
+                          required
+                          value={cobrarServicioId}
+                          onChange={(e) => {
+                            setCobrarServicioId(e.target.value);
+                            const s = servicios.find((sv) => sv.id === e.target.value);
+                            if (s?.precioBase && !turno.precioEsperado) {
+                              setCobrarPrecio(s.precioBase);
+                            }
+                          }}
+                          className="h-11 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-white outline-none focus:border-[#8cff59]"
+                        >
+                          <option value="">Elegí un servicio</option>
+                          {servicios.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.nombre}{s.precioBase ? ` — ${formatARS(s.precioBase)}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : null}
+
+                    {turno.servicioNombre ? (
+                      <div className="rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2">
+                        <p className="text-[11px] text-zinc-500">Servicio</p>
+                        <p className="text-sm font-semibold text-white">{turno.servicioNombre}</p>
+                      </div>
+                    ) : null}
+
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-zinc-400">Precio cobrado</label>
+                        <input
+                          name="precioCobrado"
+                          type="number"
+                          inputMode="numeric"
+                          min="1"
+                          step="1"
+                          required
+                          value={cobrarPrecio}
+                          onChange={(e) => setCobrarPrecio(e.target.value)}
+                          placeholder="0"
+                          className="h-11 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-[#8cff59]"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-zinc-400">Medio de pago</label>
+                        <select
+                          name="medioPagoId"
+                          required
+                          defaultValue=""
+                          className="h-11 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-white outline-none focus:border-[#8cff59]"
+                        >
+                          <option value="" disabled>Elegí medio de pago</option>
+                          {mediosPago.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.nombre}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="submit"
+                        disabled={cobrarPending || actionPending}
+                        className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-[#8cff59] px-4 text-sm font-semibold text-[#07130a] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {cobrarPending ? "Registrando..." : "Confirmar cobro"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowCobrar(false)}
+                        className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800 px-4 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                ) : null}
 
                 {showReject ? (
                   <form

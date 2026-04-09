@@ -3,7 +3,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { pantallaEvents, turnos, turnosDisponibilidad } from "@/db/schema";
+import { atenciones, barberos, cierresCaja, mediosPago, pantallaEvents, servicios, turnos, turnosDisponibilidad } from "@/db/schema";
 import { handleClienteLlego } from "@/lib/music-engine";
 import { getTurnosActorContext } from "@/lib/turnos-access";
 import {
@@ -13,6 +13,7 @@ import {
   getFechaHoyArgentina,
   isFechaCerrada,
 } from "@/lib/turnos";
+import { getHoraAhoraArgentina } from "@/lib/caja-atencion";
 
 export type TurnoActionState = {
   error?: string;
@@ -448,6 +449,23 @@ export async function crearTurnoRapidoAction(
     return { error: "Ese horario acaba de ocuparse." };
   }
 
+  const servicioId = String(formData.get("servicioId") ?? "").trim() || null;
+  const precioEsperadoRaw = String(formData.get("precioEsperado") ?? "").trim();
+  const precioEsperado = precioEsperadoRaw && Number(precioEsperadoRaw) > 0
+    ? String(Number(precioEsperadoRaw))
+    : null;
+
+  if (servicioId) {
+    const [servicio] = await db
+      .select({ id: servicios.id })
+      .from(servicios)
+      .where(and(eq(servicios.id, servicioId), eq(servicios.activo, true)))
+      .limit(1);
+    if (!servicio) {
+      return { error: "El servicio seleccionado no existe o no está activo." };
+    }
+  }
+
   try {
     await db.insert(turnos).values({
       barberoId,
@@ -458,6 +476,8 @@ export async function crearTurnoRapidoAction(
       fecha,
       horaInicio: horaNormalizada,
       duracionMinutos,
+      servicioId: servicioId ?? null,
+      precioEsperado: precioEsperado ?? null,
       estado: "confirmado",
       esMarcianoSnapshot: clientMatch?.esMarciano ?? false,
       prioridadAbsoluta: clientMatch?.esMarciano ?? false,
@@ -471,4 +491,124 @@ export async function crearTurnoRapidoAction(
   revalidatePath("/hoy");
   revalidatePath("/turnos/disponibilidad");
   return { success: true };
+}
+
+export async function cobrarYCompletarTurnoAction(
+  turnoId: string,
+  _prevState: TurnoActionState,
+  formData: FormData
+): Promise<TurnoActionState> {
+  const actor = await getTurnosActorContext();
+  if (!actor) {
+    return { error: "Necesitas iniciar sesion." };
+  }
+
+  const medioPagoId = String(formData.get("medioPagoId") ?? "").trim();
+  const precioCobradoRaw = String(formData.get("precioCobrado") ?? "").trim();
+  const servicioIdForm = String(formData.get("servicioId") ?? "").trim() || null;
+
+  if (!medioPagoId) {
+    return { error: "Elegí un medio de pago para continuar." };
+  }
+  const precioCobrado = Number(precioCobradoRaw);
+  if (!precioCobradoRaw || precioCobrado <= 0) {
+    return { error: "El precio cobrado debe ser mayor a cero." };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      const [turno] = await tx
+        .select()
+        .from(turnos)
+        .where(eq(turnos.id, turnoId))
+        .limit(1);
+
+      if (!turno) throw new Error("Turno no encontrado.");
+      if (actor.barberoId !== turno.barberoId) {
+        throw new Error("Solo el barbero del turno puede cobrarlo.");
+      }
+      if (turno.estado !== "confirmado") {
+        throw new Error(
+          turno.estado === "completado"
+            ? "Este turno ya fue cobrado."
+            : "Solo se pueden cobrar turnos confirmados."
+        );
+      }
+
+      const [cierre] = await tx
+        .select({ id: cierresCaja.id })
+        .from(cierresCaja)
+        .where(eq(cierresCaja.fecha, turno.fecha))
+        .limit(1);
+
+      if (cierre) {
+        throw new Error(
+          "Ese día ya fue cerrado. Registrá la atención manualmente en caja si corresponde."
+        );
+      }
+
+      const resolvedServicioId = servicioIdForm ?? turno.servicioId;
+      if (!resolvedServicioId) {
+        throw new Error("Este turno no tiene servicio asignado. Elegí un servicio antes de cobrar.");
+      }
+
+      const [barbero] = await tx
+        .select({ porcentajeComision: barberos.porcentajeComision })
+        .from(barberos)
+        .where(eq(barberos.id, turno.barberoId))
+        .limit(1);
+
+      const [medioPago] = await tx
+        .select({ comisionPorcentaje: mediosPago.comisionPorcentaje })
+        .from(mediosPago)
+        .where(eq(mediosPago.id, medioPagoId))
+        .limit(1);
+
+      const [servicio] = await tx
+        .select({ precioBase: servicios.precioBase })
+        .from(servicios)
+        .where(eq(servicios.id, resolvedServicioId))
+        .limit(1);
+
+      if (!barbero) throw new Error("Barbero no encontrado.");
+      if (!medioPago) throw new Error("Medio de pago no encontrado.");
+      if (!servicio) throw new Error("Servicio no encontrado.");
+
+      const comisionMpPct = Number(medioPago.comisionPorcentaje ?? 0);
+      const comisionMpMonto = (precioCobrado * comisionMpPct) / 100;
+      const montoNeto = precioCobrado - comisionMpMonto;
+      const comisionBarberoPct = Number(barbero.porcentajeComision ?? 0);
+      const comisionBarberoMonto = (precioCobrado * comisionBarberoPct) / 100;
+
+      await tx.insert(atenciones).values({
+        barberoId: turno.barberoId,
+        clientId: turno.clientId ?? null,
+        servicioId: resolvedServicioId,
+        fecha: turno.fecha,
+        hora: getHoraAhoraArgentina(),
+        precioBase: servicio.precioBase,
+        precioCobrado: String(precioCobrado),
+        medioPagoId,
+        comisionMedioPagoPct: String(comisionMpPct),
+        comisionMedioPagoMonto: String(comisionMpMonto.toFixed(2)),
+        montoNeto: String(montoNeto.toFixed(2)),
+        comisionBarberoPct: String(comisionBarberoPct),
+        comisionBarberoMonto: String(comisionBarberoMonto.toFixed(2)),
+        anulado: false,
+      });
+
+      await tx
+        .update(turnos)
+        .set({ estado: "completado", updatedAt: new Date() })
+        .where(eq(turnos.id, turnoId));
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "No se pudo registrar el cobro.";
+    return { error: message };
+  }
+
+  revalidatePath("/turnos");
+  revalidatePath("/hoy");
+  revalidatePath("/caja");
+  return {};
 }

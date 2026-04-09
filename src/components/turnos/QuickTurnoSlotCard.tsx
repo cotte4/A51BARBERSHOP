@@ -4,10 +4,17 @@ import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { QuickTurnoCreateState } from "@/app/(admin)/turnos/actions";
 
+type ServicioOption = {
+  id: string;
+  nombre: string;
+  precioBase: string | null;
+};
+
 type QuickTurnoSlotCardProps = {
   time: string;
   barberName: string;
   durationMinutos: number;
+  servicios?: ServicioOption[];
   action: (
     prevState: QuickTurnoCreateState,
     formData: FormData
@@ -20,14 +27,24 @@ export default function QuickTurnoSlotCard({
   time,
   barberName,
   durationMinutos,
+  servicios = [],
   action,
 }: QuickTurnoSlotCardProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [selectedServicioId, setSelectedServicioId] = useState("");
+  const [precioEsperado, setPrecioEsperado] = useState("");
   const [state, formAction, pending] = useActionState(action, initialState);
   const fieldError = state.fieldErrors?.clienteNombre;
   const hasError = Boolean(state.error || fieldError);
   const panelId = `quick-slot-${barberName}-${time}-${durationMinutos}`.replace(/[^a-zA-Z0-9-]/g, "-");
+
+  function handleServicioChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const id = e.target.value;
+    setSelectedServicioId(id);
+    const servicio = servicios.find((s) => s.id === id);
+    setPrecioEsperado(servicio?.precioBase ?? "");
+  }
 
   useEffect(() => {
     if (state.success) {
@@ -98,6 +115,35 @@ export default function QuickTurnoSlotCard({
               className="h-11 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500"
             />
           </div>
+
+          {servicios.length > 0 ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <select
+                name="servicioId"
+                value={selectedServicioId}
+                onChange={handleServicioChange}
+                className="h-11 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-white outline-none focus:border-[#8cff59]"
+              >
+                <option value="">Sin servicio específico</option>
+                {servicios.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nombre}
+                  </option>
+                ))}
+              </select>
+              <input
+                name="precioEsperado"
+                type="number"
+                inputMode="numeric"
+                min="0"
+                step="1"
+                placeholder="Precio esperado"
+                value={precioEsperado}
+                onChange={(e) => setPrecioEsperado(e.target.value)}
+                className="h-11 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500"
+              />
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap gap-2">
             <button
