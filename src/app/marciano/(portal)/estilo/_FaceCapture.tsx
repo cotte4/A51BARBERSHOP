@@ -175,13 +175,13 @@ export default function FaceCapture({ onCapture }: FaceCaptureProps) {
         </>
       )}
 
-      {state === "streaming" && (
-        <>
+      {/* Video element stays mounted during "analyzing" so MediaPipe can read frames */}
+      {(state === "streaming" || state === "analyzing") && (
+        <div className={state === "analyzing" ? "hidden" : "contents"}>
           <p className="text-zinc-500 uppercase tracking-widest text-xs text-center">
             Análisis de rostro
           </p>
           <div className="relative w-full max-w-sm aspect-[3/4] rounded-[28px] overflow-hidden bg-zinc-900">
-            {/* Video */}
             <video
               ref={videoRef}
               autoPlay
@@ -189,15 +189,9 @@ export default function FaceCapture({ onCapture }: FaceCaptureProps) {
               muted
               className="w-full h-full object-cover"
             />
-            {/* Oval guide */}
             <div
               className="absolute border-4 border-[#8cff59]/60 rounded-[50%] pointer-events-none"
-              style={{
-                top: "10%",
-                left: "15%",
-                right: "15%",
-                bottom: "10%",
-              }}
+              style={{ top: "10%", left: "15%", right: "15%", bottom: "10%" }}
             />
           </div>
           <p className="text-sm text-zinc-400 text-center">Centrá tu rostro en el óvalo</p>
@@ -215,7 +209,7 @@ export default function FaceCapture({ onCapture }: FaceCaptureProps) {
           >
             Continuar sin análisis facial
           </button>
-        </>
+        </div>
       )}
 
       {state === "analyzing" && (
