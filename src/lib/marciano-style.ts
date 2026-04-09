@@ -14,49 +14,128 @@ const STYLE_BY_SHAPE: Record<FaceShape, StyleDominante> = {
 
 // ————————————————————————————
 // Smart cuts matrix: shape × lifestyle × morningMinutes
-// Based on barbering research (Apr 2026)
+// Based on barbering research Apr 2026 — 55 modern cuts (2022-2025)
+// targeting young men 18-35, Argentine barbershop context
 // ————————————————————————————
 export function getDefaultCuts(shape: FaceShape, answers: InterrogatoryAnswers): string[] {
   const { lifestyle, morningMinutes } = answers;
-  const highMaint = morningMinutes >= 5;
+  const low  = morningMinutes <= 3;   // 0-3 min
+  const mid  = morningMinutes === 5;  // 5 min
+  const high = morningMinutes >= 10;  // 10+ min
 
   switch (shape) {
+
+    // ——— OVAL: el más versátil, acepta todo ———
     case "oval":
       if (lifestyle === "formal") {
-        return highMaint ? ["Pompadour", "Slick Back"] : ["Side Part", "French Crop"];
-      }
-      return highMaint ? ["Quiff", "Taper Fade"] : ["French Crop", "Crew Cut"];
-
-    case "cuadrado":
-      if (lifestyle === "formal") {
-        return highMaint ? ["Pompadour", "Hard Part"] : ["French Crop", "Quiff"];
+        if (high) return ["Pompadour Moderno", "Slick Back", "Side Part"];
+        if (mid)  return ["Copete Texturizado", "Side Part", "Brush Up"];
+        return ["French Crop", "Raya Lateral", "Ivy League"];
       }
       if (lifestyle === "nocturno") {
-        return highMaint ? ["Quiff", "French Crop"] : ["French Crop", "Crew Cut"];
+        if (high) return ["Wolf Cut", "Slicked-Back Undercut", "Mullet Moderno"];
+        if (mid)  return ["Curtain Fringe", "Disconnected Undercut", "Corte Coma"];
+        return ["Textured Crop", "Mid Fade Textured Top", "Natural Texture Fade"];
       }
-      return highMaint ? ["French Crop", "Quiff"] : ["French Crop", "Crew Cut"];
+      if (lifestyle === "outdoor") {
+        if (high) return ["Faux Hawk", "Brush Up", "Copete Texturizado"];
+        if (mid)  return ["Textured Fringe", "High Fade Textured Top", "Quiff"];
+        return ["Crew Cut", "French Crop", "Mid Fade Textured Top"];
+      }
+      // minimal
+      if (high) return ["Copete Texturizado", "Corte Coma", "Korean Two Block"];
+      if (mid)  return ["Curtain Fringe", "Textured Fringe", "Soft Two Block"];
+      return ["French Crop", "Textured Crop", "Natural Texture Fade"];
 
+    // ——— CUADRADO: necesita altura, suavizar la mandíbula ———
+    case "cuadrado":
+      if (lifestyle === "formal") {
+        if (high) return ["Pompadour Moderno", "Hard Part Fade", "Slick Back"];
+        if (mid)  return ["Copete Texturizado", "Side Part", "Comb Over Fade"];
+        return ["French Crop", "Ivy League", "Crew Cut"];
+      }
+      if (lifestyle === "nocturno") {
+        if (high) return ["Mullet Moderno", "Disconnected Undercut", "Wolf Cut"];
+        if (mid)  return ["Korean Two Block", "Slicked-Back Undercut", "Quiff"];
+        return ["Mid Fade Textured Top", "French Crop", "Crew Cut"];
+      }
+      if (lifestyle === "outdoor") {
+        if (high) return ["Faux Hawk", "Brush Up", "Drop Cut"];
+        if (mid)  return ["High Fade Textured Top", "Textured Fringe", "Quiff"];
+        return ["French Crop", "Crew Cut", "Buzz Cut"];
+      }
+      // minimal
+      if (high) return ["Copete Texturizado", "Soft Two Block", "Corte Coma"];
+      if (mid)  return ["Textured Fringe", "Korean Two Block", "Mid Fade Textured Top"];
+      return ["French Crop", "Textured Crop", "Crew Cut"];
+
+    // ——— REDONDO: necesita elongación y volumen en la cima ———
     case "redondo":
       if (lifestyle === "formal") {
-        return highMaint ? ["Pompadour", "Quiff"] : ["Quiff", "French Crop"];
+        if (high) return ["Pompadour Moderno", "Quiff", "Copete Texturizado"];
+        if (mid)  return ["Quiff", "Copete Texturizado", "Faux Hawk"];
+        return ["French Crop", "High Fade Textured Top", "Ivy League"];
       }
-      if (lifestyle === "outdoor" && highMaint) {
-        return ["Quiff", "Faux Hawk"];
+      if (lifestyle === "nocturno") {
+        if (high) return ["Wolf Cut", "Faux Hawk", "Mullet Moderno"];
+        if (mid)  return ["Textured Fringe", "Curtain Fringe", "Quiff"];
+        return ["High Fade Textured Top", "French Crop", "Mid Fade Textured Top"];
       }
-      return highMaint ? ["Quiff", "French Crop"] : ["French Crop", "Crew Cut"];
+      if (lifestyle === "outdoor") {
+        if (high) return ["Faux Hawk", "Quiff", "Drop Cut"];
+        if (mid)  return ["Textured Fringe", "High Fade Textured Top", "Corte Coma"];
+        return ["French Crop", "Crew Cut", "Mid Fade Textured Top"];
+      }
+      // minimal
+      if (high) return ["Copete Texturizado", "Corte Coma", "Curtain Fringe"];
+      if (mid)  return ["Textured Fringe", "High Fade Textured Top", "Quiff"];
+      return ["French Crop", "Textured Crop", "Ivy League"];
 
+    // ——— CORAZÓN: frente ancha, mentón angosto — equilibrar ———
     case "corazon":
-      if (lifestyle === "formal" && highMaint) {
-        return ["Slick Back", "Side Part"];
+      if (lifestyle === "formal") {
+        if (high) return ["Slick Back", "Side Part", "Comb Over Fade"];
+        if (mid)  return ["Side Part", "Copete Texturizado", "Soft Two Block"];
+        return ["Caesar Cut", "French Crop", "Textured Crop"];
       }
-      return highMaint ? ["Side Part", "Quiff"] : ["Textured Crop", "Side Part"];
+      if (lifestyle === "nocturno") {
+        if (high) return ["Curtain Fringe", "Wolf Cut", "Disconnected Undercut"];
+        if (mid)  return ["Korean Two Block", "Corte Coma", "Curtain Fringe"];
+        return ["Natural Texture Fade", "Textured Crop", "Mid Fade Textured Top"];
+      }
+      if (lifestyle === "outdoor") {
+        if (high) return ["Faux Hawk", "Drop Cut", "Textured Fringe"];
+        if (mid)  return ["Textured Fringe", "Corte Coma", "Soft Two Block"];
+        return ["French Crop", "Textured Crop", "Crew Cut"];
+      }
+      // minimal
+      if (high) return ["Curtain Fringe", "Corte Coma", "Korean Two Block"];
+      if (mid)  return ["Soft Two Block", "Textured Fringe", "Side Part"];
+      return ["Textured Crop", "Caesar Cut", "French Crop"];
 
+    // ——— DIAMANTE: pómulos anchos, frente y mentón angostos ———
     case "diamante":
-      if (lifestyle === "formal" && highMaint) {
-        return ["Faux Hawk", "Textured Quiff"];
+      if (lifestyle === "formal") {
+        if (high) return ["Faux Hawk", "Copete Texturizado", "Hard Part Fade"];
+        if (mid)  return ["Textured Quiff Fade", "Side Part", "Soft Two Block"];
+        return ["Ivy League", "French Crop", "Crew Cut"];
       }
-      return highMaint ? ["Textured Crop", "Long Top Fade"] : ["Textured Crop", "Messy Top"];
+      if (lifestyle === "nocturno") {
+        if (high) return ["Wolf Cut", "Mullet Moderno", "Disconnected Undercut"];
+        if (mid)  return ["Curtain Fringe", "Korean Two Block", "Corte Coma"];
+        return ["Natural Texture Fade", "Textured Crop", "Mid Fade Textured Top"];
+      }
+      if (lifestyle === "outdoor") {
+        if (high) return ["Faux Hawk", "Brush Up", "Drop Cut"];
+        if (mid)  return ["High Fade Textured Top", "Textured Fringe", "Corte Coma"];
+        return ["Textured Crop", "Crew Cut", "Mid Fade Textured Top"];
+      }
+      // minimal
+      if (high) return ["Curtain Fringe", "Corte Coma", "Soft Two Block"];
+      if (mid)  return ["Korean Two Block", "Textured Fringe", "Natural Texture Fade"];
+      return ["Textured Crop", "Messy Top Fade", "French Crop"];
 
+    // ——— ALIEN: inclasificable — todos los cortes son válidos ———
     case "alien":
       return ["Buzz Cut", "Crew Cut", "Lo que quieras"];
   }
