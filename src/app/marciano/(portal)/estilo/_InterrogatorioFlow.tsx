@@ -10,39 +10,43 @@ import StyleDNAReveal from "./_StyleDNAReveal";
 import type { FaceShape, InterrogatoryAnswers, StyleProfile } from "@/lib/types";
 import type { FaceMetrics } from "@/lib/marciano-style";
 
-type FlowState = "intro" | "q1" | "q2" | "q3" | "q4" | "q5" | "face-capture" | "saving" | "reveal";
+type FlowState =
+  | "intro"
+  | "q1" | "q2" | "q3" | "q4" | "q5"
+  | "q6" | "q7" | "q8" | "q9" | "q10" | "q11"
+  | "face-capture" | "saving" | "reveal";
 
 const QUESTIONS = [
   {
     key: "q1",
-    eyebrow: "Pregunta 1 de 5",
-    title: "Contanos cómo llegás",
+    eyebrow: "Pregunta 1 de 11",
+    title: "¿Cómo llegás?",
     type: "choice-text" as const,
     field: "arrival" as const,
     options: [
-      { value: "caminando", label: "Caminando" },
-      { value: "auto", label: "En auto" },
-      { value: "apurado", label: "Siempre apurado" },
-      { value: "con-tiempo", label: "Con tiempo" },
+      { value: "caminando", label: "A pie, sin apuro" },
+      { value: "auto", label: "En auto, música a fondo" },
+      { value: "apurado", label: "Tarde, como siempre" },
+      { value: "con-tiempo", label: "Con tiempo de sobra" },
     ],
   },
   {
     key: "q2",
-    eyebrow: "Pregunta 2 de 5",
-    title: "¿Cuánto tiempo le metés al pelo a la mañana?",
+    eyebrow: "Pregunta 2 de 11",
+    title: "¿Cuánto le metés al pelo antes de salir?",
     type: "choice-text" as const,
     field: "morningMinutes" as const,
     options: [
-      { value: "0", label: "0 min" },
-      { value: "3", label: "3 min" },
-      { value: "5", label: "5 min" },
-      { value: "10", label: "10+ min" },
+      { value: "0", label: "Nada, sale solo" },
+      { value: "3", label: "3 minutos justos" },
+      { value: "5", label: "5 minutos y listo" },
+      { value: "10", label: "10 o más, no me apuro" },
     ],
   },
   {
     key: "q3",
-    eyebrow: "Pregunta 3 de 5",
-    title: "Elegí tu ambiente",
+    eyebrow: "Pregunta 3 de 11",
+    title: "¿En qué mundo vivís?",
     type: "choice-image" as const,
     field: "lifestyle" as const,
     options: [
@@ -54,32 +58,110 @@ const QUESTIONS = [
   },
   {
     key: "q4",
-    eyebrow: "Pregunta 4 de 5",
-    title: "¿Cuándo sabés que un corte salió bien?",
+    eyebrow: "Pregunta 4 de 11",
+    title: "¿Cuándo decís 'este corte estuvo'?",
     type: "choice-text" as const,
     field: "perfectCut" as const,
     options: [
-      { value: "otros-notan", label: "Cuando otros lo notan" },
+      { value: "otros-notan", label: "Cuando alguien lo nota" },
       { value: "lo-siento", label: "Cuando vos lo sentís" },
-      { value: "dura-semanas", label: "Cuando dura semanas" },
+      { value: "dura-semanas", label: "Cuando aguanta semanas" },
     ],
   },
   {
     key: "q5",
-    eyebrow: "Pregunta 5 de 5",
-    title: "¿Qué te le baja?",
+    eyebrow: "Pregunta 5 de 11",
+    title: "¿Qué te arruina el momento?",
     type: "choice-text" as const,
     field: "turnoff" as const,
     options: [
-      { value: "musica-boluda", label: "Música boluda" },
-      { value: "gente-de-mas", label: "Gente de más" },
-      { value: "apuro", label: "Que te apuren" },
+      { value: "musica-boluda", label: "Música que no pega" },
+      { value: "gente-de-mas", label: "Mucha gente" },
+      { value: "apuro", label: "Que te metan presión" },
       { value: "charla-forzada", label: "Charla forzada" },
     ],
   },
+  {
+    key: "q6",
+    eyebrow: "Pregunta 6 de 11",
+    title: "¿Qué suena en tus auriculares?",
+    type: "choice-text" as const,
+    field: "music" as const,
+    options: [
+      { value: "trap", label: "Trap / RKT" },
+      { value: "rock", label: "Rock" },
+      { value: "reggaeton", label: "Reggaetón / Latin" },
+      { value: "electronica", label: "Electrónica" },
+    ],
+  },
+  {
+    key: "q7",
+    eyebrow: "Pregunta 7 de 11",
+    title: "El sábado a la noche te vestís...",
+    type: "choice-text" as const,
+    field: "weekendStyle" as const,
+    options: [
+      { value: "todo-negro", label: "Todo negro, como siempre" },
+      { value: "sporty", label: "Cómodo y ya" },
+      { value: "como-siempre", label: "Igual que cualquier día" },
+      { value: "me-armo", label: "Te armás algo" },
+    ],
+  },
+  {
+    key: "q8",
+    eyebrow: "Pregunta 8 de 11",
+    title: "En el sillón sos...",
+    type: "choice-text" as const,
+    field: "chairBehavior" as const,
+    options: [
+      { value: "celular", label: "Redes y celular" },
+      { value: "duermo", label: "Me relajo, casi duermo" },
+      { value: "hablo", label: "Hablo con el barbero" },
+      { value: "miro-todo", label: "Estudio el espejo" },
+    ],
+  },
+  {
+    key: "q9",
+    eyebrow: "Pregunta 9 de 11",
+    title: "La barba la llevás...",
+    type: "choice-text" as const,
+    field: "beard" as const,
+    options: [
+      { value: "rapada", label: "Rasurada al ras" },
+      { value: "prolija", label: "Corta y prolija" },
+      { value: "descuidada", label: "Larga, que se note" },
+      { value: "no-tengo", label: "Poca o nada" },
+    ],
+  },
+  {
+    key: "q10",
+    eyebrow: "Pregunta 10 de 11",
+    title: "Con el barbero...",
+    type: "choice-text" as const,
+    field: "barberTrust" as const,
+    options: [
+      { value: "le-explico-todo", label: "Le explicás todo" },
+      { value: "le-muestro-foto", label: "Le mostrás foto" },
+      { value: "confio-en-el", label: "Confiás ciegamente" },
+      { value: "mitad-y-mitad", label: "Mitad y mitad" },
+    ],
+  },
+  {
+    key: "q11",
+    eyebrow: "Pregunta 11 de 11",
+    title: "Decinos algo que te guste MUCHO ay ay ay",
+    type: "free-text" as const,
+    field: "freeText" as const,
+    options: [],
+  },
 ];
 
-const FLOW_ORDER: FlowState[] = ["intro", "q1", "q2", "q3", "q4", "q5", "face-capture", "saving", "reveal"];
+const FLOW_ORDER: FlowState[] = [
+  "intro",
+  "q1", "q2", "q3", "q4", "q5",
+  "q6", "q7", "q8", "q9", "q10", "q11",
+  "face-capture", "saving", "reveal",
+];
 
 function nextState(current: FlowState): FlowState {
   const idx = FLOW_ORDER.indexOf(current);
@@ -88,7 +170,10 @@ function nextState(current: FlowState): FlowState {
 
 const QUESTION_PROGRESS: Record<string, number> = {
   q1: 1, q2: 2, q3: 3, q4: 4, q5: 5,
+  q6: 6, q7: 7, q8: 8, q9: 9, q10: 10, q11: 11,
 };
+
+const QUESTION_KEYS = new Set(["q1","q2","q3","q4","q5","q6","q7","q8","q9","q10","q11"]);
 
 function Spinner() {
   return (
@@ -118,14 +203,12 @@ function MuteToggle() {
       className="fixed top-4 right-4 z-[60] rounded-full border border-white/10 bg-white/5 p-2 text-zinc-400 hover:text-white transition"
     >
       {muted ? (
-        // Muted icon
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
           <line x1="23" y1="9" x2="17" y2="15" />
           <line x1="17" y1="9" x2="23" y2="15" />
         </svg>
       ) : (
-        // Sound icon
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
           <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
@@ -177,7 +260,7 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
 
     if (!res.success) {
       setError(res.error);
-      setFlowState("face-capture"); // go back so they can retry from capture
+      setFlowState("face-capture");
       return;
     }
 
@@ -198,9 +281,8 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
   }
 
   // Render question screens
-  if (flowState === "q1" || flowState === "q2" || flowState === "q3" || flowState === "q4" || flowState === "q5") {
-    const idx = parseInt(flowState[1], 10) - 1;
-    const q = QUESTIONS[idx];
+  if (QUESTION_KEYS.has(flowState)) {
+    const q = QUESTIONS.find((question) => question.key === flowState)!;
     return (
       <>
         <MuteToggle />
@@ -212,6 +294,7 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
               type={q.type}
               options={q.options}
               progress={QUESTION_PROGRESS[flowState]}
+              total={11}
               onAnswer={(value) => handleAnswer(q.field, value)}
             />
           </motion.div>
@@ -267,7 +350,6 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
         className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center px-6 gap-6"
       >
         <MuteToggle />
-        {/* A51 logo */}
         <p className="font-display text-4xl font-bold text-white tracking-tight">A51</p>
         <p className="text-zinc-500 uppercase tracking-widest text-xs text-center">
           Tu Perfil Marciano
@@ -276,7 +358,7 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
           Hola {clientName}, vamos a conocerte.
         </h1>
         <p className="text-sm text-zinc-400 text-center max-w-xs">
-          5 preguntas + análisis de rostro. 2 minutos.
+          11 preguntas + análisis de rostro. 3 minutos.
         </p>
         <button
           type="button"

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { playSound } from "@/lib/marciano-sounds";
 
 type QuestionOption = {
@@ -13,23 +12,31 @@ type QuestionOption = {
 type QuestionProps = {
   eyebrow: string;
   title: string;
-  type: "choice-text" | "choice-image";
+  type: "choice-text" | "choice-image" | "free-text";
   options: QuestionOption[];
   onAnswer: (value: string) => void;
   progress: number;
+  total: number;
 };
 
-export default function Question({ eyebrow, title, type, options, onAnswer, progress }: QuestionProps) {
+export default function Question({ eyebrow, title, type, options, onAnswer, progress, total }: QuestionProps) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [freeInput, setFreeInput] = useState("");
 
   function handleSelect(value: string) {
     if (selected) return;
     setSelected(value);
     playSound("select");
-    // Brief highlight then advance
     setTimeout(() => {
       onAnswer(value);
     }, 220);
+  }
+
+  function handleFreeSubmit() {
+    const trimmed = freeInput.trim();
+    if (!trimmed) return;
+    playSound("select");
+    onAnswer(trimmed);
   }
 
   return (
@@ -38,7 +45,7 @@ export default function Question({ eyebrow, title, type, options, onAnswer, prog
       <div className="w-full h-0.5 bg-zinc-900">
         <div
           className="bg-[#8cff59] h-0.5 transition-all duration-500"
-          style={{ width: `${(progress / 5) * 100}%` }}
+          style={{ width: `${(progress / total) * 100}%` }}
         />
       </div>
 
@@ -70,7 +77,7 @@ export default function Question({ eyebrow, title, type, options, onAnswer, prog
               </button>
             ))}
           </div>
-        ) : (
+        ) : type === "choice-image" ? (
           <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto w-full">
             {options.map((opt) => (
               <button
@@ -101,6 +108,28 @@ export default function Question({ eyebrow, title, type, options, onAnswer, prog
                 </div>
               </button>
             ))}
+          </div>
+        ) : (
+          /* free-text */
+          <div className="w-full max-w-md mx-auto flex flex-col gap-4">
+            <textarea
+              value={freeInput}
+              onChange={(e) => setFreeInput(e.target.value)}
+              rows={4}
+              placeholder="Escribí acá..."
+              className="w-full rounded-[20px] border border-zinc-700 bg-zinc-900 px-5 py-4 text-white placeholder:text-zinc-600 focus:border-[#8cff59]/60 focus:outline-none resize-none text-base"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleFreeSubmit();
+              }}
+            />
+            <button
+              type="button"
+              onClick={handleFreeSubmit}
+              disabled={!freeInput.trim()}
+              className="neon-button rounded-[20px] px-8 py-4 font-semibold text-[#07130a] text-base disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Listo
+            </button>
           </div>
         )}
       </div>

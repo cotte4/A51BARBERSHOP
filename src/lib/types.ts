@@ -196,11 +196,20 @@ export interface QuickActionDefaults {
 export type FaceShape = 'oval' | 'cuadrado' | 'redondo' | 'corazon' | 'diamante' | 'alien';
 
 export type InterrogatoryAnswers = {
+  // Preguntas 1-5 (originales)
   lifestyle: 'minimal' | 'nocturno' | 'outdoor' | 'formal';
   morningMinutes: 0 | 3 | 5 | 10;
   arrival: 'caminando' | 'auto' | 'apurado' | 'con-tiempo';
   perfectCut: 'otros-notan' | 'lo-siento' | 'dura-semanas';
   turnoff: 'musica-boluda' | 'gente-de-mas' | 'apuro' | 'charla-forzada';
+  // Preguntas 6-10 (nuevas — opcionales para no romper perfiles existentes)
+  music?: 'trap' | 'rock' | 'reggaeton' | 'electronica';
+  weekendStyle?: 'todo-negro' | 'sporty' | 'como-siempre' | 'me-armo';
+  chairBehavior?: 'celular' | 'duermo' | 'hablo' | 'miro-todo';
+  beard?: 'rapada' | 'prolija' | 'descuidada' | 'no-tengo';
+  barberTrust?: 'le-explico-todo' | 'le-muestro-foto' | 'confio-en-el' | 'mitad-y-mitad';
+  // Pregunta 11 — texto libre
+  freeText?: string;
 };
 
 export type StyleDominante =
