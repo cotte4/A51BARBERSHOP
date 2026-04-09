@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import DisponibilidadGrid from "@/components/turnos/DisponibilidadGrid";
+import PlantillaSemanalForm from "@/components/turnos/PlantillaSemanalForm";
+import BorrarDiaSemanaForm from "@/components/turnos/BorrarDiaSemanaForm";
 import {
   crearDisponibilidadAction,
+  crearDisponibilidadLoteAction,
   eliminarDisponibilidadAction,
+  eliminarDisponibilidadDiaSemanaAction,
 } from "../actions";
 import {
   getBarberoAgendaProfile,
@@ -140,6 +144,15 @@ export default async function DisponibilidadPage() {
             </div>
           </div>
         </section>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <PlantillaSemanalForm
+            action={crearDisponibilidadLoteAction.bind(null, targetBarbero.id)}
+          />
+          <BorrarDiaSemanaForm
+            action={eliminarDisponibilidadDiaSemanaAction.bind(null, targetBarbero.id)}
+          />
+        </div>
 
         <DisponibilidadGrid
           barberoId={targetBarbero.id}

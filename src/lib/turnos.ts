@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, count, desc, eq, gte, inArray, isNotNull, lt } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, lt, lte } from "drizzle-orm";
 import { db } from "@/db";
 import {
   barberos,
@@ -436,4 +436,46 @@ export async function getTurnosOcupadosDesde(barberoId: string, fromFecha: strin
       )
     )
     .orderBy(desc(turnos.fecha), desc(turnos.horaInicio));
+}
+
+export async function getCancelacionesStats(
+  fromFecha: string,
+  toFecha: string,
+  barberoId?: string
+) {
+  const [cancelados, totalRow] = await Promise.all([
+    db
+      .select({
+        motivoCancelacion: turnos.motivoCancelacion,
+        cantidad: count(),
+      })
+      .from(turnos)
+      .where(
+        and(
+          eq(turnos.estado, "cancelado"),
+          gte(turnos.fecha, fromFecha),
+          lte(turnos.fecha, toFecha),
+          barberoId ? eq(turnos.barberoId, barberoId) : undefined
+        )
+      )
+      .groupBy(turnos.motivoCancelacion),
+    db
+      .select({ total: count() })
+      .from(turnos)
+      .where(
+        and(
+          gte(turnos.fecha, fromFecha),
+          lte(turnos.fecha, toFecha),
+          barberoId ? eq(turnos.barberoId, barberoId) : undefined
+        )
+      ),
+  ]);
+
+  return {
+    cancelados: cancelados.map((row) => ({
+      motivo: row.motivoCancelacion ?? "Sin motivo registrado",
+      cantidad: row.cantidad,
+    })),
+    totalTurnos: totalRow[0]?.total ?? 0,
+  };
 }

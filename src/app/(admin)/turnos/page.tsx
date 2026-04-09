@@ -4,6 +4,7 @@ import type { TurnoSummary } from "@/lib/types";
 import TurnoCard from "@/components/turnos/TurnoCard";
 import TurnosSpotifyBridge from "@/components/turnos/TurnosSpotifyBridge";
 import QuickTurnoSlotCard from "@/components/turnos/QuickTurnoSlotCard";
+import CancelacionesPanel from "@/components/turnos/CancelacionesPanel";
 import {
   clienteLlegoAction,
   cobrarYCompletarTurnoAction,
@@ -13,6 +14,7 @@ import {
 } from "./actions";
 import {
   getBarberosActivosTurnos,
+  getCancelacionesStats,
   getDisponibilidadLibrePorFecha,
   getFechaHoyArgentina,
   getServiciosPublicos,
@@ -54,7 +56,10 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
   const scope = actor.isAdmin && params.scope === "equipo" ? "equipo" : "mio";
   const visibleBarberoId = scope === "mio" ? actor.barberoId ?? undefined : undefined;
 
-  const [turnos, barberos, slotsLibres, mediosPagoList, serviciosList] = await Promise.all([
+  const fechaHoy = getFechaHoyArgentina();
+  const inicioMes = fechaHoy.slice(0, 7) + "-01";
+
+  const [turnos, barberos, slotsLibres, mediosPagoList, serviciosList, cancelacionesStats] = await Promise.all([
     getTurnosVisibleList(fecha, estado, visibleBarberoId),
     getBarberosActivosTurnos(),
     getDisponibilidadLibrePorFecha(fecha, visibleBarberoId),
@@ -63,9 +68,11 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
       .where(eq(mediosPago.activo, true))
       .then((rows) => rows.map((r) => ({ id: r.id, nombre: r.nombre ?? "" }))),
     getServiciosPublicos(),
+    actor.isAdmin
+      ? getCancelacionesStats(inicioMes, fechaHoy)
+      : Promise.resolve({ cancelados: [], totalTurnos: 0 }),
   ]);
 
-  const fechaHoy = getFechaHoyArgentina();
   const isToday = fecha === fechaHoy;
   const timelineSlots = buildTimelineSlots(turnos, slotsLibres);
   const pendingMarcianos = turnos.filter(
@@ -316,6 +323,15 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
           </div>
         </div>
       )}
+
+      {actor.isAdmin ? (
+        <div className="mx-4 mb-4 mt-3">
+          <CancelacionesPanel
+            cancelados={cancelacionesStats.cancelados}
+            totalTurnos={cancelacionesStats.totalTurnos}
+          />
+        </div>
+      ) : null}
     </main>
   );
 }

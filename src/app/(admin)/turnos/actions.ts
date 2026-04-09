@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { atenciones, barberos, cierresCaja, mediosPago, pantallaEvents, servicios, turnos, turnosDisponibilidad } from "@/db/schema";
@@ -611,4 +611,190 @@ export async function cobrarYCompletarTurnoAction(
   revalidatePath("/hoy");
   revalidatePath("/caja");
   return {};
+}
+
+export async function crearDisponibilidadLoteAction(
+  barberoId: string,
+  _prevState: TurnoActionState,
+  formData: FormData
+): Promise<TurnoActionState> {
+  const actor = await getTurnosActorContext();
+  if (!actor) return { error: "Necesitas iniciar sesion." };
+  if (!actor.isAdmin && actor.barberoId !== barberoId) {
+    return { error: "Solo podes gestionar tu propia disponibilidad." };
+  }
+
+  const diasRaw = String(formData.get("diasSemana") ?? "");
+  const horaInicio = normalizeTimeInput(String(formData.get("horaInicio") ?? ""));
+  const horaFinRaw = String(formData.get("horaFin") ?? "").trim();
+  const horaFin = horaFinRaw ? normalizeTimeInput(horaFinRaw) : "";
+  const duracionMinutos = Number(formData.get("duracionMinutos") ?? 0);
+  const semanas = Math.min(8, Math.max(1, Number(formData.get("semanas") ?? 1)));
+
+  const diasSeleccionados = diasRaw
+    .split(",")
+    .map(Number)
+    .filter((d) => !isNaN(d) && d >= 0 && d <= 6);
+
+  if (diasSeleccionados.length === 0) {
+    return { error: "Elegí al menos un día de la semana." };
+  }
+  if (!horaInicio || !horaFin || !TURNO_DURACIONES.includes(duracionMinutos as 45 | 60)) {
+    return { error: "Completá hora de inicio, fin y duración válidas." };
+  }
+
+  const startMinutes = timeToMinutes(horaInicio);
+  const endMinutes = timeToMinutes(horaFin);
+  if (endMinutes <= startMinutes) {
+    return { error: "La hora de fin debe ser posterior al inicio." };
+  }
+
+  const slotsHorarios: string[] = [];
+  for (let cursor = startMinutes; cursor + duracionMinutos <= endMinutes; cursor += duracionMinutos) {
+    slotsHorarios.push(minutesToTime(cursor));
+  }
+  if (slotsHorarios.length === 0) {
+    return { error: "El rango no alcanza para generar ningún slot con esa duración." };
+  }
+
+  const fechaHoy = getFechaHoyArgentina();
+  const [y, m, d] = fechaHoy.split("-").map(Number);
+  const hoyUTC = new Date(Date.UTC(y!, m! - 1, d!));
+
+  const fechas: string[] = [];
+  for (let i = 1; i <= semanas * 7; i++) {
+    const date = new Date(hoyUTC);
+    date.setUTCDate(hoyUTC.getUTCDate() + i);
+    if (diasSeleccionados.includes(date.getUTCDay())) {
+      fechas.push(date.toISOString().slice(0, 10));
+    }
+  }
+
+  if (fechas.length === 0) {
+    return { error: "No hay fechas que coincidan con esos días en ese rango." };
+  }
+
+  let createdCount = 0;
+  let skippedCierre = 0;
+
+  for (const fecha of fechas) {
+    if (await isFechaCerrada(fecha)) {
+      skippedCierre++;
+      continue;
+    }
+
+    for (const hora of slotsHorarios) {
+      const [existing] = await db
+        .select({ id: turnosDisponibilidad.id })
+        .from(turnosDisponibilidad)
+        .where(
+          and(
+            eq(turnosDisponibilidad.barberoId, barberoId),
+            eq(turnosDisponibilidad.fecha, fecha),
+            eq(turnosDisponibilidad.horaInicio, hora)
+          )
+        )
+        .limit(1);
+
+      if (existing) continue;
+
+      await db.insert(turnosDisponibilidad).values({ barberoId, fecha, horaInicio: hora, duracionMinutos });
+      createdCount++;
+    }
+  }
+
+  const agendaBarbero = await getBarberoAgendaProfile(barberoId);
+  revalidatePath("/turnos");
+  revalidatePath("/hoy");
+  revalidatePath("/turnos/disponibilidad");
+  if (agendaBarbero?.publicSlug) {
+    revalidatePath(`/reservar/${agendaBarbero.publicSlug}`);
+  }
+
+  if (createdCount === 0) {
+    return { error: "Todos esos slots ya estaban cargados." };
+  }
+  const partes = [`Se crearon ${createdCount} slots`];
+  if (skippedCierre > 0) partes.push(`${skippedCierre} días cerrados se saltaron`);
+  return { success: partes.join(". ") + "." };
+}
+
+export async function eliminarDisponibilidadDiaSemanaAction(
+  barberoId: string,
+  _prevState: TurnoActionState,
+  formData: FormData
+): Promise<TurnoActionState> {
+  const actor = await getTurnosActorContext();
+  if (!actor) return { error: "Necesitas iniciar sesion." };
+  if (!actor.isAdmin && actor.barberoId !== barberoId) {
+    return { error: "Solo podes gestionar tu propia disponibilidad." };
+  }
+
+  const diaSemana = Number(formData.get("diaSemana") ?? -1);
+  if (isNaN(diaSemana) || diaSemana < 0 || diaSemana > 6) {
+    return { error: "Día de la semana inválido." };
+  }
+
+  const fechaHoy = getFechaHoyArgentina();
+
+  const todosSlots = await db
+    .select()
+    .from(turnosDisponibilidad)
+    .where(
+      and(
+        eq(turnosDisponibilidad.barberoId, barberoId),
+        gte(turnosDisponibilidad.fecha, fechaHoy)
+      )
+    );
+
+  const matchingSlots = todosSlots.filter((slot) => {
+    const [sy, sm, sd] = slot.fecha.split("-").map(Number);
+    return new Date(Date.UTC(sy!, sm! - 1, sd!)).getUTCDay() === diaSemana;
+  });
+
+  if (matchingSlots.length === 0) {
+    return { error: "No hay slots futuros para ese día de la semana." };
+  }
+
+  let deletedCount = 0;
+  let skippedCount = 0;
+
+  for (const slot of matchingSlots) {
+    const [ocupado] = await db
+      .select({ id: turnos.id })
+      .from(turnos)
+      .where(
+        and(
+          eq(turnos.barberoId, slot.barberoId),
+          eq(turnos.fecha, slot.fecha),
+          eq(turnos.horaInicio, slot.horaInicio),
+          inArray(turnos.estado, ["pendiente", "confirmado"])
+        )
+      )
+      .limit(1);
+
+    if (ocupado) {
+      skippedCount++;
+      continue;
+    }
+
+    await db.delete(turnosDisponibilidad).where(eq(turnosDisponibilidad.id, slot.id));
+    deletedCount++;
+  }
+
+  const agendaBarbero = await getBarberoAgendaProfile(barberoId);
+  revalidatePath("/turnos");
+  revalidatePath("/hoy");
+  revalidatePath("/turnos/disponibilidad");
+  if (agendaBarbero?.publicSlug) {
+    revalidatePath(`/reservar/${agendaBarbero.publicSlug}`);
+  }
+
+  if (deletedCount === 0) {
+    return { error: `No se borró ningún slot. Los ${skippedCount} tienen turnos activos — recházalos primero.` };
+  }
+
+  const partes = [`Se borraron ${deletedCount} slots`];
+  if (skippedCount > 0) partes.push(`${skippedCount} tenían turno y no se tocaron`);
+  return { success: partes.join(". ") + "." };
 }
