@@ -2,29 +2,34 @@
 
 import type { FaceMetrics } from "@/lib/marciano-style";
 
-// MediaPipe landmark indices (478-point model)
-// These are approximate well-known indices for key facial features
+// MediaPipe FaceMesh landmark indices (478-point model, first 468 are face mesh)
+// Validated against MediaPipe canonical face model topology
 const LM = {
-  // Top of head
-  TOP: 10,
-  // Bottom of chin
-  CHIN: 152,
-  // Left/right cheekbones (widest face point)
+  // Vertical axis
+  TOP: 10,          // forehead center
+  CHIN: 152,        // chin bottom
+  // Cheekbones — widest face points (zygion area)
   LEFT_CHEEK: 234,
   RIGHT_CHEEK: 454,
-  // Left/right jaw corners
+  // Jaw corners (gonion area)
   LEFT_JAW: 172,
   RIGHT_JAW: 397,
-  // Left/right forehead corners (approx)
+  // Forehead width (lateral forehead, above eyebrow tails)
   LEFT_FOREHEAD: 21,
   RIGHT_FOREHEAD: 251,
-  // Left/right chin corners
+  // Chin width (chin corners)
   LEFT_CHIN: 58,
   RIGHT_CHIN: 288,
+  // Alignment check — outer eye corners (canonical in FaceMesh)
+  LEFT_EYE_OUTER: 33,
+  RIGHT_EYE_OUTER: 263,
+  // Nose tip (for left/right centering)
+  NOSE_TIP: 4,
 } as const;
 
 type Landmark = { x: number; y: number; z: number };
 
+// 2D Euclidean distance (x, y only — ratios are scale-invariant so z not needed here)
 function dist(a: Landmark, b: Landmark): number {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
@@ -41,6 +46,43 @@ export function computeFaceMetrics(landmarks: Landmark[]): FaceMetrics {
     jawWidthRatio: faceWidth > 0 ? jawWidth / faceWidth : 1,
     foreheadChinRatio: chinWidth > 0 ? foreheadWidth / chinWidth : 1,
   };
+}
+
+// Average multiple metric samples to reduce single-frame noise
+export function averageMetrics(samples: FaceMetrics[]): FaceMetrics {
+  const n = samples.length;
+  if (n === 0) return { widthHeightRatio: 1, jawWidthRatio: 1, foreheadChinRatio: 1 };
+  return {
+    widthHeightRatio: samples.reduce((s, m) => s + m.widthHeightRatio, 0) / n,
+    jawWidthRatio: samples.reduce((s, m) => s + m.jawWidthRatio, 0) / n,
+    foreheadChinRatio: samples.reduce((s, m) => s + m.foreheadChinRatio, 0) / n,
+  };
+}
+
+export type AlignmentStatus = "ok" | "no_face" | "tilt" | "offcenter";
+
+// Check if face is well-positioned for accurate metric capture.
+// Uses eye symmetry (head tilt) and nose centering (left-right rotation).
+export function checkFaceAlignment(landmarks: Landmark[]): AlignmentStatus {
+  const leftEye = landmarks[LM.LEFT_EYE_OUTER];
+  const rightEye = landmarks[LM.RIGHT_EYE_OUTER];
+  const nose = landmarks[LM.NOSE_TIP];
+
+  if (!leftEye || !rightEye || !nose) return "no_face";
+
+  const eyeSpan = Math.abs(rightEye.x - leftEye.x);
+  if (eyeSpan < 0.05) return "no_face"; // too small / not detected properly
+
+  // Tilt: eyes should be at roughly the same Y (vertical position)
+  const eyeYDiff = Math.abs(leftEye.y - rightEye.y);
+  if (eyeYDiff / eyeSpan > 0.13) return "tilt"; // >13% → visible tilt
+
+  // Rotation: nose tip should be horizontally centered between eyes
+  const eyeCenterX = (leftEye.x + rightEye.x) / 2;
+  const noseOffset = Math.abs(nose.x - eyeCenterX);
+  if (noseOffset / eyeSpan > 0.13) return "offcenter"; // >13% → turned away
+
+  return "ok";
 }
 
 let landmarkerInstance: unknown | null = null;
