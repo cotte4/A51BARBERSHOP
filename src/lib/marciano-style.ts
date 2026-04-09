@@ -1,16 +1,34 @@
 import type { FaceShape, InterrogatoryAnswers, StyleDominante, StyleProfile } from "@/lib/types";
 
 // ————————————————————————————
-// Face shape → estilo A51
+// Title from answers: lifestyle × perfectCut → título
+// Alien face shape is always El Intergaláctico regardless of answers
 // ————————————————————————————
-const STYLE_BY_SHAPE: Record<FaceShape, StyleDominante> = {
-  oval: "Comandante",
-  cuadrado: "Capitán",
-  redondo: "Piloto",
-  corazon: "Navegante",
-  diamante: "Explorador",
-  alien: "Intergaláctico",
-};
+function getTitleFromAnswers(shape: FaceShape, answers: InterrogatoryAnswers): StyleDominante {
+  if (shape === "alien") return "El Intergaláctico";
+
+  const { lifestyle, perfectCut } = answers;
+
+  if (lifestyle === "formal") {
+    if (perfectCut === "otros-notan") return "El Victor";
+    if (perfectCut === "lo-siento")   return "El Código";
+    return "El Turbio";
+  }
+  if (lifestyle === "nocturno") {
+    if (perfectCut === "otros-notan") return "El Espectro";
+    if (perfectCut === "lo-siento")   return "El Pesado";
+    return "El Clandestino";
+  }
+  if (lifestyle === "outdoor") {
+    if (perfectCut === "otros-notan") return "El Detonante";
+    if (perfectCut === "lo-siento")   return "El Bardo";
+    return "El Humo";
+  }
+  // minimal
+  if (perfectCut === "otros-notan") return "El Satélite";
+  if (perfectCut === "lo-siento")   return "El Filo";
+  return "El Umbral";
+}
 
 // ————————————————————————————
 // Smart cuts matrix: shape × lifestyle × morningMinutes
@@ -151,24 +169,6 @@ function estimateChairTime(morningMinutes: number): number {
   return 60; // 10+
 }
 
-// ————————————————————————————
-// Style override: lifestyle × morningMinutes can shift the base style
-// ————————————————————————————
-function applyStyleOverride(
-  shape: FaceShape,
-  base: StyleDominante,
-  answers: InterrogatoryAnswers
-): StyleDominante {
-  // oval + nocturno/outdoor + 0min → Capitán (menos mantenimiento)
-  if (shape === "oval" && (answers.lifestyle === "nocturno" || answers.lifestyle === "outdoor") && answers.morningMinutes === 0) {
-    return "Capitán";
-  }
-  // cuadrado + formal + 10min → Comandante (más versatilidad)
-  if (shape === "cuadrado" && answers.lifestyle === "formal" && answers.morningMinutes >= 5) {
-    return "Comandante";
-  }
-  return base;
-}
 
 // ————————————————————————————
 // Face shape classification from MediaPipe metrics
@@ -226,8 +226,7 @@ export function generateStyleProfile(
   metrics: FaceMetrics | null,
   cutsOverride: string[] | null = null
 ): Omit<StyleProfile, "idealBarberoId"> {
-  const baseStyle = STYLE_BY_SHAPE[shape];
-  const dominantStyle = applyStyleOverride(shape, baseStyle, answers);
+  const dominantStyle = getTitleFromAnswers(shape, answers);
   const recommendedCuts = cutsOverride && cutsOverride.length > 0
     ? cutsOverride
     : getDefaultCuts(shape, answers);

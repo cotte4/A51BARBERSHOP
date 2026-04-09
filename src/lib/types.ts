@@ -203,7 +203,12 @@ export type InterrogatoryAnswers = {
   turnoff: 'musica-boluda' | 'gente-de-mas' | 'apuro' | 'charla-forzada';
 };
 
-export type StyleDominante = 'Comandante' | 'Capitán' | 'Piloto' | 'Navegante' | 'Explorador' | 'Intergaláctico';
+export type StyleDominante =
+  | 'El Victor' | 'El Código' | 'El Turbio'
+  | 'El Espectro' | 'El Pesado' | 'El Clandestino'
+  | 'El Detonante' | 'El Bardo' | 'El Humo'
+  | 'El Satélite' | 'El Filo' | 'El Umbral'
+  | 'El Intergaláctico';
 
 export type StyleProfile = {
   version: 1;
