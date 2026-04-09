@@ -39,7 +39,12 @@ export default function FaceCapture({ onCapture }: FaceCaptureProps) {
 
   useEffect(() => {
     if (state === "streaming" && videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
+      const video = videoRef.current;
+      video.srcObject = streamRef.current;
+      video.play().catch(() => {
+        // autoplay blocked — the muted+playsInline attributes should prevent this,
+        // but catch silently; the user can still tap Capturar which will retry
+      });
     }
   }, [state]);
 
@@ -93,6 +98,15 @@ export default function FaceCapture({ onCapture }: FaceCaptureProps) {
 
       setLoadingMsg("Analizando tu rostro...");
       const video = videoRef.current;
+
+      // Wait until the video has actual frame data (readyState >= HAVE_CURRENT_DATA)
+      if (video.readyState < 2) {
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error("video timeout")), 5000);
+          video.addEventListener("canplay", () => { clearTimeout(timeout); resolve(); }, { once: true });
+        }).catch(() => null);
+      }
+
       const landmarks = await detectLandmarksFromVideo(video, landmarker);
 
       if (!landmarks) {
