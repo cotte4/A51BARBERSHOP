@@ -193,7 +193,7 @@ export interface QuickActionDefaults {
 // ————————————————————————————
 // Perfil Marciano (Style DNA)
 // ————————————————————————————
-export type FaceShape = 'oval' | 'cuadrado' | 'redondo' | 'corazon' | 'diamante';
+export type FaceShape = 'oval' | 'cuadrado' | 'redondo' | 'corazon' | 'diamante' | 'alien';
 
 export type InterrogatoryAnswers = {
   lifestyle: 'minimal' | 'nocturno' | 'outdoor' | 'formal';
@@ -203,7 +203,7 @@ export type InterrogatoryAnswers = {
   turnoff: 'musica-boluda' | 'gente-de-mas' | 'apuro' | 'charla-forzada';
 };
 
-export type StyleDominante = 'Comandante' | 'Capitán' | 'Piloto' | 'Navegante' | 'Explorador';
+export type StyleDominante = 'Comandante' | 'Capitán' | 'Piloto' | 'Navegante' | 'Explorador' | 'Intergaláctico';
 
 export type StyleProfile = {
   version: 1;

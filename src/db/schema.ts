@@ -499,7 +499,7 @@ export const clients = pgTable(
     ),
     index("clients_created_by_barbero_id_idx").on(table.createdByBarberoId),
     check("clients_face_shape_check",
-      sql`${table.faceShape} IN ('oval', 'cuadrado', 'redondo', 'corazon', 'diamante') OR ${table.faceShape} IS NULL`
+      sql`${table.faceShape} IN ('oval', 'cuadrado', 'redondo', 'corazon', 'diamante', 'alien') OR ${table.faceShape} IS NULL`
     ),
   ]
 );
@@ -942,6 +942,12 @@ export const musicAutoResumeState = pgTable(
     index("music_auto_resume_state_pending_idx").on(table.resumePending, table.updatedAt),
   ]
 );
+
+export const marcianoCutsConfig = pgTable("marciano_cuts_config", {
+  faceShape: text("face_shape").primaryKey(),
+  cuts: jsonb("cuts").$type<string[]>().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const musicEvents = pgTable(
   "music_events",

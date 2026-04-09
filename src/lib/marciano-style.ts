@@ -1,17 +1,6 @@
 import type { FaceShape, InterrogatoryAnswers, StyleDominante, StyleProfile } from "@/lib/types";
 
 // ————————————————————————————
-// Face shape → cortes base
-// ————————————————————————————
-const CUTS_BY_SHAPE: Record<FaceShape, string[]> = {
-  oval: ["Undercut", "Pompadour", "Taper Fade"],
-  cuadrado: ["French Crop", "Taper Fade estructurado", "Buzz"],
-  redondo: ["Pompadour", "Faux Hawk", "Quiff"],
-  corazon: ["Side Part", "Slick Back", "Undercut"],
-  diamante: ["Textured Crop", "Messy Top", "Long Top Fade"],
-};
-
-// ————————————————————————————
 // Face shape → estilo A51
 // ————————————————————————————
 const STYLE_BY_SHAPE: Record<FaceShape, StyleDominante> = {
@@ -20,7 +9,58 @@ const STYLE_BY_SHAPE: Record<FaceShape, StyleDominante> = {
   redondo: "Piloto",
   corazon: "Navegante",
   diamante: "Explorador",
+  alien: "Intergaláctico",
 };
+
+// ————————————————————————————
+// Smart cuts matrix: shape × lifestyle × morningMinutes
+// Based on barbering research (Apr 2026)
+// ————————————————————————————
+export function getDefaultCuts(shape: FaceShape, answers: InterrogatoryAnswers): string[] {
+  const { lifestyle, morningMinutes } = answers;
+  const highMaint = morningMinutes >= 5;
+
+  switch (shape) {
+    case "oval":
+      if (lifestyle === "formal") {
+        return highMaint ? ["Pompadour", "Slick Back"] : ["Side Part", "French Crop"];
+      }
+      return highMaint ? ["Quiff", "Taper Fade"] : ["French Crop", "Crew Cut"];
+
+    case "cuadrado":
+      if (lifestyle === "formal") {
+        return highMaint ? ["Pompadour", "Hard Part"] : ["French Crop", "Quiff"];
+      }
+      if (lifestyle === "nocturno") {
+        return highMaint ? ["Quiff", "French Crop"] : ["French Crop", "Crew Cut"];
+      }
+      return highMaint ? ["French Crop", "Quiff"] : ["French Crop", "Crew Cut"];
+
+    case "redondo":
+      if (lifestyle === "formal") {
+        return highMaint ? ["Pompadour", "Quiff"] : ["Quiff", "French Crop"];
+      }
+      if (lifestyle === "outdoor" && highMaint) {
+        return ["Quiff", "Faux Hawk"];
+      }
+      return highMaint ? ["Quiff", "French Crop"] : ["French Crop", "Crew Cut"];
+
+    case "corazon":
+      if (lifestyle === "formal" && highMaint) {
+        return ["Slick Back", "Side Part"];
+      }
+      return highMaint ? ["Side Part", "Quiff"] : ["Textured Crop", "Side Part"];
+
+    case "diamante":
+      if (lifestyle === "formal" && highMaint) {
+        return ["Faux Hawk", "Textured Quiff"];
+      }
+      return highMaint ? ["Textured Crop", "Long Top Fade"] : ["Textured Crop", "Messy Top"];
+
+    case "alien":
+      return ["Buzz Cut", "Crew Cut", "Lo que quieras"];
+  }
+}
 
 // ————————————————————————————
 // Chair time by morning minutes
@@ -78,21 +118,25 @@ export function classifyFaceShape(metrics: FaceMetrics): FaceShape {
   // diamante: narrow forehead + narrow chin + wide cheekbones
   if (foreheadChinRatio < 0.92) return "diamante";
 
-  // default fallback
-  return "oval";
+  // fallback: alien (unclassifiable face — embrace it)
+  return "alien";
 }
 
 // ————————————————————————————
 // Generate Style Profile (without idealBarberoId — that requires DB)
+// cutsOverride: Pinky's configured cuts for this shape (from marciano_cuts_config)
 // ————————————————————————————
 export function generateStyleProfile(
   shape: FaceShape,
   answers: InterrogatoryAnswers,
-  metrics: FaceMetrics | null
+  metrics: FaceMetrics | null,
+  cutsOverride: string[] | null = null
 ): Omit<StyleProfile, "idealBarberoId"> {
   const baseStyle = STYLE_BY_SHAPE[shape];
   const dominantStyle = applyStyleOverride(shape, baseStyle, answers);
-  const recommendedCuts = CUTS_BY_SHAPE[shape];
+  const recommendedCuts = cutsOverride && cutsOverride.length > 0
+    ? cutsOverride
+    : getDefaultCuts(shape, answers);
   const chairTimeMin = estimateChairTime(answers.morningMinutes);
 
   return {

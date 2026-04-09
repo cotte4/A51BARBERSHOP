@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { clients, clientBriefingCache } from "@/db/schema";
+import { clients, clientBriefingCache, marcianoCutsConfig } from "@/db/schema";
 import { requireMarcianoClient } from "@/lib/marciano-portal";
 import { generateStyleProfile, matchIdealBarbero } from "@/lib/marciano-style";
 import type { FaceShape, InterrogatoryAnswers, StyleProfile } from "@/lib/types";
@@ -17,7 +17,14 @@ export async function saveStyleProfileAction(input: {
   try {
     const { client } = await requireMarcianoClient();
 
-    const partial = generateStyleProfile(input.shape, input.answers, input.metrics);
+    const [cutsConfigRow] = await db
+      .select({ cuts: marcianoCutsConfig.cuts })
+      .from(marcianoCutsConfig)
+      .where(eq(marcianoCutsConfig.faceShape, input.shape))
+      .limit(1);
+
+    const cutsOverride = cutsConfigRow?.cuts ?? null;
+    const partial = generateStyleProfile(input.shape, input.answers, input.metrics, cutsOverride);
     const idealBarberoId = await matchIdealBarbero(input.shape, db);
 
     const profile: StyleProfile = {
