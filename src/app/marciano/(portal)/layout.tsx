@@ -57,6 +57,12 @@ export default async function MarcianoPortalLayout({
               Perfil
             </Link>
             <Link
+              href="/marciano/estilo"
+              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-300 hover:border-[#8cff59]/30 hover:text-white"
+            >
+              Mi Estilo
+            </Link>
+            <Link
               href="/marciano/seguridad"
               className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-300 hover:border-[#8cff59]/30 hover:text-white"
             >

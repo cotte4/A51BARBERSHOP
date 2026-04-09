@@ -235,8 +235,8 @@ export async function POST(
     )
     .limit(1);
 
-  // No visits → return fixed summary without calling the model
-  if (visits.length === 0) {
+  // No visits AND no style profile → return fixed summary without calling the model
+  if (visits.length === 0 && !client.styleProfile) {
     const briefingText = buildFallbackBriefing(client.name);
     await saveBriefingCache({ clientId, viewerScope, viewerBarberoId, cacheKey, briefingText });
     return Response.json({ briefing: briefingText, cached: false });

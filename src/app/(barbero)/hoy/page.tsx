@@ -1,15 +1,18 @@
 import Link from "next/link";
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import HoyActionStrip from "@/components/hoy/HoyActionStrip";
 import { db } from "@/db";
 import {
   atenciones,
   barberos,
+  clients,
   mediosPago,
   productos,
   servicios,
   stockMovimientos,
+  turnos as turnosTable,
 } from "@/db/schema";
+import type { StyleProfile, FaceShape } from "@/lib/types";
 import { registrarAtencionExpressAction } from "@/app/(barbero)/caja/actions";
 import { getTurnosActorContext } from "@/lib/turnos-access";
 import { getTurnosVisibleList } from "@/lib/turnos";
@@ -118,6 +121,7 @@ export default async function HoyPage() {
     serviciosList,
     productosList,
     turnosHoy,
+    marcianosTurnosHoy,
     atencionesMesRows,
   ] = await Promise.all([
     actor.barberoId
@@ -166,6 +170,24 @@ export default async function HoyPage() {
     db.select().from(servicios),
     db.select().from(productos).where(eq(productos.activo, true)),
     getTurnosVisibleList(fechaHoy, undefined, actor.barberoId ?? undefined),
+    db
+      .select({
+        turnoId: turnosTable.id,
+        horaInicio: turnosTable.horaInicio,
+        clienteNombre: turnosTable.clienteNombre,
+        faceShape: clients.faceShape,
+        styleProfile: clients.styleProfile,
+      })
+      .from(turnosTable)
+      .leftJoin(clients, eq(clients.id, turnosTable.clientId))
+      .where(
+        and(
+          eq(turnosTable.fecha, fechaHoy),
+          eq(turnosTable.esMarcianoSnapshot, true),
+          inArray(turnosTable.estado, ["pendiente", "confirmado"])
+        )
+      )
+      .orderBy(turnosTable.horaInicio),
     actor.barberoId
       ? db
           .select({
@@ -460,6 +482,7 @@ export default async function HoyPage() {
           <section className="panel-card rounded-[32px] p-4 sm:p-6">
             <div className="space-y-3">
               <p className="eyebrow text-[11px] font-semibold">Mi mes</p>
+
               <h2 className="font-display text-2xl font-semibold text-white">Rendimiento acumulado</h2>
               <p className="text-sm leading-5 text-zinc-400 sm:leading-6">
                 Cortes, bruto, comision y posicion acumulada hasta hoy.
@@ -487,6 +510,10 @@ export default async function HoyPage() {
           </section>
         ) : null}
       </section>
+
+      {marcianosTurnosHoy.length > 0 ? (
+        <MarcianosTurnosHoy turnos={marcianosTurnosHoy} />
+      ) : null}
     </div>
   );
 }
@@ -550,6 +577,86 @@ function StatusRailCard({
         <span className="text-sm font-semibold text-[#8cff59]">{actionLabel}</span>
       </div>
     </Link>
+  );
+}
+
+const FACE_SHAPE_LABEL: Record<string, string> = {
+  oval: "Oval",
+  cuadrado: "Cuadrado",
+  redondo: "Redondo",
+  corazon: "Corazón",
+  diamante: "Diamante",
+};
+
+function MarcianosTurnosHoy({
+  turnos,
+}: {
+  turnos: Array<{
+    turnoId: string;
+    horaInicio: string;
+    clienteNombre: string | null;
+    faceShape: string | null;
+    styleProfile: unknown;
+  }>;
+}) {
+  return (
+    <section className="panel-card rounded-[32px] p-4 sm:p-6">
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div>
+          <p className="eyebrow text-[11px] font-semibold text-[#8cff59]">Marcianos hoy</p>
+          <h2 className="font-display mt-1 text-xl font-semibold text-white">
+            Style DNA activo
+          </h2>
+        </div>
+        <span className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/8 px-3 py-1.5 text-[11px] font-semibold text-[#8cff59]">
+          {turnos.length} {turnos.length === 1 ? "turno" : "turnos"}
+        </span>
+      </div>
+
+      <div className="space-y-3">
+        {turnos.map((t) => {
+          const sp = t.styleProfile as StyleProfile | null;
+          const shape = t.faceShape as FaceShape | null;
+          return (
+            <article
+              key={t.turnoId}
+              className="rounded-[24px] border border-[#8cff59]/15 bg-[#8cff59]/5 p-4"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#8cff59]" />
+                  <p className="text-sm font-semibold text-white">{t.clienteNombre ?? "Marciano"}</p>
+                </div>
+                <span className="text-xs text-zinc-400">{t.horaInicio.slice(0, 5)}</span>
+              </div>
+
+              {sp ? (
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Rostro</p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      {shape ? (FACE_SHAPE_LABEL[shape] ?? shape) : "No analizado"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Estilo</p>
+                    <p className="mt-1 text-sm font-semibold text-white">{sp.dominantStyle}</p>
+                  </div>
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Cortes</p>
+                    <p className="mt-1 text-sm font-semibold text-white leading-snug">
+                      {sp.recommendedCuts.slice(0, 2).join(", ")}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-500">Sin perfil de estilo completado aún.</p>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { loadFaceLandmarker, detectLandmarksFromVideo, computeFaceMetrics } from "@/lib/marciano-face-landmarks";
 import { classifyFaceShape } from "@/lib/marciano-style";
 import { playSound } from "@/lib/marciano-sounds";
@@ -36,6 +36,12 @@ export default function FaceCapture({ onCapture }: FaceCaptureProps) {
   const [state, setState] = useState<CaptureState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [loadingMsg, setLoadingMsg] = useState<string>("");
+
+  useEffect(() => {
+    if (state === "streaming" && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [state]);
 
   async function startCamera() {
     setState("requesting");
