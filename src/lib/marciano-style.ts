@@ -272,9 +272,3 @@ export async function matchIdealBarbero(
 // ————————————————————————————
 // Lifestyle image placeholders (Pinky provides final images)
 // ————————————————————————————
-export const LIFESTYLE_IMAGES: Record<string, string> = {
-  minimal: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&q=80",
-  nocturno: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80",
-  outdoor: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&q=80",
-  formal: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80",
-};

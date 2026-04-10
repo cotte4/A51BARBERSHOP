@@ -68,7 +68,7 @@ export async function sendMarcianoPasswordResetEmail(input: {
 }
 
 export function buildMarcianoResetRedirectUrl() {
-  return `${getAppUrl()}/marcianos/reset`;
+  return `${getAppUrl()}/marciano/reset`;
 }
 
 function escapeHtml(value: string) {

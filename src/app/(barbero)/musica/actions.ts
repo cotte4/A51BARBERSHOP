@@ -331,8 +331,3 @@ export async function deleteScheduleRuleAction(ruleId: string): Promise<ActionRe
     return { error: error instanceof Error ? error.message : "No pude borrar la franja." };
   }
 }
-
-export async function getDefaultScheduleDaysAction() {
-  await requireMusicAdmin();
-  return getDefaultWeekdayMask();
-}

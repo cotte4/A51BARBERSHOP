@@ -22,11 +22,11 @@ export default async function MarcianoResetPage({ searchParams }: MarcianoResetP
         { label: "Token", value: tokenError ? "Vencido" : "Valido" },
         { label: "Clave", value: "Nueva y segura" },
         { label: "Acceso", value: "Portal Marciano" },
-        { label: "Ruta", value: "/marcianos/reset" },
+        { label: "Ruta", value: "/marciano/reset" },
       ]}
       footer={
         <p className="text-center text-sm text-zinc-400">
-          <Link href="/marcianos" className="text-[#8cff59] hover:text-[#b6ff84]">
+          <Link href="/marciano/login" className="text-[#8cff59] hover:text-[#b6ff84]">
             Volver al login
           </Link>
         </p>

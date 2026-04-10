@@ -339,10 +339,6 @@ export async function getTurnosVisibleList(
   }));
 }
 
-export async function getTurnosAdminList(fecha: string, estado?: string) {
-  return getTurnosVisibleList(fecha, estado);
-}
-
 export async function getDisponibilidadAdminList(barberoId: string, fromFecha: string) {
   return db
     .select({

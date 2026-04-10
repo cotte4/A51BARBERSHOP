@@ -31,7 +31,7 @@ export default function MarcianoPasswordResetForm({
               Pedimos otro correo de recuperacion y volvemos a cargar la pagina con ese acceso.
             </p>
             <Link
-              href="/marcianos/recuperar"
+              href="/marciano/recuperar"
               className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-white/10 bg-black/30 px-4 text-sm font-semibold text-zinc-100 transition hover:border-[#8cff59]/30 hover:text-white"
             >
               Pedir nuevo link
@@ -106,7 +106,7 @@ export default function MarcianoPasswordResetForm({
       )}
 
       <p className="text-center text-sm text-zinc-400">
-        <Link href="/marcianos" className="text-[#8cff59] hover:text-[#b6ff84]">
+        <Link href="/marciano/login" className="text-[#8cff59] hover:text-[#b6ff84]">
           Volver al login
         </Link>
       </p>

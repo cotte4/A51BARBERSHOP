@@ -258,14 +258,6 @@ function MiniAlien({ tone, size = "md" }: { tone: AlienTone; size?: AlienSize })
 
 // ─── Standalone exports ───────────────────────────────────────────────────────
 
-export function PinkyAlien({ size = "md" }: { size?: AlienSize }) {
-  return <MiniAlien tone="pinky" size={size} />;
-}
-
-export function GaboteAlien({ size = "md" }: { size?: AlienSize }) {
-  return <MiniAlien tone="gabote" size={size} />;
-}
-
 // ─── Panel principal ──────────────────────────────────────────────────────────
 
 type AlienSignalPanelProps = {

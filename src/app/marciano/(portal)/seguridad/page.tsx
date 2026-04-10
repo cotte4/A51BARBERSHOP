@@ -58,7 +58,7 @@ export default async function MarcianoSecurityPage() {
 
       <section className="rounded-[24px] border border-white/10 bg-white/5 p-5 text-sm text-zinc-300">
         ¿Necesitas recuperar la cuenta desde cero? Usa{" "}
-        <Link href="/marcianos/recuperar" className="text-[#8cff59] hover:text-[#b6ff84]">
+        <Link href="/marciano/recuperar" className="text-[#8cff59] hover:text-[#b6ff84]">
           la recuperacion de contrasena
         </Link>
         .

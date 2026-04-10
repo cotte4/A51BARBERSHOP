@@ -133,7 +133,7 @@ export default function MarcianoRegisterForm() {
 
       <p className="text-center text-sm text-zinc-400">
         Ya tenes cuenta?{" "}
-        <Link href="/marcianos" className="font-medium text-[#8cff59] hover:text-[#b6ff95]">
+        <Link href="/marciano/login" className="font-medium text-[#8cff59] hover:text-[#b6ff95]">
           Entrar desde aca
         </Link>
       </p>

@@ -14,7 +14,7 @@ export default function MarcianoRegistroPage() {
         { label: "Paso 1", value: "Validar tu email" },
         { label: "Paso 2", value: "Crear tu clave" },
         { label: "Paso 3", value: "Entrar al portal" },
-        { label: "Ruta", value: "/marcianos/registro" },
+        { label: "Ruta", value: "/marciano/registro" },
       ]}
       footer={
         <>
@@ -22,7 +22,7 @@ export default function MarcianoRegistroPage() {
             Si todavia no figuras, escribinos en la barber para validar tu email primero.
           </p>
           <p className="mt-3 text-center text-sm text-zinc-400">
-            <Link href="/marcianos" className="hover:text-white">
+            <Link href="/marciano/login" className="hover:text-white">
               Volver al login Marciano
             </Link>
           </p>

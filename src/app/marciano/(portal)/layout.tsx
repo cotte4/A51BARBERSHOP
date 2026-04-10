@@ -68,7 +68,7 @@ export default async function MarcianoPortalLayout({
             >
               Seguridad
             </Link>
-            <LogoutButton redirectTo="/marcianos" />
+            <LogoutButton redirectTo="/marciano/login" />
           </div>
         </div>
       </header>

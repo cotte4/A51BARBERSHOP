@@ -51,10 +51,6 @@ export type SpotifyPlaylist = {
   ownerName: string | null;
 };
 
-export type SpotifyPlaylistTrack = SpotifyTrack & {
-  addedAt: string | null;
-};
-
 export type SpotifyPlaybackState = {
   isPlaying: boolean;
   progressMs: number;
@@ -64,7 +60,7 @@ export type SpotifyPlaybackState = {
   contextType: string | null;
 };
 
-export class SpotifyApiError extends Error {
+class SpotifyApiError extends Error {
   readonly status: number;
   readonly payload: unknown;
 
@@ -210,38 +206,6 @@ export async function listDevices(accessToken: string): Promise<SpotifyDevice[]>
   return (response?.devices ?? []).map(mapDevice);
 }
 
-export async function transferPlayback(
-  accessToken: string,
-  deviceId: string,
-  play = false
-): Promise<void> {
-  await requestSpotify<void>(`/me/player`, accessToken, {
-    method: "PUT",
-    body: {
-      device_ids: [deviceId],
-      play,
-    },
-  });
-}
-
-export async function searchTracks(
-  query: string,
-  accessToken: string,
-  options: { limit?: number } = {}
-): Promise<SpotifyTrack[]> {
-  const response = await requestSpotify<{
-    tracks: { items: RawSpotifyTrack[] };
-  }>("/search", accessToken, {
-    query: {
-      q: query,
-      type: "track",
-      limit: options.limit ?? 10,
-    },
-  });
-
-  return (response?.tracks.items ?? []).map(mapTrack);
-}
-
 export async function playTrack(
   accessToken: string,
   options: { deviceId?: string | null; trackUri: string }
@@ -290,48 +254,6 @@ export async function playPlaylist(
       context_uri: options.playlistUri,
     },
   });
-}
-
-export async function listPlaylistTracks(
-  accessToken: string,
-  playlistId: string,
-  options: { limit?: number; offset?: number } = {}
-): Promise<SpotifyPlaylistTrack[]> {
-  const response = await requestSpotify<{
-    items: Array<{
-      added_at: string | null;
-      track:
-        | {
-            id: string;
-            uri: string;
-            name: string;
-            artists: { name: string }[];
-            album: { name: string; images: { url: string }[] };
-            duration_ms: number;
-          }
-        | null;
-    }>;
-  }>(`/playlists/${playlistId}/tracks`, accessToken, {
-    query: {
-      limit: options.limit ?? 25,
-      offset: options.offset ?? 0,
-      market: "from_token",
-    },
-  });
-
-  return (response?.items ?? [])
-    .filter(
-      (
-        item
-      ): item is {
-        added_at: string | null;
-        track: RawSpotifyTrack;
-      } => Boolean(item.track?.id && item.track?.uri)
-    )
-    .map((item) => ({
-      ...mapTrack(item.track),
-      addedAt: item.added_at ?? null,
-    }));
 }
 
 export async function getCurrentPlayback(

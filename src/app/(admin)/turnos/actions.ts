@@ -131,32 +131,6 @@ export async function rechazarTurnoAction(
   return {};
 }
 
-export async function completarTurnoAction(
-  turnoId: string,
-  _prevState: TurnoActionState
-): Promise<TurnoActionState> {
-  const { turno, allowed } = await getManagedTurno(turnoId);
-  if (!turno) {
-    return { error: "Turno no encontrado." };
-  }
-  if (!allowed) {
-    return { error: "Solo podes gestionar tus propios turnos." };
-  }
-  if (turno.estado !== "confirmado") {
-    return { error: "Solo se pueden completar turnos confirmados." };
-  }
-
-  await db
-    .update(turnos)
-    .set({ estado: "completado", updatedAt: new Date() })
-    .where(eq(turnos.id, turnoId));
-
-  revalidatePath("/turnos");
-  revalidatePath("/hoy");
-  revalidatePath("/turnos/disponibilidad");
-  return {};
-}
-
 export async function clienteLlegoAction(
   turnoId: string,
   _prevState: TurnoActionState

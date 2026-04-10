@@ -9,7 +9,6 @@ import {
 import type { SpotifyPlaybackState, SpotifyPlaylist } from "@/lib/spotify-api";
 import {
   formatProposal,
-  formatScheduleRule,
   isoOrNull,
   parseTurnoProposalPayload,
 } from "@/lib/music-engine-helpers";
@@ -205,37 +204,3 @@ export function getPreferredDashboardPlayer(
     null
   );
 }
-
-export function buildProviderSummary(provider: ProviderRow) {
-  return buildDashboardProvider(provider);
-}
-
-export function buildRuntimeSummary(provider: ProviderRow, runtime: RuntimeRow) {
-  return buildDashboardRuntime(provider, runtime);
-}
-
-export function buildModeSummary(mode: ModeRow) {
-  return buildDashboardMode(mode);
-}
-
-export function buildPlayerSummaries(players: PlayerRow[]) {
-  return buildDashboardPlayers(players);
-}
-
-export function buildAutoResumeSummary(autoResume: AutoResumeRow) {
-  return buildDashboardAutoResume(autoResume);
-}
-
-export function buildQueueItems(queueRows: QueueSummaryRow[]) {
-  return buildDashboardQueue(null, queueRows).items;
-}
-
-export function buildNowPlayingSummary(playback: SpotifyPlaybackState | null) {
-  return buildDashboardNowPlaying(playback);
-}
-
-export function buildPlaylistSummaries(playlists: SpotifyPlaylist[]) {
-  return buildDashboardPlaylists(playlists);
-}
-
-export { formatScheduleRule };

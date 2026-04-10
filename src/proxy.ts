@@ -15,7 +15,6 @@ export async function proxy(request: NextRequest) {
   const isAuthenticated = !!session?.user;
   const userRole = (session?.user as { role?: string })?.role;
   const isMarciano = userRole === "marciano";
-  const isMarcianosAliasRoute = pathname === "/marcianos" || pathname.startsWith("/marcianos/");
   const isMarcianoRoute = pathname === "/marciano" || pathname.startsWith("/marciano/");
   const isMarcianoPublicRoute =
     pathname === "/marciano/login" ||
@@ -26,16 +25,6 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/marciano/recuperar") ||
     pathname === "/marciano/reset" ||
     pathname.startsWith("/marciano/reset");
-  const marcianosAliasTarget =
-    pathname === "/marcianos"
-      ? "/marciano/login"
-      : pathname.startsWith("/marcianos/")
-        ? pathname.replace("/marcianos", "/marciano")
-        : null;
-
-  if (isMarcianosAliasRoute && marcianosAliasTarget) {
-    return NextResponse.rewrite(new URL(marcianosAliasTarget, request.url));
-  }
 
   if (pathname === "/") {
     if (!isAuthenticated) {
@@ -165,6 +154,5 @@ export const config = {
     "/caja/:path*",
     "/clientes/:path*",
     "/marciano/:path*",
-    "/marcianos/:path*",
   ],
 };

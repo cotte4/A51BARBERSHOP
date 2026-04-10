@@ -13,10 +13,6 @@ export const clientPreferencesSchema = z.object({
 
 export type ClientPreferences = z.infer<typeof clientPreferencesSchema>;
 
-export function parseClientPreferences(input: Record<string, unknown>): ClientPreferences {
-  return clientPreferencesSchema.parse(input);
-}
-
 export function normalizeClientPreferences(
   input: Record<string, unknown>
 ): ClientPreferences | null {

@@ -1,21 +1,4 @@
-// ————————————————————————————
-// Roles de usuario
-// ————————————————————————————
-export type Rol = "admin" | "barbero" | "marciano";
-
-// ————————————————————————————
-// Tipos del modelo financiero
-// ————————————————————————————
-export type TipoModelo = "variable" | "hibrido" | "fijo";
-
-export type TipoMovimientoStock =
-  | "entrada"
-  | "venta"
-  | "uso_interno"
-  | "ajuste";
-
-export type FrecuenciaGasto = "mensual" | "trimestral" | "anual" | "unica";
-export type TipoGasto = "fijo" | "rapido";
+// Tipos compartidos del dominio
 export type CategoriaGastoRapidoKey =
   | "cafe"
   | "bebida"
@@ -25,36 +8,11 @@ export type CategoriaGastoRapidoKey =
   | "compras"
   | "otros";
 
-// ————————————————————————————
-// Cálculos financieros (siempre en servidor)
-// ————————————————————————————
-export interface CalculoAtencion {
-  precioCobrado: number;
-  comisionMedioPagoPct: number;
-  comisionMedioPagoMonto: number;
-  montoNeto: number;
-  comisionBarberoPct: number;
-  comisionBarberoMonto: number;
-}
-
-// ————————————————————————————
-// Resumen de barbero en cierre de caja
-// ————————————————————————————
-export interface ResumenBarberoCierre {
-  barberoId: string;
-  nombre: string;
-  cantidadAtenciones: number;
-  totalBruto: number;
-  totalComision: number;
-}
-
 export interface ClientPreferences {
   allergies?: string;
   productPreferences?: string;
   extraNotes?: string;
 }
-
-export type ClientVipTag = string;
 
 export interface ClientSummary {
   id: string;
@@ -96,12 +54,6 @@ export interface MarcianoUsage {
   sorteosParticipados: number;
 }
 
-export interface MarcianoBeneficiosConfig {
-  cortesPorMes: number | null;
-  consumicionesPorMes: number | null;
-  sorteosPorMes: number | null;
-}
-
 export interface ClientProfile extends ClientSummary {
   avatarUrl: string | null;
   tags: string[];
@@ -115,15 +67,6 @@ export interface ClientProfile extends ClientSummary {
   auditEvents: ClientProfileEvent[];
   marcianoUsage: MarcianoUsage | null;
 }
-
-export interface VisitLogInput {
-  barberNotes?: string;
-  tags?: string[];
-  photoUrls?: string[];
-  propinaEstrellas?: number;
-}
-
-export type ClientBriefingScope = "admin" | "barbero";
 
 export type TurnoEstado = "pendiente" | "confirmado" | "completado" | "cancelado";
 
@@ -164,23 +107,6 @@ export interface TurnoSummary {
   }>;
 }
 
-export interface TurnoDetalle extends TurnoSummary {
-  barberoId: string;
-  clientId: string | null;
-}
-
-export interface ReservaPublicInput {
-  slug: string;
-  serviceId: string;
-  slotId: string;
-  clienteNombre: string;
-  clienteTelefonoRaw?: string;
-  notaCliente?: string;
-  sugerenciaCancion?: string;
-  spotifyTrackUri?: string;
-  extras?: TurnoExtraInput[];
-}
-
 export interface QuickActionDefaults {
   servicioId: string;
   servicioNombre: string;
@@ -190,34 +116,32 @@ export interface QuickActionDefaults {
   comisionMedioPagoPct: number;
 }
 
-// ————————————————————————————
 // Perfil Marciano (Style DNA)
-// ————————————————————————————
-export type FaceShape = 'oval' | 'cuadrado' | 'redondo' | 'corazon' | 'diamante' | 'alien';
+export type FaceShape = "oval" | "cuadrado" | "redondo" | "corazon" | "diamante" | "alien";
 
 export type InterrogatoryAnswers = {
   // Preguntas 1-5 (originales)
-  lifestyle: 'minimal' | 'nocturno' | 'outdoor' | 'formal';
+  lifestyle: "minimal" | "nocturno" | "outdoor" | "formal";
   morningMinutes: 0 | 3 | 5 | 10;
-  arrival: 'caminando' | 'auto' | 'apurado' | 'con-tiempo';
-  perfectCut: 'otros-notan' | 'lo-siento' | 'dura-semanas';
-  turnoff: 'musica-boluda' | 'gente-de-mas' | 'apuro' | 'charla-forzada';
-  // Preguntas 6-10 (nuevas — opcionales para no romper perfiles existentes)
-  music?: 'trap' | 'rock' | 'reggaeton' | 'electronica';
-  weekendStyle?: 'todo-negro' | 'sporty' | 'como-siempre' | 'me-armo';
-  chairBehavior?: 'celular' | 'duermo' | 'hablo' | 'miro-todo';
-  beard?: 'rapada' | 'prolija' | 'descuidada' | 'no-tengo';
-  barberTrust?: 'le-explico-todo' | 'le-muestro-foto' | 'confio-en-el' | 'mitad-y-mitad';
-  // Pregunta 11 — texto libre
+  arrival: "caminando" | "auto" | "apurado" | "con-tiempo";
+  perfectCut: "otros-notan" | "lo-siento" | "dura-semanas";
+  turnoff: "musica-boluda" | "gente-de-mas" | "apuro" | "charla-forzada";
+  // Preguntas 6-10 (nuevas, opcionales para no romper perfiles existentes)
+  music?: "trap" | "rock" | "reggaeton" | "electronica";
+  weekendStyle?: "todo-negro" | "sporty" | "como-siempre" | "me-armo";
+  chairBehavior?: "celular" | "duermo" | "hablo" | "miro-todo";
+  beard?: "rapada" | "prolija" | "descuidada" | "no-tengo";
+  barberTrust?: "le-explico-todo" | "le-muestro-foto" | "confio-en-el" | "mitad-y-mitad";
+  // Pregunta 11: texto libre
   freeText?: string;
 };
 
 export type StyleDominante =
-  | 'El Victor' | 'El Código' | 'El Turbio'
-  | 'El Espectro' | 'El Pesado' | 'El Clandestino'
-  | 'El Detonante' | 'El Bardo' | 'El Humo'
-  | 'El Satélite' | 'El Filo' | 'El Umbral'
-  | 'El Intergaláctico';
+  | "El Victor" | "El Código" | "El Turbio"
+  | "El Espectro" | "El Pesado" | "El Clandestino"
+  | "El Detonante" | "El Bardo" | "El Humo"
+  | "El Satélite" | "El Filo" | "El Umbral"
+  | "El Intergaláctico";
 
 export type StyleProfile = {
   version: 1;

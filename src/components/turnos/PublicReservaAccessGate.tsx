@@ -61,7 +61,7 @@ export default function PublicReservaAccessGate({
           la puerta se abre sola.
         </p>
         <p className="text-sm text-zinc-400">
-          Marcianos del club: entren directo desde <span className="text-white">/marcianos</span>.
+          Marcianos del club: entren directo desde <span className="text-white">/marciano/login</span>.
         </p>
       </div>
 

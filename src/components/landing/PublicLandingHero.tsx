@@ -183,7 +183,7 @@ export default function PublicLandingHero({
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-sm text-zinc-300">Portal Marciano</span>
-                      <span className="text-sm font-semibold text-zinc-100">/marcianos</span>
+                      <span className="text-sm font-semibold text-zinc-100">/marciano/login</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-sm text-zinc-300">Ingreso interno</span>

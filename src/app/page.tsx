@@ -10,7 +10,7 @@ export default async function RootPage() {
   const role = (session?.user as { role?: string } | undefined)?.role;
   const reserveHref = "/reservar";
   const loginHref = "/login";
-  const marcianosHref = "/marcianos";
+  const marcianosHref = "/marciano/login";
 
   if (role === "marciano") {
     redirect("/marciano");

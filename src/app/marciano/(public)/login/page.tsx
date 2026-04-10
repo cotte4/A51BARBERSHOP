@@ -42,19 +42,19 @@ export default function MarcianoLoginPage() {
       sideDescription="Esto no es el login del staff. Es la entrada Marciana: mas club, mas noche, mas acceso rapido para la gente que ya juega del lado de adentro."
       notes={[
         { label: "Ingreso", value: "Email y clave" },
-        { label: "Ruta", value: "/marcianos" },
+        { label: "Ruta", value: "/marciano/login" },
         { label: "Codigo", value: "VIP Marciano" },
         { label: "Uso", value: "Portal, turnos y seguridad" },
       ]}
       footer={
         <div className="grid gap-3 rounded-[24px] border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
           <p>
-            <Link href="/marcianos/recuperar" className="font-medium text-[#8cff59] hover:text-[#b6ff95]">
+            <Link href="/marciano/recuperar" className="font-medium text-[#8cff59] hover:text-[#b6ff95]">
               Recuperar acceso
             </Link>
           </p>
           <p>
-            <Link href="/marcianos/registro" className="font-medium text-[#8cff59] hover:text-[#b6ff95]">
+            <Link href="/marciano/registro" className="font-medium text-[#8cff59] hover:text-[#b6ff95]">
               Activar mi portal
             </Link>
           </p>
