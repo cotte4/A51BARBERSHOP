@@ -1,16 +1,17 @@
 import Replicate from "replicate";
 import { put } from "@vercel/blob";
 
-// Prompt definitivo v2 — 13/04/2026 (ajustado a referencias visuales)
-// {COLOR} aplica a la piel alien — pelo y fondo son constantes (dark teal + barber pole)
+// Prompt v3 — 13/04/2026 (ajustado a identidad A51 + cliente Marciano, no barbero)
+// {COLOR} aplica solo a la piel alien. Ropa/props quedan libres al modelo para variedad.
+// Fondo alineado a branding A51 (negro + barber pole verde neón #8cff59).
 const AVATAR_PROMPT =
-  "flat 2D cartoon illustration of an alien barber from Buenos Aires, " +
+  "flat 2D cartoon illustration of a Marciano, an alien VIP customer of A51 barbershop in Buenos Aires, " +
   "{COLOR} smooth alien skin, large solid black eyes with tiny white dot pupils, " +
-  "short styled hair, wearing a hoodie, holding a styrofoam cup with both hands, " +
-  "relaxed chill expression, bust portrait centered, " +
-  "background: dark deep teal space, glowing neon barber pole hologram, small stars scattered, " +
-  "Argentinian trap culture, urban streetwear, bold black outlines, vibrant flat colors, " +
-  "clean cel-shading, NFT avatar art, no photorealism, 2D digital illustration";
+  "confident relaxed expression, premium chill vibe, bust portrait centered, " +
+  "urban streetwear rooted in Argentinian trap culture, " +
+  "background: deep black space with a glowing neon green #8cff59 barber pole hologram, scattered small stars, " +
+  "bold black outlines, vibrant flat colors, clean cel-shading, " +
+  "no photorealism, 2D digital illustration";
 
 export async function generateAvatar(
   frameBase64: string,
