@@ -1,6 +1,7 @@
 "use server";
 
 import Anthropic from "@anthropic-ai/sdk";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -101,16 +102,20 @@ export async function saveStyleProfileAction(input: {
     revalidatePath("/marciano");
     revalidatePath("/marciano/perfil-marciano");
 
-    // Generar avatar alien solo si el cliente no tiene uno todavía
+    // Generar avatar alien en background (no bloquea la respuesta al usuario)
     if (!client.avatarUrl && input.frameBase64 && input.favoriteColor) {
-      const avatarUrl = await generateAvatar(input.frameBase64, input.favoriteColor, client.id);
-      if (avatarUrl) {
-        await db
-          .update(clients)
-          .set({ avatarUrl, updatedAt: new Date() })
-          .where(eq(clients.id, client.id));
-      }
-      // Si falla la generación, no bloqueamos — el usuario sigue sin avatar, sin error visible
+      const frameBase64 = input.frameBase64;
+      const favoriteColor = input.favoriteColor;
+      const clientId = client.id;
+      after(async () => {
+        const avatarUrl = await generateAvatar(frameBase64, favoriteColor, clientId);
+        if (avatarUrl) {
+          await db
+            .update(clients)
+            .set({ avatarUrl, updatedAt: new Date() })
+            .where(eq(clients.id, clientId));
+        }
+      });
     }
 
     return { success: true, profile };

@@ -276,22 +276,27 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
 
     const finalAnswers = answers as InterrogatoryAnswers;
 
-    const res = await saveStyleProfileAction({
-      shape,
-      answers: finalAnswers,
-      metrics,
-      frameBase64: frame,
-      favoriteColor: answers.favoriteColor ?? null,
-    });
+    try {
+      const res = await saveStyleProfileAction({
+        shape,
+        answers: finalAnswers,
+        metrics,
+        frameBase64: frame,
+        favoriteColor: answers.favoriteColor ?? null,
+      });
 
-    if (!res.success) {
-      setError(res.error);
+      if (!res.success) {
+        setError(res.error);
+        setFlowState("face-capture");
+        return;
+      }
+
+      setProfile(res.profile);
+      setFlowState("reveal");
+    } catch {
+      setError("No pudimos guardar tu perfil. Revisá tu conexión e intentá de nuevo.");
       setFlowState("face-capture");
-      return;
     }
-
-    setProfile(res.profile);
-    setFlowState("reveal");
   }
 
   function handleShare() {
@@ -374,7 +379,7 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
         <Spinner />
         <p className="text-sm text-zinc-400">Generando tu Perfil Marciano...</p>
         <p className="text-xs text-zinc-600 text-center max-w-[220px]">
-          También estamos creando tu avatar alien. Puede tardar hasta 30 segundos.
+          Tu avatar alien se va a generar en segundo plano. Vas a verlo en tu dashboard.
         </p>
       </div>
     );
