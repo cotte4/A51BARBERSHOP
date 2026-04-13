@@ -1,7 +1,7 @@
 # A51 Barber - PRD Live
 
 **Estado real del sistema**
-Actualizado: 04/04/2026 (sesion 16)
+Actualizado: 08/04/2026 (sesion 18)
 
 ## 1. Proposito del documento
 
@@ -129,6 +129,25 @@ Archivos de soporte detectados:
 - `/api/spotify/refresh`
 - `/api/spotify/search-track`
 - `/api/youtube/search-beat`
+- `/api/music/state`
+- `/api/pantalla/votos`
+- `/api/pantalla/votos/[eventId]`
+- `/api/turnos/proximas-canciones`
+- `/api/turnos/ranking-canciones`
+- `/pantalla`
+- `/pantalla/votar/[eventId]`
+
+### Portal Marciano (Fase 7)
+
+- `/marciano/login`
+- `/marciano/registro`
+- `/marciano` (dashboard VIP)
+- `/marciano/turnos`
+- `/marciano/turnos/nuevo`
+- `/marciano/perfil`
+- `/marciano/seguridad`
+- `/marciano/recuperar`
+- `/marciano/reset`
 
 ### Estructura de permisos
 
@@ -352,6 +371,62 @@ Scope implementado: buscar beats de YouTube y reproducirlos directamente desde l
 
 Pendiente: agregar `YOUTUBE_API_KEY` como variable de entorno en Vercel dashboard antes del proximo deploy.
 
+### Portal Marciano (Fase 7)
+
+Implementado en (05/04/2026 sesion 17):
+
+- `src/app/marciano/` — route group propio con layout y nav del portal VIP
+- `src/app/marciano/login/page.tsx`, `registro/page.tsx` — autenticacion separada para Marcianos
+- `src/app/marciano/page.tsx` — dashboard: estado del mes, cortes/consumiciones usados, historial de visitas
+- `src/app/marciano/turnos/page.tsx`, `turnos/nuevo/page.tsx` — reserva y listado de turnos propios
+- `src/app/marciano/perfil/page.tsx`, `seguridad/page.tsx`, `recuperar/page.tsx`, `reset/page.tsx` — perfil y gestion de cuenta
+- `src/proxy.ts` — rutas `/marciano/*` aisladas del resto, acceso solo para rol `marciano`
+
+Estado verificado (05/04/2026 sesion 17):
+
+- rol `marciano` agregado a Better Auth y validado en proxy
+- vinculacion via `clients.email` + `clients.userId`
+- si el admin desactiva la membresia, el acceso al portal queda revocado
+- briefing pre-corte sigue siendo privado para barberos — no expuesto en el portal
+- reserva reutiliza la logica de `turnos` existente con prefill de datos de sesion Marciana
+- reprogramacion y cancelacion de turnos propios operativas
+
+### Avatar Alien Trap — Marciano (sesion 19, 13/04/2026)
+
+Implementado en:
+
+- `src/lib/marciano-avatar.ts` — `generateAvatar()` via Replicate `easel/ai-avatars` (version pineada `27ebf241`) + upload a Vercel Blob
+- `src/lib/types.ts` — campo `favoriteColor?: string` agregado a `InterrogatoryAnswers`
+- `src/app/marciano/(portal)/estilo/_InterrogatorioFlow.tsx` — nueva pregunta 12 "color favorito" (FlowState `color-favorito`), barra de progreso a 12, pantalla saving con aviso de ~30s
+- `src/app/marciano/(portal)/estilo/_Question.tsx` — nuevo tipo `choice-color` con swatches visuales
+- `src/app/marciano/(portal)/estilo/_FaceCapture.tsx` — `onCapture` devuelve `frameBase64` ademas de shape y metrics
+- `src/app/marciano/(portal)/estilo/actions.ts` — `saveStyleProfileAction` acepta `frameBase64` y `favoriteColor`, genera avatar post-save si `client.avatarUrl` es null
+- `src/app/marciano/(portal)/page.tsx` — avatar card en dashboard cuando `client.avatarUrl` existe
+- `REPLICATE_API_TOKEN` agregado en `.env.local` y Vercel dashboard
+
+Estado verificado (13/04/2026):
+
+- build limpio sin errores
+- el avatar se genera una sola vez (idempotente: check `!client.avatarUrl`)
+- si Replicate falla, el perfil igual se guarda sin error visible al usuario
+- modelo elegido: `easel/ai-avatars` — licencia comercial ("production use"), descartados `fofr/face-to-sticker` y `tencentarc/photomaker` por licencia non-commercial
+- costo estimado: ~$0.01-0.05/imagen, 100 imgs/mes = menos de $5/mes
+- plan completo en `docs/plans/avatar-alien-marciano.md`
+
+### Inbox Turnos Pendientes en Hoy (sesion 19, 13/04/2026)
+
+- `src/app/(barbero)/hoy/_TurnosPendientesInbox.tsx` — nuevo componente para confirmar/rechazar turnos pendientes directamente desde la pagina Hoy
+- `src/app/(barbero)/hoy/page.tsx` — integra `TurnosPendientesInbox` con filter de `turnosPendientes`
+- `src/app/(admin)/turnos/page.tsx` — turnos Marciano pendientes con opacity reducida en grilla
+
+### Cut Book Marciano
+
+Implementado en (07/04/2026):
+
+- galeria de fotos de cortes vinculada al perfil de cada cliente VIP en `/clientes/[id]/post-corte`
+- foto upload via Vercel Blob corregido: loguea el error real de Blob en lugar de ocultarlo
+- historial de cortes con fotos visible para el barbero antes del corte (briefing)
+
 ### Turnos + Accion Rapida
 
 Implementado en:
@@ -392,7 +467,7 @@ Implementado en:
 
 Estado verificado (04/04/2026 sesion 16):
 
-- la navegacion es un bottom nav fijo con 4 tabs para barbero (Hoy, Caja, Clientes, Turnos) y 5 tabs para admin (agrega Negocio)
+- la navegacion es un bottom nav fijo con 5 tabs para barbero (Hoy, Caja, Clientes, Turnos, Musica) y 6 tabs para admin (agrega Negocio)
 - el tab "Negocio" agrupa todo lo que pertenece al rol de owner: dashboard, cierre, inventario, liquidaciones, mi-resultado, repago, configuracion, gastos-rapidos
 - `/negocio` es un hub de links agrupados por categoria: Ventas y caja, Inventario, Barberos, Pagos, Configuracion
 - esta estructura implementa la separacion PRD entre operacion del dia (Hoy/Caja/Clientes/Turnos) y gestion del negocio (Negocio), sin necesitar dos secciones literales en la nav
@@ -437,10 +512,8 @@ La pagina `/dashboard/pl` tiene boton de descarga CSV en el header.
 Resultado del build:
 
 - `npm run db:push` ejecutado con exito el 30/03/2026 (sesion 13) — migration Fase 6 aplicada (tipo, categoria_visual en gastos)
-- `npm run build` ejecutado con exito el 30/03/2026 (sesion 13)
-- compilacion OK
-- TypeScript OK
-- generacion de paginas OK
+- `npm run build` ejecutado con exito el 30/03/2026 (sesion 13) — ultimo build verificado explicitamente
+- compilacion OK, TypeScript OK, generacion de paginas OK a partir de sesion 13
 - `src/proxy.ts` reemplaza la convencion vieja de `middleware.ts`
 - `next.config.ts` ya fija `turbopack.root`
 - el build incluye las rutas `/clientes`, `/clientes/[id]`, `/clientes/[id]/post-corte`, `/clientes/nuevo`, `/api/clients/search`, `/api/clients/upload-photo` y `/api/clients/[id]/briefing`
@@ -452,6 +525,12 @@ Advertencias encontradas durante build:
 - `dotenv` removido de `db/index.ts` — Next.js carga `.env.local` automaticamente, el import manual causaba crash en cliente
 - `gastos-rapidos.ts` separado en `gastos-rapidos.ts` (constantes, client-safe) y `gastos-rapidos-server.ts` (db-dependent, server-only) — previene que `db` se bundlee en el cliente
 - QA Playwright verificado en produccion: dashboard, mi-resultado, FAB, registro de gasto rapido
+
+Fixes aplicados post-sesion 17 (07-08/04/2026):
+
+- bug UTC medianoche corregido en todos los formatters de fecha del codebase — `new Date("YYYY-MM-DD")` parsea como UTC y mostraba el dia anterior en Argentina; corregido con formateo explicito en zona horaria `America/Argentina/Buenos_Aires`
+- UI de turnos: toolbar compacta + timeline denso — reduccion de ruido visual sin cambios funcionales
+- `CLAUDE.md` actualizado en sesion 18 con seccion de Arquitectura: route groups, nav, auth, lib files, Music Engine, fecha/timezone, Marciano
 
 ## 8. Estado documental
 
@@ -512,11 +591,102 @@ No agregar aqui:
 - Fase 6 implementada, verificada por build y QA en produccion (sesion 13, 30/03/2026)
 - Prioridad Absoluta Marciano, Consumiciones Marciano y Pantalla Musical verificadas en codigo (sesion 15, 02/04/2026)
 - Music Engine v3 (Strategy C), Beats Mode (YouTube), pagina Hoy y redesign UI implementados (sesion 16, 04/04/2026)
+- Fase 7 - Portal Marciano implementado con routes, autenticacion, dashboard VIP, reservas y gestion de cuenta (sesion 17, 05/04/2026)
+- Cut Book Marciano, redesign Post-Corte, fix Date UTC medianoche, UI diet en Turnos (post-sesion 17, 07/04/2026)
+- Music Engine v3 modular split (post-sesion 17, 07/04/2026)
+- CLAUDE.md actualizado con seccion de Arquitectura (sesion 18, 08/04/2026)
 - **TODAS LAS FASES COMPLETAS** — sistema listo para operacion (deadline: mayo 2026)
+- Avatar Alien Trap para Marcianos implementado y deployado (sesion 19, 13/04/2026)
+- Inbox de turnos pendientes en Hoy implementado y deployado (sesion 19, 13/04/2026)
 - proximos pasos: seed de datos reales, capacitacion de usuarios (Pinky/Gabote), go-live
 - siguiente plan operativo: `docs/plans/go-live-seed-capacitacion.md`
 - **bloqueante antes de deploy**: agregar `YOUTUBE_API_KEY` en Vercel dashboard
-- iteracion futura opcional: integrar Beats Mode al Music Engine (colas, modos); Web Playback SDK para reproduccion automatica en pantalla musical
+- iteracion futura opcional: integrar Beats Mode al Music Engine (colas, modos); Web Playback SDK para reproduccion automatica en pantalla musical; notificaciones de turno para Marcianos (Resend)
+- iteracion futura avatar: pin de version Replicate a actualizar cuando salga version nueva; opcion de reset de avatar desde panel admin; mostrar avatar en StyleDNAReveal; ajuste de prompt si resultado no es suficientemente cartoon (migrar a fal.ai IP-Adapter si necesario)
+
+### Fase 7 - Portal Marciano (expandida, 05/04/2026)
+
+Portal separado para clientes VIP (Marcianos). Estado actual:
+
+**Acceso**
+
+Implementado en esta iteracion:
+
+- rol `marciano` agregado a Better Auth
+- registro separado en `/marciano/registro`
+- vinculacion via `clients.email` + `clients.userId`
+- aislamiento de rutas Marciano por `proxy.ts`
+- Los Marcianos se registran solos con email y contraseña
+- Login en ruta separada: `/marciano/login`
+- Al activarse como Marciano por el admin, el cliente puede crear su cuenta linkando por email
+- Si el admin desactiva el status Marciano, el acceso al portal se revoca
+
+**Que pueden ver**
+
+Implementado en esta iteracion:
+
+- dashboard `/marciano` con estado del mes
+- historial reciente de visitas
+- catalogo de servicios y productos del local
+- el briefing pre-corte sigue privado para barberos
+- Su estado Marciano del mes: cortes usados, consumiciones restantes
+- Historial de visitas
+- Catalogo de servicios y productos del local
+- El briefing pre-corte es privado (solo visible para barberos)
+
+**Que pueden hacer**
+
+Implementado en esta iteracion:
+
+- reservar turno dentro del portal en `/marciano/turnos/nuevo`
+- reservar con datos precompletados desde la sesion Marciana
+- ver proximos turnos propios en `/marciano/turnos`
+- reprogramar turnos propios
+- cancelar turnos propios
+- editar su perfil en `/marciano/perfil`
+- cambiar su contrasena en `/marciano/seguridad`
+- pedir recuperacion de contrasena en `/marciano/recuperar` y resetearla en `/marciano/reset`
+
+**Scope activo ya implementado para Portal Marciano**
+
+- integrar el flujo de reserva dentro de `/marciano/*`
+- prellenar la reserva con datos de la sesion Marciana
+- mostrar proximos turnos propios
+- permitir reprogramar turnos propios
+- permitir cancelar turnos propios
+- agregar recuperacion y cambio de contrasena
+
+**Diferido para una etapa posterior**
+
+- notificaciones basicas de confirmacion y recordatorio
+
+**Fuera del scope inmediato de Portal Marciano**
+
+- extras musicales o preferencia de cancion como experiencia propia del portal
+- biblioteca de disenos exclusivos dentro del portal
+- sorteos operativos dentro del portal
+
+**Estructura tecnica**
+
+Implementado en esta iteracion:
+
+- grupo de rutas `src/app/marciano/*`
+- layout propio para el portal Marciano
+- schema ampliado con `clients.email` y `clients.userId`
+- la reserva sigue reutilizando la logica existente de `turnos`
+
+**Estructura tecnica propuesta**
+- Nuevo route group `(marciano)` con su propio layout y nav
+- Nuevo rol `'marciano'` en better-auth (sin acceso a rutas de barbero ni admin)
+- `clients` ya existe en DB — solo se agrega `userId` para linkear al account
+- La reserva de turno reutiliza la logica existente de `turnos`
+
+**Decisiones de onboarding y coexistencia (04/04/2026)**
+- Onboarding: el admin activa al Marciano ingresando su email; el sistema crea la cuenta y el cliente recibe acceso
+- `/reservar/[slug]` y el portal Marciano conviven: el link del barbero es para cualquier cliente, el portal es exclusivo para Marcianos autenticados
+- Requiere configurar envio de emails transaccionales — proveedor elegido: Resend (pendiente, no es prioridad ahora)
+
+---
 
 ### Decisiones tomadas sobre Fase 3 (29/03/2026)
 
@@ -551,6 +721,10 @@ Estado confirmado:
 - turnos internos y disponibilidad manual presentes bajo `/turnos`
 - rate limiting basico de reservas resuelto en DB
 - accion rapida de caja disponible con defaults por barbero
+
+## 11.bis Pendientes / backlog QA
+
+- **Auditoria de CTAs por rol en `/hoy`** — pendiente. Stub en `docs/qa/hoy-roles-audit.md`. Bloquea el rename de copys de `/hoy` definido en `docs/qa/cta-navigation-audit.md` v1.2 (decision #5). Necesario antes de implementar los cambios de prioridad alta sobre `/hoy`.
 
 ## 12. Fuente de verdad
 
