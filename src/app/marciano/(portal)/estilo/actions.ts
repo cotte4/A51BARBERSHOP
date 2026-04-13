@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { clients, clientBriefingCache, marcianoCutsConfig } from "@/db/schema";
 import { requireMarcianoClient } from "@/lib/marciano-portal";
 import { generateStyleProfile, matchIdealBarbero } from "@/lib/marciano-style";
+import { generateAvatar } from "@/lib/marciano-avatar";
 import type { FaceShape, InterrogatoryAnswers, StyleProfile } from "@/lib/types";
 import type { FaceMetrics } from "@/lib/marciano-style";
 
@@ -61,6 +62,8 @@ export async function saveStyleProfileAction(input: {
   shape: FaceShape;
   answers: InterrogatoryAnswers;
   metrics: FaceMetrics | null;
+  frameBase64?: string | null;
+  favoriteColor?: string | null;
 }): Promise<{ success: true; profile: StyleProfile } | { success: false; error: string }> {
   try {
     const { client } = await requireMarcianoClient();
@@ -97,6 +100,18 @@ export async function saveStyleProfileAction(input: {
 
     revalidatePath("/marciano");
     revalidatePath("/marciano/perfil-marciano");
+
+    // Generar avatar alien solo si el cliente no tiene uno todavía
+    if (!client.avatarUrl && input.frameBase64 && input.favoriteColor) {
+      const avatarUrl = await generateAvatar(input.frameBase64, input.favoriteColor, client.id);
+      if (avatarUrl) {
+        await db
+          .update(clients)
+          .set({ avatarUrl, updatedAt: new Date() })
+          .where(eq(clients.id, client.id));
+      }
+      // Si falla la generación, no bloqueamos — el usuario sigue sin avatar, sin error visible
+    }
 
     return { success: true, profile };
   } catch (err) {

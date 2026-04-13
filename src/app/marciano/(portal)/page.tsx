@@ -39,6 +39,24 @@ export default async function MarcianoPortalPage() {
 
   return (
     <div className="space-y-6">
+      {/* Avatar Alien — solo visible cuando ya fue generado */}
+      {client.avatarUrl && (
+        <section className="panel-card rounded-[28px] p-5 flex flex-col items-center gap-4">
+          <p className="eyebrow text-xs text-[#8cff59] self-start">Tu Avatar Marciano</p>
+          <div className="relative w-40 h-40 rounded-full overflow-hidden border-2 border-[#8cff59]/40 shadow-[0_0_24px_rgba(140,255,89,0.2)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={client.avatarUrl}
+              alt="Avatar Marciano"
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <p className="text-xs text-zinc-500 text-center max-w-[200px]">
+            Tu forma alienígena. Generada una sola vez.
+          </p>
+        </section>
+      )}
+
       {/* Perfil Marciano CTA or card */}
       {!client.styleCompletedAt ? (
         <section className="panel-card rounded-[28px] p-5">

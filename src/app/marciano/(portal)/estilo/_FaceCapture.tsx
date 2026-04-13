@@ -33,7 +33,7 @@ function captureFrameAsBase64(video: HTMLVideoElement, quality = 0.75): string {
 type CaptureState = "idle" | "requesting" | "streaming" | "analyzing" | "error";
 
 type FaceCaptureProps = {
-  onCapture: (result: { shape: FaceShape; metrics: FaceMetrics | null } | null) => void;
+  onCapture: (result: { shape: FaceShape; metrics: FaceMetrics | null; frameBase64: string | null } | null) => void;
 };
 
 function Spinner() {
@@ -218,7 +218,7 @@ export default function FaceCapture({ onCapture }: FaceCaptureProps) {
       stopCamera();
       // Small pause so the user sees the AI status feedback before the reveal
       await new Promise(r => setTimeout(r, 900));
-      onCapture({ shape: finalShape, metrics });
+      onCapture({ shape: finalShape, metrics, frameBase64: frameBase64 || null });
     } catch {
       stopCamera();
       setState("error");
