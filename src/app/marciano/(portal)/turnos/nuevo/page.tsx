@@ -4,7 +4,7 @@ import { getMarcianoTurnoById } from "@/lib/marciano-turnos";
 import { requireMarcianoClient } from "@/lib/marciano-portal";
 import {
   getBarberosPublicosReserva,
-  getFechaHoyArgentina,
+  getFechaMananaArgentina,
   getServiciosPublicos,
 } from "@/lib/turnos";
 
@@ -21,18 +21,20 @@ export default async function MarcianoNuevoTurnoPage({
     getServiciosPublicos(),
     getBarberosPublicosReserva(),
   ]);
-  const fechaHoy = getFechaHoyArgentina();
   const turnoAReprogramar = params.reprogramar
     ? await getMarcianoTurnoById(client.id, params.reprogramar)
     : null;
 
-  const selectedBarbero =
-    barberosPublicos.find((barbero) => barbero.publicSlug === params.barbero) ??
-    barberosPublicos[0] ??
-    null;
+  const fechaMañana = getFechaMananaArgentina();
+  const pinkyBarbero = barberosPublicos.find((b) => b.nombre.toLowerCase() === "pinky");
+  const selectedBarbero = params.barbero
+    ? (barberosPublicos.find((b) => b.publicSlug === params.barbero) ?? pinkyBarbero ?? barberosPublicos[0] ?? null)
+    : (pinkyBarbero ?? barberosPublicos[0] ?? null);
 
   const initialFecha =
-    turnoAReprogramar && turnoAReprogramar.fecha >= fechaHoy ? turnoAReprogramar.fecha : fechaHoy;
+    turnoAReprogramar && turnoAReprogramar.fecha >= fechaMañana
+      ? turnoAReprogramar.fecha
+      : fechaMañana;
 
   return (
     <div className="space-y-6">
@@ -67,6 +69,7 @@ export default async function MarcianoNuevoTurnoPage({
           <div className="mt-4 flex flex-wrap gap-3">
             {barberosPublicos.map((barbero) => {
               const selected = barbero.id === selectedBarbero?.id;
+              const isPinky = barbero.nombre.toLowerCase() === "pinky";
               const href = `/marciano/turnos/nuevo?barbero=${encodeURIComponent(barbero.publicSlug ?? "")}${
                 params.reprogramar ? `&reprogramar=${encodeURIComponent(params.reprogramar)}` : ""
               }`;
@@ -77,8 +80,12 @@ export default async function MarcianoNuevoTurnoPage({
                   href={href}
                   className={`rounded-[22px] border px-4 py-3 text-sm transition ${
                     selected
-                      ? "border-[#8cff59]/35 bg-[#8cff59]/10 text-white"
-                      : "border-white/10 bg-white/5 text-zinc-300 hover:border-white/20 hover:bg-white/8"
+                      ? isPinky
+                        ? "border-pink-400/45 bg-pink-500/15 text-pink-100"
+                        : "border-[#8cff59]/35 bg-[#8cff59]/10 text-white"
+                      : isPinky
+                        ? "border-pink-400/25 bg-pink-500/8 text-pink-300 hover:border-pink-400/40 hover:bg-pink-500/15"
+                        : "border-white/10 bg-white/5 text-zinc-300 hover:border-white/20 hover:bg-white/8"
                   }`}
                 >
                   {barbero.nombre}

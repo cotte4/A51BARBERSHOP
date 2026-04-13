@@ -14,8 +14,13 @@ import {
 } from "@/db/schema";
 import type { StyleProfile, FaceShape } from "@/lib/types";
 import { registrarAtencionExpressAction } from "@/app/(barbero)/caja/actions";
+import {
+  confirmarTurnoAction,
+  rechazarTurnoAction,
+} from "@/app/(admin)/turnos/actions";
 import { getTurnosActorContext } from "@/lib/turnos-access";
 import { getTurnosVisibleList } from "@/lib/turnos";
+import TurnosPendientesInbox from "./_TurnosPendientesInbox";
 
 function getFechaHoyArgentina(): string {
   return new Date().toLocaleDateString("en-CA", {
@@ -250,6 +255,7 @@ export default async function HoyPage() {
   const turnosOperativos = turnosHoy.filter(
     (turno) => turno.estado === "pendiente" || turno.estado === "confirmado"
   );
+  const turnosPendientes = turnosHoy.filter((turno) => turno.estado === "pendiente");
   const proximoTurno =
     turnosOperativos.find((turno) => turno.horaInicio >= horaActual) ?? turnosOperativos[0] ?? null;
 
@@ -510,6 +516,14 @@ export default async function HoyPage() {
           </section>
         ) : null}
       </section>
+
+      <TurnosPendientesInbox
+        items={turnosPendientes.map((turno) => ({
+          turno,
+          confirmarAction: confirmarTurnoAction.bind(null, turno.id),
+          rechazarAction: rechazarTurnoAction.bind(null, turno.id),
+        }))}
+      />
 
       {marcianosTurnosHoy.length > 0 ? (
         <MarcianosTurnosHoy turnos={marcianosTurnosHoy} />

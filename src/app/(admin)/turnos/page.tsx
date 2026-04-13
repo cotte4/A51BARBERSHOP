@@ -280,22 +280,30 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
                 </div>
                 <div className="min-w-0 flex-1 space-y-1">
                   {slot.turnos.map((turno) => (
-                    <TurnoCard
+                    <div
                       key={turno.id}
-                      turno={turno}
-                      compact
-                      confirmarAction={confirmarTurnoAction.bind(null, turno.id)}
-                      rechazarAction={rechazarTurnoAction.bind(null, turno.id)}
-                      cobrarAction={cobrarYCompletarTurnoAction.bind(null, turno.id)}
-                      clienteLlegoAction={clienteLlegoAction.bind(null, turno.id)}
-                      mediosPago={mediosPagoList}
-                      servicios={serviciosList.map((s) => ({
-                        id: s.id,
-                        nombre: s.nombre,
-                        precioBase: s.precioBase,
-                      }))}
-                      canCobrar={actor.barberoId === turno.barberoId}
-                    />
+                      className={
+                        turno.estado === "pendiente" && turno.esMarcianoSnapshot
+                          ? "opacity-55 transition-opacity duration-200 hover:opacity-100 focus-within:opacity-100"
+                          : undefined
+                      }
+                    >
+                      <TurnoCard
+                        turno={turno}
+                        compact
+                        confirmarAction={confirmarTurnoAction.bind(null, turno.id)}
+                        rechazarAction={rechazarTurnoAction.bind(null, turno.id)}
+                        cobrarAction={cobrarYCompletarTurnoAction.bind(null, turno.id)}
+                        clienteLlegoAction={clienteLlegoAction.bind(null, turno.id)}
+                        mediosPago={mediosPagoList}
+                        servicios={serviciosList.map((s) => ({
+                          id: s.id,
+                          nombre: s.nombre,
+                          precioBase: s.precioBase,
+                        }))}
+                        canCobrar={actor.barberoId === turno.barberoId}
+                      />
+                    </div>
                   ))}
                   {slot.freeSlots.map((freeSlot) => (
                     <QuickTurnoSlotCard
