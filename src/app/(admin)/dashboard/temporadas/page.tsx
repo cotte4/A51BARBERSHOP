@@ -34,7 +34,7 @@ function formatPeriodo(inicio: string, fin: string): string {
 export default async function TemporadasPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin") redirect("/caja");
+  if (userRole !== "admin" && userRole !== "asesor") redirect("/caja");
 
   const temporadas = await getComparativaTemporadas();
 

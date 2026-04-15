@@ -15,6 +15,7 @@ export async function proxy(request: NextRequest) {
   const isAuthenticated = !!session?.user;
   const userRole = (session?.user as { role?: string })?.role;
   const isMarciano = userRole === "marciano";
+  const isAsesor = userRole === "asesor";
   const isMarcianoRoute = pathname === "/marciano" || pathname.startsWith("/marciano/");
   const isMarcianoPublicRoute =
     pathname === "/marciano/login" ||
@@ -30,12 +31,16 @@ export async function proxy(request: NextRequest) {
     if (!isAuthenticated) {
       return NextResponse.next();
     }
-    return NextResponse.redirect(new URL(isMarciano ? "/marciano" : "/hoy", request.url));
+    if (isMarciano) return NextResponse.redirect(new URL("/marciano", request.url));
+    if (isAsesor) return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/hoy", request.url));
   }
 
   if (pathname === "/login" || pathname.startsWith("/login")) {
     if (isAuthenticated) {
-      return NextResponse.redirect(new URL(isMarciano ? "/marciano" : "/hoy", request.url));
+      if (isMarciano) return NextResponse.redirect(new URL("/marciano", request.url));
+      if (isAsesor) return NextResponse.redirect(new URL("/dashboard", request.url));
+      return NextResponse.redirect(new URL("/hoy", request.url));
     }
     return NextResponse.next();
   }
@@ -67,6 +72,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/repago") ||
     pathname.startsWith("/mi-resultado") ||
     pathname.startsWith("/gastos-rapidos") ||
+    pathname.startsWith("/finanzas") ||
     pathname.startsWith("/pantalla")
   ) {
     if (!isAuthenticated) {
@@ -75,7 +81,7 @@ export async function proxy(request: NextRequest) {
     if (isMarciano) {
       return NextResponse.redirect(new URL("/marciano", request.url));
     }
-    if (userRole !== "admin") {
+    if (userRole !== "admin" && userRole !== "asesor") {
       return NextResponse.redirect(new URL("/caja", request.url));
     }
     return NextResponse.next();
@@ -88,6 +94,9 @@ export async function proxy(request: NextRequest) {
     if (isMarciano) {
       return NextResponse.redirect(new URL("/marciano", request.url));
     }
+    if (isAsesor) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
     return NextResponse.next();
   }
 
@@ -97,6 +106,9 @@ export async function proxy(request: NextRequest) {
     }
     if (isMarciano) {
       return NextResponse.redirect(new URL("/marciano", request.url));
+    }
+    if (isAsesor) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
     return NextResponse.next();
   }
@@ -108,6 +120,9 @@ export async function proxy(request: NextRequest) {
     if (isMarciano) {
       return NextResponse.redirect(new URL("/marciano", request.url));
     }
+    if (isAsesor) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
     return NextResponse.next();
   }
 
@@ -118,6 +133,9 @@ export async function proxy(request: NextRequest) {
     if (isMarciano) {
       return NextResponse.redirect(new URL("/marciano", request.url));
     }
+    if (isAsesor) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
     return NextResponse.next();
   }
 
@@ -127,6 +145,9 @@ export async function proxy(request: NextRequest) {
     }
     if (isMarciano) {
       return NextResponse.redirect(new URL("/marciano", request.url));
+    }
+    if (isAsesor) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
     return NextResponse.next();
   }
@@ -149,6 +170,7 @@ export const config = {
     "/musica/:path*",
     "/mi-resultado/:path*",
     "/gastos-rapidos/:path*",
+    "/finanzas/:path*",
     "/pantalla/:path*",
     "/pantalla",
     "/caja/:path*",

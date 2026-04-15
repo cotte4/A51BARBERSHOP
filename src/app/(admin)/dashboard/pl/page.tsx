@@ -76,7 +76,7 @@ function PLRow({ label, valor, indent, negativo, subtotal, total, signo }: PLRow
 export default async function PLPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin") redirect("/caja");
+  if (userRole !== "admin" && userRole !== "asesor") redirect("/caja");
 
   const sp = await searchParams;
   const hoyDate = new Date(

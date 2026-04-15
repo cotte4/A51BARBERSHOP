@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -76,6 +76,44 @@ function MusicIcon() {
   );
 }
 
+function ChartIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M3 17l4-6 4 3 4-8 4 4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 21h18" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function DocumentIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 3v5h5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 13h8M8 17h5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function FinanzasIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v1.5m0 7V17m0-8.5c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" strokeLinecap="round" />
+      <path d="M12 2v2m0 16v2M2 12h2m16 0h2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function getNavItems(isAdmin: boolean): NavItem[] {
   const items: NavItem[] = [
     {
@@ -130,8 +168,76 @@ function getNavItems(isAdmin: boolean): NavItem[] {
   return items;
 }
 
-export default function RoleBottomNav({ isAdmin }: { isAdmin: boolean }) {
+function getAsesorNavItems(): NavItem[] {
+  return [
+    {
+      href: "/dashboard",
+      label: "Dashboard",
+      icon: <ChartIcon />,
+      isActive: (pathname) => pathname.startsWith("/dashboard"),
+    },
+    {
+      href: "/liquidaciones",
+      label: "Liquidaciones",
+      icon: <DocumentIcon />,
+      isActive: (pathname) => pathname.startsWith("/liquidaciones"),
+    },
+    {
+      href: "/finanzas",
+      label: "Finanzas",
+      icon: <FinanzasIcon />,
+      isActive: (pathname) => pathname.startsWith("/finanzas"),
+    },
+    {
+      href: "/configuracion",
+      label: "Config",
+      icon: <SettingsIcon />,
+      isActive: (pathname) =>
+        pathname.startsWith("/configuracion") ||
+        pathname.startsWith("/negocio") ||
+        pathname.startsWith("/inventario"),
+    },
+  ];
+}
+
+export default function RoleBottomNav({
+  isAdmin,
+  isAsesor = false,
+}: {
+  isAdmin: boolean;
+  isAsesor?: boolean;
+}) {
   const pathname = usePathname();
+
+  if (isAsesor) {
+    const asesorItems = getAsesorNavItems();
+    return (
+      <nav className="fixed inset-x-0 bottom-4 z-30 px-3 sm:px-4">
+        <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
+          <div className="grid grid-cols-4 gap-1">
+            {asesorItems.map((item) => {
+              const active = item.isActive(pathname);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex min-h-[58px] flex-col items-center justify-center rounded-[20px] px-1 py-2 text-center text-[11px] font-semibold transition ${
+                    active
+                      ? "bg-[#8cff59] text-[#07130a] shadow-[0_12px_24px_rgba(140,255,89,0.18)]"
+                      : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <span>{item.icon}</span>
+                  <span className="mt-1 leading-none">{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
   const navItems = getNavItems(isAdmin);
 
   return (
@@ -160,4 +266,3 @@ export default function RoleBottomNav({ isAdmin }: { isAdmin: boolean }) {
     </nav>
   );
 }
-

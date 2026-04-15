@@ -20,7 +20,7 @@ export async function GET(
     return new Response("Unauthorized", { status: 401 });
   }
   const userRole = (session.user as { role?: string })?.role;
-  if (userRole !== "admin") {
+  if (userRole !== "admin" && userRole !== "asesor") {
     return new Response("Forbidden", { status: 403 });
   }
 

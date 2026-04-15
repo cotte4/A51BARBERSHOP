@@ -21,7 +21,7 @@ export async function registrarCuota(
 
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin") {
+  if (userRole !== "admin" && userRole !== "asesor") {
     return { error: "Solo el administrador puede registrar pagos." };
   }
 

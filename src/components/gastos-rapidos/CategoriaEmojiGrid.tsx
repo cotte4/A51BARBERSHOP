@@ -12,27 +12,28 @@ export default function CategoriaEmojiGrid({
   onSelect,
 }: CategoriaEmojiGridProps) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <div className="grid grid-cols-4 gap-2">
       {GASTO_RAPIDO_CATEGORIAS.map((categoria) => {
         const isSelected = selectedEmoji === categoria.emoji;
         return (
           <button
             key={categoria.key}
             type="button"
+            title={categoria.label}
             onClick={() => onSelect(categoria.emoji)}
-            className={`min-h-[68px] rounded-[18px] border px-3 py-3 text-left transition ${
+            className={`flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-[16px] border px-2 py-2 transition ${
               isSelected
-                ? "border-[#8cff59]/40 bg-[#8cff59]/10 text-white"
-                : "border-zinc-700 bg-zinc-800 text-white hover:border-zinc-600 hover:bg-zinc-700"
+                ? "border-[#8cff59]/40 bg-[#8cff59]/10"
+                : "border-zinc-700 bg-zinc-800 hover:border-zinc-600 hover:bg-zinc-700"
             }`}
           >
-            <span className="block text-2xl">{categoria.emoji}</span>
+            <span className="text-xl leading-none">{categoria.emoji}</span>
             <span
-              className={`mt-1.5 block text-xs font-medium ${
+              className={`w-full truncate text-center text-[10px] font-medium ${
                 isSelected ? "text-[#8cff59]" : "text-zinc-400"
               }`}
             >
-              {categoria.label}
+              {categoria.label.split(" /")[0]}
             </span>
           </button>
         );

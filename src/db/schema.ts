@@ -959,3 +959,49 @@ export const musicEvents = pgTable(
   },
   (table) => [index("music_events_type_created_idx").on(table.eventType, table.createdAt)]
 );
+
+// ————————————————————————————
+// MÓDULO ASESOR FINANCIERO
+// ————————————————————————————
+export const costosFijosNegocio = pgTable("costos_fijos_negocio", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  nombre: text("nombre").notNull(),
+  montoMensual: numeric("monto_mensual", { precision: 12, scale: 2 }), // nullable — referencia; valores reales en costos_fijos_valores
+  categoria: text("categoria").notNull(),
+  notas: text("notas"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const costosFijosValores = pgTable(
+  "costos_fijos_valores",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    costoId: uuid("costo_id")
+      .notNull()
+      .references(() => costosFijosNegocio.id, { onDelete: "cascade" }),
+    mes: text("mes").notNull(), // formato YYYY-MM
+    monto: numeric("monto", { precision: 12, scale: 2 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("costos_fijos_valores_costo_mes_idx").on(table.costoId, table.mes),
+    index("costos_fijos_valores_mes_idx").on(table.mes),
+  ]
+);
+
+export const capitalMovimientos = pgTable(
+  "capital_movimientos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    fecha: date("fecha").notNull(),
+    tipo: text("tipo").notNull(),
+    monto: numeric("monto", { precision: 12, scale: 2 }).notNull(),
+    descripcion: text("descripcion"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check("capital_movimientos_tipo_check", sql`${table.tipo} IN ('aporte', 'retiro')`),
+    index("capital_movimientos_fecha_idx").on(table.fecha),
+  ]
+);

@@ -63,7 +63,7 @@ export default async function GastosRapidosPage({
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
 
-  if (userRole !== "admin") {
+  if (userRole !== "admin" && userRole !== "asesor") {
     redirect("/caja");
   }
 
@@ -108,7 +108,7 @@ export default async function GastosRapidosPage({
     count: countsByCategory[categoria.key] ?? 0,
   }));
 
-  const topCategory = [...categoryMetrics].sort((a, b) => b.total - a.total)[0] ?? null;
+  const topCategory = [...categoryMetrics].sort((a, b) => b.total - a.total).find((c) => c.total > 0) ?? null;
   const topCategories = [...categoryMetrics]
     .sort((a, b) => b.total - a.total)
     .filter((item) => item.total > 0)
@@ -210,6 +210,7 @@ export default async function GastosRapidosPage({
                 returnTo={returnTo}
                 historyHref="/gastos-rapidos"
                 fixed={false}
+                showHistoryLink={false}
                 buttonLabel="Registrar gasto rapido"
                 buttonClassName="neon-button inline-flex min-h-[54px] w-full items-center justify-center rounded-[20px] px-5 text-sm font-semibold sm:w-auto"
               />
@@ -350,29 +351,22 @@ function CategoryChip({
   total: number;
   tone?: string;
 }) {
+  const tooltipText = count > 0
+    ? `${formatCount(count)} · ${formatARS(total)}`
+    : label;
+
   return (
     <Link
       href={href}
-      className={`inline-flex min-h-[56px] items-center gap-3 rounded-[24px] border px-4 py-3 transition ${
+      title={tooltipText}
+      className={`inline-flex min-h-[40px] items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition ${
         active
           ? "border-[#8cff59]/30 bg-[#8cff59]/10 text-white"
           : tone ?? "border-zinc-800 bg-zinc-900 text-white hover:border-zinc-700 hover:bg-zinc-800"
       }`}
     >
-      <span className="text-xl">{emoji}</span>
-      <span className="min-w-0 text-left">
-        <span className="block text-sm font-semibold">{label}</span>
-        <span className={`block text-xs ${active ? "text-zinc-200" : "text-zinc-400"}`}>
-          {formatCount(count)}
-        </span>
-      </span>
-      <span
-        className={`ml-auto rounded-full px-3 py-1 text-xs font-semibold ${
-          active ? "bg-white/10 text-white" : "bg-zinc-950/80 text-zinc-300"
-        }`}
-      >
-        {formatARS(total)}
-      </span>
+      {emoji !== "•" && <span className="text-base leading-none">{emoji}</span>}
+      <span>{label}</span>
     </Link>
   );
 }

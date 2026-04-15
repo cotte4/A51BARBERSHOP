@@ -24,7 +24,7 @@ export async function generarLiquidacion(
   // 1. Verificar admin
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin") return { error: "Solo el administrador puede generar liquidaciones." };
+  if (userRole !== "admin" && userRole !== "asesor") return { error: "Solo el administrador puede generar liquidaciones." };
 
   const barberoId = formData.get("barberoId") as string;
   const periodoInicio = formData.get("periodoInicio") as string; // YYYY-MM-DD
@@ -119,7 +119,7 @@ export async function marcarPagada(
 ): Promise<MarcarPagadaState> {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin") return { error: "Solo el administrador puede marcar liquidaciones como pagadas." };
+  if (userRole !== "admin" && userRole !== "asesor") return { error: "Solo el administrador puede marcar liquidaciones como pagadas." };
 
   try {
     const [liq] = await db.select().from(liquidaciones).where(eq(liquidaciones.id, id)).limit(1);

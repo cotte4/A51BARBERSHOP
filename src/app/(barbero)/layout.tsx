@@ -27,6 +27,10 @@ export default async function BarberoLayout({ children }: { children: React.Reac
     redirect("/marciano");
   }
 
+  if (userRole === "asesor") {
+    redirect("/dashboard");
+  }
+
   return (
     <div className="app-shell min-h-screen">
       <header className="border-b border-zinc-900/80 bg-zinc-950/90 px-4 py-4 backdrop-blur sm:px-6">

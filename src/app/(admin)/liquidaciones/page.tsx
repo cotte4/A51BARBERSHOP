@@ -47,7 +47,7 @@ export default async function LiquidacionesPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
 
-  if (userRole !== "admin") {
+  if (userRole !== "admin" && userRole !== "asesor") {
     redirect("/caja");
   }
 

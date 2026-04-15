@@ -29,7 +29,7 @@ const DUMMY_ANSWERS = {
 export default async function EstiloConfigPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin") {
+  if (userRole !== "admin" && userRole !== "asesor") {
     redirect("/hoy");
   }
 

@@ -10,7 +10,7 @@ import { auth } from "@/lib/auth";
 export async function saveCutsConfigAction(faceShape: string, formData: FormData): Promise<void> {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin") return;
+  if (userRole !== "admin" && userRole !== "asesor") return;
 
   const cutsRaw = (formData.get("cutsRaw") as string) ?? "";
   const cuts = cutsRaw

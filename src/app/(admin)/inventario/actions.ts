@@ -25,7 +25,7 @@ export async function crearProducto(
 ): Promise<ProductoFormState> {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin") return { error: "Solo el administrador puede crear productos." };
+  if (userRole !== "admin" && userRole !== "asesor") return { error: "Solo el administrador puede crear productos." };
 
   const nombre = (formData.get("nombre") as string)?.trim();
   const descripcion = (formData.get("descripcion") as string)?.trim() || null;
@@ -81,7 +81,7 @@ export async function editarProducto(
 ): Promise<ProductoFormState> {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin") return { error: "Solo el administrador puede editar productos." };
+  if (userRole !== "admin" && userRole !== "asesor") return { error: "Solo el administrador puede editar productos." };
 
   const nombre = (formData.get("nombre") as string)?.trim();
   const descripcion = (formData.get("descripcion") as string)?.trim() || null;
@@ -162,7 +162,7 @@ export async function registrarMovimiento(
 ): Promise<MovimientoFormState> {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin") return { error: "Solo el administrador puede registrar movimientos." };
+  if (userRole !== "admin" && userRole !== "asesor") return { error: "Solo el administrador puede registrar movimientos." };
 
   const tipo = (formData.get("tipo") as string)?.trim();
   const cantidadRaw = (formData.get("cantidad") as string)?.trim();
@@ -233,7 +233,7 @@ export async function ajustarStockRapido(
 ): Promise<QuickStockAdjustState> {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin") return { error: "Solo el administrador puede ajustar stock." };
+  if (userRole !== "admin" && userRole !== "asesor") return { error: "Solo el administrador puede ajustar stock." };
 
   if (!Number.isInteger(delta) || delta === 0) {
     return { error: "El ajuste rápido es inválido." };
