@@ -369,7 +369,7 @@ Implementado en (04/04/2026 sesion 16):
 
 Scope implementado: buscar beats de YouTube y reproducirlos directamente desde la pantalla musical del barbero. Independiente del Music Engine por ahora.
 
-Pendiente: agregar `YOUTUBE_API_KEY` como variable de entorno en Vercel dashboard antes del proximo deploy.
+`YOUTUBE_API_KEY` configurada en Vercel dashboard (15/04/2026).
 
 ### Portal Marciano (Fase 7)
 
@@ -600,11 +600,40 @@ No agregar aqui:
 - Inbox de turnos pendientes en Hoy implementado y deployado (sesion 19, 13/04/2026)
 - UI polish gastos-rapidos y repago, panel asesor documentado (sesion 20, 15/04/2026)
 - Panel asesor verificado en detalle: reportes P&L/Flujo/Temporadas revisados; link "Administrar temporadas" agregado; P&L identificado como incompleto — pendiente revision (sesion 21, 15/04/2026)
-- proximos pasos: revisar y completar P&L del asesor; seed de datos reales; capacitacion de usuarios (Pinky/Gabote); go-live
+- P&L y Flujo mensual correctamente mapeados: cuota Memas vinculada al repago real, costos fijos integrados desde ambas fuentes, TC configurable (sesion 22, 15/04/2026)
+- proximos pasos: seed de datos reales; capacitacion de usuarios (Pinky/Gabote); go-live
 - siguiente plan operativo: `docs/plans/go-live-seed-capacitacion.md`
 - `YOUTUBE_API_KEY` ya configurada en Vercel dashboard (15/04/2026)
 - iteracion futura opcional: integrar Beats Mode al Music Engine (colas, modos); Web Playback SDK para reproduccion automatica en pantalla musical; notificaciones de turno para Marcianos (Resend)
 - iteracion futura avatar: pin de version Replicate a actualizar cuando salga version nueva; opcion de reset de avatar desde panel admin; mostrar avatar en StyleDNAReveal; ajuste de prompt si resultado no es suficientemente cartoon (migrar a fal.ai IP-Adapter si necesario)
+
+### Sesion 22 — P&L y Flujo correctamente mapeados (15/04/2026)
+
+**P&L — Cuota Memas**
+
+- `cuotaMensual` hardcodeado en seed ($400.000) reemplazado por logica real
+- si la cuota del mes ya fue pagada → usa `montoPagado` de `repagoMemasCuotas` (ARS real)
+- si no → proyecta `cuotaTotal` del cronograma de amortizacion × `tcReferencia`
+- `tcReferencia` (default 1400) ahora vive en `configuracion_negocio` como campo configurable
+- migration `0011_add_tc_referencia.sql` aplicada en Neon
+
+**P&L — Costos operativos**
+
+- P&L antes solo leia tabla `gastos` (gastos rapidos)
+- ahora suma tambien `costos_fijos_valores` via inner join con `costosFijosNegocio`
+- cada costo fijo entra con su categoria real (alquiler, sueldos, servicios, etc.)
+- ambas fuentes se mezclan en el mismo `categoriaMap` y total `gastosFijosMes`
+
+**Flujo mensual — Costos fijos**
+
+- `getFlujoMensual` antes solo incluia gastos rapidos como egresos
+- ahora suma los costos fijos del mes e imputa el total el dia 1 (convencion correcta para gastos mensuales sin fecha especifica)
+
+**Visual — Navegacion P&L**
+
+- "← Dashboard" rediseñado como pill con SVG chevron, borde sutil, hover verde
+- "Anterior / Siguiente" rediseñados con `rounded-[20px]`, SVG arrows, hover brand green
+- mes central levemente mas grande (`text-base font-bold`)
 
 ### Sesion 21 — Review Panel Asesor + fix menor Temporadas (15/04/2026)
 
@@ -623,7 +652,7 @@ No agregar aqui:
 - acceso controlado por `src/proxy.ts` y `src/lib/asesor-action.ts`
 - rutas compartidas con admin — el asesor ve las mismas paginas pero sin tabs operativos (Inventario, Negocio, etc.)
 - nav del asesor: 4 tabs renombrados — **Hoy** (`/dashboard`), **Resultado** (`/mi-resultado`), **Costos** (`/finanzas`), **Ajustes** (`/configuracion`) — Liquidaciones reemplazada por Resultado (sesion 21)
-- pendiente: documentar flujo de creacion de cuenta asesor (`src/db/create-asesor-user.ts`)
+- creacion de cuenta asesor: correr `npx tsx src/db/create-asesor-user.ts` con `.env.local` configurado (o `WAS_PASSWORD=xxx npx tsx ...` para password custom). Crea o actualiza el usuario `contact@memas.agency` con rol `asesor`. El script es idempotente — si ya existe, actualiza password y rol sin romper nada.
 
 **Decision de negocio confirmada (sesion 21, 15/04/2026)**
 
