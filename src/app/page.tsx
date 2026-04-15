@@ -3,7 +3,6 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import PublicLandingDetails from "@/components/landing/PublicLandingDetails";
 import PublicLandingHero from "@/components/landing/PublicLandingHero";
-import LandingFreqBand from "@/components/landing/LandingFreqBand";
 import { auth } from "@/lib/auth";
 
 export default async function RootPage() {
@@ -37,7 +36,6 @@ export default async function RootPage() {
           reserveHref={reserveHref}
           marcianosHref={marcianosHref}
         />
-        <LandingFreqBand />
         <PublicLandingDetails
           reserveHref={reserveHref}
           marcianosHref={marcianosHref}
