@@ -598,11 +598,53 @@ No agregar aqui:
 - **TODAS LAS FASES COMPLETAS** — sistema listo para operacion (deadline: mayo 2026)
 - Avatar Alien Trap para Marcianos implementado y deployado (sesion 19, 13/04/2026)
 - Inbox de turnos pendientes en Hoy implementado y deployado (sesion 19, 13/04/2026)
-- proximos pasos: seed de datos reales, capacitacion de usuarios (Pinky/Gabote), go-live
+- UI polish gastos-rapidos y repago, panel asesor documentado (sesion 20, 15/04/2026)
+- Panel asesor verificado en detalle: reportes P&L/Flujo/Temporadas revisados; link "Administrar temporadas" agregado; P&L identificado como incompleto — pendiente revision (sesion 21, 15/04/2026)
+- proximos pasos: revisar y completar P&L del asesor; seed de datos reales; capacitacion de usuarios (Pinky/Gabote); go-live
 - siguiente plan operativo: `docs/plans/go-live-seed-capacitacion.md`
-- **bloqueante antes de deploy**: agregar `YOUTUBE_API_KEY` en Vercel dashboard
+- `YOUTUBE_API_KEY` ya configurada en Vercel dashboard (15/04/2026)
 - iteracion futura opcional: integrar Beats Mode al Music Engine (colas, modos); Web Playback SDK para reproduccion automatica en pantalla musical; notificaciones de turno para Marcianos (Resend)
 - iteracion futura avatar: pin de version Replicate a actualizar cuando salga version nueva; opcion de reset de avatar desde panel admin; mostrar avatar en StyleDNAReveal; ajuste de prompt si resultado no es suficientemente cartoon (migrar a fal.ai IP-Adapter si necesario)
+
+### Sesion 21 — Review Panel Asesor + fix menor Temporadas (15/04/2026)
+
+- Revision detallada de los 3 reportes del panel asesor: P&L, Flujo mensual, Temporadas
+- P&L identificado como incompleto: estructura confusa, "Cuota Memas" sin contexto — pendiente reescritura
+- Flujo mensual: correcto, solo lectura, depende de cierres diarios
+- Temporadas: link "Administrar temporadas" agregado al pie de la lista (antes solo aparecia en estado vacio)
+- Pendiente sesion siguiente: redisenar P&L con estructura mas clara y completa
+
+### Sesion 20 — Panel Asesor + UI Polish (15/04/2026)
+
+**Panel Asesor (Was)**
+
+- rol `asesor` ya existia en Better Auth pero no estaba documentado en el PRD
+- el panel asesor es una vista reducida del admin con acceso a: Dashboard, Liquidaciones, Finanzas, Configuracion
+- acceso controlado por `src/proxy.ts` y `src/lib/asesor-action.ts`
+- rutas compartidas con admin — el asesor ve las mismas paginas pero sin tabs operativos (Inventario, Negocio, etc.)
+- nav del asesor: 4 tabs renombrados — **Hoy** (`/dashboard`), **Resultado** (`/mi-resultado`), **Costos** (`/finanzas`), **Ajustes** (`/configuracion`) — Liquidaciones reemplazada por Resultado (sesion 21)
+- pendiente: documentar flujo de creacion de cuenta asesor (`src/db/create-asesor-user.ts`)
+
+**Decision de negocio confirmada (sesion 21, 15/04/2026)**
+
+- Gabote cobra **60%** de cada atencion; la casa retiene **40%** (menos fees de medio de pago)
+- No hay alquiler fijo mensual para Gabote — el 40% de retencion compensa esa diferencia
+- El codigo en `src/lib/bep.ts` ya usaba 40% correctamente; el PRD y la skill a51-qa tenian un error (decian 75%/25%) — corregido en esta sesion
+
+**UI Polish — Gastos Rapidos**
+
+- `CategoryChip` rediseñado: pills compactos (`min-h-[40px]`, `rounded-full`), solo emoji + label visible, count y total en `title` tooltip nativo
+- `CategoriaEmojiGrid`: `grid-cols-4` siempre (antes `grid-cols-2 sm:grid-cols-4`), labels truncadas antes del "/", botones `min-h-[52px]`
+- `GastoRapidoModal` simplificado: eliminado hero card con SummaryCards, eliminado aside "Lectura rapida/Estado", layout columna unica, `max-w-lg`, nota reducida a 2 rows, botones full-width
+- Boton "Ver gastos" eliminado del FAB cuando esta embebido en la misma pagina (`showHistoryLink={false}`)
+- Bug fix: `topCategory` mostraba "Cafe / capsulas $0" sin datos — corregido con `.find(c => c.total > 0)`
+
+**UI Polish — Repago**
+
+- `_RegistrarPagoForm` simplificado: eliminado layout de dos columnas anidado que causaba overlap, eliminado aside "Resumen previo" y "Checklist", eliminadas MiniMetrics redundantes (ya visibles en la pagina), eliminado header duplicado
+- Preview inline USD→ARS: aparece solo cuando ambos campos tienen valor (`u$d X × $TC → $ARS`)
+- Formulario ahora es columna unica: 3 botones rapidos + monto + TC con pills + nota + submit
+- Bug data: `repago_memas.cuotas_pagadas = 1` con `repago_memas_cuotas` vacia por registro de prueba — resuelto via SQL en Neon (15/04/2026)
 
 ### Fase 7 - Portal Marciano (expandida, 05/04/2026)
 
