@@ -64,7 +64,8 @@ export default async function TemporadasPage() {
             </Link>
           </div>
         ) : (
-          temporadas.map((temp) => {
+          <>
+          {temporadas.map((temp) => {
             const esFutura = temp.estado === "futura";
             const esActiva = temp.estado === "activa";
 
@@ -182,7 +183,16 @@ export default async function TemporadasPage() {
                 )}
               </div>
             );
-          })
+          })}
+          <div className="text-center pt-2">
+            <Link
+              href="/configuracion/temporadas"
+              className="text-sm text-zinc-400 hover:text-[#8cff59]"
+            >
+              Administrar temporadas →
+            </Link>
+          </div>
+          </>
         )}
       </main>
     </div>

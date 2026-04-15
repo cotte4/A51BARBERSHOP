@@ -57,8 +57,7 @@ export function SmartCard({
 
         <div className="mt-5 flex-1">{children}</div>
 
-        <div className="mt-5 flex items-center justify-between border-t border-white/8 pt-4 text-sm">
-          <span className="text-zinc-400">{footer}</span>
+        <div className="mt-5 flex items-center justify-end border-t border-white/8 pt-4 text-sm">
           <span className="flex items-center gap-2 font-semibold text-[#8cff59] transition-transform duration-200 group-hover:translate-x-1">
             {footer}
             <span className="text-base">-&gt;</span>

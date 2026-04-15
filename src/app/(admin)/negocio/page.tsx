@@ -12,11 +12,9 @@ import {
   stockMovimientos,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { calcularBep } from "@/lib/bep";
 import { calcularCuotaSiguiente, formatUSD, generarCronograma } from "@/lib/amortizacion";
-import { getDatosBep, getKpisDia } from "@/lib/dashboard-queries";
+import { getKpisDia } from "@/lib/dashboard-queries";
 import {
-  HudMiniStat as NegocioHudMiniStat,
   SmartCard as NegocioSmartCard,
   UtilityChip as NegocioUtilityChip,
 } from "./_components/NegocioCards";
@@ -25,8 +23,6 @@ import {
   formatARS,
   formatHeaderDate,
   formatShortDate,
-  getBepPips,
-  getBepProgress,
   getDueLabel,
   getFechaHoyArgentina,
   getInitials,
@@ -57,7 +53,6 @@ export default async function NegocioPage() {
 
   const [
     kpisDia,
-    datosBep,
     listaBarberos,
     listaLiquidaciones,
     listaProductos,
@@ -67,7 +62,6 @@ export default async function NegocioPage() {
     ventasRetailHoyRows,
   ] = await Promise.all([
     getKpisDia(),
-    getDatosBep(),
     db.select().from(barberos),
     db.select().from(liquidaciones).where(eq(liquidaciones.pagado, false)),
     db
@@ -113,10 +107,6 @@ export default async function NegocioPage() {
   }, 0);
   const ingresoBrutoHoy = totalServiciosHoy + totalRetailHoy;
   const gastosHoy = gastosHoyRows.reduce((sum, row) => sum + toNumber(row.monto), 0);
-
-  const bep = calcularBep(datosBep);
-  const bepProgress = getBepProgress(kpisDia.atencionesHoy, bep.cortesBep);
-  const bepPips = getBepPips(bepProgress);
 
   const teamRows = listaBarberos
     .filter((barbero) => barbero.activo && barbero.rol !== "admin")
@@ -284,129 +274,7 @@ export default async function NegocioPage() {
           </div>
         </section>
 
-        <section className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
-          <NegocioHudMiniStat
-            label="Entro"
-            value={formatARS(ingresoBrutoHoy)}
-            helper="Servicios y productos"
-          />
-          <NegocioHudMiniStat
-            label="Queda"
-            value={formatARS(kpisDia.cajaNeta)}
-            helper="Despues de descuentos"
-          />
-          <NegocioHudMiniStat
-            label="Hoy"
-            value={String(kpisDia.atencionesHoy)}
-            helper="Trabajos hechos"
-          />
-          <NegocioHudMiniStat
-            label="Equipo"
-            value={formatARS(totalPendienteBarberos)}
-            helper="Falta pagar esto"
-          />
-          <NegocioHudMiniStat
-            label="Stock"
-            value={String(stockAlerts.length)}
-            helper={stockAlerts.length > 0 ? "Hay cosas para comprar" : "Todo bien"}
-          />
-          <NegocioHudMiniStat
-            label="Cuota"
-            value={proximaCuotaUsd > 0 ? formatUSD(proximaCuotaUsd) : "Sin cuota"}
-            helper={proximaCuotaUsd > 0 ? proximaCuotaEstado : "Nada urgente hoy"}
-          />
-        </section>
-
         <section className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
-          <NegocioSmartCard
-            href="/dashboard"
-            eyebrow="Hoy"
-            kicker="Lo importante"
-            title="Plata de hoy"
-            detail="Ingreso, atenciones y BEP del dia en una sola tarjeta."
-            footer="Ir al panel diario"
-            className="min-h-[380px]"
-            accentClassName="border-[#8cff59]/20 bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.16),_transparent_35%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
-          >
-            <div className="grid gap-4 lg:grid-cols-[1.18fr_0.82fr]">
-              <div className="rounded-[26px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(0,0,0,0.16))] p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-400">
-                  Entro hoy
-                </p>
-                <p className="font-display mt-3 text-4xl font-semibold text-white sm:text-5xl">
-                  {formatARS(ingresoBrutoHoy)}
-                </p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-[20px] border border-white/6 bg-black/18 p-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Servicios</p>
-                    <p className="mt-2 text-lg font-semibold text-zinc-100">{formatARS(totalServiciosHoy)}</p>
-                  </div>
-                  <div className="rounded-[20px] border border-white/6 bg-black/18 p-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Productos</p>
-                    <p className="mt-2 text-lg font-semibold text-zinc-100">{formatARS(totalRetailHoy)}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-3">
-                <div className="panel-soft rounded-[24px] p-4">
-                  <div className="flex items-end justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-medium text-zinc-400">Trabajos hechos</p>
-                      <p className="font-display mt-2 text-3xl font-bold text-white">
-                        {kpisDia.atencionesHoy}
-                      </p>
-                    </div>
-                    <div className="text-right text-xs text-zinc-400">
-                      <p>Pinky {kpisDia.atencionesPinky}</p>
-                      <p>Equipo {kpisDia.atencionesGabote}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="panel-soft rounded-[24px] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-medium text-zinc-400">Meta del dia</p>
-                    {!bep.sinReferencia ? (
-                      <span className="rounded-full bg-black/18 px-2 py-1 text-[11px] font-semibold text-zinc-300">
-                        {bepProgress}% listo
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {bep.sinReferencia ? (
-                    <p className="mt-3 text-sm text-zinc-400">
-                      Cuando haya mas datos, aca te vamos a mostrar si el dia ya se pago solo.
-                    </p>
-                  ) : (
-                    <>
-                      <div className="mt-3 flex gap-2">
-                        {Array.from({ length: 5 }).map((_, index) => (
-                          <span
-                            key={index}
-                            className={`h-3 flex-1 rounded-full shadow-[0_0_18px_rgba(140,255,89,0.14)] ${
-                              index < bepPips ? "bg-[#8cff59]" : "bg-zinc-700"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <div className="mt-4 rounded-[18px] border border-white/6 bg-black/18 p-3">
-                        <p className="text-sm text-zinc-300">
-                          {bep.faltanCortes > 0
-                            ? `Faltan ${bep.faltanCortes} trabajo${bep.faltanCortes === 1 ? "" : "s"} para cubrir el dia`
-                            : "El dia ya se pago solo"}
-                        </p>
-                        <p className="mt-1 text-xs text-zinc-500">
-                          Referencia de hoy: {bep.cortesBep} trabajos
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </NegocioSmartCard>
-
           <NegocioSmartCard
             href="/liquidaciones"
             eyebrow="Equipo"

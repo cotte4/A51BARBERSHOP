@@ -76,6 +76,18 @@ function MusicIcon() {
   );
 }
 
+function ResultadoIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M6 20V14" strokeLinecap="round" />
+      <path d="M10 20V10" strokeLinecap="round" />
+      <path d="M14 20V13" strokeLinecap="round" />
+      <path d="M18 20V7" strokeLinecap="round" />
+      <path d="M3 20h18" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function ChartIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
@@ -172,25 +184,25 @@ function getAsesorNavItems(): NavItem[] {
   return [
     {
       href: "/dashboard",
-      label: "Dashboard",
+      label: "Hoy",
       icon: <ChartIcon />,
       isActive: (pathname) => pathname.startsWith("/dashboard"),
     },
     {
-      href: "/liquidaciones",
-      label: "Liquidaciones",
-      icon: <DocumentIcon />,
-      isActive: (pathname) => pathname.startsWith("/liquidaciones"),
+      href: "/mi-resultado",
+      label: "Resultado",
+      icon: <ResultadoIcon />,
+      isActive: (pathname) => pathname.startsWith("/mi-resultado"),
     },
     {
       href: "/finanzas",
-      label: "Finanzas",
+      label: "Costos",
       icon: <FinanzasIcon />,
       isActive: (pathname) => pathname.startsWith("/finanzas"),
     },
     {
       href: "/configuracion",
-      label: "Config",
+      label: "Ajustes",
       icon: <SettingsIcon />,
       isActive: (pathname) =>
         pathname.startsWith("/configuracion") ||
