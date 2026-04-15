@@ -184,3 +184,102 @@ select {
     transform: scale(1);
   }
 }
+
+@keyframes marciano-breathe {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(140, 255, 89, 0.12),
+      0 32px 80px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(140, 255, 89, 0.22),
+      0 32px 80px rgba(0, 0, 0, 0.5),
+      0 0 70px rgba(140, 255, 89, 0.07);
+  }
+}
+
+/* Landing animation utilities */
+.animate-fade-up {
+  animation: a51-fade-up 0.7s ease both;
+}
+
+.animate-scale-in-landing {
+  animation: a51-scale-in 0.65s ease both;
+}
+
+.marciano-glow {
+  animation: marciano-breathe 4s ease-in-out infinite;
+}
+
+@keyframes radar-sweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes ufo-float {
+  0%, 100% { transform: translateY(0px) rotate(-1deg); }
+  50%       { transform: translateY(-14px) rotate(1deg); }
+}
+
+@keyframes a51-freq {
+  0%, 100% { transform: scaleY(0.1); }
+  50%       { transform: scaleY(1); }
+}
+
+/* ── Button micro-interaction keyframes ─────────────────────────── */
+
+@keyframes a51-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes a51-btn-success {
+  0%   { box-shadow: 0 0 0 0 rgba(140, 255, 89, 0.55); }
+  70%  { box-shadow: 0 0 0 8px rgba(140, 255, 89, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(140, 255, 89, 0); }
+}
+
+@keyframes a51-btn-error {
+  0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+  70%  { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+@keyframes a51-check-draw {
+  from { stroke-dashoffset: 22; opacity: 0.3; }
+  to   { stroke-dashoffset: 0;  opacity: 1; }
+}
+
+@keyframes a51-btn-scale-in {
+  from { transform: scale(0.96); opacity: 0.7; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+/* ── Glitch ──────────────────────────────────────────────────────── */
+
+@keyframes a51-glitch {
+  0%, 91%, 100% {
+    transform: none;
+    text-shadow: none;
+  }
+  92% {
+    transform: translate(-3px, 0) skewX(-1deg);
+    text-shadow: 3px 0 rgba(140, 255, 89, 0.7), -2px 0 rgba(255, 50, 100, 0.3);
+  }
+  93% {
+    transform: translate(3px, 0);
+    text-shadow: -3px 0 rgba(140, 255, 89, 0.7), 2px 0 rgba(0, 100, 255, 0.22);
+  }
+  94% {
+    transform: translate(-1px, 0);
+    text-shadow: 1px 0 rgba(140, 255, 89, 0.5);
+  }
+  95%, 97% {
+    transform: none;
+    text-shadow: none;
+  }
+  96% {
+    transform: translate(2px, -1px) skewX(0.5deg);
+    text-shadow: -2px 0 rgba(140, 255, 89, 0.4);
+  }
+}

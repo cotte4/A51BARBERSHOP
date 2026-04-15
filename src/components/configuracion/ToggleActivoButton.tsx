@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import ActionButton from "@/components/ui/ActionButton";
 
 interface ToggleActivoButtonProps {
   id: string;
@@ -13,20 +13,15 @@ export default function ToggleActivoButton({
   activo,
   toggleAction,
 }: ToggleActivoButtonProps) {
-  const [isPending, startTransition] = useTransition();
-
   return (
-    <button
-      type="button"
-      onClick={() => startTransition(() => toggleAction(id, activo))}
-      disabled={isPending}
-      className={`inline-flex min-h-[46px] items-center justify-center rounded-2xl px-4 text-sm font-semibold transition ${
-        activo
-          ? "bg-stone-900 text-white hover:bg-stone-700"
-          : "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
-      } disabled:opacity-50`}
+    <ActionButton
+      variant={activo ? "subtle" : "ghost"}
+      onAction={() => toggleAction(id, activo)}
+      successText={activo ? "Desactivado" : "Activado"}
+      loadingText={activo ? "Desactivando..." : "Activando..."}
+      className="min-h-[46px] px-4"
     >
-      {isPending ? "Actualizando..." : activo ? "Desactivar" : "Activar"}
-    </button>
+      {activo ? "Desactivar" : "Activar"}
+    </ActionButton>
   );
 }

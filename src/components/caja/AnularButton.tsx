@@ -110,9 +110,19 @@ export default function AnularButton({ atencionId, anularAction }: AnularButtonP
               <button
                 type="submit"
                 disabled={!canSubmit}
-                className="flex-1 min-h-[46px] rounded-2xl bg-rose-600 text-sm font-semibold text-white transition-colors hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-rose-950 disabled:text-rose-300"
+                className="inline-flex flex-1 min-h-[46px] items-center justify-center gap-2 rounded-2xl bg-rose-600 text-sm font-semibold text-white transition-colors hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-rose-950 disabled:text-rose-300"
               >
-                {isPending ? "Anulando..." : confirmed ? "Confirmar anulación" : "Confirmar anulación"}
+                {isPending && (
+                  <svg
+                    style={{ animation: "a51-spin 0.65s linear infinite" }}
+                    width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"
+                    className="shrink-0"
+                  >
+                    <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeOpacity="0.3" strokeWidth="1.8" />
+                    <path d="M 7 1.5 A 5.5 5.5 0 0 1 12.5 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                )}
+                <span>{isPending ? "Anulando..." : "Confirmar anulación"}</span>
               </button>
               <button
                 type="button"

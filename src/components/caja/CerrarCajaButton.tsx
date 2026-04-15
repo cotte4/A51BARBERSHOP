@@ -60,13 +60,25 @@ export default function CerrarCajaButton({ cerrarAction }: CerrarCajaButtonProps
       <button
         type="submit"
         disabled={isPending}
-        className="neon-button min-h-[48px] w-full rounded-[20px] px-5 text-sm font-semibold text-[#07130a] disabled:cursor-not-allowed disabled:opacity-60"
+        className="neon-button inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-[20px] px-5 text-sm font-semibold text-[#07130a] disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isPending
-          ? "Cerrando caja..."
-          : armed
-            ? "Confirmar cierre del dia"
-            : "Revisar y habilitar cierre"}
+        {isPending && (
+          <svg
+            style={{ animation: "a51-spin 0.65s linear infinite" }}
+            width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"
+            className="shrink-0"
+          >
+            <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeOpacity="0.28" strokeWidth="1.8" />
+            <path d="M 7 1.5 A 5.5 5.5 0 0 1 12.5 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        )}
+        <span>
+          {isPending
+            ? "Cerrando caja..."
+            : armed
+              ? "Confirmar cierre del dia"
+              : "Revisar y habilitar cierre"}
+        </span>
       </button>
 
       <p className="text-xs leading-5 text-zinc-500">

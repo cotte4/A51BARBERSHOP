@@ -50,9 +50,19 @@ export default function MarcarPagadaButton({ marcarAction }: Props) {
             <button
               type="submit"
               disabled={isPending}
-              className="neon-button inline-flex min-h-[44px] flex-1 items-center justify-center rounded-2xl px-4 text-sm font-semibold disabled:opacity-50"
+              className="neon-button inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold text-[#07130a] disabled:opacity-50"
             >
-              {isPending ? "Guardando..." : "Confirmar pago"}
+              {isPending && (
+                <svg
+                  style={{ animation: "a51-spin 0.65s linear infinite" }}
+                  width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"
+                  className="shrink-0"
+                >
+                  <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeOpacity="0.28" strokeWidth="1.8" />
+                  <path d="M 7 1.5 A 5.5 5.5 0 0 1 12.5 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              )}
+              <span>{isPending ? "Guardando..." : "Confirmar pago"}</span>
             </button>
           </div>
         </div>
