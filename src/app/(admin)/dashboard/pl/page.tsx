@@ -150,11 +150,16 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
     <div className="min-h-screen bg-zinc-950">
       <header className="border-b border-zinc-800 bg-zinc-900/90 px-4 py-4 backdrop-blur">
         <div className="mx-auto max-w-2xl">
-          <Link href="/dashboard" className="mb-2 block text-sm text-zinc-400 hover:text-[#8cff59]">
-            ← Dashboard
-          </Link>
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="font-display text-xl font-bold text-white">P&amp;L mensual</h1>
+          <div className="mb-3 flex items-center justify-between">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs font-medium text-zinc-400 transition hover:border-[#8cff59]/30 hover:text-[#8cff59]"
+            >
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.9">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              Dashboard
+            </Link>
             <div className="flex items-center gap-2">
               <a
                 href={`/api/export/csv/${anio}-${String(mes).padStart(2, "0")}`}
@@ -170,26 +175,33 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
               </a>
             </div>
           </div>
+          <h1 className="font-display text-xl font-bold text-white">P&amp;L mensual</h1>
         </div>
       </header>
 
       <main className="mx-auto flex max-w-2xl flex-col gap-5 px-4 py-6 pb-24">
         {/* Navegación de meses */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <Link
             href={`/dashboard/pl?mes=${mesPrev}&anio=${anioPrev}`}
-            className="inline-flex min-h-[44px] items-center rounded-xl border border-zinc-800 bg-zinc-900 px-4 text-sm text-zinc-300 hover:bg-zinc-800"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-[20px] border border-zinc-700/60 bg-zinc-900 px-4 text-sm font-medium text-zinc-300 transition hover:border-[#8cff59]/30 hover:text-[#8cff59]"
           >
-            ← Anterior
+            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.9">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            Anterior
           </Link>
-          <span className="text-sm font-semibold capitalize text-white">
-            {nombreMes(mes, anio)}
+          <span className="text-base font-bold capitalize text-white">
+            {capitalize(nombreMes(mes, anio))}
           </span>
           <Link
             href={`/dashboard/pl?mes=${mesNext}&anio=${anioNext}`}
-            className="inline-flex min-h-[44px] items-center rounded-xl border border-zinc-800 bg-zinc-900 px-4 text-sm text-zinc-300 hover:bg-zinc-800"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-[20px] border border-zinc-700/60 bg-zinc-900 px-4 text-sm font-medium text-zinc-300 transition hover:border-[#8cff59]/30 hover:text-[#8cff59]"
           >
-            Siguiente →
+            Siguiente
+            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.9">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
           </Link>
         </div>
 

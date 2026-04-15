@@ -447,6 +447,7 @@ export const configuracionNegocio = pgTable("configuracion_negocio", {
   presupuestoMensualGastos: integer("presupuesto_mensual_gastos")
     .notNull()
     .default(1956686),
+  tcReferencia: numeric("tc_referencia", { precision: 10, scale: 2 }).default("1400.00"),
   actualizadoEn: timestamp("actualizado_en", { withTimezone: true }).defaultNow(),
   actualizadoPor: text("actualizado_por"),
 });

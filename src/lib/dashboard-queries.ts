@@ -6,10 +6,14 @@ import {
   gastos,
   temporadas,
   repagoMemas,
+  repagoMemasCuotas,
   stockMovimientos,
   productos,
   configuracionNegocio,
+  costosFijosValores,
+  costosFijosNegocio,
 } from "@/db/schema";
+import { generarCronograma, calcularCuotaSiguiente } from "./amortizacion";
 import { and, eq, gte, lte, sum, count, avg, isNull, or } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { toNumber, getDaysInMonth } from "./caja-finance";
@@ -254,6 +258,8 @@ export type PLData = {
   resultadoOperativo: number;
   // Financiero
   cuotaMemasMes: number;
+  cuotaMemasPagada: boolean;
+  tcReferencia: number;
   cuotasPagadas: number;
   cantidadCuotasPactadas: number | null;
   saldoPendiente: number;
@@ -336,44 +342,87 @@ export async function getPL(mes: number, anio: number): Promise<PLData> {
     costoProductosVendidos += cant * costo;
   }
 
-  // Gastos del mes agrupados por categoría
+  // Gastos rápidos del mes
   const gastosMes = await db
     .select({ monto: gastos.monto, categoriaVisual: gastos.categoriaVisual })
     .from(gastos)
     .where(and(gte(gastos.fecha, inicio), lte(gastos.fecha, fin)));
 
+  // Costos fijos del mes (pestaña Finanzas) con su categoría real
+  const mesClave = `${anio}-${String(mes).padStart(2, "0")}`;
+  const costosFijosMes = await db
+    .select({ monto: costosFijosValores.monto, categoria: costosFijosNegocio.categoria })
+    .from(costosFijosValores)
+    .innerJoin(costosFijosNegocio, eq(costosFijosValores.costoId, costosFijosNegocio.id))
+    .where(eq(costosFijosValores.mes, mesClave));
+
   const categoriaMap = new Map<string, number>();
   let gastosFijosMes = 0;
+
   for (const g of gastosMes) {
     const cat = g.categoriaVisual ?? "otro";
     categoriaMap.set(cat, (categoriaMap.get(cat) ?? 0) + toNumber(g.monto));
     gastosFijosMes += toNumber(g.monto);
   }
+
+  for (const c of costosFijosMes) {
+    const cat = c.categoria ?? "otro";
+    categoriaMap.set(cat, (categoriaMap.get(cat) ?? 0) + toNumber(c.monto));
+    gastosFijosMes += toNumber(c.monto);
+  }
   const gastosPorCategoria = Array.from(categoriaMap.entries())
     .map(([categoria, monto]) => ({ categoria, monto }))
     .sort((a, b) => b.monto - a.monto);
 
-  // Presupuesto de gastos
+  // Presupuesto de gastos y TC de referencia
   const [config] = await db
-    .select({ presupuesto: configuracionNegocio.presupuestoMensualGastos })
+    .select({
+      presupuesto: configuracionNegocio.presupuestoMensualGastos,
+      tcReferencia: configuracionNegocio.tcReferencia,
+    })
     .from(configuracionNegocio)
     .limit(1);
   const presupuestoGastos = config?.presupuesto ?? 0;
+  const tcReferencia = toNumber(config?.tcReferencia) || 1400;
 
   // Repago Memas con contexto completo
   const [repago] = await db
     .select({
-      cuotaMensual: repagoMemas.cuotaMensual,
       pagadoCompleto: repagoMemas.pagadoCompleto,
       cuotasPagadas: repagoMemas.cuotasPagadas,
       cantidadCuotasPactadas: repagoMemas.cantidadCuotasPactadas,
       saldoPendiente: repagoMemas.saldoPendiente,
       deudaUsd: repagoMemas.deudaUsd,
+      tasaAnualUsd: repagoMemas.tasaAnualUsd,
     })
     .from(repagoMemas)
     .limit(1);
 
-  const cuotaMemasMes = repago && !repago.pagadoCompleto ? toNumber(repago.cuotaMensual) : 0;
+  // Cuota del mes: si ya fue pagada usamos montoPagado (ARS real),
+  // si no, proyectamos con el cronograma × TC de referencia
+  let cuotaMemasMes = 0;
+  let cuotaMemasPagada = false;
+
+  if (repago && !repago.pagadoCompleto) {
+    const cuotaDelMes = await db
+      .select({ montoPagado: repagoMemasCuotas.montoPagado })
+      .from(repagoMemasCuotas)
+      .where(and(gte(repagoMemasCuotas.fechaPago, inicio), lte(repagoMemasCuotas.fechaPago, fin)))
+      .limit(1);
+
+    if (cuotaDelMes.length > 0 && cuotaDelMes[0].montoPagado) {
+      cuotaMemasMes = toNumber(cuotaDelMes[0].montoPagado);
+      cuotaMemasPagada = true;
+    } else {
+      const cronograma = generarCronograma(
+        toNumber(repago.deudaUsd),
+        toNumber(repago.tasaAnualUsd),
+        repago.cantidadCuotasPactadas ?? 12,
+      );
+      const proximaCuota = calcularCuotaSiguiente(cronograma, repago.cuotasPagadas ?? 0);
+      cuotaMemasMes = proximaCuota ? proximaCuota.cuotaTotal * tcReferencia : 0;
+    }
+  }
 
   // Cálculos finales
   const feesMedioPagoTotal = feesMedioPagoGabote + feesMedioPagoPinky;
@@ -403,6 +452,8 @@ export async function getPL(mes: number, anio: number): Promise<PLData> {
     presupuestoGastos,
     resultadoOperativo,
     cuotaMemasMes,
+    cuotaMemasPagada,
+    tcReferencia,
     cuotasPagadas: repago?.cuotasPagadas ?? 0,
     cantidadCuotasPactadas: repago?.cantidadCuotasPactadas ?? null,
     saldoPendiente: toNumber(repago?.saldoPendiente),
@@ -443,7 +494,7 @@ export async function getFlujoMensual(
     }
   }
 
-  // Gastos del mes por fecha
+  // Gastos rápidos del mes por fecha
   const gastosMes = await db
     .select({ fecha: gastos.fecha, monto: gastos.monto })
     .from(gastos)
@@ -452,9 +503,20 @@ export async function getFlujoMensual(
   const gastosPorFecha = new Map<string, number>();
   for (const g of gastosMes) {
     if (g.fecha) {
-      const prev = gastosPorFecha.get(g.fecha) ?? 0;
-      gastosPorFecha.set(g.fecha, prev + toNumber(g.monto));
+      gastosPorFecha.set(g.fecha, (gastosPorFecha.get(g.fecha) ?? 0) + toNumber(g.monto));
     }
+  }
+
+  // Costos fijos del mes → se imputan el día 1
+  const mesClave = `${anio}-${String(mes).padStart(2, "0")}`;
+  const costosFijos = await db
+    .select({ monto: costosFijosValores.monto })
+    .from(costosFijosValores)
+    .where(eq(costosFijosValores.mes, mesClave));
+
+  const totalCostosFijos = costosFijos.reduce((sum, c) => sum + toNumber(c.monto), 0);
+  if (totalCostosFijos > 0) {
+    gastosPorFecha.set(inicio, (gastosPorFecha.get(inicio) ?? 0) + totalCostosFijos);
   }
 
   // Generar todos los días del mes
