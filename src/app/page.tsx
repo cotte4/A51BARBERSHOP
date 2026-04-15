@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import PublicLandingDetails from "@/components/landing/PublicLandingDetails";
 import PublicLandingHero from "@/components/landing/PublicLandingHero";
+import LandingFreqBand from "@/components/landing/LandingFreqBand";
 import { auth } from "@/lib/auth";
 
 export default async function RootPage() {
@@ -34,12 +35,11 @@ export default async function RootPage() {
       <div className="relative">
         <PublicLandingHero
           reserveHref={reserveHref}
-          loginHref={loginHref}
           marcianosHref={marcianosHref}
         />
+        <LandingFreqBand />
         <PublicLandingDetails
           reserveHref={reserveHref}
-          loginHref={loginHref}
           marcianosHref={marcianosHref}
         />
 
@@ -48,12 +48,12 @@ export default async function RootPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="eyebrow text-[11px] font-semibold">A51 Barber Shop</p>
-                <p className="mt-2 text-sm text-zinc-300">
-                  Cliente reserva. Staff ingresa. La base queda lista desde la raiz.
+                <p className="mt-2 text-sm text-zinc-400">
+                  Zona Aldrey, Mar del Plata · Mar — Sáb 10:00–19:00
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link
                   href={reserveHref}
                   className="neon-button inline-flex min-h-11 items-center justify-center rounded-2xl px-5 text-sm font-semibold"
@@ -64,13 +64,13 @@ export default async function RootPage() {
                   href={marcianosHref}
                   className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 text-sm font-semibold text-zinc-100 transition hover:border-[#8cff59]/30 hover:bg-white/10"
                 >
-                  Portal Marciano
+                  Club Marciano
                 </Link>
                 <Link
                   href={loginHref}
-                  className="ghost-button inline-flex min-h-11 items-center justify-center rounded-2xl px-5 text-sm font-semibold"
+                  className="text-xs text-zinc-600 transition hover:text-zinc-400 sm:px-2"
                 >
-                  Ingreso staff
+                  staff
                 </Link>
               </div>
             </div>

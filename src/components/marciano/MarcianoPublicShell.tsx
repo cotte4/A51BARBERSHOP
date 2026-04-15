@@ -77,8 +77,14 @@ export default function MarcianoPublicShell({
               <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-400">
                 {badge}
               </p>
-              <Link href="/" className="text-sm text-zinc-500 transition hover:text-white">
-                Volver a Area51
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-400 transition hover:text-[#8cff59]"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 12H5M12 5l-7 7 7 7" />
+                </svg>
+                Volver
               </Link>
             </div>
 

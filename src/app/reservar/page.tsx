@@ -8,6 +8,18 @@ export default async function ReservarLandingPage() {
     <main className="public-shell min-h-screen text-white">
       <div className="public-grid min-h-screen">
         <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+          <div className="mb-5">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-400 transition hover:text-[#8cff59]"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 5l-7 7 7 7" />
+              </svg>
+              Volver
+            </Link>
+          </div>
+
           <section className="public-panel public-glow rounded-[36px] border border-white/10 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-2xl space-y-4">

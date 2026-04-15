@@ -122,9 +122,6 @@ export default function RegistrarPagoForm({
               className="min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-800 px-4 pl-14 text-base text-white outline-none transition focus:border-[#8cff59]/60"
             />
           </div>
-          {state.fieldErrors && "montoPagadoUsd" in (state.fieldErrors ?? {}) ? (
-            <p className="mt-2 text-xs text-red-300">{(state.fieldErrors as Record<string, string>).montoPagadoUsd}</p>
-          ) : null}
         </div>
 
         {/* TC */}
