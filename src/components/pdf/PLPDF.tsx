@@ -2,30 +2,29 @@ import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { pdfStyles, colors } from "./pdf-styles";
 
-// ——————————————————————————————
-// Tipos
-// ——————————————————————————————
-
 export type PLPDFData = {
-  mes: number; // 1–12
+  mes: number;
   anio: number;
-  // Resultado casa
   ingresosGaboteBruto: number;
-  comisionesGabote: number;
-  feesMedioPagoGabote: number;
-  margenProductosMes: number;
-  ingresosCasaGabote: number;
+  ingresosPinkyBruto: number;
+  ingresosProductosBruto: number;
+  ingresoBrutoTotal: number;
+  comisionGabote: number;
+  comisionGabotePct: number;
+  costoProductosVendidos: number;
+  feesMedioPagoTotal: number;
+  margenBruto: number;
+  margenBrutoPct: number;
   gastosFijosMes: number;
-  resultadoCasa: number;
-  // Resultado personal Pinky
-  ingresosNetosPinky: number;
+  gastosPorCategoria: { categoria: string; monto: number }[];
+  resultadoOperativo: number;
   cuotaMemasMes: number;
-  resultadoPersonalPinky: number;
+  cuotasPagadas: number;
+  cantidadCuotasPactadas: number | null;
+  saldoPendiente: number;
+  deudaUsd: number;
+  resultadoNeto: number;
 };
-
-// ——————————————————————————————
-// Helpers
-// ——————————————————————————————
 
 function ars(value: number): string {
   return new Intl.NumberFormat("es-AR", {
@@ -49,9 +48,9 @@ function formatFechaEmision(fecha: string): string {
   return `${day} de ${MESES[(month ?? 1) - 1]} de ${year}`;
 }
 
-// ——————————————————————————————
-// Sub-componente: fila de P&L
-// ——————————————————————————————
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 type PLRowProps = {
   label: string;
@@ -105,209 +104,158 @@ function PLRow({ label, valor, negativo, signo, indent, bold, muted }: PLRowProp
   );
 }
 
-// ——————————————————————————————
-// Componente principal
-// ——————————————————————————————
+function ResultBox({ label, valor }: { label: string; valor: number }) {
+  const positive = valor >= 0;
+  return (
+    <View
+      style={[
+        pdfStyles.resultBox,
+        positive ? pdfStyles.resultBoxPositive : pdfStyles.resultBoxNegative,
+        { marginTop: 8 },
+      ]}
+    >
+      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        <Text
+          style={[
+            pdfStyles.resultText,
+            positive ? pdfStyles.resultTextPositive : pdfStyles.resultTextNegative,
+            { fontSize: 11, textAlign: "left" },
+          ]}
+        >
+          = {label}
+        </Text>
+        <Text
+          style={[
+            pdfStyles.resultText,
+            positive ? pdfStyles.resultTextPositive : pdfStyles.resultTextNegative,
+            { fontSize: 11 },
+          ]}
+        >
+          {ars(valor)}
+        </Text>
+      </View>
+    </View>
+  );
+}
 
 export function PLPDF({ data }: { data: PLPDFData }) {
-  const {
-    mes,
-    anio,
-    ingresosGaboteBruto,
-    comisionesGabote,
-    feesMedioPagoGabote,
-    margenProductosMes,
-    ingresosCasaGabote,
-    gastosFijosMes,
-    resultadoCasa,
-    ingresosNetosPinky,
-    cuotaMemasMes,
-    resultadoPersonalPinky,
-  } = data;
-
   const hoy = new Date().toISOString().split("T")[0]!;
-  const ingresosCasaTotal = ingresosCasaGabote + margenProductosMes;
+  const cuotaLabel = data.cantidadCuotasPactadas
+    ? `cuota ${data.cuotasPagadas + 1} de ${data.cantidadCuotasPactadas}`
+    : `${data.cuotasPagadas} pagadas`;
 
   return (
-    <Document title={`P&L ${nombreMes(mes, anio)}`} author="A51 Barber">
+    <Document title={`P&L ${nombreMes(data.mes, data.anio)}`} author="A51 Barber">
       <Page size="A4" style={pdfStyles.page}>
         {/* Cabecera */}
         <View style={pdfStyles.header}>
           <Text style={pdfStyles.headerTitle}>A51 Barber — P&L Mensual</Text>
-          <Text style={pdfStyles.headerSubtitle}>{nombreMes(mes, anio)}</Text>
-          <Text style={pdfStyles.headerMeta}>
-            Generado el {formatFechaEmision(hoy)}
-          </Text>
+          <Text style={pdfStyles.headerSubtitle}>{nombreMes(data.mes, data.anio)}</Text>
+          <Text style={pdfStyles.headerMeta}>Generado el {formatFechaEmision(hoy)}</Text>
         </View>
 
-        {/* Bloque: Resultado casa */}
+        {/* 1. INGRESOS */}
         <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>Resultado casa</Text>
-
-          <PLRow
-            label="Cortes Gabote (bruto)"
-            valor={ingresosGaboteBruto}
-            signo="+"
-          />
-          <PLRow
-            label="Comision Gabote (60%)"
-            valor={comisionesGabote}
-            negativo
-            signo="-"
-            indent
-            muted
-          />
-          <PLRow
-            label="Fees medios de pago (Gabote)"
-            valor={feesMedioPagoGabote}
-            negativo
-            signo="-"
-            indent
-            muted
-          />
-          <PLRow
-            label="Margen productos"
-            valor={margenProductosMes}
-            signo="+"
-          />
-
-          {/* Subtotal ingresos casa */}
-          <View
-            style={{
-              backgroundColor: colors.lightGray,
-              borderRadius: 3,
-              marginTop: 4,
-              marginBottom: 4,
-            }}
-          >
-            <PLRow
-              label="Ingresos casa"
-              valor={ingresosCasaTotal}
-              signo="="
-              bold
-            />
-          </View>
-
-          <PLRow
-            label="Gastos del mes"
-            valor={gastosFijosMes}
-            negativo
-            signo="-"
-            indent
-            muted
-          />
-
-          {/* Total resultado casa */}
-          <View
-            style={[
-              pdfStyles.resultBox,
-              resultadoCasa >= 0 ? pdfStyles.resultBoxPositive : pdfStyles.resultBoxNegative,
-              { marginTop: 8 },
-            ]}
-          >
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text
-                style={[
-                  pdfStyles.resultText,
-                  resultadoCasa >= 0
-                    ? pdfStyles.resultTextPositive
-                    : pdfStyles.resultTextNegative,
-                  { fontSize: 11, textAlign: "left" },
-                ]}
-              >
-                = Resultado casa
-              </Text>
-              <Text
-                style={[
-                  pdfStyles.resultText,
-                  resultadoCasa >= 0
-                    ? pdfStyles.resultTextPositive
-                    : pdfStyles.resultTextNegative,
-                  { fontSize: 11 },
-                ]}
-              >
-                {ars(resultadoCasa)}
-              </Text>
-            </View>
-          </View>
+          <Text style={pdfStyles.sectionTitle}>Ingresos</Text>
+          <PLRow label="Servicios Gabote" valor={data.ingresosGaboteBruto} signo="+" />
+          <PLRow label="Servicios Pinky" valor={data.ingresosPinkyBruto} signo="+" />
+          {data.ingresosProductosBruto > 0 && (
+            <PLRow label="Venta de productos" valor={data.ingresosProductosBruto} signo="+" />
+          )}
+          <ResultBox label="Ingreso bruto total" valor={data.ingresoBrutoTotal} />
         </View>
 
-        {/* Bloque: Resultado personal Pinky */}
+        {/* 2. COSTOS VARIABLES */}
         <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>Resultado personal Pinky</Text>
-
+          <Text style={pdfStyles.sectionTitle}>Costos variables</Text>
           <PLRow
-            label="Ingresos Pinky (neto)"
-            valor={ingresosNetosPinky}
-            signo="+"
+            label={`Comision Gabote (${data.comisionGabotePct}%)`}
+            valor={data.comisionGabote}
+            negativo
+            signo="-"
+            indent
+            muted
           />
-          <PLRow
-            label="Resultado casa"
-            valor={resultadoCasa}
-            signo="+"
-          />
-          {cuotaMemasMes > 0 && (
+          {data.costoProductosVendidos > 0 && (
             <PLRow
-              label="Cuota Memas"
-              valor={cuotaMemasMes}
+              label="Costo productos vendidos"
+              valor={data.costoProductosVendidos}
               negativo
               signo="-"
               indent
               muted
             />
           )}
-
-          {/* Total resultado personal */}
-          <View
-            style={[
-              pdfStyles.resultBox,
-              resultadoPersonalPinky >= 0
-                ? pdfStyles.resultBoxPositive
-                : pdfStyles.resultBoxNegative,
-              { marginTop: 8 },
-            ]}
-          >
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text
-                style={[
-                  pdfStyles.resultText,
-                  resultadoPersonalPinky >= 0
-                    ? pdfStyles.resultTextPositive
-                    : pdfStyles.resultTextNegative,
-                  { fontSize: 11, textAlign: "left" },
-                ]}
-              >
-                = Resultado personal Pinky
-              </Text>
-              <Text
-                style={[
-                  pdfStyles.resultText,
-                  resultadoPersonalPinky >= 0
-                    ? pdfStyles.resultTextPositive
-                    : pdfStyles.resultTextNegative,
-                  { fontSize: 11 },
-                ]}
-              >
-                {ars(resultadoPersonalPinky)}
-              </Text>
-            </View>
-          </View>
+          <PLRow
+            label="Fees medios de pago"
+            valor={data.feesMedioPagoTotal}
+            negativo
+            signo="-"
+            indent
+            muted
+          />
+          <ResultBox label={`Margen bruto (${data.margenBrutoPct}%)`} valor={data.margenBruto} />
         </View>
 
-        {/* Sin datos */}
-        {ingresosGaboteBruto === 0 &&
-          ingresosNetosPinky === 0 &&
-          gastosFijosMes === 0 && (
-            <Text style={pdfStyles.emptyText}>
-              No hay datos registrados para este mes.
-            </Text>
+        {/* 3. COSTOS FIJOS */}
+        <View style={pdfStyles.section}>
+          <Text style={pdfStyles.sectionTitle}>Costos operativos</Text>
+          {data.gastosPorCategoria.map(({ categoria, monto }) => (
+            <PLRow
+              key={categoria}
+              label={capitalize(categoria)}
+              valor={monto}
+              negativo
+              signo="-"
+              indent
+              muted
+            />
+          ))}
+          {data.gastosPorCategoria.length === 0 && (
+            <PLRow label="Sin gastos registrados" valor={0} muted />
           )}
+          <ResultBox label="Resultado operativo" valor={data.resultadoOperativo} />
+        </View>
+
+        {/* 4. FINANCIERO */}
+        {data.cuotaMemasMes > 0 && (
+          <View style={pdfStyles.section}>
+            <Text style={pdfStyles.sectionTitle}>Financiero</Text>
+            <PLRow
+              label={`Repago inversion inicial (${cuotaLabel}${data.deudaUsd > 0 ? ` — u$d ${data.deudaUsd.toLocaleString("es-AR")} pendiente` : ""})`}
+              valor={data.cuotaMemasMes}
+              negativo
+              signo="-"
+              indent
+              muted
+            />
+          </View>
+        )}
+
+        {/* RESULTADO NETO */}
+        <View style={[pdfStyles.resultBox, pdfStyles.resultBoxPositive, { marginTop: 12 }]}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <Text style={[pdfStyles.resultText, pdfStyles.resultTextPositive, { fontSize: 12, textAlign: "left" }]}>
+              Resultado neto del negocio
+            </Text>
+            <Text style={[
+              pdfStyles.resultText,
+              data.resultadoNeto >= 0 ? pdfStyles.resultTextPositive : pdfStyles.resultTextNegative,
+              { fontSize: 12 },
+            ]}>
+              {ars(data.resultadoNeto)}
+            </Text>
+          </View>
+          <Text style={{ fontSize: 8, color: colors.muted, marginTop: 4 }}>
+            Va integramente a Pinky como dueno del negocio
+          </Text>
+        </View>
 
         {/* Pie */}
         <View style={pdfStyles.footer} fixed>
           <Text style={pdfStyles.footerText}>
-            A51 Barber — P&L {nombreMes(mes, anio)} — Generado el {formatFechaEmision(hoy)} — Solo
-            de caracter informativo
+            A51 Barber — P&L {nombreMes(data.mes, data.anio)} — Generado el{" "}
+            {formatFechaEmision(hoy)} — Solo de caracter informativo
           </Text>
         </View>
       </Page>

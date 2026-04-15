@@ -232,32 +232,46 @@ export async function getKpisMes(
 // P&L mensual detallado
 // ————————————————————————————
 
-export async function getPL(
-  mes: number,
-  anio: number
-): Promise<{
+export type PLData = {
+  // Ingresos
   ingresosGaboteBruto: number;
-  comisionesGabote: number;
+  ingresosPinkyBruto: number;
+  ingresosProductosBruto: number;
+  ingresoBrutoTotal: number;
+  // Costos variables
+  comisionGabote: number;
   comisionGabotePct: number;
+  costoProductosVendidos: number;
   feesMedioPagoGabote: number;
-  margenProductosMes: number;
-  ingresosCasaGabote: number;
+  feesMedioPagoPinky: number;
+  feesMedioPagoTotal: number;
+  margenBruto: number;
+  margenBrutoPct: number;
+  // Costos fijos
   gastosFijosMes: number;
-  resultadoCasa: number;
-  ingresosNetosPinky: number;
+  gastosPorCategoria: { categoria: string; monto: number }[];
+  presupuestoGastos: number;
+  resultadoOperativo: number;
+  // Financiero
   cuotaMemasMes: number;
-  resultadoPersonalPinky: number;
-}> {
+  cuotasPagadas: number;
+  cantidadCuotasPactadas: number | null;
+  saldoPendiente: number;
+  deudaUsd: number;
+  resultadoNeto: number;
+};
+
+export async function getPL(mes: number, anio: number): Promise<PLData> {
   const { inicio, fin } = fechasDelMes(mes, anio);
 
   const listaBarberos = await db.select().from(barberos);
   const gaboteIds = listaBarberos.filter((b) => b.rol === "barbero").map((b) => b.id);
   const pinkyIds = listaBarberos.filter((b) => b.rol === "admin").map((b) => b.id);
-
   const comisionGabotePct = listaBarberos
     .filter((b) => b.rol === "barbero")
     .reduce((max, b) => Math.max(max, toNumber(b.porcentajeComision)), 0);
 
+  // Atenciones del mes
   const atencionesMes = await db
     .select({
       barberoId: atenciones.barberoId,
@@ -267,37 +281,27 @@ export async function getPL(
     })
     .from(atenciones)
     .where(
-      and(
-        gte(atenciones.fecha, inicio),
-        lte(atenciones.fecha, fin),
-        eq(atenciones.anulado, false)
-      )
+      and(gte(atenciones.fecha, inicio), lte(atenciones.fecha, fin), eq(atenciones.anulado, false))
     );
 
   let ingresosGaboteBruto = 0;
-  let comisionesGabote = 0;
-  // Solo fees de Gabote — para que el subtotal "Ingresos casa" cuadre aritméticamente.
-  // Los fees de Pinky ya están descontados en ingresosNetosPinky.
+  let comisionGabote = 0;
   let feesMedioPagoGabote = 0;
-  let ingresosCasaGabote = 0;
-  let ingresosNetosPinky = 0;
+  let ingresosPinkyBruto = 0;
+  let feesMedioPagoPinky = 0;
 
   for (const a of atencionesMes) {
     if (a.barberoId && gaboteIds.includes(a.barberoId)) {
       ingresosGaboteBruto += toNumber(a.precioCobrado);
-      comisionesGabote += toNumber(a.comisionBarberoMonto);
+      comisionGabote += toNumber(a.comisionBarberoMonto);
       feesMedioPagoGabote += toNumber(a.comisionMedioPagoMonto);
-      ingresosCasaGabote +=
-        toNumber(a.precioCobrado) -
-        toNumber(a.comisionBarberoMonto) -
-        toNumber(a.comisionMedioPagoMonto);
     } else if (a.barberoId && pinkyIds.includes(a.barberoId)) {
-      ingresosNetosPinky +=
-        toNumber(a.precioCobrado) - toNumber(a.comisionMedioPagoMonto);
+      ingresosPinkyBruto += toNumber(a.precioCobrado);
+      feesMedioPagoPinky += toNumber(a.comisionMedioPagoMonto);
     }
   }
 
-  // Margen de productos
+  // Productos vendidos — ingreso bruto + costo
   const ventasMes = await db
     .select({
       productoId: stockMovimientos.productoId,
@@ -315,56 +319,95 @@ export async function getPL(
     );
 
   const productosMap = new Map(
-    (
-      await db.select({ id: productos.id, costoCompra: productos.costoCompra }).from(productos)
-    ).map((p) => [p.id, p])
+    (await db.select({ id: productos.id, costoCompra: productos.costoCompra }).from(productos)).map(
+      (p) => [p.id, p]
+    )
   );
 
-  let margenProductosMes = 0;
+  let ingresosProductosBruto = 0;
+  let costoProductosVendidos = 0;
   for (const v of ventasMes) {
     const cant = Math.abs(Number(v.cantidad ?? 0));
     const precio = toNumber(v.precioUnitario);
-    // Usa el snapshot histórico del costo; fallback al costo actual para filas anteriores a esta feature.
     const costoSnap = toNumber(v.costoUnitarioSnapshot);
     const prod = v.productoId ? productosMap.get(v.productoId) : undefined;
     const costo = costoSnap > 0 ? costoSnap : toNumber(prod?.costoCompra);
-    margenProductosMes += cant * (precio - costo);
+    ingresosProductosBruto += cant * precio;
+    costoProductosVendidos += cant * costo;
   }
 
-  // Gastos
+  // Gastos del mes agrupados por categoría
   const gastosMes = await db
-    .select({ monto: gastos.monto })
+    .select({ monto: gastos.monto, categoriaVisual: gastos.categoriaVisual })
     .from(gastos)
     .where(and(gte(gastos.fecha, inicio), lte(gastos.fecha, fin)));
 
-  const gastosFijosMes = gastosMes.reduce((s, g) => s + toNumber(g.monto), 0);
+  const categoriaMap = new Map<string, number>();
+  let gastosFijosMes = 0;
+  for (const g of gastosMes) {
+    const cat = g.categoriaVisual ?? "otro";
+    categoriaMap.set(cat, (categoriaMap.get(cat) ?? 0) + toNumber(g.monto));
+    gastosFijosMes += toNumber(g.monto);
+  }
+  const gastosPorCategoria = Array.from(categoriaMap.entries())
+    .map(([categoria, monto]) => ({ categoria, monto }))
+    .sort((a, b) => b.monto - a.monto);
 
-  const resultadoCasa =
-    ingresosCasaGabote + margenProductosMes - gastosFijosMes;
+  // Presupuesto de gastos
+  const [config] = await db
+    .select({ presupuesto: configuracionNegocio.presupuestoMensualGastos })
+    .from(configuracionNegocio)
+    .limit(1);
+  const presupuestoGastos = config?.presupuesto ?? 0;
 
-  // Cuota Memas
+  // Repago Memas con contexto completo
   const [repago] = await db
-    .select({ cuotaMensual: repagoMemas.cuotaMensual, pagadoCompleto: repagoMemas.pagadoCompleto })
+    .select({
+      cuotaMensual: repagoMemas.cuotaMensual,
+      pagadoCompleto: repagoMemas.pagadoCompleto,
+      cuotasPagadas: repagoMemas.cuotasPagadas,
+      cantidadCuotasPactadas: repagoMemas.cantidadCuotasPactadas,
+      saldoPendiente: repagoMemas.saldoPendiente,
+      deudaUsd: repagoMemas.deudaUsd,
+    })
     .from(repagoMemas)
     .limit(1);
 
-  const cuotaMemasMes =
-    repago && !repago.pagadoCompleto ? toNumber(repago.cuotaMensual) : 0;
+  const cuotaMemasMes = repago && !repago.pagadoCompleto ? toNumber(repago.cuotaMensual) : 0;
 
-  const resultadoPersonalPinky = ingresosNetosPinky + resultadoCasa - cuotaMemasMes;
+  // Cálculos finales
+  const feesMedioPagoTotal = feesMedioPagoGabote + feesMedioPagoPinky;
+  const ingresoBrutoTotal = ingresosGaboteBruto + ingresosPinkyBruto + ingresosProductosBruto;
+  const margenBruto =
+    ingresoBrutoTotal - comisionGabote - costoProductosVendidos - feesMedioPagoTotal;
+  const margenBrutoPct =
+    ingresoBrutoTotal > 0 ? Math.round((margenBruto / ingresoBrutoTotal) * 100) : 0;
+  const resultadoOperativo = margenBruto - gastosFijosMes;
+  const resultadoNeto = resultadoOperativo - cuotaMemasMes;
 
   return {
     ingresosGaboteBruto,
-    comisionesGabote,
+    ingresosPinkyBruto,
+    ingresosProductosBruto,
+    ingresoBrutoTotal,
+    comisionGabote,
     comisionGabotePct,
+    costoProductosVendidos,
     feesMedioPagoGabote,
-    margenProductosMes,
-    ingresosCasaGabote,
+    feesMedioPagoPinky,
+    feesMedioPagoTotal,
+    margenBruto,
+    margenBrutoPct,
     gastosFijosMes,
-    resultadoCasa,
-    ingresosNetosPinky,
+    gastosPorCategoria,
+    presupuestoGastos,
+    resultadoOperativo,
     cuotaMemasMes,
-    resultadoPersonalPinky,
+    cuotasPagadas: repago?.cuotasPagadas ?? 0,
+    cantidadCuotasPactadas: repago?.cantidadCuotasPactadas ?? null,
+    saldoPendiente: toNumber(repago?.saldoPendiente),
+    deudaUsd: toNumber(repago?.deudaUsd),
+    resultadoNeto,
   };
 }
 

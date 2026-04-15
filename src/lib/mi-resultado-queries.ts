@@ -181,9 +181,16 @@ export async function getMiResultadoData() {
     0
   );
 
+  const ingresosNetosPinky = plMes.ingresosPinkyBruto - plMes.feesMedioPagoPinky;
+  const ingresosCasaGabote =
+    plMes.ingresosGaboteBruto - plMes.comisionGabote - plMes.feesMedioPagoGabote;
+  const margenProductosPL = plMes.ingresosProductosBruto - plMes.costoProductosVendidos;
+  // resultadoCasa = lo que la barbería genera excl. los cortes propios de Pinky y la cuota Memas
+  const resultadoCasaMes = ingresosCasaGabote + margenProductosPL - plMes.gastosFijosMes;
+
   const totalIngresosHoy = tusCortesHoy + aporteCasaServiciosHoy + margenProductosHoy;
-  const aporteCasaMes = plMes.ingresosCasaGabote;
-  const totalIngresosMes = plMes.ingresosNetosPinky + aporteCasaMes + margenProductosMes;
+  const aporteCasaMes = ingresosCasaGabote;
+  const totalIngresosMes = ingresosNetosPinky + aporteCasaMes + margenProductosPL;
   const totalEgresosMes =
     gastosFijosMes + quickExpensesMes.total + plMes.feesMedioPagoGabote;
 
@@ -195,11 +202,11 @@ export async function getMiResultadoData() {
       totalHoy: totalIngresosHoy,
       totalMes: totalIngresosMes,
       tusCortesHoy,
-      tusCortesMes: plMes.ingresosNetosPinky,
+      tusCortesMes: ingresosNetosPinky,
       aporteCasaHoy: aporteCasaServiciosHoy,
       aporteCasaMes,
       productosHoy: margenProductosHoy,
-      productosMes: margenProductosMes,
+      productosMes: margenProductosPL,
     },
     egresos: {
       gastosFijosMes,
@@ -209,8 +216,8 @@ export async function getMiResultadoData() {
     },
     resultado: {
       paraVosHoy: tusCortesHoy,
-      paraVosMes: plMes.ingresosNetosPinky,
-      paraLaBarberMes: plMes.resultadoCasa,
+      paraVosMes: ingresosNetosPinky,
+      paraLaBarberMes: resultadoCasaMes,
     },
     gastosRapidos: {
       habilitados: gastosRapidosHabilitados,
