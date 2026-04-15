@@ -203,9 +203,11 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
             <Section eyebrow="Paso 1" title="Ingresos">
               <Row label="Servicios Gabote" valor={pl.ingresosGaboteBruto} />
               <Row label="Servicios Pinky" valor={pl.ingresosPinkyBruto} />
-              {pl.ingresosProductosBruto > 0 && (
-                <Row label="Venta de productos" valor={pl.ingresosProductosBruto} />
-              )}
+              <Row
+                label="Venta de productos"
+                valor={pl.ingresosProductosBruto}
+                muted={pl.ingresosProductosBruto === 0}
+              />
               <TotalRow label="Ingreso bruto total" valor={pl.ingresoBrutoTotal} />
             </Section>
 
@@ -217,13 +219,12 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
                 sub={`${pl.comisionGabotePct}% de sus servicios`}
                 negativo
               />
-              {pl.costoProductosVendidos > 0 && (
-                <Row
-                  label="Costo de productos vendidos"
-                  valor={pl.costoProductosVendidos}
-                  negativo
-                />
-              )}
+              <Row
+                label="Costo de productos vendidos"
+                valor={pl.costoProductosVendidos}
+                negativo
+                muted={pl.costoProductosVendidos === 0}
+              />
               <Row
                 label="Fees medios de pago"
                 valor={pl.feesMedioPagoTotal}

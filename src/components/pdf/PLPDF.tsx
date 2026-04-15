@@ -159,9 +159,12 @@ export function PLPDF({ data }: { data: PLPDFData }) {
           <Text style={pdfStyles.sectionTitle}>Ingresos</Text>
           <PLRow label="Servicios Gabote" valor={data.ingresosGaboteBruto} signo="+" />
           <PLRow label="Servicios Pinky" valor={data.ingresosPinkyBruto} signo="+" />
-          {data.ingresosProductosBruto > 0 && (
-            <PLRow label="Venta de productos" valor={data.ingresosProductosBruto} signo="+" />
-          )}
+          <PLRow
+            label="Venta de productos"
+            valor={data.ingresosProductosBruto}
+            signo="+"
+            muted={data.ingresosProductosBruto === 0}
+          />
           <ResultBox label="Ingreso bruto total" valor={data.ingresoBrutoTotal} />
         </View>
 
@@ -176,16 +179,14 @@ export function PLPDF({ data }: { data: PLPDFData }) {
             indent
             muted
           />
-          {data.costoProductosVendidos > 0 && (
-            <PLRow
-              label="Costo productos vendidos"
-              valor={data.costoProductosVendidos}
-              negativo
-              signo="-"
-              indent
-              muted
-            />
-          )}
+          <PLRow
+            label="Costo productos vendidos"
+            valor={data.costoProductosVendidos}
+            negativo
+            signo="-"
+            indent
+            muted
+          />
           <PLRow
             label="Fees medios de pago"
             valor={data.feesMedioPagoTotal}
