@@ -1,7 +1,7 @@
 # A51 Barber - PRD Live
 
 **Estado real del sistema**
-Actualizado: 08/04/2026 (sesion 18)
+Actualizado: 15/04/2026 (sesion 22)
 
 ## 1. Proposito del documento
 
@@ -506,6 +506,35 @@ Implementado en:
 - `src/app/api/export/csv/[mes]` - CSV mensual descargable para contador (solo admin; mes en formato YYYY-MM)
 
 La pagina `/dashboard/pl` tiene boton de descarga CSV en el header.
+
+### Micro-interacciones de Botones (sesion 22, 15/04/2026)
+
+Implementado en:
+
+- `src/app/globals.css` — 5 keyframes nuevos: `a51-spin`, `a51-btn-success`, `a51-btn-error`, `a51-check-draw`, `a51-btn-scale-in`
+- `src/components/ui/ActionButton.tsx` — componente core reutilizable con state machine interna
+
+`ActionButton` soporta dos modos:
+- **Self-managed** (`onAction: () => Promise<void>`): maneja pending/success/error internamente, auto-reset
+- **External** (`isPending` + `actionStatus`): renderiza el estado que pasa el padre desde `useActionState`
+
+Variantes disponibles: `neon`, `ghost`, `danger`, `subtle`.
+
+Estados visuales: spinner SVG (arco, no círculo genérico), checkmark animado con stroke-draw, X en error, ring pulse flash al resolver.
+
+Botones actualizados:
+
+- `configuracion/DeleteButton.tsx` — reescrito: dark theme correcto (antes usaba `bg-red-50 text-red-600`), `window.confirm` reemplazado por confirm inline dark-themed
+- `configuracion/ToggleActivoButton.tsx` — reescrito: dark theme correcto (antes usaba `bg-emerald-50 text-emerald-700`), ahora usa `ActionButton`
+- `caja/CerrarCajaButton.tsx` — spinner SVG agregado en estado pending
+- `caja/AnularButton.tsx` — spinner SVG agregado en estado pending
+- `liquidaciones/[id]/_MarcarPagadaButton.tsx` — spinner SVG agregado en estado pending
+- `musica/SpotifyConnectButton.tsx` — spinner SVG agregado en estado pending
+
+Estado verificado (15/04/2026):
+
+- TypeScript limpio en todos los archivos modificados/creados
+- `DeleteButton` y `ToggleActivoButton` ya no rompen el dark theme con clases light
 
 ## 7. Verificacion tecnica
 
