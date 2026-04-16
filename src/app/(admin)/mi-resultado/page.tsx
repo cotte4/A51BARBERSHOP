@@ -8,16 +8,8 @@ import ResultadoPersonal from "@/components/mi-resultado/ResultadoPersonal";
 import GastoRapidoFAB from "@/components/gastos-rapidos/GastoRapidoFAB";
 import GastosHistorialModal from "@/components/gastos-rapidos/GastosHistorialModal";
 import { getMiResultadoData, getGastosRapidosDelMes } from "@/lib/mi-resultado-queries";
+import { formatARS } from "@/lib/format";
 import { registrarGastoRapidoAction } from "@/app/(admin)/gastos-rapidos/actions";
-
-function formatARS(value: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function formatMonthLabel(fecha: string, mes: number, anio: number) {
   const current = new Date(`${fecha}T12:00:00`);

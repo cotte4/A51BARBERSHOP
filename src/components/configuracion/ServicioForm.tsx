@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import type { ServicioFormState } from "@/app/(admin)/configuracion/servicios/actions";
+import { formatARS } from "@/lib/format";
 
 interface ServicioFormProps {
   action: (
@@ -20,15 +21,6 @@ interface ServicioFormProps {
 }
 
 const initialState: ServicioFormState = {};
-
-function formatARS(value: number) {
-  if (!value) return "$ 0";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(value);
-}
 
 export default function ServicioForm({
   action,

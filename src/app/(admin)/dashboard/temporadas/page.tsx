@@ -2,15 +2,8 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { formatARS } from "@/lib/format";
 import { getComparativaTemporadas } from "@/lib/dashboard-queries";
-
-function formatARS(val: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(val);
-}
 
 function formatPct(val: number): string {
   const sign = val >= 0 ? "+" : "";

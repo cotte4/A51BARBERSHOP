@@ -22,14 +22,7 @@ export type QuickDateOption = {
   month: string;
 };
 
-export function formatARS(value: string | null) {
-  if (!value) return null;
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(value));
-}
+export { formatARS } from "@/lib/format";
 
 export function parsePublicDate(value: string) {
   return new Date(`${value}T12:00:00Z`);

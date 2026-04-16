@@ -9,6 +9,7 @@ import {
   getCategoriaGastoRapidoByKey,
 } from "@/lib/gastos-rapidos";
 import { getGastosRapidosDelMes } from "@/lib/mi-resultado-queries";
+import { formatARS } from "@/lib/format";
 import { registrarGastoRapidoAction } from "./actions";
 
 type SearchParams = Promise<{ categoria?: string | string[] | undefined }>;
@@ -20,14 +21,6 @@ type CategoryMetric = {
   total: number;
   count: number;
 };
-
-function formatARS(value: number) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(value);
-}
 
 function formatMonthLabel() {
   return new Date().toLocaleDateString("es-AR", {

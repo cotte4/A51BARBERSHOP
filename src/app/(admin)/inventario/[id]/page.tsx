@@ -4,16 +4,8 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { mediosPago, productos, stockMovimientos } from "@/db/schema";
 import { registrarMovimiento } from "../actions";
+import { formatARS } from "@/lib/format";
 import MovimientoForm from "./_MovimientoForm";
-
-function formatARS(value: string | number | null | undefined): string {
-  if (value === null || value === undefined || value === "") return "—";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(value));
-}
 
 function formatFechaHora(value: Date | string | null | undefined): string {
   if (!value) return "—";

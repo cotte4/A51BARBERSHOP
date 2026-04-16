@@ -5,19 +5,11 @@ import { servicios, serviciosAdicionales } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import ServicioForm from "@/components/configuracion/ServicioForm";
 import AdicionalManager from "@/components/configuracion/AdicionalManager";
+import { formatARS } from "@/lib/format";
 import { editarServicio, crearAdicional, eliminarAdicional } from "../../actions";
 
 interface EditarServicioPageProps {
   params: Promise<{ id: string }>;
-}
-
-function formatARS(value: string | null | undefined) {
-  if (!value) return "$ 0";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(value));
 }
 
 export default async function EditarServicioPage({

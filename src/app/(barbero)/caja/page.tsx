@@ -532,7 +532,6 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                   comisionPorcentaje: m.comisionPorcentaje,
                 }))}
                 action={registrarAtencionExpressAction}
-                variant="embedded"
               />
             </div>
           </section>

@@ -22,15 +22,9 @@ interface VentaProductoFormProps {
   }>;
 }
 
-const quickQuantities = [1, 2, 3];
+import { formatARS } from "@/lib/format";
 
-function formatARS(value: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(value);
-}
+const quickQuantities = [1, 2, 3];
 
 function getProductoAccent(nombre: string) {
   const normalized = nombre.toLowerCase();

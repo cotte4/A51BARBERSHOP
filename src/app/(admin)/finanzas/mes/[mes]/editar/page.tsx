@@ -3,6 +3,7 @@ import { costosFijosNegocio, costosFijosValores } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import BrandMark from "@/components/BrandMark";
+import { formatARS } from "@/lib/format";
 import EditarMesForm from "./_EditarMesForm";
 
 function getMesLabel(mes: string): string {
@@ -10,14 +11,6 @@ function getMesLabel(mes: string): string {
   const date = new Date(Number(year), Number(month) - 1, 1);
   const label = date.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
   return label.charAt(0).toUpperCase() + label.slice(1);
-}
-
-function formatARS(val: number) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(val);
 }
 
 export default async function EditarMesPage({

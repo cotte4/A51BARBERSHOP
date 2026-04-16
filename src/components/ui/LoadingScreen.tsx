@@ -3,22 +3,22 @@ export default function LoadingScreen() {
     <>
       <style>{`
         @keyframes a51-eye-pulse {
-          0%, 100% { opacity: 0.85; }
+          0%, 100% { opacity: 0.8; }
           50% { opacity: 1; }
         }
         @keyframes a51-eye-glow {
-          0%, 100% { opacity: 0.2; }
-          50% { opacity: 0.55; }
+          0%, 100% { opacity: 0.15; }
+          50% { opacity: 0.5; }
         }
         @keyframes a51-scan {
-          0%   { transform: translateY(-90px); opacity: 0; }
+          0%   { transform: translateY(-72px); opacity: 0; }
           12%  { opacity: 0.9; }
           88%  { opacity: 0.9; }
-          100% { transform: translateY(90px); opacity: 0; }
+          100% { transform: translateY(72px); opacity: 0; }
         }
         @keyframes a51-outer-ring {
-          0%, 100% { stroke-opacity: 0.12; }
-          50%       { stroke-opacity: 0.28; }
+          0%, 100% { stroke-opacity: 0.08; }
+          50%       { stroke-opacity: 0.22; }
         }
         @keyframes a51-dot {
           0%, 80%, 100% { opacity: 0.18; transform: scale(0.75); }
@@ -31,25 +31,24 @@ export default function LoadingScreen() {
           94%  { opacity: 0.5; }
           96%  { opacity: 0.85; }
         }
-        .a51-eye      { animation: a51-eye-pulse 2.4s ease-in-out infinite; }
-        .a51-eye-r    { animation: a51-eye-pulse 2.4s ease-in-out infinite 0.5s; }
-        .a51-glow     { animation: a51-eye-glow  2.4s ease-in-out infinite; }
-        .a51-glow-r   { animation: a51-eye-glow  2.4s ease-in-out infinite 0.5s; }
-        .a51-scan     { animation: a51-scan 3s ease-in-out infinite; }
-        .a51-ring     { animation: a51-outer-ring 3.5s ease-in-out infinite; }
-        .a51-dot-1    { animation: a51-dot 1.6s ease-in-out infinite 0s; }
-        .a51-dot-2    { animation: a51-dot 1.6s ease-in-out infinite 0.28s; }
-        .a51-dot-3    { animation: a51-dot 1.6s ease-in-out infinite 0.56s; }
-        .a51-label    { animation: a51-label 8s ease-in-out infinite; }
+        .a51-eye    { animation: a51-eye-pulse 2.4s ease-in-out infinite; }
+        .a51-eye-r  { animation: a51-eye-pulse 2.4s ease-in-out infinite 0.5s; }
+        .a51-glow   { animation: a51-eye-glow  2.4s ease-in-out infinite; }
+        .a51-glow-r { animation: a51-eye-glow  2.4s ease-in-out infinite 0.5s; }
+        .a51-scan   { animation: a51-scan 3s ease-in-out infinite; }
+        .a51-ring   { animation: a51-outer-ring 3.5s ease-in-out infinite; }
+        .a51-dot-1  { animation: a51-dot 1.6s ease-in-out infinite 0s; }
+        .a51-dot-2  { animation: a51-dot 1.6s ease-in-out infinite 0.28s; }
+        .a51-dot-3  { animation: a51-dot 1.6s ease-in-out infinite 0.56s; }
+        .a51-label  { animation: a51-label 8s ease-in-out infinite; }
       `}</style>
 
-      {/* Full-screen backdrop */}
       <div
         style={{
           position: "fixed",
           inset: 0,
           background:
-            "radial-gradient(ellipse 70% 55% at 50% 38%, rgba(140,255,89,0.07) 0%, transparent 100%), #121212",
+            "radial-gradient(ellipse 60% 50% at 50% 38%, rgba(140,255,89,0.06) 0%, transparent 100%), #121212",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -57,27 +56,9 @@ export default function LoadingScreen() {
           zIndex: 9999,
         }}
       >
-        {/* CRT scanlines overlay */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage:
-              "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.045) 3px, rgba(0,0,0,0.045) 4px)",
-            pointerEvents: "none",
-          }}
-        />
-
         {/* Alien figure + scan line */}
-        <div
-          style={{
-            position: "relative",
-            width: 190,
-            height: 252,
-            marginBottom: 36,
-          }}
-        >
-          {/* Scan line clipped to this container */}
+        <div style={{ position: "relative", width: 140, height: 180, marginBottom: 32 }}>
+          {/* Scan line clipped to container */}
           <div
             style={{
               position: "absolute",
@@ -91,256 +72,146 @@ export default function LoadingScreen() {
               className="a51-scan"
               style={{
                 position: "absolute",
-                left: "-15%",
-                right: "-15%",
+                left: "-20%",
+                right: "-20%",
                 top: "50%",
-                height: 2,
+                height: 1.5,
                 background:
-                  "linear-gradient(90deg, transparent 0%, transparent 8%, rgba(140,255,89,0.85) 35%, rgba(182,255,132,1) 50%, rgba(140,255,89,0.85) 65%, transparent 92%, transparent 100%)",
-                boxShadow: "0 0 10px rgba(140,255,89,0.7)",
+                  "linear-gradient(90deg, transparent 0%, rgba(140,255,89,0.8) 30%, rgba(182,255,132,1) 50%, rgba(140,255,89,0.8) 70%, transparent 100%)",
+                boxShadow: "0 0 8px rgba(140,255,89,0.6)",
               }}
             />
           </div>
 
           <svg
-            viewBox="0 0 190 252"
-            width="190"
-            height="252"
+            viewBox="0 0 140 180"
+            width="140"
+            height="180"
             xmlns="http://www.w3.org/2000/svg"
             style={{ overflow: "visible", display: "block" }}
           >
             <defs>
-              {/* Head gradient */}
-              <radialGradient id="a51-hg" cx="42%" cy="32%" r="62%">
-                <stop offset="0%" stopColor="#252b20" />
-                <stop offset="65%" stopColor="#191d14" />
-                <stop offset="100%" stopColor="#10130d" />
+              <radialGradient id="a51-hg" cx="40%" cy="28%" r="65%">
+                <stop offset="0%" stopColor="#22271c" />
+                <stop offset="70%" stopColor="#161a12" />
+                <stop offset="100%" stopColor="#0e1009" />
               </radialGradient>
-
-              {/* Eye iris gradient */}
-              <radialGradient id="a51-el" cx="32%" cy="28%" r="72%">
+              <radialGradient id="a51-el" cx="30%" cy="25%" r="75%">
                 <stop offset="0%" stopColor="#d4ffb0" />
-                <stop offset="45%" stopColor="#8cff59" />
-                <stop offset="100%" stopColor="#1e5508" />
+                <stop offset="40%" stopColor="#8cff59" />
+                <stop offset="100%" stopColor="#1c5006" />
               </radialGradient>
-              <radialGradient id="a51-er" cx="32%" cy="28%" r="72%">
-                <stop offset="0%" stopColor="#d4ffb0" />
-                <stop offset="45%" stopColor="#8cff59" />
-                <stop offset="100%" stopColor="#1e5508" />
-              </radialGradient>
-
-              {/* Eye outer glow gradient */}
               <radialGradient id="a51-eg" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="rgba(140,255,89,0.5)" />
+                <stop offset="0%" stopColor="rgba(140,255,89,0.55)" />
                 <stop offset="100%" stopColor="rgba(140,255,89,0)" />
               </radialGradient>
             </defs>
 
             {/* Outer glow ring */}
-            <ellipse
-              cx="95"
-              cy="110"
-              rx="80"
-              ry="100"
+            <path
+              d="M 70 6 C 118 6 132 42 130 90 C 128 145 104 172 70 174 C 36 172 12 145 10 90 C 8 42 22 6 70 6 Z"
               fill="none"
               stroke="rgba(140,255,89,1)"
-              strokeWidth="1"
+              strokeWidth="0.8"
               className="a51-ring"
             />
 
-            {/* Head */}
-            <ellipse
-              cx="95"
-              cy="110"
-              rx="72"
-              ry="93"
+            {/* Head silhouette — single elongated shape */}
+            <path
+              d="M 70 14 C 108 14 120 46 118 88 C 116 138 98 164 70 166 C 42 164 24 138 22 88 C 20 46 32 14 70 14 Z"
               fill="url(#a51-hg)"
-              stroke="rgba(140,255,89,0.22)"
-              strokeWidth="1"
+              stroke="rgba(140,255,89,0.18)"
+              strokeWidth="0.8"
             />
 
-            {/* Head specular highlight */}
+            {/* Left eye — glow halo */}
             <ellipse
-              cx="76"
-              cy="65"
-              rx="26"
-              ry="15"
-              fill="rgba(255,255,255,0.04)"
-              transform="rotate(-12 76 65)"
-            />
-
-            {/* Neck */}
-            <rect
-              x="77"
-              y="198"
-              width="36"
-              height="46"
-              rx="9"
-              fill="url(#a51-hg)"
-              stroke="rgba(140,255,89,0.14)"
-              strokeWidth="1"
-            />
-
-            {/* Left eye */}
-            {/* Socket shadow */}
-            <ellipse
-              cx="62"
-              cy="104"
-              rx="28"
-              ry="19"
-              fill="#0b0f08"
-              transform="rotate(-20 62 104)"
-            />
-            {/* Outer glow halo */}
-            <ellipse
-              cx="62"
-              cy="104"
-              rx="32"
-              ry="22"
+              cx="46" cy="80" rx="26" ry="16"
               fill="url(#a51-eg)"
-              transform="rotate(-20 62 104)"
+              transform="rotate(-18 46 80)"
               className="a51-glow"
             />
-            {/* Iris */}
+            {/* Left eye socket */}
             <ellipse
-              cx="62"
-              cy="104"
-              rx="24"
-              ry="15"
+              cx="46" cy="80" rx="21" ry="13"
+              fill="#090d07"
+              transform="rotate(-18 46 80)"
+            />
+            {/* Left iris */}
+            <ellipse
+              cx="46" cy="80" rx="18" ry="11"
               fill="url(#a51-el)"
-              transform="rotate(-20 62 104)"
+              transform="rotate(-18 46 80)"
               className="a51-eye"
             />
-            {/* Pupil */}
+            {/* Left pupil */}
             <ellipse
-              cx="62"
-              cy="104"
-              rx="13"
-              ry="8"
-              fill="#050d03"
-              transform="rotate(-20 62 104)"
+              cx="46" cy="80" rx="9" ry="5.5"
+              fill="#040804"
+              transform="rotate(-18 46 80)"
             />
-            {/* Reflection */}
+            {/* Left reflection */}
             <ellipse
-              cx="56"
-              cy="99"
-              rx="5"
-              ry="3.5"
-              fill="rgba(220,255,190,0.65)"
-              transform="rotate(-20 62 104)"
+              cx="41" cy="76" rx="4" ry="2.5"
+              fill="rgba(210,255,180,0.6)"
+              transform="rotate(-18 46 80)"
             />
-            {/* Rim */}
+            {/* Left rim */}
             <ellipse
-              cx="62"
-              cy="104"
-              rx="24"
-              ry="15"
+              cx="46" cy="80" rx="18" ry="11"
               fill="none"
-              stroke="rgba(140,255,89,0.5)"
-              strokeWidth="1.5"
-              transform="rotate(-20 62 104)"
+              stroke="rgba(140,255,89,0.45)"
+              strokeWidth="1.2"
+              transform="rotate(-18 46 80)"
               className="a51-eye"
             />
 
-            {/* Right eye */}
+            {/* Right eye — glow halo */}
             <ellipse
-              cx="128"
-              cy="104"
-              rx="28"
-              ry="19"
-              fill="#0b0f08"
-              transform="rotate(20 128 104)"
-            />
-            <ellipse
-              cx="128"
-              cy="104"
-              rx="32"
-              ry="22"
+              cx="94" cy="80" rx="26" ry="16"
               fill="url(#a51-eg)"
-              transform="rotate(20 128 104)"
+              transform="rotate(18 94 80)"
               className="a51-glow-r"
             />
+            {/* Right eye socket */}
             <ellipse
-              cx="128"
-              cy="104"
-              rx="24"
-              ry="15"
-              fill="url(#a51-er)"
-              transform="rotate(20 128 104)"
+              cx="94" cy="80" rx="21" ry="13"
+              fill="#090d07"
+              transform="rotate(18 94 80)"
+            />
+            {/* Right iris */}
+            <ellipse
+              cx="94" cy="80" rx="18" ry="11"
+              fill="url(#a51-el)"
+              transform="rotate(18 94 80)"
               className="a51-eye-r"
             />
+            {/* Right pupil */}
             <ellipse
-              cx="128"
-              cy="104"
-              rx="13"
-              ry="8"
-              fill="#050d03"
-              transform="rotate(20 128 104)"
+              cx="94" cy="80" rx="9" ry="5.5"
+              fill="#040804"
+              transform="rotate(18 94 80)"
             />
+            {/* Right reflection */}
             <ellipse
-              cx="122"
-              cy="99"
-              rx="5"
-              ry="3.5"
-              fill="rgba(220,255,190,0.65)"
-              transform="rotate(20 128 104)"
+              cx="89" cy="76" rx="4" ry="2.5"
+              fill="rgba(210,255,180,0.6)"
+              transform="rotate(18 94 80)"
             />
+            {/* Right rim */}
             <ellipse
-              cx="128"
-              cy="104"
-              rx="24"
-              ry="15"
+              cx="94" cy="80" rx="18" ry="11"
               fill="none"
-              stroke="rgba(140,255,89,0.5)"
-              strokeWidth="1.5"
-              transform="rotate(20 128 104)"
+              stroke="rgba(140,255,89,0.45)"
+              strokeWidth="1.2"
+              transform="rotate(18 94 80)"
               className="a51-eye-r"
-            />
-
-            {/* Nose slits */}
-            <ellipse cx="87" cy="148" rx="3.5" ry="5.5" fill="rgba(0,0,0,0.55)" />
-            <ellipse cx="103" cy="148" rx="3.5" ry="5.5" fill="rgba(0,0,0,0.55)" />
-
-            {/* Mouth */}
-            <path
-              d="M 70 172 Q 95 182 120 172"
-              stroke="rgba(140,255,89,0.32)"
-              strokeWidth="1.5"
-              fill="none"
-              strokeLinecap="round"
-            />
-
-            {/* Subtle cranial texture lines */}
-            <path
-              d="M 58 38 Q 64 72 60 100"
-              stroke="rgba(140,255,89,0.055)"
-              strokeWidth="1.5"
-              fill="none"
-            />
-            <path
-              d="M 132 38 Q 126 72 130 100"
-              stroke="rgba(140,255,89,0.055)"
-              strokeWidth="1.5"
-              fill="none"
-            />
-            <path
-              d="M 95 20 L 95 68"
-              stroke="rgba(140,255,89,0.04)"
-              strokeWidth="1"
-              fill="none"
             />
           </svg>
         </div>
 
         {/* Brand + dots */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 14,
-          }}
-        >
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
           <span
             className="a51-label"
             style={{
@@ -349,7 +220,7 @@ export default function LoadingScreen() {
               letterSpacing: "0.6em",
               color: "#8cff59",
               textTransform: "uppercase",
-              paddingLeft: "0.6em" /* optical balance for letter-spacing */,
+              paddingLeft: "0.6em",
             }}
           >
             Area 51 signal

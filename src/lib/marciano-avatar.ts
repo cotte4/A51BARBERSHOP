@@ -1,41 +1,19 @@
 import Replicate from "replicate";
-import Anthropic from "@anthropic-ai/sdk";
 import { put } from "@vercel/blob";
 
-// Claude describe el pelo y rasgos para refinar el prompt
-async function describeFaceForAvatar(frameBase64: string): Promise<string> {
-  try {
-    const client = new Anthropic();
-    const msg = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 60,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: { type: "base64", media_type: "image/jpeg", data: frameBase64 },
-            },
-            {
-              type: "text",
-              text: `Describe the hair and one distinctive facial feature of this person for a cartoon avatar.
-Reply in English, exact format: "hair: X, distinctive: X"
-Hair: describe color + style (ex: "black short fade", "brown wavy medium", "blonde buzz cut")
-Distinctive: one feature (ex: "strong jawline", "thick eyebrows", "wide smile", "sharp cheekbones")`,
-            },
-          ],
-        },
-      ],
-    });
+// Prompt alien trap — {COLOR} se reemplaza con el color elegido por el usuario
+// InstantID preserva la identidad de la cara — el prompt controla el estilo
+const AVATAR_PROMPT =
+  "illustrated alien avatar, Buenos Aires trap barber, {COLOR} extraterrestrial skin, " +
+  "large dark reflective eyes, styled hair with sharp fade, oversized hoodie, silver chain necklace, " +
+  "holding a styrofoam cup, confident relaxed pose, tattoos on neck and hands, " +
+  "dark background with glowing {COLOR} neon light and floating barber pole holograms, " +
+  "clean cartoon illustration, bold black outlines, vibrant flat colors, " +
+  "trap aesthetic, futuristic streetwear, NFT avatar art, 2D digital art, high detail";
 
-    const raw = msg.content[0].type === "text" ? msg.content[0].text.trim() : "";
-    console.log("[avatar] Face description:", raw);
-    return raw;
-  } catch {
-    return "hair: black short fade, distinctive: sharp eyes";
-  }
-}
+const AVATAR_NEGATIVE_PROMPT =
+  "photorealistic, photograph, realistic skin, 3D render, blurry, low quality, " +
+  "ugly, deformed, extra limbs, multiple faces, watermark, text, logo";
 
 export async function generateAvatar(
   frameBase64: string,
@@ -43,35 +21,33 @@ export async function generateAvatar(
   clientId: string
 ): Promise<string | null> {
   try {
-    console.log("[avatar] Describiendo cara con Claude...");
-    const faceDescription = await describeFaceForAvatar(frameBase64);
-
-    const stylePrompt =
-      `alien character with ${favoriteColor} skin, ${faceDescription}, ` +
-      `oversized hoodie, silver chain, holding styrofoam cup, ` +
-      `Argentinian trap culture, Buenos Aires barbershop, ` +
-      `deep black background with neon green glow and stars, ` +
-      `bust portrait, 2D cartoon illustration, NFT avatar style`;
-
-    console.log("[avatar] Llamando fofr/face-to-many...");
+    const prompt = AVATAR_PROMPT.replaceAll("{COLOR}", favoriteColor);
     const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN! });
 
+    console.log("[avatar] Llamando InstantID + IP-Adapter...");
+
     const output = await Promise.race([
-      replicate.run("fofr/face-to-many:a07f252abbbd832009640b27f063ea52d87d7a23b8b827de51f9b0ded58a5e05", {
-        input: {
-          image: `data:image/jpeg;base64,${frameBase64}`,
-          style: "3D",
-          prompt: stylePrompt,
-          negative_prompt: "photorealistic, photo, realistic, barber pole",
-          num_outputs: 1,
-        },
-      }),
+      replicate.run(
+        "zsxkib/instant-id-ipadapter-plus-face:32402fb5c493d883aa6cf098ce3e4cc80f1fe6871f6ae7f632a8dbde01a3d161",
+        {
+          input: {
+            image: `data:image/jpeg;base64,${frameBase64}`,
+            prompt,
+            negative_prompt: AVATAR_NEGATIVE_PROMPT,
+            width: 1024,
+            height: 1024,
+            steps: 30,
+            instantid_weight: 0.8,   // alta preservación de identidad
+            ipadapter_weight: 0.8,   // fuerte influencia del prompt de estilo
+          },
+        }
+      ),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Replicate timeout 90s")), 90000)
+        setTimeout(() => reject(new Error("Replicate timeout 120s")), 120000)
       ),
     ]);
 
-    console.log("[avatar] fofr respondió. Output:", typeof output, Array.isArray(output) ? "array" : "single");
+    console.log("[avatar] InstantID respondió. Output:", typeof output, Array.isArray(output) ? "array" : "single");
 
     const replicateFileOutput = Array.isArray(output) ? output[0] : output;
     if (!replicateFileOutput) {

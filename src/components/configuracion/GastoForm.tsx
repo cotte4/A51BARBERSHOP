@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import type { GastoFormState } from "@/app/(admin)/configuracion/gastos-fijos/actions";
+import { formatARS } from "@/lib/format";
 
 interface GastoFormProps {
   action: (prevState: GastoFormState, formData: FormData) => Promise<GastoFormState>;
@@ -21,15 +22,6 @@ interface GastoFormProps {
 }
 
 const initialState: GastoFormState = {};
-
-function formatARS(value: number) {
-  if (!value) return "$ 0";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(value);
-}
 
 function SummaryRow({
   label,

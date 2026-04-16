@@ -14,16 +14,8 @@ import { formatFecha } from "@/lib/fecha";
 import { db } from "@/db";
 import { repagoMemas, repagoMemasCuotas } from "@/db/schema";
 import { registrarCuota } from "./actions";
+import { formatARS } from "@/lib/format";
 import RegistrarPagoForm from "./_RegistrarPagoForm";
-
-function formatARS(val: string | number | null | undefined): string {
-  if (val === null || val === undefined || val === "") return "$ 0";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(val));
-}
 
 function formatLongDate(value: string | null | undefined): string {
   if (!value) return "-";

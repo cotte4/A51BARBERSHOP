@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { cancelMarcianoTurnoAction, type MarcianoReservaState } from "@/app/marciano/actions";
 import type { MarcianoTurnoItem } from "@/lib/marciano-turnos";
+import { formatARS } from "@/lib/format";
 
 type MarcianoTurnoCardProps = {
   turno: MarcianoTurnoItem;
@@ -19,15 +20,6 @@ function formatDateTime(turno: MarcianoTurnoItem) {
     month: "long",
     timeZone: "America/Argentina/Buenos_Aires",
   })} · ${turno.horaInicio}`;
-}
-
-function formatARS(value: string | null) {
-  if (!value) return null;
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(value));
 }
 
 function statusClasses(status: MarcianoTurnoItem["estado"]) {

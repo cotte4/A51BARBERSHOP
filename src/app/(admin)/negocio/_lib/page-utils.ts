@@ -6,14 +6,7 @@ export function toNumber(value: string | number | null | undefined): number {
   return Number(value);
 }
 
-export function formatARS(value: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+export { formatARS } from "@/lib/format";
 
 export function getFechaHoyArgentina(): string {
   return new Date().toLocaleDateString("en-CA", {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import type { TemporadaFormState } from "@/app/(admin)/configuracion/temporadas/actions";
+import { formatARS } from "@/lib/format";
 
 interface TemporadaFormProps {
   action: (
@@ -21,15 +22,6 @@ interface TemporadaFormProps {
 }
 
 const initialState: TemporadaFormState = {};
-
-function formatARS(value: number) {
-  if (!value) return "$ 0";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(value);
-}
 
 function formatRange(fechaInicio: string, fechaFin: string) {
   if (!fechaInicio && !fechaFin) return "Sin rango";

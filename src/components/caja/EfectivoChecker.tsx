@@ -1,14 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-function formatARS(val: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(val);
-}
+import { formatARS } from "@/lib/format";
 
 function getDifferenceTone(difference: number, contadoReady: boolean) {
   if (!contadoReady) {

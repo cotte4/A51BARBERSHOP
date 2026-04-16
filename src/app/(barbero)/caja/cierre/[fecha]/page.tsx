@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { barberos, cierresCaja } from "@/db/schema";
 import { normalizeCierreResumen, type ResumenBarberoCierre } from "@/lib/caja-finance";
+import { formatARS } from "@/lib/format";
 import PrintButton from "./_PrintButton";
 
 export default async function CierreDetallePage({
@@ -315,15 +316,6 @@ function ExecRow({ label, value }: { label: string; value: string }) {
       <span className="text-sm font-semibold text-white">{value}</span>
     </div>
   );
-}
-
-function formatARS(val: string | number | null | undefined): string {
-  if (val === null || val === undefined || val === "") return "$0";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(val));
 }
 
 function formatFechaLarga(fecha: string): string {

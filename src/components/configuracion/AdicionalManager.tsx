@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import type { AdicionalFormState } from "@/app/(admin)/configuracion/servicios/actions";
+import { formatARS } from "@/lib/format";
 
 interface AdicionalManagerProps {
   servicioId: string;
@@ -12,15 +13,6 @@ interface AdicionalManagerProps {
     formData: FormData
   ) => Promise<AdicionalFormState>;
   eliminarAdicionalAction: (id: string, servicioId: string) => Promise<void>;
-}
-
-function formatARS(val: string | null | undefined) {
-  if (!val) return "$0";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(val));
 }
 
 const initialState: AdicionalFormState = {};

@@ -5,16 +5,8 @@ import { headers } from "next/headers";
 import { db } from "@/db";
 import { cierresCaja, mediosPago, productos } from "@/db/schema";
 import VentaProductoForm from "@/components/caja/VentaProductoForm";
+import { formatARS } from "@/lib/format";
 import { registrarVentaProducto } from "../actions";
-
-function formatARS(value: string | number | null | undefined): string {
-  if (value === null || value === undefined || value === "") return "$0";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(value));
-}
 
 function getFechaHoy(): string {
   return new Date().toLocaleDateString("en-CA", {

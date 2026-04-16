@@ -1,3 +1,5 @@
+import { formatARS } from "@/lib/format";
+
 type IngresosSummaryProps = {
   totalHoy: number;
   totalMes: number;
@@ -8,15 +10,6 @@ type IngresosSummaryProps = {
   productosHoy: number;
   productosMes: number;
 };
-
-function formatARS(value: number) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function DetailRow({
   label,

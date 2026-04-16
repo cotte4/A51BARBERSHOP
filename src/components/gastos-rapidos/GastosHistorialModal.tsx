@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import GastoRapidoList from "@/components/gastos-rapidos/GastoRapidoList";
+import { formatARS } from "@/lib/format";
 import { getCategoriaGastoRapidoByEmoji } from "@/lib/gastos-rapidos";
 
 type Gasto = {
@@ -18,15 +19,6 @@ type GastosHistorialModalProps = {
   gastos: Gasto[];
   total: number;
 };
-
-function formatARS(value: number) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function getTopCategory(gastos: Gasto[]) {
   const counts = new Map<string, number>();

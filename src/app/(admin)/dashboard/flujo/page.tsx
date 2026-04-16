@@ -2,17 +2,10 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { formatARS } from "@/lib/format";
 import { getFlujoMensual } from "@/lib/dashboard-queries";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
-
-function formatARS(val: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(val);
-}
 
 function nombreMes(mes: number, anio: number): string {
   return new Date(anio, mes - 1, 1).toLocaleDateString("es-AR", {

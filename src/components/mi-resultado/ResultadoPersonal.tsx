@@ -1,17 +1,10 @@
+import { formatARS } from "@/lib/format";
+
 type ResultadoPersonalProps = {
   paraVosHoy: number;
   paraVosMes: number;
   paraLaBarberMes: number;
 };
-
-function formatARS(value: number) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 export default function ResultadoPersonal({
   paraVosHoy,

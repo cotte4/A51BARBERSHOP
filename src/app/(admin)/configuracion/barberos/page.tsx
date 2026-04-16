@@ -1,19 +1,11 @@
 import { db } from "@/db";
 import { barberos } from "@/db/schema";
+import { formatARS } from "@/lib/format";
 import Link from "next/link";
 
 function formatPct(value: string | null) {
   if (!value) return "—";
   return `${Number(value).toFixed(0)}%`;
-}
-
-function formatARS(value: string | null) {
-  if (!value) return "—";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(value));
 }
 
 function modeloLabel(tipo: string | null) {

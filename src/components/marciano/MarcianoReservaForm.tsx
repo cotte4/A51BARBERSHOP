@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { formatARS } from "@/lib/format";
 
 type MarcianoReservaFormProps = {
   slug: string;
@@ -39,15 +40,6 @@ type SpotifyTrackOption = {
   albumName: string;
   imageUrl: string;
 };
-
-function formatARS(value: string | null) {
-  if (!value) return "Precio a confirmar";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(value));
-}
 
 export default function MarcianoReservaForm({
   slug,

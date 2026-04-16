@@ -37,13 +37,7 @@ export type ProductoSeleccionadoState = {
   esMarcianoIncluido: boolean;
 };
 
-export function formatARS(value: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(value);
-}
+export { formatARS } from "@/lib/format";
 
 export function getBarberoEmoji(nombre: string): string {
   const normalized = nombre.toLowerCase();

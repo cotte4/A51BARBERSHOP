@@ -1,4 +1,6 @@
+import Link from "next/link";
 import MarcianoProfileForm from "@/components/marciano/MarcianoProfileForm";
+import LogoutButton from "@/components/LogoutButton";
 import { requireMarcianoClient } from "@/lib/marciano-portal";
 
 export default async function MarcianoPerfilPage() {
@@ -64,6 +66,17 @@ export default async function MarcianoPerfilPage() {
             }}
           />
         </section>
+      </div>
+
+      {/* Seguridad + Logout */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[28px] border border-zinc-800 bg-zinc-900/40 px-5 py-4">
+        <Link
+          href="/marciano/seguridad"
+          className="text-sm text-zinc-400 transition hover:text-[#8cff59]"
+        >
+          Cambiar contraseña →
+        </Link>
+        <LogoutButton redirectTo="/marciano/login" />
       </div>
     </section>
   );

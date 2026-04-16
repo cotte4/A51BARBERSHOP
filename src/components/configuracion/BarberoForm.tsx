@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import type { BarberoFormState } from "@/app/(admin)/configuracion/barberos/actions";
+import { formatARS } from "@/lib/format";
 
 interface BarberoFormProps {
   action: (
@@ -29,15 +30,6 @@ interface BarberoFormProps {
 }
 
 const initialState: BarberoFormState = {};
-
-function formatARS(value: number) {
-  if (!value) return "$ 0";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(value);
-}
 
 export default function BarberoForm({
   action,

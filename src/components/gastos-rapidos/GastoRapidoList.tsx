@@ -1,4 +1,5 @@
 import { eliminarGastoRapidoAction } from "@/app/(admin)/gastos-rapidos/actions";
+import { formatARS } from "@/lib/format";
 import { getCategoriaGastoRapidoByEmoji } from "@/lib/gastos-rapidos";
 
 type GastoRapidoListProps = {
@@ -14,15 +15,6 @@ type GastoRapidoListProps = {
   emptyTitle?: string;
   emptyDescription?: string;
 };
-
-function formatARS(value: string | null) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Number(value ?? 0));
-}
 
 function formatFecha(fecha: string | null) {
   if (!fecha) return "Sin fecha";

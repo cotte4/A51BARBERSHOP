@@ -9,15 +9,7 @@ import { calcularBep } from "@/lib/bep";
 import { getDatosBep, getKpisDia, getKpisMes } from "@/lib/dashboard-queries";
 import { db } from "@/db";
 import { productos } from "@/db/schema";
-
-function formatARS(value: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+import { formatARS } from "@/lib/format";
 
 function formatFechaHoy(fecha: string): string {
   return new Date(`${fecha}T12:00:00`).toLocaleDateString("es-AR", {

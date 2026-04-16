@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 import type { RegistrarCuotaState } from "./actions";
+import { formatARS } from "@/lib/format";
 
 interface RegistrarPagoFormProps {
   action: (
@@ -19,14 +20,6 @@ function formatUSD(value: number) {
   })
     .format(value)
     .replace("US$", "u$d ");
-}
-
-function formatARS(value: number) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(value);
 }
 
 export default function RegistrarPagoForm({

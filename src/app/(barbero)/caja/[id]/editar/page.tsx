@@ -15,15 +15,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import AtencionForm from "@/components/caja/AtencionForm";
 import { getCajaActorContext } from "@/lib/caja-access";
+import { formatARS } from "@/lib/format";
 import { editarAtencion } from "../../actions";
-
-function formatARS(value: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(value);
-}
 
 function formatFechaEditable(fecha: string): string {
   return new Intl.DateTimeFormat("es-AR", {

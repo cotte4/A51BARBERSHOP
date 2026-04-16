@@ -7,16 +7,8 @@ import {
 import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { toggleActivoServicio } from "./actions";
+import { formatARS } from "@/lib/format";
 import ToggleActivoButton from "@/components/configuracion/ToggleActivoButton";
-
-function formatARS(val: string | null | undefined) {
-  if (!val) return "$ 0";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(val));
-}
 
 function getServicioAccent(nombre: string) {
   const normalized = nombre.toLowerCase();

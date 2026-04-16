@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import type { TurnoActionState } from "@/app/(admin)/turnos/actions";
 import type { TurnoSummary } from "@/lib/types";
+import { formatARS } from "@/lib/format";
 
 type MedioPagoOption = {
   id: string;
@@ -128,14 +129,6 @@ function ChevronIcon({ expanded }: { expanded: boolean }) {
   );
 }
 
-function formatARS(value: string | null | undefined) {
-  if (!value) return "";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(value));
-}
 
 export default function TurnoCard({
   turno,

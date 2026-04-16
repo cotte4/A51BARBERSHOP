@@ -1,11 +1,4 @@
-export function formatARS(value: string | number | null | undefined): string {
-  if (value === null || value === undefined) return "-";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(value));
-}
+export { formatARS } from "@/lib/format";
 
 export function getFechaHoy(): string {
   return new Date().toLocaleDateString("en-CA", {

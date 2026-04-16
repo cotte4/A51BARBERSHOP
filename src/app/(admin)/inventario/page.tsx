@@ -3,16 +3,8 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { productos } from "@/db/schema";
 import InventoryQuickAdjust from "@/components/inventario/InventoryQuickAdjust";
+import { formatARS } from "@/lib/format";
 import { ajustarStockRapido } from "./actions";
-
-function formatARS(value: string | number | null | undefined): string {
-  if (value === null || value === undefined || value === "") return "—";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(value));
-}
 
 function getProductoEmoji(nombre: string) {
   const normalized = nombre.toLowerCase();

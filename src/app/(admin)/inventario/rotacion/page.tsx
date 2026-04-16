@@ -2,15 +2,7 @@ import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { productos, stockMovimientos } from "@/db/schema";
-
-function formatARS(value: string | number | null | undefined): string {
-  if (value === null || value === undefined || value === "") return "—";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(value));
-}
+import { formatARS } from "@/lib/format";
 
 function getProductoEmoji(nombre: string) {
   const normalized = nombre.toLowerCase();
