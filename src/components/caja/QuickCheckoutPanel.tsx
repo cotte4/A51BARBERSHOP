@@ -1,69 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useRef, useEffect, useCallback, useMemo } from "react";
 import type { AtencionRapidaState } from "@/app/(barbero)/caja/actions";
-
-function ScissorsIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={`h-5 w-5${className ? ` ${className}` : ""}`}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.9"
-    >
-      <circle cx="6" cy="6" r="2.5" />
-      <circle cx="6" cy="18" r="2.5" />
-      <path d="M8.12 8.12 20 20M8.12 15.88 20 4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function BanknoteIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
-      <rect x="2" y="6" width="20" height="12" rx="2" />
-      <circle cx="12" cy="12" r="2.5" />
-      <path d="M6 12h.01M18 12h.01" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ArrowLeftRightIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
-      <path
-        d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function CreditCardIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
-      <rect x="2" y="5" width="20" height="14" rx="2.5" />
-      <path d="M2 10h20" />
-      <path d="M6 15h4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={`h-5 w-5${className ? ` ${className}` : ""}`}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.9"
-    >
-      <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+import { formatARS } from "@/lib/format";
 
 type Servicio = {
   id: string;
@@ -82,251 +21,313 @@ type Props = {
   mediosPago: MedioPago[];
   action: (prevState: AtencionRapidaState, formData: FormData) => Promise<AtencionRapidaState>;
   returnTo?: string;
-  variant?: "standalone" | "embedded";
 };
 
-const initialState: AtencionRapidaState = {};
+const STEP = 500;
+const ITEM_H = 58;
+const VISIBLE = 5; // number of visible rows in the drum
 
-function formatARS(value: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(value);
+function snapToStep(value: number): number {
+  return Math.max(STEP, Math.round(value / STEP) * STEP);
 }
 
-function getMedioPagoIcon(nombre: string | null) {
-  const normalized = (nombre ?? "").toLowerCase();
-  if (normalized.includes("efectivo")) return <BanknoteIcon />;
-  if (normalized.includes("transf")) return <ArrowLeftRightIcon />;
-  return <CreditCardIcon />;
+function buildPrices(base: number): number[] {
+  const snapped = snapToStep(base);
+  const prices: number[] = [];
+  for (let i = -24; i <= 24; i++) {
+    const v = snapped + i * STEP;
+    if (v >= STEP) prices.push(v);
+  }
+  return prices;
 }
 
 function getMedioPagoLabel(nombre: string | null): string {
-  const normalized = (nombre ?? "").toLowerCase();
-  if (normalized.includes("efectivo")) return "Efectivo";
-  if (normalized.includes("transf")) return "Transferencia";
-  if (normalized.includes("posnet") || normalized.includes("tarjeta")) return "Tarjeta";
-  if (normalized.includes("mp") || normalized.includes("mercado")) return "Mercado Pago";
+  const n = (nombre ?? "").toLowerCase();
+  if (n.includes("efectivo")) return "Efectivo";
+  if (n.includes("transf")) return "Transferencia";
+  if (n.includes("posnet") || n.includes("tarjeta")) return "Tarjeta";
+  if (n.includes("mp") || n.includes("mercado")) return "Mercado Pago";
   return nombre ?? "Otro";
 }
 
-function esCorteYBarba(nombre: string): boolean {
-  const normalized = nombre.toLowerCase();
-  return normalized.includes("barba") || normalized.includes("beard");
+function getMedioPagoShort(nombre: string | null): string {
+  const n = (nombre ?? "").toLowerCase();
+  if (n.includes("efectivo")) return "Efectivo";
+  if (n.includes("transf")) return "Transfer";
+  if (n.includes("posnet") || n.includes("tarjeta")) return "Tarjeta";
+  if (n.includes("mp") || n.includes("mercado")) return "MP";
+  return nombre ?? "Otro";
 }
+
+// ─── Drum Picker ─────────────────────────────────────────────────────────────
+
+function DrumPicker({
+  prices,
+  value,
+  onChange,
+}: {
+  prices: number[];
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [liveIndex, setLiveIndex] = useState(() => {
+    const i = prices.indexOf(value);
+    return i >= 0 ? i : 0;
+  });
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const padding = ITEM_H * Math.floor(VISIBLE / 2);
+  const containerH = ITEM_H * VISIBLE;
+
+  // Scroll to value on mount
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const idx = prices.indexOf(value);
+    if (idx >= 0) {
+      el.scrollTop = idx * ITEM_H;
+      setLiveIndex(idx);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // When parent changes the value (e.g. service changed), scroll there
+  const prevValue = useRef(value);
+  useEffect(() => {
+    if (prevValue.current === value) return;
+    prevValue.current = value;
+    const el = ref.current;
+    if (!el) return;
+    const idx = prices.indexOf(value);
+    if (idx >= 0) {
+      el.scrollTo({ top: idx * ITEM_H, behavior: "smooth" });
+      setLiveIndex(idx);
+    }
+  }, [value, prices]);
+
+  const handleScroll = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollTop / ITEM_H);
+    const clamped = Math.max(0, Math.min(prices.length - 1, idx));
+    setLiveIndex(clamped);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      onChange(prices[clamped]);
+    }, 80);
+  }, [prices, onChange]);
+
+  return (
+    <div className="relative select-none" style={{ height: containerH }}>
+      {/* Center highlight */}
+      <div
+        className="pointer-events-none absolute inset-x-3 rounded-[18px] border border-[#8cff59]/25 bg-[#8cff59]/8"
+        style={{ top: padding, height: ITEM_H }}
+      />
+      {/* Top fade */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-10"
+        style={{
+          height: padding,
+          background: "linear-gradient(to bottom, #121212 0%, transparent 100%)",
+        }}
+      />
+      {/* Bottom fade */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-10"
+        style={{
+          height: padding,
+          background: "linear-gradient(to top, #121212 0%, transparent 100%)",
+        }}
+      />
+
+      <div
+        ref={ref}
+        onScroll={handleScroll}
+        style={{
+          height: containerH,
+          overflowY: "scroll",
+          scrollSnapType: "y mandatory",
+          paddingTop: padding,
+          paddingBottom: padding,
+          scrollbarWidth: "none",
+          // @ts-expect-error vendor prefix
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
+        {prices.map((price, i) => {
+          const dist = Math.abs(i - liveIndex);
+          const isCenter = dist === 0;
+          return (
+            <div
+              key={price}
+              style={{
+                height: ITEM_H,
+                scrollSnapAlign: "center",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: isCenter ? 1 : dist === 1 ? 0.4 : 0.18,
+                transform: `scale(${isCenter ? 1 : dist === 1 ? 0.88 : 0.76})`,
+                transition: "opacity 0.12s ease, transform 0.12s ease",
+              }}
+            >
+              <span
+                className={`font-display text-3xl font-bold tracking-tight ${
+                  isCenter ? "text-[#8cff59]" : "text-zinc-300"
+                }`}
+              >
+                {formatARS(price)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+const initialState: AtencionRapidaState = {};
 
 export default function QuickCheckoutPanel({
   servicios,
   mediosPago,
   action,
   returnTo,
-  variant = "standalone",
 }: Props) {
   const [state, formAction, isPending] = useActionState(action, initialState);
-  const [selectedServicioId, setSelectedServicioId] = useState<string | null>(null);
-  const [selectedMedioPagoId, setSelectedMedioPagoId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState(servicios[0]?.id ?? "");
+  const [medioId, setMedioId] = useState(mediosPago[0]?.id ?? "");
 
-  const selectedServicio = servicios.find((servicio) => servicio.id === selectedServicioId) ?? null;
-  const selectedMedioPago = mediosPago.find((medio) => medio.id === selectedMedioPagoId) ?? null;
-  const precio = Number(selectedServicio?.precioBase ?? 0);
-  const listo = selectedServicioId !== null && selectedMedioPagoId !== null;
-  const embedded = variant === "embedded";
+  const selected = servicios.find((s) => s.id === selectedId) ?? servicios[0];
+  const basePrice = snapToStep(Number(selected?.precioBase ?? 0));
+  const prices = useMemo(() => buildPrices(Number(selected?.precioBase ?? 0)), [selected?.precioBase]);
+  const [precio, setPrecio] = useState(basePrice);
 
-  const missingSteps: string[] = [];
-  if (!selectedServicio) missingSteps.push("servicio");
-  if (!selectedMedioPago) missingSteps.push("medio de pago");
+  // When service changes, reset price to its base
+  const prevServiceId = useRef(selectedId);
+  useEffect(() => {
+    if (prevServiceId.current === selectedId) return;
+    prevServiceId.current = selectedId;
+    const newBase = snapToStep(Number(selected?.precioBase ?? 0));
+    setPrecio(newBase);
+  }, [selectedId, selected]);
 
-  const statusLabel = isPending ? "Procesando" : listo ? "Listo para cobrar" : "Faltan datos";
-  const statusClassName = isPending
-    ? "border-zinc-700 bg-zinc-800 text-zinc-200"
-    : listo
-      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-      : "border-amber-500/30 bg-amber-500/10 text-amber-200";
+  const medio = mediosPago.find((m) => m.id === medioId) ?? mediosPago[0];
+  const listo = !!selected?.id && !!medio?.id && precio > 0;
 
-  const helperText = isPending
-    ? "Estamos registrando el cobro. No cierres la pantalla."
-    : listo
-      ? "El monto ya esta listo para cobrar. Revisa el medio antes de confirmar."
-      : `Te falta ${missingSteps.join(" y ")} para habilitar el cobro.`;
-
-  const submitLabel = isPending
-    ? "Registrando..."
-    : listo
-      ? `Cobrar ${formatARS(precio)}`
-      : "Selecciona servicio y pago";
+  function handleServiceSelect(id: string) {
+    setSelectedId(id);
+  }
 
   return (
-    <section
-      className={
-        embedded
-          ? "overflow-hidden rounded-[26px] border border-zinc-800 bg-zinc-950/60"
-          : "overflow-hidden rounded-[30px] border border-[#8cff59]/20 bg-zinc-950 shadow-[0_0_40px_rgba(140,255,89,0.08)]"
-      }
-    >
-      <div className={`p-5 sm:p-6 ${isPending ? "opacity-80" : ""}`}>
-        {embedded ? (
-          <div className="flex justify-end">
-            <span
-              className={`inline-flex min-h-[36px] items-center rounded-full px-3 text-xs font-semibold uppercase tracking-[0.18em] ${statusClassName}`}
-            >
-              {statusLabel}
+    <div className="flex flex-col gap-5 p-5">
+      {/* Drum price picker */}
+      <div>
+        <p className="eyebrow mb-1 text-center text-xs">¿Cuánto cobra?</p>
+        <DrumPicker prices={prices} value={precio} onChange={setPrecio} />
+        {precio > basePrice ? (
+          <div className="mt-2 flex items-center justify-center gap-3 text-xs">
+            <span className="text-zinc-500">Corte {formatARS(basePrice)}</span>
+            <span className="text-zinc-700">+</span>
+            <span className="font-semibold text-amber-300">
+              Propina {formatARS(precio - basePrice)}
             </span>
           </div>
-        ) : (
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="eyebrow text-xs font-semibold text-zinc-500">Cobro rapido</p>
-              <h2 className="font-display mt-2 text-2xl font-semibold text-white">
-                Selecciona, mira el monto y cobra sin dudar
-              </h2>
-            </div>
-            <span
-              className={`inline-flex min-h-[36px] items-center rounded-full px-3 text-xs font-semibold uppercase tracking-[0.18em] ${statusClassName}`}
-            >
-              {statusLabel}
-            </span>
-          </div>
-        )}
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="panel-soft rounded-[22px] px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Servicio</p>
-            <p className="mt-2 text-sm font-semibold text-white">
-              {selectedServicio ? selectedServicio.nombre : "Falta seleccionar"}
-            </p>
-          </div>
-          <div className="panel-soft rounded-[22px] px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Medio de pago
-            </p>
-            <p className="mt-2 text-sm font-semibold text-white">
-              {selectedMedioPago ? getMedioPagoLabel(selectedMedioPago.nombre) : "Falta seleccionar"}
-            </p>
-          </div>
-          <div className="panel-soft rounded-[22px] px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Monto</p>
-            <p className="mt-2 text-lg font-semibold text-[#8cff59]">
-              {selectedServicio ? formatARS(precio) : "--"}
-            </p>
-          </div>
-        </div>
-
-        <div
-          className={`mt-4 rounded-[22px] border px-4 py-3 text-sm ${
-            isPending
-              ? "border-zinc-700 bg-zinc-900/80 text-zinc-200"
-              : listo
-                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-100"
-                : "border-amber-500/20 bg-amber-500/10 text-amber-100"
-          }`}
-          aria-live="polite"
-        >
-          {helperText}
-        </div>
-
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          {servicios.map((servicio) => {
-            const isSelected = selectedServicioId === servicio.id;
-            const doble = esCorteYBarba(servicio.nombre);
-
-            return (
-              <button
-                key={servicio.id}
-                type="button"
-                aria-pressed={isSelected}
-                disabled={isPending}
-                onClick={() => setSelectedServicioId(isSelected ? null : servicio.id)}
-                className={`relative flex min-h-[92px] flex-col items-center justify-center gap-2 rounded-[22px] border px-4 py-4 text-center transition-all duration-150 disabled:cursor-wait ${
-                  isSelected
-                    ? "border-[#8cff59]/60 bg-[#8cff59]/10 text-[#8cff59] shadow-[0_0_20px_rgba(140,255,89,0.15)]"
-                    : "border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900 hover:text-white"
-                }`}
-              >
-                {isSelected ? (
-                  <span className="absolute right-3 top-3">
-                    <CheckIcon className="text-[#8cff59]" />
-                  </span>
-                ) : null}
-                <span className="flex items-center gap-0.5">
-                  <ScissorsIcon />
-                  {doble ? <ScissorsIcon className="opacity-60" /> : null}
-                </span>
-                <span className="text-center text-sm font-semibold leading-tight">{servicio.nombre}</span>
-                <span className={`text-xs ${isSelected ? "text-[#8cff59]/80" : "text-zinc-500"}`}>
-                  {formatARS(Number(servicio.precioBase ?? 0))}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {mediosPago.map((medio) => {
-            const isSelected = selectedMedioPagoId === medio.id;
-            const icon = getMedioPagoIcon(medio.nombre);
-            const label = getMedioPagoLabel(medio.nombre);
-            const commission = Number(medio.comisionPorcentaje ?? 0);
-
-            return (
-              <button
-                key={medio.id}
-                type="button"
-                aria-pressed={isSelected}
-                disabled={isPending}
-                onClick={() => setSelectedMedioPagoId(isSelected ? null : medio.id)}
-                className={`relative flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-[18px] border px-2 py-3 text-center transition-all duration-150 disabled:cursor-wait ${
-                  isSelected
-                    ? "border-white/30 bg-white text-zinc-900 shadow-[0_0_16px_rgba(255,255,255,0.12)]"
-                    : "border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-900 hover:text-white"
-                }`}
-              >
-                {isSelected ? (
-                  <span className="absolute right-2 top-2">
-                    <CheckIcon className="text-zinc-600" />
-                  </span>
-                ) : null}
-                {icon}
-                <span className="text-xs font-medium leading-tight">{label}</span>
-                {commission > 0 ? (
-                  <span className={`text-[11px] ${isSelected ? "text-zinc-700" : "text-zinc-500"}`}>
-                    {commission}% comision
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-
-        {state.error ? (
-          <p
-            className="mt-4 rounded-[18px] border border-rose-500/35 bg-rose-500/10 px-4 py-3 text-sm text-rose-300"
-            aria-live="assertive"
-          >
-            {state.error}
-          </p>
         ) : null}
-
-        <form action={formAction} className="mt-4">
-          <input type="hidden" name="servicioId" value={selectedServicioId ?? ""} />
-          <input type="hidden" name="medioPagoId" value={selectedMedioPagoId ?? ""} />
-          <input type="hidden" name="precioCobrado" value={precio} />
-          {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
-
-          <button
-            type="submit"
-            disabled={!listo || isPending}
-            aria-busy={isPending}
-            className={`flex min-h-[56px] w-full items-center justify-center rounded-[22px] px-6 text-base font-bold transition-all duration-150 ${
-              listo
-                ? "bg-[#8cff59] text-zinc-950 shadow-[0_4px_24px_rgba(140,255,89,0.3)] hover:bg-[#a8ff80] active:scale-[0.98]"
-                : "cursor-not-allowed bg-zinc-800 text-zinc-600"
-            }`}
-          >
-            {submitLabel}
-          </button>
-        </form>
       </div>
-    </section>
+
+      {/* Service selector */}
+      <div>
+        <p className="eyebrow mb-3 text-xs">Servicio</p>
+        <div
+          className="flex gap-2.5 overflow-x-auto pb-1"
+          style={{ scrollSnapType: "x mandatory" } as React.CSSProperties}
+        >
+          {servicios.map((s) => {
+            const active = selectedId === s.id;
+            return (
+              <button
+                key={s.id}
+                type="button"
+                disabled={isPending}
+                onClick={() => handleServiceSelect(s.id)}
+                style={{ scrollSnapAlign: "start" } as React.CSSProperties}
+                className={`min-w-[130px] flex-none rounded-[20px] border p-3.5 text-left transition disabled:cursor-wait ${
+                  active
+                    ? "border-[#8cff59]/40 bg-[#8cff59]/10 shadow-[0_0_14px_rgba(140,255,89,0.1)]"
+                    : "border-zinc-800 bg-zinc-900/60 hover:border-zinc-700"
+                }`}
+              >
+                <p className="text-xs font-semibold text-white">{s.nombre}</p>
+                <p className={`mt-1 text-xs ${active ? "text-[#8cff59]" : "text-zinc-400"}`}>
+                  {formatARS(Number(s.precioBase ?? 0))}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Payment method — 4 boxes */}
+      <div>
+        <p className="eyebrow mb-3 text-xs">Medio de pago</p>
+        <div className={`grid gap-2 ${mediosPago.length <= 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`}>
+          {mediosPago.slice(0, 4).map((m) => {
+            const active = medioId === m.id;
+            const comision = Number(m.comisionPorcentaje ?? 0);
+            return (
+              <button
+                key={m.id}
+                type="button"
+                disabled={isPending}
+                onClick={() => setMedioId(m.id)}
+                className={`rounded-[20px] border px-3 py-3.5 text-center transition disabled:cursor-wait ${
+                  active
+                    ? "border-[#8cff59]/40 bg-[#8cff59]/10 shadow-[0_0_14px_rgba(140,255,89,0.1)]"
+                    : "border-zinc-800 bg-zinc-900/60 hover:border-zinc-700"
+                }`}
+              >
+                <p className={`text-sm font-semibold ${active ? "text-[#8cff59]" : "text-white"}`}>
+                  {getMedioPagoShort(m.nombre)}
+                </p>
+                {comision > 0 ? (
+                  <p className="mt-0.5 text-[10px] text-zinc-500">{m.comisionPorcentaje}%</p>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Error */}
+      {state.error ? (
+        <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          {state.error}
+        </div>
+      ) : null}
+
+      {/* Submit */}
+      <form action={formAction}>
+        <input type="hidden" name="servicioId" value={selected?.id ?? ""} />
+        <input type="hidden" name="medioPagoId" value={medio?.id ?? ""} />
+        <input type="hidden" name="precioCobrado" value={String(precio)} />
+        {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
+        <button
+          type="submit"
+          disabled={!listo || isPending}
+          aria-busy={isPending}
+          className={`flex min-h-[60px] w-full items-center justify-center rounded-[22px] px-6 text-base font-bold transition-all duration-150 ${
+            listo
+              ? "neon-button shadow-[0_4px_24px_rgba(140,255,89,0.3)] active:scale-[0.98]"
+              : "cursor-not-allowed bg-zinc-800 text-zinc-600"
+          }`}
+        >
+          {isPending ? "Registrando..." : listo ? `Cobrar ${formatARS(precio)}` : "Seleccioná servicio"}
+        </button>
+      </form>
+    </div>
   );
 }

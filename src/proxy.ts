@@ -27,12 +27,15 @@ export async function proxy(request: NextRequest) {
     pathname === "/marciano/reset" ||
     pathname.startsWith("/marciano/reset");
 
+  const isAdmin = userRole === "admin";
+
   if (pathname === "/") {
     if (!isAuthenticated) {
       return NextResponse.next();
     }
     if (isMarciano) return NextResponse.redirect(new URL("/marciano", request.url));
     if (isAsesor) return NextResponse.redirect(new URL("/dashboard", request.url));
+    if (isAdmin) return NextResponse.redirect(new URL("/hoy", request.url));
     return NextResponse.redirect(new URL("/hoy", request.url));
   }
 
@@ -40,6 +43,7 @@ export async function proxy(request: NextRequest) {
     if (isAuthenticated) {
       if (isMarciano) return NextResponse.redirect(new URL("/marciano", request.url));
       if (isAsesor) return NextResponse.redirect(new URL("/dashboard", request.url));
+      if (isAdmin) return NextResponse.redirect(new URL("/hoy", request.url));
       return NextResponse.redirect(new URL("/hoy", request.url));
     }
     return NextResponse.next();

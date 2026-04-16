@@ -1,18 +1,14 @@
-import Link from "next/link";
 import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
-import HoyActionStrip from "@/components/hoy/HoyActionStrip";
 import { db } from "@/db";
 import {
   atenciones,
   barberos,
   clients,
   mediosPago,
-  productos,
   servicios,
   stockMovimientos,
   turnos as turnosTable,
 } from "@/db/schema";
-import type { StyleProfile, FaceShape } from "@/lib/types";
 import { registrarAtencionExpressAction } from "@/app/(barbero)/caja/actions";
 import {
   confirmarTurnoAction,
@@ -20,29 +16,12 @@ import {
 } from "@/app/(admin)/turnos/actions";
 import { getTurnosActorContext } from "@/lib/turnos-access";
 import { getTurnosVisibleList } from "@/lib/turnos";
-import TurnosPendientesInbox from "./_TurnosPendientesInbox";
+import HoyDashboard from "./_HoyDashboard";
 
 function getFechaHoyArgentina(): string {
   return new Date().toLocaleDateString("en-CA", {
     timeZone: "America/Argentina/Buenos_Aires",
   });
-}
-
-function formatARS(value: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatHora(date: Date | null | undefined): string {
-  if (!date) return "--:--";
-  return new Intl.DateTimeFormat("es-AR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "America/Argentina/Buenos_Aires",
-  }).format(date);
 }
 
 function getHoraActualArgentina(): string {
@@ -52,31 +31,6 @@ function getHoraActualArgentina(): string {
     hour12: false,
     timeZone: "America/Argentina/Buenos_Aires",
   }).format(new Date());
-}
-
-function getMonthBounds() {
-  const fechaHoy = getFechaHoyArgentina();
-  const [year, month] = fechaHoy.split("-").map(Number);
-  return {
-    fechaHoy,
-    inicioMes: `${year}-${String(month).padStart(2, "0")}-01`,
-    finMes: fechaHoy,
-  };
-}
-
-function getPaymentLabel(nombre: string | null): string {
-  const normalized = (nombre ?? "").toLowerCase();
-  if (normalized.includes("efectivo")) return "Efectivo";
-  if (normalized.includes("transf")) return nombre ?? "Transferencia";
-  if (
-    normalized.includes("tarjeta") ||
-    normalized.includes("posnet") ||
-    normalized.includes("mercado") ||
-    normalized === "mp"
-  ) {
-    return nombre ?? "Tarjeta";
-  }
-  return nombre ?? "Otro";
 }
 
 function formatFechaHoyLabel(fechaHoy: string): string {
@@ -89,32 +43,13 @@ function formatFechaHoyLabel(fechaHoy: string): string {
   });
 }
 
-function getTurnoEstadoLabel(estado: string) {
-  if (estado === "confirmado") return "Confirmado";
-  if (estado === "pendiente") return "Pendiente";
-  if (estado === "completado") return "Completado";
-  return estado;
-}
-
-function getTurnoEstadoTone(estado: string) {
-  if (estado === "confirmado") {
-    return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
-  }
-
-  if (estado === "pendiente") {
-    return "border-amber-400/20 bg-amber-400/10 text-amber-300";
-  }
-
-  return "border-zinc-800 bg-zinc-950 text-zinc-300";
-}
-
 export default async function HoyPage() {
   const actor = await getTurnosActorContext();
   if (!actor) {
     return null;
   }
 
-  const { fechaHoy } = getMonthBounds();
+  const fechaHoy = getFechaHoyArgentina();
   const inicioDia = new Date(`${fechaHoy}T00:00:00-03:00`);
   const finDia = new Date(`${fechaHoy}T23:59:59-03:00`);
 
@@ -124,7 +59,6 @@ export default async function HoyPage() {
     ventasHoyRows,
     mediosPagoList,
     serviciosList,
-    productosList,
     turnosHoy,
     marcianosTurnosHoy,
   ] = await Promise.all([
@@ -141,9 +75,6 @@ export default async function HoyPage() {
         id: atenciones.id,
         precioCobrado: atenciones.precioCobrado,
         anulado: atenciones.anulado,
-        creadoEn: atenciones.creadoEn,
-        servicioId: atenciones.servicioId,
-        medioPagoId: atenciones.medioPagoId,
       })
       .from(atenciones)
       .where(
@@ -155,11 +86,8 @@ export default async function HoyPage() {
       .orderBy(desc(atenciones.creadoEn)),
     db
       .select({
-        id: stockMovimientos.id,
-        productoId: stockMovimientos.productoId,
         cantidad: stockMovimientos.cantidad,
         precioUnitario: stockMovimientos.precioUnitario,
-        fecha: stockMovimientos.fecha,
       })
       .from(stockMovimientos)
       .where(
@@ -168,19 +96,15 @@ export default async function HoyPage() {
           gte(stockMovimientos.fecha, inicioDia),
           lte(stockMovimientos.fecha, finDia)
         )
-      )
-      .orderBy(desc(stockMovimientos.fecha)),
+      ),
     db.select().from(mediosPago),
     db.select().from(servicios),
-    db.select().from(productos).where(eq(productos.activo, true)),
     getTurnosVisibleList(fechaHoy, undefined, actor.barberoId ?? undefined),
     db
       .select({
         turnoId: turnosTable.id,
         horaInicio: turnosTable.horaInicio,
         clienteNombre: turnosTable.clienteNombre,
-        faceShape: clients.faceShape,
-        styleProfile: clients.styleProfile,
       })
       .from(turnosTable)
       .leftJoin(clients, eq(clients.id, turnosTable.clientId))
@@ -194,386 +118,64 @@ export default async function HoyPage() {
       .orderBy(turnosTable.horaInicio),
   ]);
 
-  const mediosPagoMap = new Map(mediosPagoList.map((medio) => [medio.id, medio]));
-  const serviciosMap = new Map(serviciosList.map((servicio) => [servicio.id, servicio]));
-  const productosMap = new Map(productosList.map((producto) => [producto.id, producto]));
+  const serviciosActivos = serviciosList.filter((s) => s.activo);
+  const mediosPagoActivos = mediosPagoList.filter((m) => m.activo);
 
-  const serviciosActivos = serviciosList.filter((servicio) => servicio.activo);
-  const mediosPagoActivos = mediosPagoList.filter((medio) => medio.activo);
-
-  const activeAtenciones = atencionesHoyRows.filter((row) => !row.anulado);
+  const activeAtenciones = atencionesHoyRows.filter((r) => !r.anulado);
   const atencionesCount = activeAtenciones.length;
   const ingresosServicios = activeAtenciones.reduce(
-    (sum, row) => sum + Number(row.precioCobrado ?? 0),
+    (sum, r) => sum + Number(r.precioCobrado ?? 0),
     0
   );
   const ingresosProductos = ventasHoyRows.reduce(
-    (sum, row) => sum + Math.abs(Number(row.cantidad ?? 0)) * Number(row.precioUnitario ?? 0),
+    (sum, r) => sum + Math.abs(Number(r.cantidad ?? 0)) * Number(r.precioUnitario ?? 0),
     0
   );
-
-  const recentAtenciones = atencionesHoyRows.slice(0, 4).map((row) => ({
-    id: row.id,
-    time: row.creadoEn,
-    title: serviciosMap.get(row.servicioId ?? "")?.nombre ?? "Servicio",
-    badge: row.anulado ? "Anulada" : "Servicio",
-    detail: `${row.anulado ? "Fuera de caja" : formatARS(Number(row.precioCobrado ?? 0))} / ${getPaymentLabel(mediosPagoMap.get(row.medioPagoId ?? "")?.nombre ?? null)}`,
-    tone: row.anulado
-      ? "bg-rose-50 text-rose-700 ring-1 ring-rose-200"
-      : "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
-  }));
-  const recentVentas = ventasHoyRows.slice(0, 4).map((row) => ({
-    id: row.id,
-    time: row.fecha,
-    title: productosMap.get(row.productoId ?? "")?.nombre ?? "Producto",
-    badge: "Producto",
-    detail: `${Math.abs(Number(row.cantidad ?? 0))} x ${formatARS(Number(row.precioUnitario ?? 0))}`,
-    tone: "bg-sky-50 text-sky-700 ring-1 ring-sky-200",
-  }));
-  const recentMovement = [...recentAtenciones, ...recentVentas]
-    .sort((left, right) => new Date(right.time ?? 0).getTime() - new Date(left.time ?? 0).getTime())
-    .slice(0, 4);
+  const totalCobrado = ingresosServicios + ingresosProductos;
 
   const horaActual = getHoraActualArgentina();
   const turnosOperativos = turnosHoy.filter(
-    (turno) => turno.estado === "pendiente" || turno.estado === "confirmado"
+    (t) => t.estado === "pendiente" || t.estado === "confirmado"
   );
-  const turnosPendientes = turnosHoy.filter((turno) => turno.estado === "pendiente");
+  const turnosPendientes = turnosHoy.filter((t) => t.estado === "pendiente");
   const proximoTurno =
-    turnosOperativos.find((turno) => turno.horaInicio >= horaActual) ?? turnosOperativos[0] ?? null;
+    turnosOperativos.find((t) => t.horaInicio >= horaActual) ?? turnosOperativos[0] ?? null;
 
-  const productosDisponibles = productosList.filter((producto) => Number(producto.stockActual ?? 0) > 0);
-  const stockAlerts = productosList.filter(
-    (producto) => Number(producto.stockActual ?? 0) <= Number(producto.stockMinimo ?? 0)
-  );
+  const turnosPendientesConAcciones = turnosPendientes.map((turno) => ({
+    turno,
+    confirmarAction: confirmarTurnoAction.bind(null, turno.id),
+    rechazarAction: rechazarTurnoAction.bind(null, turno.id),
+  }));
 
   const fechaLabel = formatFechaHoyLabel(fechaHoy);
-  const totalCobrado = ingresosServicios + ingresosProductos;
-  const cajaLabel = totalCobrado > 0 ? formatARS(totalCobrado) : "--";
 
   return (
-    <div className="space-y-5 pb-6 sm:space-y-6">
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.9fr)_minmax(320px,1fr)]">
-        <div className="space-y-6">
-          <section className="rounded-[32px] border border-zinc-800/80 bg-[radial-gradient(circle_at_top_left,_rgba(140,255,89,0.11),_transparent_28%),linear-gradient(180deg,_rgba(24,24,27,0.96),_rgba(9,9,11,0.98))] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.28)] sm:p-7">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-2xl space-y-3">
-                <div className="space-y-2.5">
-                  <p className="eyebrow text-[11px] font-semibold">Centro del dia</p>
-                  <h1 className="font-display text-[1.9rem] font-bold tracking-tight text-white sm:text-[2.3rem]">
-                    {barberoActual?.nombre ?? "A51"}
-                  </h1>
-                  <p className="text-sm leading-5 text-zinc-400 sm:text-base sm:leading-6">
-                    {fechaLabel}. Caja, agenda y movimiento en una mirada rapida.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <OverviewPill label="Atenciones" value={String(atencionesCount)} highlight />
-                  <OverviewPill label="Turnos" value={String(turnosOperativos.length)} />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href="/turnos"
-                  className="inline-flex min-h-[44px] items-center rounded-full border border-zinc-700 bg-zinc-950/90 px-4 text-sm font-medium text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-900"
-                >
-                  Ver turnos
-                </Link>
-                <Link
-                  href="/caja"
-                  className="inline-flex min-h-[44px] items-center rounded-full border border-zinc-700 bg-zinc-950/90 px-4 text-sm font-medium text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-900"
-                >
-                  Ver caja
-                </Link>
-              </div>
-            </div>
-          </section>
-
-          <HoyActionStrip
-            turnosCount={turnosOperativos.length}
-            productosCount={productosDisponibles.length}
-            stockAlertsCount={stockAlerts.length}
-            atencionesCount={atencionesCount}
-            totalCobrado={totalCobrado}
-            servicios={serviciosActivos.map((servicio) => ({
-              id: servicio.id,
-              nombre: servicio.nombre,
-              precioBase: servicio.precioBase,
-            }))}
-            mediosPago={mediosPagoActivos.map((medio) => ({
-              id: medio.id,
-              nombre: medio.nombre,
-              comisionPorcentaje: medio.comisionPorcentaje,
-            }))}
-            action={registrarAtencionExpressAction}
-          />
-        </div>
-
-        <aside className="grid gap-3 self-start xl:sticky xl:top-6">
-          <StatusRailCard
-            eyebrow="Proximo turno"
-            value={proximoTurno ? proximoTurno.horaInicio : "Hoy libre"}
-            detail={
-              proximoTurno
-                ? `${proximoTurno.clienteNombre} / ${proximoTurno.servicioNombre ?? "Servicio sin detalle"}`
-                : "No hay reservas cargadas por ahora."
-            }
-            badge={proximoTurno ? getTurnoEstadoLabel(proximoTurno.estado) : "Agenda libre"}
-            badgeTone={proximoTurno ? getTurnoEstadoTone(proximoTurno.estado) : undefined}
-            href="/turnos"
-            actionLabel="Abrir agenda"
-          />
-          <StatusRailCard
-            eyebrow="Caja de hoy"
-            value={cajaLabel}
-            detail={
-              atencionesCount > 0
-                ? `${atencionesCount} atenciones activas / ${formatARS(ingresosServicios)} servicios`
-                : "Todavia no hay movimiento registrado en caja."
-            }
-            badge={atencionesCount > 0 ? "Con movimiento" : "Sin caja"}
-            href="/caja"
-            actionLabel="Ir a caja"
-          />
-          <StatusRailCard
-            eyebrow="Turnos hoy"
-            value={String(turnosOperativos.length)}
-            detail={
-              turnosOperativos.length > 0
-                ? `${turnosOperativos.length} reservas entre pendientes y confirmadas.`
-                : "La agenda esta libre para el resto del dia."
-            }
-            badge={turnosOperativos.length > 0 ? "Agenda activa" : "Sin reservas"}
-            href="/turnos"
-            actionLabel="Ver turnos"
-          />
-          <StatusRailCard
-            eyebrow="Productos"
-            value={String(productosDisponibles.length)}
-            detail={
-              stockAlerts.length > 0
-                ? `${stockAlerts.length} items quedaron en zona critica.`
-                : "Stock disponible para vender sin alertas urgentes."
-            }
-            badge={stockAlerts.length > 0 ? `${stockAlerts.length} alertas` : "Stock al dia"}
-            href="/caja/vender"
-            actionLabel="Abrir venta"
-          />
-        </aside>
-      </section>
-
-      <section className="panel-card rounded-[32px] p-4 sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="eyebrow text-[11px] font-semibold">Pulso de caja</p>
-              <h2 className="font-display mt-2 text-2xl font-semibold text-white">
-                Ultimos movimientos
-              </h2>
-              <p className="mt-2 text-sm leading-5 text-zinc-400 sm:leading-6">
-                Lo ultimo que entro en servicio o producto, ordenado para escanear rapido.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
-                {recentMovement.length} recientes
-              </span>
-              <Link
-                href="/caja"
-                className="inline-flex min-h-[40px] items-center rounded-full border border-zinc-700 bg-zinc-950 px-3.5 text-sm font-medium text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-900"
-              >
-                Ver caja
-              </Link>
-            </div>
-          </div>
-
-          {recentMovement.length === 0 ? (
-            <div className="mt-5 rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/25 p-7 text-center sm:p-8">
-              <p className="font-display text-xl font-semibold text-white">Todavia no hubo movimiento</p>
-              <p className="mt-2 text-sm leading-6 text-zinc-500">
-                Cuando entren cobros o ventas, van a aparecer aca en orden cronologico.
-              </p>
-            </div>
-          ) : (
-            <div className="mt-5 space-y-3">
-              {recentMovement.map((item) => (
-                <article
-                  key={item.id}
-                  className="flex items-center justify-between gap-3 rounded-[24px] border border-zinc-800 bg-zinc-950/30 px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-white">{item.title}</p>
-                    <p className="mt-1 text-sm leading-5 text-zinc-400">{item.detail}</p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${item.tone}`}
-                    >
-                      {item.badge}
-                    </span>
-                    <p className="mt-1.5 text-[11px] text-zinc-500">{formatHora(item.time)}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-      </section>
-
-      <TurnosPendientesInbox
-        items={turnosPendientes.map((turno) => ({
-          turno,
-          confirmarAction: confirmarTurnoAction.bind(null, turno.id),
-          rechazarAction: rechazarTurnoAction.bind(null, turno.id),
+    <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-6">
+      <HoyDashboard
+        barberoNombre={barberoActual?.nombre ?? "A51"}
+        fechaLabel={fechaLabel}
+        totalCobrado={totalCobrado}
+        atencionesCount={atencionesCount}
+        turnosOperativos={turnosOperativos}
+        turnosPendientesConAcciones={turnosPendientesConAcciones}
+        proximoTurno={proximoTurno}
+        servicios={serviciosActivos.map((s) => ({
+          id: s.id,
+          nombre: s.nombre,
+          precioBase: s.precioBase,
+        }))}
+        mediosPago={mediosPagoActivos.map((m) => ({
+          id: m.id,
+          nombre: m.nombre,
+          comisionPorcentaje: m.comisionPorcentaje,
+        }))}
+        registrarAction={registrarAtencionExpressAction}
+        marcianosTurnos={marcianosTurnosHoy.map((m) => ({
+          turnoId: m.turnoId,
+          horaInicio: m.horaInicio,
+          clienteNombre: m.clienteNombre,
         }))}
       />
-
-      {marcianosTurnosHoy.length > 0 ? (
-        <MarcianosTurnosHoy turnos={marcianosTurnosHoy} />
-      ) : null}
     </div>
   );
 }
-
-function OverviewPill({
-  label,
-  value,
-  highlight = false,
-}: {
-  label: string;
-  value: string;
-  highlight?: boolean;
-}) {
-  return (
-    <span
-      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${
-        highlight
-          ? "border-[#8cff59]/20 bg-[rgba(140,255,89,0.07)] text-[#b9ff96]"
-          : "border-white/10 bg-white/[0.04] text-zinc-300"
-      }`}
-    >
-      <span className="text-zinc-500">{label}</span>
-      <span className={highlight ? "text-[#d9ffbf]" : "text-white"}>{value}</span>
-    </span>
-  );
-}
-
-function StatusRailCard({
-  eyebrow,
-  value,
-  detail,
-  badge,
-  badgeTone,
-  href,
-  actionLabel,
-}: {
-  eyebrow: string;
-  value: string;
-  detail: string;
-  badge: string;
-  badgeTone?: string;
-  href: string;
-  actionLabel: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group rounded-[28px] border border-zinc-800 bg-[linear-gradient(180deg,rgba(23,23,27,0.96),rgba(12,12,15,0.98))] p-4 shadow-[0_16px_30px_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 hover:border-[#8cff59]/20 sm:p-5"
-    >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">{eyebrow}</p>
-      <p className="font-display mt-3 text-[1.8rem] font-semibold leading-none text-white sm:text-[2rem]">{value}</p>
-      <p className="mt-2.5 max-w-[28ch] text-sm leading-5 text-zinc-400 sm:leading-6">{detail}</p>
-      <div className="mt-4 flex items-end justify-between gap-3">
-        <span
-          className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold ${
-            badgeTone ?? "border-white/10 bg-white/[0.04] text-zinc-300"
-          }`}
-        >
-          {badge}
-        </span>
-        <span className="text-sm font-semibold text-[#8cff59]">{actionLabel}</span>
-      </div>
-    </Link>
-  );
-}
-
-const FACE_SHAPE_LABEL: Record<string, string> = {
-  oval: "Oval",
-  cuadrado: "Cuadrado",
-  redondo: "Redondo",
-  corazon: "Corazón",
-  diamante: "Diamante",
-};
-
-function MarcianosTurnosHoy({
-  turnos,
-}: {
-  turnos: Array<{
-    turnoId: string;
-    horaInicio: string;
-    clienteNombre: string | null;
-    faceShape: string | null;
-    styleProfile: unknown;
-  }>;
-}) {
-  return (
-    <section className="panel-card rounded-[32px] p-4 sm:p-6">
-      <div className="flex items-center justify-between gap-3 mb-5">
-        <div>
-          <p className="eyebrow text-[11px] font-semibold text-[#8cff59]">Marcianos hoy</p>
-          <h2 className="font-display mt-1 text-xl font-semibold text-white">
-            Style DNA activo
-          </h2>
-        </div>
-        <span className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/8 px-3 py-1.5 text-[11px] font-semibold text-[#8cff59]">
-          {turnos.length} {turnos.length === 1 ? "turno" : "turnos"}
-        </span>
-      </div>
-
-      <div className="space-y-3">
-        {turnos.map((t) => {
-          const sp = t.styleProfile as StyleProfile | null;
-          const shape = t.faceShape as FaceShape | null;
-          return (
-            <article
-              key={t.turnoId}
-              className="rounded-[24px] border border-[#8cff59]/15 bg-[#8cff59]/5 p-4"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#8cff59]" />
-                  <p className="text-sm font-semibold text-white">{t.clienteNombre ?? "Marciano"}</p>
-                </div>
-                <span className="text-xs text-zinc-400">{t.horaInicio.slice(0, 5)}</span>
-              </div>
-
-              {sp ? (
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Rostro</p>
-                    <p className="mt-1 text-sm font-semibold text-white">
-                      {shape ? (FACE_SHAPE_LABEL[shape] ?? shape) : "No analizado"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Estilo</p>
-                    <p className="mt-1 text-sm font-semibold text-white">{sp.dominantStyle}</p>
-                  </div>
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Cortes</p>
-                    <p className="mt-1 text-sm font-semibold text-white leading-snug">
-                      {sp.recommendedCuts.slice(0, 2).join(", ")}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-zinc-500">Sin perfil de estilo completado aún.</p>
-              )}
-            </article>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-

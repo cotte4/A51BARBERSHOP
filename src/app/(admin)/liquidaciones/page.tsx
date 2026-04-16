@@ -6,21 +6,13 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { barberos, liquidaciones } from "@/db/schema";
 import { formatFecha } from "@/lib/fecha";
-
-function formatARS(value: string | null | undefined): string {
-  if (!value) return "$0";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(value));
-}
+import { formatARS } from "@/lib/format";
 
 function formatPeriodo(inicio: string | null, fin: string | null) {
   if (inicio && fin && inicio === fin) {
     return formatFecha(inicio);
   }
-  return `${formatFecha(inicio)} - ${formatFecha(fin)}`;
+  return `${formatFecha(inicio)} al ${formatFecha(fin)}`;
 }
 
 function StatCard({

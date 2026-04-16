@@ -3,22 +3,11 @@ import { notFound } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { servicios, serviciosPreciosHistorial } from "@/db/schema";
+import { formatARS } from "@/lib/format";
+import { formatFecha } from "@/lib/fecha";
 
 interface HistorialServicioPageProps {
   params: Promise<{ id: string }>;
-}
-
-function formatARS(val: string | null | undefined) {
-  if (!val) return "-";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(val));
-}
-
-function formatFecha(fecha: string) {
-  return new Date(fecha).toLocaleDateString("es-AR", { timeZone: "UTC" });
 }
 
 export default async function HistorialServicioPage({

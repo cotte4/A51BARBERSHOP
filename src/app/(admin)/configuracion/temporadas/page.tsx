@@ -2,13 +2,9 @@ import { db } from "@/db";
 import { temporadas } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import Link from "next/link";
+import { formatFecha } from "@/lib/fecha";
 import TemporadaDeleteButton from "./_TemporadaDeleteButton";
 
-function formatFecha(fecha: string | null): string {
-  if (!fecha) return "-";
-  const [year, month, day] = fecha.split("-");
-  return `${day}/${month}/${year}`;
-}
 
 function temporadaEstado(
   temporada: {

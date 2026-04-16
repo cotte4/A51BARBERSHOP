@@ -4,19 +4,10 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { barberos, liquidaciones } from "@/db/schema";
 import { formatFecha, formatFechaHora } from "@/lib/fecha";
+import { formatARS } from "@/lib/format";
 import { marcarPagada } from "../actions";
 import MarcarPagadaButton from "./_MarcarPagadaButton";
 import PrintButton from "./_PrintButton";
-
-function formatARS(val: string | number | null | undefined): string {
-  if (val === null || val === undefined || val === "") return "$0";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Number(val));
-}
 
 function MetricCard({
   label,

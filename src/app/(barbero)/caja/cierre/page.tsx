@@ -16,6 +16,7 @@ import {
 import { buildCierreResumen } from "@/lib/caja-finance";
 import CerrarCajaButton from "@/components/caja/CerrarCajaButton";
 import EfectivoChecker from "@/components/caja/EfectivoChecker";
+import { formatARS } from "@/lib/format";
 import { cerrarCaja } from "../actions";
 
 type SummaryCard = {
@@ -462,14 +463,6 @@ export default async function CierrePage() {
       </div>
     </main>
   );
-}
-
-function formatARS(val: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(val);
 }
 
 function getFechaHoy(): string {

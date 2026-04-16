@@ -7,24 +7,8 @@ import { barberShopAssets } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import DarDeBajaButton from "./_DarDeBajaButton";
 import { ASSET_CATEGORIAS, type AssetCategoria } from "./types";
-
-function formatARS(value: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatFecha(dateStr: string): string {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const d = new Date(year, month - 1, day);
-  return new Intl.DateTimeFormat("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(d);
-}
+import { formatARS } from "@/lib/format";
+import { formatFecha } from "@/lib/fecha";
 
 const CATEGORIA_COLORS: Record<AssetCategoria, string> = {
   Mobiliario: "border-sky-500/30 bg-sky-500/10 text-sky-300",

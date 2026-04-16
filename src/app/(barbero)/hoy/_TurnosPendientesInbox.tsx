@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import type { TurnoActionState } from "@/app/(admin)/turnos/actions";
 import type { TurnoSummary } from "@/lib/types";
 
-type TurnoConAcciones = {
+export type TurnoConAcciones = {
   turno: TurnoSummary;
   confirmarAction: (prevState: TurnoActionState) => Promise<TurnoActionState>;
   rechazarAction: (prevState: TurnoActionState, formData: FormData) => Promise<TurnoActionState>;

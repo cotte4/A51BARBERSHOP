@@ -3,22 +3,9 @@ import { costosFijosNegocio, costosFijosValores, capitalMovimientos } from "@/db
 import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import BrandMark from "@/components/BrandMark";
+import { formatARS } from "@/lib/format";
+import { formatFecha } from "@/lib/fecha";
 import { eliminarCosto, eliminarMovimiento, copiarMesAnterior } from "./actions";
-
-function formatARS(val: string | number | null | undefined) {
-  if (val === null || val === undefined) return "—";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(val));
-}
-
-function formatFecha(val: string | null) {
-  if (!val) return "-";
-  const [year, month, day] = val.split("-");
-  return `${day}/${month}/${year}`;
-}
 
 function getMesActualAR(): string {
   return new Date().toLocaleDateString("en-CA", {

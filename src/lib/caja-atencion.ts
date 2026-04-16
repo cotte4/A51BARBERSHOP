@@ -155,7 +155,9 @@ export async function crearAtencionDesdeInput(input: AtencionCreationInput) {
   const comisionMpMonto = (precioCobrado * comisionMpPct) / 100;
   const montoNeto = precioCobrado - comisionMpMonto;
   const comisionBarberoPct = Number(barbero.porcentajeComision ?? 0);
-  const comisionBarberoMonto = (precioCobrado * comisionBarberoPct) / 100;
+  // Comisión del barbero se calcula SOLO sobre el precio base del servicio, no sobre la propina
+  const baseParaComision = Math.min(precioCobrado, Number(servicio.precioBase ?? precioCobrado));
+  const comisionBarberoMonto = (baseParaComision * comisionBarberoPct) / 100;
 
   const adicionalesIds = input.adicionalesIds ?? [];
   const productosSeleccionados = input.productos ?? [];

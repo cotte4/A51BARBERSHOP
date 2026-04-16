@@ -55,16 +55,6 @@ function CalendarIcon() {
   );
 }
 
-function BriefcaseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
-      <rect x="3.5" y="6.5" width="17" height="12" rx="2.5" />
-      <path d="M9 6.5V5.75A1.75 1.75 0 0 1 10.75 4h2.5A1.75 1.75 0 0 1 15 5.75v.75" />
-      <path d="M3.5 11.5h17" />
-      <path d="M10 11.5v2h4v-2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 function MusicIcon() {
   return (
@@ -108,21 +98,42 @@ function ChartIcon() {
   );
 }
 
-function DocumentIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
-      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14 3v5h5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8 13h8M8 17h5" strokeLinecap="round" />
-    </svg>
-  );
-}
 
 function FinanzasIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v1.5m0 7V17m0-8.5c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ScissorsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <circle cx="6" cy="6" r="2.5" />
+      <circle cx="6" cy="18" r="2.5" />
+      <path d="M8.5 6 20 12 8.5 18" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ClipboardCheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M9 5H7a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2Z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 13l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function CashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <rect x="2.5" y="6.5" width="19" height="11" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M6 9.5v5M18 9.5v5" strokeLinecap="round" />
     </svg>
   );
 }
@@ -137,65 +148,91 @@ function SettingsIcon() {
   );
 }
 
-function getNavItems(isAdmin: boolean): NavItem[] {
-  const items: NavItem[] = [
-    {
-      href: "/hoy",
-      label: "Hoy",
-      icon: <HomeIcon />,
-      isActive: (pathname) => pathname === "/hoy",
-    },
-    {
-      href: "/caja",
-      label: "Caja",
-      icon: <WalletIcon />,
-      isActive: (pathname) => pathname.startsWith("/caja"),
-    },
-    {
-      href: "/clientes",
-      label: "Clientes",
-      icon: <UsersIcon />,
-      isActive: (pathname) => pathname.startsWith("/clientes"),
-    },
-    {
-      href: "/turnos",
-      label: "Turnos",
-      icon: <CalendarIcon />,
-      isActive: (pathname) => pathname.startsWith("/turnos"),
-    },
-    {
-      href: "/musica",
-      label: "Musica",
-      icon: <MusicIcon />,
-      isActive: (pathname) => pathname.startsWith("/musica"),
-    },
-    {
-      href: "/mi-progreso",
-      label: "Progreso",
-      icon: <TrophyIcon />,
-      isActive: (pathname) => pathname.startsWith("/mi-progreso"),
-    },
-  ];
+const BARBERO_NAV_ITEMS: NavItem[] = [
+  {
+    href: "/hoy",
+    label: "Hoy",
+    icon: <HomeIcon />,
+    isActive: (pathname) => pathname === "/hoy",
+  },
+  {
+    href: "/caja",
+    label: "Caja",
+    icon: <WalletIcon />,
+    isActive: (pathname) => pathname.startsWith("/caja"),
+  },
+  {
+    href: "/clientes",
+    label: "Clientes",
+    icon: <UsersIcon />,
+    isActive: (pathname) => pathname.startsWith("/clientes"),
+  },
+  {
+    href: "/turnos",
+    label: "Turnos",
+    icon: <CalendarIcon />,
+    isActive: (pathname) => pathname.startsWith("/turnos"),
+  },
+  {
+    href: "/mi-progreso",
+    label: "Progreso",
+    icon: <TrophyIcon />,
+    isActive: (pathname) => pathname.startsWith("/mi-progreso"),
+  },
+];
 
-  if (isAdmin) {
-    items.push({
-      href: "/negocio",
-      label: "Negocio",
-      icon: <BriefcaseIcon />,
-      isActive: (pathname) =>
-        pathname.startsWith("/negocio") ||
-        pathname.startsWith("/dashboard") ||
-        pathname.startsWith("/configuracion") ||
-        pathname.startsWith("/liquidaciones") ||
-        pathname.startsWith("/inventario") ||
-        pathname.startsWith("/repago") ||
-        pathname.startsWith("/mi-resultado") ||
-        pathname.startsWith("/gastos-rapidos"),
-    });
-  }
+const ADMIN_NAV_LEFT: NavItem[] = [
+  {
+    href: "/hoy",
+    label: "Hoy",
+    icon: <HomeIcon />,
+    isActive: (pathname) => pathname === "/hoy" || pathname.startsWith("/hoy/"),
+  },
+  {
+    href: "/caja",
+    label: "Caja",
+    icon: <ScissorsIcon />,
+    isActive: (pathname) =>
+      pathname === "/caja" ||
+      pathname === "/caja/nueva" ||
+      pathname === "/caja/vender" ||
+      (pathname.startsWith("/caja/") && !pathname.startsWith("/caja/cierre")),
+  },
+  {
+    href: "/caja/cierre",
+    label: "Cierre",
+    icon: <ClipboardCheckIcon />,
+    isActive: (pathname) => pathname.startsWith("/caja/cierre"),
+  },
+  {
+    href: "/gastos-rapidos",
+    label: "Gasto",
+    icon: <CashIcon />,
+    isActive: (pathname) => pathname.startsWith("/gastos-rapidos"),
+  },
+];
 
-  return items;
-}
+const ADMIN_NAV_RIGHT: NavItem[] = [
+  {
+    href: "/dashboard",
+    label: "Gestión",
+    icon: <ChartIcon />,
+    isActive: (pathname) =>
+      pathname.startsWith("/dashboard") ||
+      pathname.startsWith("/liquidaciones") ||
+      pathname.startsWith("/inventario") ||
+      pathname.startsWith("/repago") ||
+      pathname.startsWith("/mi-resultado") ||
+      pathname.startsWith("/turnos") ||
+      pathname.startsWith("/clientes"),
+  },
+  {
+    href: "/configuracion",
+    label: "Config",
+    icon: <SettingsIcon />,
+    isActive: (pathname) => pathname.startsWith("/configuracion"),
+  },
+];
 
 function getAsesorNavItems(): NavItem[] {
   return [
@@ -267,13 +304,66 @@ export default function RoleBottomNav({
     );
   }
 
-  const navItems = getNavItems(isAdmin);
+  if (isAdmin) {
+    return (
+      <nav className="fixed inset-x-0 bottom-4 z-30 px-3 sm:px-4">
+        <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
+          <div className="flex items-center gap-1">
+            {/* Grupo izquierdo — Operación del día */}
+            <div className="grid flex-1 grid-cols-4 gap-1">
+              {ADMIN_NAV_LEFT.map((item) => {
+                const active = item.isActive(pathname);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex min-h-[58px] flex-col items-center justify-center rounded-[20px] px-1 py-2 text-center text-[11px] font-semibold transition ${
+                      active
+                        ? "bg-[#8cff59] text-[#07130a] shadow-[0_12px_24px_rgba(140,255,89,0.18)]"
+                        : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <span>{item.icon}</span>
+                    <span className="mt-1 leading-none">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Divisor vertical */}
+            <div className="mx-1 h-10 w-px shrink-0 rounded-full bg-zinc-700/60" />
+
+            {/* Grupo derecho — Gestión */}
+            <div className="grid grid-cols-2 gap-1">
+              {ADMIN_NAV_RIGHT.map((item) => {
+                const active = item.isActive(pathname);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex min-h-[58px] flex-col items-center justify-center rounded-[20px] px-2 py-2 text-center text-[11px] font-semibold transition ${
+                      active
+                        ? "bg-[#8cff59] text-[#07130a] shadow-[0_12px_24px_rgba(140,255,89,0.18)]"
+                        : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <span>{item.icon}</span>
+                    <span className="mt-1 leading-none">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className="fixed inset-x-0 bottom-4 z-30 px-3 sm:px-4">
       <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
-        <div className="grid grid-cols-6 gap-1">
-          {navItems.map((item) => {
+        <div className="grid grid-cols-5 gap-1">
+          {BARBERO_NAV_ITEMS.map((item) => {
             const active = item.isActive(pathname);
             return (
               <Link

@@ -3,22 +3,9 @@ import { gastos, categoriasGasto } from "@/db/schema";
 import { hasGastosRapidosSchema } from "@/lib/gastos-rapidos-server";
 import { desc, eq, isNull, or } from "drizzle-orm";
 import Link from "next/link";
+import { formatARS } from "@/lib/format";
+import { formatFecha } from "@/lib/fecha";
 import GastoDeleteButton from "./_GastoDeleteButton";
-
-function formatARS(val: string | null) {
-  if (!val) return "-";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(Number(val));
-}
-
-function formatFecha(val: string | null) {
-  if (!val) return "-";
-  const [year, month, day] = val.split("-");
-  return `${day}/${month}/${year}`;
-}
 
 function frecuenciaLabel(frecuencia: string | null) {
   if (!frecuencia) return null;
