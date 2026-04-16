@@ -4,8 +4,9 @@ import { notFound } from "next/navigation";
 import BarberoForm from "@/components/configuracion/BarberoForm";
 import ToggleActivoButton from "@/components/configuracion/ToggleActivoButton";
 import { db } from "@/db";
-import { barberos, mediosPago, servicios } from "@/db/schema";
+import { barberoPortfolioItems, barberos, mediosPago, servicios } from "@/db/schema";
 import { editarBarbero, toggleActivoBarbero } from "../../actions";
+import PortfolioAdmin from "./_PortfolioAdmin";
 
 interface EditarBarberoPageProps {
   params: Promise<{ id: string }>;
@@ -14,7 +15,7 @@ interface EditarBarberoPageProps {
 export default async function EditarBarberoPage({ params }: EditarBarberoPageProps) {
   const { id } = await params;
 
-  const [[barbero], serviciosActivos, mediosPagoActivos] = await Promise.all([
+  const [[barbero], serviciosActivos, mediosPagoActivos, portfolioItems] = await Promise.all([
     db.select().from(barberos).where(eq(barberos.id, id)).limit(1),
     db
       .select({ id: servicios.id, nombre: servicios.nombre })
@@ -24,6 +25,11 @@ export default async function EditarBarberoPage({ params }: EditarBarberoPagePro
       .select({ id: mediosPago.id, nombre: mediosPago.nombre })
       .from(mediosPago)
       .where(eq(mediosPago.activo, true)),
+    db
+      .select()
+      .from(barberoPortfolioItems)
+      .where(eq(barberoPortfolioItems.barberoId, id))
+      .orderBy(barberoPortfolioItems.orden),
   ]);
 
   if (!barbero) {
@@ -87,6 +93,8 @@ export default async function EditarBarberoPage({ params }: EditarBarberoPagePro
         mediosPagoOptions={mediosPagoActivos}
         submitLabel="Guardar cambios"
       />
+
+      <PortfolioAdmin barberoId={id} items={portfolioItems} />
     </div>
   );
 }

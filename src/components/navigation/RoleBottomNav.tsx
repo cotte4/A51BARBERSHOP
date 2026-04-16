@@ -76,6 +76,17 @@ function MusicIcon() {
   );
 }
 
+function TrophyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M8 21h8M12 17v4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 3H3v5a4 4 0 0 0 4 4h1" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M19 3h2v5a4 4 0 0 1-4 4h-1" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 3h10v8a5 5 0 0 1-10 0V3Z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function ResultadoIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
@@ -157,6 +168,12 @@ function getNavItems(isAdmin: boolean): NavItem[] {
       label: "Musica",
       icon: <MusicIcon />,
       isActive: (pathname) => pathname.startsWith("/musica"),
+    },
+    {
+      href: "/mi-progreso",
+      label: "Progreso",
+      icon: <TrophyIcon />,
+      isActive: (pathname) => pathname.startsWith("/mi-progreso"),
     },
   ];
 
@@ -255,7 +272,7 @@ export default function RoleBottomNav({
   return (
     <nav className="fixed inset-x-0 bottom-4 z-30 px-3 sm:px-4">
       <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
-        <div className={`grid gap-1 ${isAdmin ? "grid-cols-6" : "grid-cols-5"}`}>
+        <div className="grid grid-cols-6 gap-1">
           {navItems.map((item) => {
             const active = item.isActive(pathname);
             return (

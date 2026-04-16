@@ -1006,3 +1006,65 @@ export const capitalMovimientos = pgTable(
     index("capital_movimientos_fecha_idx").on(table.fecha),
   ]
 );
+
+// ————————————————————————————
+// HISTORIAL DE CORTES DEL BARBERO
+// ————————————————————————————
+export const barberCutsLog = pgTable(
+  "barber_cuts_log",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    barberoId: uuid("barbero_id")
+      .notNull()
+      .references(() => barberos.id, { onDelete: "cascade" }),
+    fecha: date("fecha").notNull(),
+    servicioNombre: text("servicio_nombre").notNull(),
+    clienteNombre: text("cliente_nombre"),
+    fotoUrl: text("foto_url"),
+    notas: text("notas"),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index("barber_cuts_log_barbero_fecha_idx").on(table.barberoId, table.fecha),
+  ]
+);
+
+// ————————————————————————————
+// PORTFOLIO DEL BARBERO
+// ————————————————————————————
+export const barberoPortfolioItems = pgTable(
+  "barbero_portfolio_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    barberoId: uuid("barbero_id")
+      .notNull()
+      .references(() => barberos.id, { onDelete: "cascade" }),
+    fotoUrl: text("foto_url").notNull(),
+    caption: text("caption"),
+    orden: integer("orden").notNull().default(0),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index("portfolio_barbero_idx").on(table.barberoId),
+  ]
+);
+
+// ————————————————————————————
+// ACTIVOS DEL LOCAL
+// ————————————————————————————
+export const barberShopAssets = pgTable("barber_shop_assets", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  nombre: text("nombre").notNull(),
+  categoria: text("categoria")
+    .notNull()
+    .$type<"Mobiliario" | "Equipamiento" | "Iluminación" | "Herramientas" | "Tecnología" | "Otros">(),
+  precioCompra: numeric("precio_compra", { precision: 12, scale: 2 }).notNull(),
+  fechaCompra: date("fecha_compra").notNull(),
+  proveedor: text("proveedor"),
+  notas: text("notas"),
+  estado: text("estado")
+    .notNull()
+    .default("activo")
+    .$type<"activo" | "dado_de_baja">(),
+  creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
+});

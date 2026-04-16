@@ -1,5 +1,7 @@
+import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import PublicReservaAccessGate from "@/components/turnos/PublicReservaAccessGate";
+import PortfolioGallery from "@/components/turnos/PortfolioGallery";
 import ReservaForm from "../../../components/turnos/ReservaForm";
 import { canAccessPublicReserva } from "@/lib/public-reserva-access";
 import {
@@ -8,6 +10,8 @@ import {
   getServiciosPublicos,
   resolvePublicBarberoBySlug,
 } from "@/lib/turnos";
+import { db } from "@/db";
+import { barberoPortfolioItems } from "@/db/schema";
 
 type ReservarPageProps = {
   params: Promise<{ slug: string }>;
@@ -36,9 +40,15 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
     );
   }
 
-  const [productos, servicios] = await Promise.all([
+  const [productos, servicios, portfolioItems] = await Promise.all([
     getProductosExtrasActivos(),
     getServiciosPublicos(),
+    db
+      .select()
+      .from(barberoPortfolioItems)
+      .where(eq(barberoPortfolioItems.barberoId, barbero.id))
+      .orderBy(barberoPortfolioItems.orden)
+      .limit(12),
   ]);
 
   return (
@@ -83,6 +93,15 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
               ))}
             </div>
           </section>
+
+          {portfolioItems.length > 0 && (
+            <section className="public-panel mt-6 rounded-[30px] border border-white/10 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8cff59]">
+                Trabajos de {barbero.nombre}
+              </p>
+              <PortfolioGallery items={portfolioItems} />
+            </section>
+          )}
 
           <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
             <div className="space-y-5">
