@@ -151,7 +151,6 @@ function DrumPicker({
           paddingTop: padding,
           paddingBottom: padding,
           scrollbarWidth: "none",
-          // @ts-expect-error vendor prefix
           WebkitOverflowScrolling: "touch",
         }}
       >
