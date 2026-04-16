@@ -1,7 +1,7 @@
 # A51 Barber - PRD Live
 
 **Estado real del sistema**
-Actualizado: 15/04/2026 (sesion 22)
+Actualizado: 16/04/2026 (sesion 25)
 
 ## 1. Proposito del documento
 
@@ -467,7 +467,7 @@ Implementado en:
 
 Estado verificado (04/04/2026 sesion 16):
 
-- la navegacion es un bottom nav fijo con 5 tabs para barbero (Hoy, Caja, Clientes, Turnos, Musica) y 6 tabs para admin (agrega Negocio)
+- la navegacion es un bottom nav fijo con 6 tabs para barbero (Hoy, Caja, Clientes, Turnos, Musica, Progreso) y 6 tabs para admin (agrega Negocio)
 - el tab "Negocio" agrupa todo lo que pertenece al rol de owner: dashboard, cierre, inventario, liquidaciones, mi-resultado, repago, configuracion, gastos-rapidos
 - `/negocio` es un hub de links agrupados por categoria: Ventas y caja, Inventario, Barberos, Pagos, Configuracion
 - esta estructura implementa la separacion PRD entre operacion del dia (Hoy/Caja/Clientes/Turnos) y gestion del negocio (Negocio), sin necesitar dos secciones literales en la nav
@@ -535,6 +535,97 @@ Estado verificado (15/04/2026):
 
 - TypeScript limpio en todos los archivos modificados/creados
 - `DeleteButton` y `ToggleActivoButton` ya no rompen el dark theme con clases light
+
+### Historial de Cortes + Progreso del Barbero (sesion 23, 16/04/2026)
+
+Implementado en:
+
+- `src/db/schema.ts` — tabla `barber_cuts_log` con índice `(barberoId, fecha)`
+- `src/lib/barber-progress.ts` — `getLevel(totalCuts)`: Rookie (0–49) → Junior (50–149) → Senior (150–299) → Master (300+)
+- `src/app/(barbero)/mi-progreso/page.tsx` — nivel badge, barra de progreso, grid de últimos 20 cortes con fotos
+- `src/app/(barbero)/mi-progreso/nuevo/page.tsx` — wrapper server component con auth check
+- `src/app/(barbero)/mi-progreso/nuevo/_NuevoCorteForm.tsx` — form cliente: servicio, cliente (opcional), fecha, notas, foto con preview y validación 5MB
+- `src/app/(barbero)/mi-progreso/nuevo/actions.ts` — `registrarCorteAction`: upload a Vercel Blob path `barber-cuts/{barberoId}/{timestamp}.jpg`, insert en DB, revalidate + redirect
+- `src/components/navigation/RoleBottomNav.tsx` — tab "Progreso" (TrophyIcon) agregado al array de barbero; barbero pasa a `grid-cols-6` igual que admin
+
+Rutas nuevas:
+- `/mi-progreso`
+- `/mi-progreso/nuevo`
+
+### Portfolio del Barbero en la Landing (sesion 23, 16/04/2026)
+
+Implementado en:
+
+- `src/db/schema.ts` — tabla `barbero_portfolio_items` con `barberoId`, `fotoUrl`, `caption`, `orden`
+- `src/app/(admin)/configuracion/barberos/[id]/editar/actions.ts` — `subirFotoPortfolioAction` (upload múltiple a Blob, límite 12, max 8MB/foto) + `eliminarFotoPortfolioAction`; ambas con `requireAdminSession()`
+- `src/app/(admin)/configuracion/barberos/[id]/editar/_PortfolioAdmin.tsx` — grid de fotos, form upload múltiple, contador N/12, botón eliminar, `router.refresh()` post-upload
+- `src/app/(admin)/configuracion/barberos/[id]/editar/page.tsx` — query portfolio en `Promise.all`, render `_PortfolioAdmin` debajo del form existente
+- `src/components/turnos/PortfolioGallery.tsx` — grid 2/3 cols con `next/image` y captions
+- `src/app/reservar/[slug]/page.tsx` — query portfolio items en `Promise.all`, sección condicional entre el hero y el form de reserva
+
+### Activos del Local (sesion 23, 16/04/2026)
+
+Implementado en:
+
+- `src/db/schema.ts` — tabla `barber_shop_assets` (nombre, categoria, precioCompra, fechaCompra, proveedor, notas, estado)
+- `src/app/(admin)/negocio/activos/actions.ts` — `crearAssetAction` + `darDeBajaAssetAction`; categorías: Mobiliario, Equipamiento, Iluminación, Herramientas, Tecnología, Otros
+- `src/app/(admin)/negocio/activos/nuevo/_NuevoAssetForm.tsx` — form cliente con 6 campos
+- `src/app/(admin)/negocio/activos/nuevo/page.tsx` — wrapper server component con auth check
+- `src/app/(admin)/negocio/activos/page.tsx` — resumen total invertido + desglose por categoría (clickeable como filtro URL), lista completa con badge estado, botón "Dar de baja"
+- `src/app/(admin)/negocio/activos/_DarDeBajaButton.tsx` — botón cliente para baja sin borrar registro
+- `src/app/(admin)/negocio/page.tsx` — link "Equipamiento" agregado a `utilityLinks`
+
+Rutas nuevas:
+- `/negocio/activos`
+- `/negocio/activos/nuevo`
+
+Migración `0012_salty_santa_claus.sql` aplicada a Neon (db:push 16/04/2026).
+
+### Nav Dividida para Pinky — Admin+Barbero (sesion 25, 16/04/2026)
+
+Implementado en:
+
+- `src/components/navigation/RoleBottomNav.tsx` — nav admin rediseñada: 6 ítems en 2 grupos separados por divisor vertical. Grupo operativo: Hoy, Caja, Cierre, Gasto. Grupo gestión: Gestión (dashboard+), Config. Barbero sin cambios.
+- `src/proxy.ts` — redirect admin desde `/` va a `/hoy` (no `/dashboard`) porque Pinky es admin+barbero y `/hoy` es su pantalla de entrada diaria.
+
+Concepto validado: Pinky tiene rol admin Y barbero. Gabote solo barbero. Was es asesor.
+
+### Vista Hoy — HoyDashboard (sesion 24-25, 16/04/2026)
+
+Implementado en:
+
+- `src/app/(barbero)/hoy/_HoyDashboard.tsx` — reescritura completa como Client Component con layout full-screen mobile-first
+- `src/app/(barbero)/hoy/page.tsx` — server component delegando a HoyDashboard
+- `src/app/(barbero)/hoy/_TurnosPendientesInbox.tsx` — `TurnoConAcciones` exportada como tipo público
+
+Layout: barra superior (fecha + KPIs del día), botón COBRAR dominante (abre overlay), grid 2 columnas (TURNOS + MÚSICA), footer con próximo turno. Sin scroll en la vista principal.
+
+### QuickCheckoutPanel — Drum Picker + Propina (sesion 25, 16/04/2026)
+
+Implementado en:
+
+- `src/components/caja/QuickCheckoutPanel.tsx` — reescritura completa
+
+Cambios:
+- **Drum picker de precio**: scroll vertical con `scroll-snap-type: y mandatory`, saltos de $500 ARS, estilo iOS alarm clock. Ítems adyacentes dimados (40%/18% opacity, scale 88%/76%). Se inicializa en el precio base del servicio seleccionado y se regenera con `useMemo` al cambiar de servicio.
+- **4 boxes de medio de pago**: grid 2×2 en lugar del cycler. El activo resaltado en verde.
+- **Display de propina**: cuando `precio > basePrice` aparece `Corte $X.XXX + Propina $X.XXX` en ámbar debajo del drum.
+
+### Comisión Gabote — Solo sobre Precio Base (sesion 25, 16/04/2026)
+
+Implementado en:
+
+- `src/lib/caja-atencion.ts` — `baseParaComision = Math.min(precioCobrado, servicio.precioBase)`. La comisión del barbero se calcula sobre el precio base del servicio, no sobre la propina. Si el cliente paga propina, esa diferencia no entra en el 60% de Gabote.
+
+### Formato de Fechas DD/MM/YYYY (sesion 25, 16/04/2026)
+
+Corregidos 5 archivos que usaban formateo manual o timezone incorrecto, reemplazados por `formatFecha()` de `@/lib/fecha`:
+
+- `configuracion/gastos-fijos/page.tsx`
+- `configuracion/temporadas/page.tsx`
+- `configuracion/servicios/[id]/historial/page.tsx`
+- `negocio/activos/page.tsx`
+- `finanzas/page.tsx`
 
 ## 7. Verificacion tecnica
 
