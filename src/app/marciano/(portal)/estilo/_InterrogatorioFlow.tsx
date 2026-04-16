@@ -379,7 +379,7 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
         <Spinner />
         <p className="text-sm text-zinc-400">Generando tu Perfil Marciano...</p>
         <p className="text-xs text-zinc-600 text-center max-w-[220px]">
-          Tu avatar alien se va a generar en segundo plano. Vas a verlo en tu dashboard.
+          Creando tu avatar alien. Puede tardar hasta 30 segundos.
         </p>
       </div>
     );

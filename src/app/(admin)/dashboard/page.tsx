@@ -85,45 +85,6 @@ export default async function DashboardPage() {
     },
   ];
 
-  const accesosOperativos = [
-    {
-      href: "/gastos-rapidos",
-      icon: "💸",
-      title: "Historial de gastos",
-      detail: "Gastos rapidos del mes",
-    },
-    {
-      href: "/configuracion/medios-de-pago",
-      icon: "💳",
-      title: "Medios de pago",
-      detail: "Comisiones y canales de cobro",
-    },
-    {
-      href: "/repago",
-      icon: "🔄",
-      title: "Repago",
-      detail: "Seguir cuotas y saldo pendiente",
-    },
-  ];
-
-  const finanzasSecundarias = [
-    {
-      href: "/dashboard/pl",
-      title: "P&L mensual",
-      detail: "Resultado detallado del negocio",
-    },
-    {
-      href: "/dashboard/flujo",
-      title: "Flujo mensual",
-      detail: "Ingresos y egresos por dia",
-    },
-    {
-      href: "/dashboard/temporadas",
-      title: "Temporadas",
-      detail: "Proyectado vs real",
-    },
-  ];
-
   const bepLabel = bep.sinReferencia
     ? "Todavia no hay referencia para el objetivo diario."
     : bep.superado
@@ -148,10 +109,6 @@ export default async function DashboardPage() {
                 <h1 className="font-display mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                   Panel ejecutivo del dia
                 </h1>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
-                  Lo critico arriba, lo tactico en el medio y lo historico abajo. Si hay que decidir
-                  rapido, esta es la pantalla.
-                </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-semibold text-zinc-200">
                     {formatFechaHoy(kpisDia.fechaHoy)}
@@ -350,22 +307,6 @@ export default async function DashboardPage() {
                 </p>
               </div>
             </div>
-
-            <div className="mt-4 divide-y divide-zinc-800 overflow-hidden rounded-[24px] border border-zinc-800">
-              {finanzasSecundarias.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center justify-between gap-4 px-4 py-4 transition hover:bg-white/4"
-                >
-                  <div>
-                    <p className="font-semibold text-white">{item.title}</p>
-                    <p className="mt-1 text-sm text-zinc-400">{item.detail}</p>
-                  </div>
-                  <span className="text-lg text-[#8cff59]">→</span>
-                </Link>
-              ))}
-            </div>
           </div>
 
           <div className="panel-card rounded-[28px] p-5">
@@ -374,23 +315,19 @@ export default async function DashboardPage() {
               Gestion del negocio
             </h2>
 
-            <div className="mt-4 divide-y divide-zinc-800 overflow-hidden rounded-[24px] border border-zinc-800">
-              {accesosOperativos.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center gap-4 bg-zinc-950/25 px-4 py-4 transition hover:bg-white/4"
-                >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#8cff59]/20 bg-[#8cff59]/10 text-xl">
-                    {item.icon}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-white">{item.title}</p>
-                    <p className="mt-1 text-sm text-zinc-400">{item.detail}</p>
-                  </div>
-                  <span className="text-lg text-[#8cff59]">→</span>
-                </Link>
-              ))}
+            <div className="mt-4 flex flex-col gap-2">
+              <Link href="/gastos-rapidos" className="text-sm text-zinc-400 hover:text-[#8cff59]">
+                Historial de gastos
+              </Link>
+              <Link
+                href="/configuracion/medios-de-pago"
+                className="text-sm text-zinc-400 hover:text-[#8cff59]"
+              >
+                Medios de pago
+              </Link>
+              <Link href="/repago" className="text-sm text-zinc-400 hover:text-[#8cff59]">
+                Repago
+              </Link>
             </div>
           </div>
         </section>

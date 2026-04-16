@@ -1,17 +1,41 @@
 import Replicate from "replicate";
+import Anthropic from "@anthropic-ai/sdk";
 import { put } from "@vercel/blob";
 
-// Prompt v3 — 13/04/2026 (ajustado a identidad A51 + cliente Marciano, no barbero)
-// {COLOR} aplica solo a la piel alien. Ropa/props quedan libres al modelo para variedad.
-// Fondo alineado a branding A51 (negro + barber pole verde neón #8cff59).
-const AVATAR_PROMPT =
-  "flat 2D cartoon illustration of a Marciano, an alien VIP customer of A51 barbershop in Buenos Aires, " +
-  "{COLOR} smooth alien skin, large solid black eyes with tiny white dot pupils, " +
-  "confident relaxed expression, premium chill vibe, bust portrait centered, " +
-  "urban streetwear rooted in Argentinian trap culture, " +
-  "background: deep black space with a glowing neon green #8cff59 barber pole hologram, scattered small stars, " +
-  "bold black outlines, vibrant flat colors, clean cel-shading, " +
-  "no photorealism, 2D digital illustration";
+// Claude describe el pelo y rasgos para refinar el prompt
+async function describeFaceForAvatar(frameBase64: string): Promise<string> {
+  try {
+    const client = new Anthropic();
+    const msg = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 60,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: { type: "base64", media_type: "image/jpeg", data: frameBase64 },
+            },
+            {
+              type: "text",
+              text: `Describe the hair and one distinctive facial feature of this person for a cartoon avatar.
+Reply in English, exact format: "hair: X, distinctive: X"
+Hair: describe color + style (ex: "black short fade", "brown wavy medium", "blonde buzz cut")
+Distinctive: one feature (ex: "strong jawline", "thick eyebrows", "wide smile", "sharp cheekbones")`,
+            },
+          ],
+        },
+      ],
+    });
+
+    const raw = msg.content[0].type === "text" ? msg.content[0].text.trim() : "";
+    console.log("[avatar] Face description:", raw);
+    return raw;
+  } catch {
+    return "hair: black short fade, distinctive: sharp eyes";
+  }
+}
 
 export async function generateAvatar(
   frameBase64: string,
@@ -19,41 +43,55 @@ export async function generateAvatar(
   clientId: string
 ): Promise<string | null> {
   try {
-    const replicate = new Replicate({
-      auth: process.env.REPLICATE_API_TOKEN!,
-    });
+    console.log("[avatar] Describiendo cara con Claude...");
+    const faceDescription = await describeFaceForAvatar(frameBase64);
 
-    const prompt = AVATAR_PROMPT.replace(/\{COLOR\}/g, favoriteColor);
+    const stylePrompt =
+      `alien character with ${favoriteColor} skin, ${faceDescription}, ` +
+      `oversized hoodie, silver chain, holding styrofoam cup, ` +
+      `Argentinian trap culture, Buenos Aires barbershop, ` +
+      `deep black background with neon green glow and stars, ` +
+      `bust portrait, 2D cartoon illustration, NFT avatar style`;
 
-    // Convertir base64 → Buffer (el SDK de Replicate lo sube automáticamente)
-    const imageBuffer = Buffer.from(frameBase64, "base64");
+    console.log("[avatar] Llamando fofr/face-to-many...");
+    const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN! });
 
-    // Modelo: easel/ai-avatars
-    // Diseñado para producción/apps comerciales (messaging, social, creative apps)
-    // Sin entrenamiento previo, genera desde 1 foto
-    // Docs: https://replicate.com/easel/ai-avatars
-    // Versión pineada: 2025-04-30 — cambiar solo si hay una versión verificada mejor
-    const output = await replicate.run("easel/ai-avatars:27ebf241efeded7a50964c7cff8f27c79e1570674be70d8e1df712ae31857d34", {
-      input: {
-        prompt,
-        face_image: imageBuffer,
-        user_gender: "male",
-      },
-    });
+    const output = await Promise.race([
+      replicate.run("fofr/face-to-many:a07f252abbbd832009640b27f063ea52d87d7a23b8b827de51f9b0ded58a5e05", {
+        input: {
+          image: `data:image/jpeg;base64,${frameBase64}`,
+          style: "3D",
+          prompt: stylePrompt,
+          negative_prompt: "photorealistic, photo, realistic, barber pole",
+          num_outputs: 1,
+        },
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Replicate timeout 90s")), 90000)
+      ),
+    ]);
 
-    // output puede ser FileOutput (ReadableStream con .url()) o string directo
+    console.log("[avatar] fofr respondió. Output:", typeof output, Array.isArray(output) ? "array" : "single");
+
     const replicateFileOutput = Array.isArray(output) ? output[0] : output;
-    if (!replicateFileOutput) return null;
+    if (!replicateFileOutput) {
+      console.log("[avatar] Output vacío");
+      return null;
+    }
 
     const tempUrl =
       typeof replicateFileOutput === "string"
         ? replicateFileOutput
         : (replicateFileOutput as { url: () => string }).url?.();
+
+    console.log("[avatar] URL temporal:", tempUrl);
     if (!tempUrl) return null;
 
-    // Descargar desde la URL temporal de Replicate y persistir en Vercel Blob
     const response = await fetch(tempUrl);
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.log("[avatar] Fetch falló:", response.status);
+      return null;
+    }
     const buffer = await response.arrayBuffer();
 
     const blob = await put(
@@ -62,9 +100,10 @@ export async function generateAvatar(
       { access: "public", contentType: "image/jpeg" }
     );
 
+    console.log("[avatar] Blob OK:", blob.url);
     return blob.url;
   } catch (err) {
-    console.error("generateAvatar error:", err);
+    console.error("[avatar] generateAvatar error:", err);
     return null;
   }
 }

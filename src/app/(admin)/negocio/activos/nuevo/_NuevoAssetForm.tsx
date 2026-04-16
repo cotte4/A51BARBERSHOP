@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { ASSET_CATEGORIAS } from "../actions";
+import { ASSET_CATEGORIAS } from "../types";
 import { crearAssetAction } from "../actions";
 
 function getFechaHoyAR(): string {

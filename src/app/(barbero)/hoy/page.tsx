@@ -114,7 +114,7 @@ export default async function HoyPage() {
     return null;
   }
 
-  const { fechaHoy, inicioMes, finMes } = getMonthBounds();
+  const { fechaHoy } = getMonthBounds();
   const inicioDia = new Date(`${fechaHoy}T00:00:00-03:00`);
   const finDia = new Date(`${fechaHoy}T23:59:59-03:00`);
 
@@ -127,7 +127,6 @@ export default async function HoyPage() {
     productosList,
     turnosHoy,
     marcianosTurnosHoy,
-    atencionesMesRows,
   ] = await Promise.all([
     actor.barberoId
       ? db
@@ -193,22 +192,6 @@ export default async function HoyPage() {
         )
       )
       .orderBy(turnosTable.horaInicio),
-    actor.barberoId
-      ? db
-          .select({
-            precioCobrado: atenciones.precioCobrado,
-            comisionBarberoMonto: atenciones.comisionBarberoMonto,
-          })
-          .from(atenciones)
-          .where(
-            and(
-              eq(atenciones.barberoId, actor.barberoId),
-              eq(atenciones.anulado, false),
-              gte(atenciones.fecha, inicioMes),
-              lte(atenciones.fecha, finMes)
-            )
-          )
-      : Promise.resolve([]),
   ]);
 
   const mediosPagoMap = new Map(mediosPagoList.map((medio) => [medio.id, medio]));
@@ -264,45 +247,6 @@ export default async function HoyPage() {
     (producto) => Number(producto.stockActual ?? 0) <= Number(producto.stockMinimo ?? 0)
   );
 
-  let monthCard: {
-    cortes: number;
-    bruto: number;
-    comision: number;
-    ranking: number;
-    totalBarberos: number;
-  } | null = null;
-
-  if (actor.barberoId) {
-    const rankingBase = await db
-      .select({ barberoId: atenciones.barberoId })
-      .from(atenciones)
-      .where(
-        and(
-          eq(atenciones.anulado, false),
-          gte(atenciones.fecha, inicioMes),
-          lte(atenciones.fecha, finMes)
-        )
-      );
-
-    const rankingMap = rankingBase.reduce<Map<string, number>>((map, row) => {
-      const key = row.barberoId ?? "";
-      map.set(key, (map.get(key) ?? 0) + 1);
-      return map;
-    }, new Map());
-    const ranking = [...rankingMap.entries()].sort((a, b) => b[1] - a[1]);
-
-    monthCard = {
-      cortes: atencionesMesRows.length,
-      bruto: atencionesMesRows.reduce((sum, row) => sum + Number(row.precioCobrado ?? 0), 0),
-      comision: atencionesMesRows.reduce(
-        (sum, row) => sum + Number(row.comisionBarberoMonto ?? 0),
-        0
-      ),
-      ranking: Math.max(1, ranking.findIndex(([barberoId]) => barberoId === actor.barberoId) + 1),
-      totalBarberos: Math.max(1, ranking.length),
-    };
-  }
-
   const fechaLabel = formatFechaHoyLabel(fechaHoy);
   const totalCobrado = ingresosServicios + ingresosProductos;
   const cajaLabel = totalCobrado > 0 ? formatARS(totalCobrado) : "--";
@@ -327,7 +271,6 @@ export default async function HoyPage() {
                 <div className="flex flex-wrap gap-2">
                   <OverviewPill label="Atenciones" value={String(atencionesCount)} highlight />
                   <OverviewPill label="Turnos" value={String(turnosOperativos.length)} />
-                  <OverviewPill label="Alertas stock" value={String(stockAlerts.length)} />
                 </div>
               </div>
 
@@ -421,14 +364,7 @@ export default async function HoyPage() {
         </aside>
       </section>
 
-      <section
-        className={
-          monthCard
-            ? "grid gap-5 xl:grid-cols-[minmax(0,1.9fr)_minmax(320px,1fr)] xl:gap-6"
-            : undefined
-        }
-      >
-        <section className="panel-card rounded-[32px] p-4 sm:p-6">
+      <section className="panel-card rounded-[32px] p-4 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="eyebrow text-[11px] font-semibold">Pulso de caja</p>
@@ -482,39 +418,6 @@ export default async function HoyPage() {
               ))}
             </div>
           )}
-        </section>
-
-        {monthCard ? (
-          <section className="panel-card rounded-[32px] p-4 sm:p-6">
-            <div className="space-y-3">
-              <p className="eyebrow text-[11px] font-semibold">Mi mes</p>
-
-              <h2 className="font-display text-2xl font-semibold text-white">Rendimiento acumulado</h2>
-              <p className="text-sm leading-5 text-zinc-400 sm:leading-6">
-                Cortes, bruto, comision y posicion acumulada hasta hoy.
-              </p>
-            </div>
-
-            <div className="mt-5 rounded-[24px] border border-[#8cff59]/14 bg-[rgba(140,255,89,0.06)] p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#b9ff96]">
-                Comision acumulada
-              </p>
-              <p className="font-display mt-2 text-4xl font-bold text-white">
-                {formatARS(monthCard.comision)}
-              </p>
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <MetricCard label="Cortes" value={String(monthCard.cortes)} />
-              <MetricCard label="Bruto" value={formatARS(monthCard.bruto)} />
-              <MetricCard label="Comision" value={formatARS(monthCard.comision)} />
-              <MetricCard
-                label="Ranking"
-                value={`#${monthCard.ranking} de ${monthCard.totalBarberos}`}
-              />
-            </div>
-          </section>
-        ) : null}
       </section>
 
       <TurnosPendientesInbox
@@ -674,11 +577,3 @@ function MarcianosTurnosHoy({
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/45 px-4 py-4">
-      <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">{label}</p>
-      <p className="mt-2 text-xl font-semibold text-white">{value}</p>
-    </div>
-  );
-}

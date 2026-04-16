@@ -1,7 +1,6 @@
 "use server";
 
 import Anthropic from "@anthropic-ai/sdk";
-import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -99,24 +98,23 @@ export async function saveStyleProfileAction(input: {
       .delete(clientBriefingCache)
       .where(eq(clientBriefingCache.clientId, client.id));
 
+    // Generar avatar alien de forma sincrónica (el usuario espera en la pantalla "saving")
+    if (!client.avatarUrl && input.frameBase64 && input.favoriteColor) {
+      console.log("[avatar] Iniciando generación para client:", client.id);
+      const avatarUrl = await generateAvatar(input.frameBase64, input.favoriteColor, client.id);
+      if (avatarUrl) {
+        console.log("[avatar] Generado OK:", avatarUrl);
+        await db
+          .update(clients)
+          .set({ avatarUrl, updatedAt: new Date() })
+          .where(eq(clients.id, client.id));
+      } else {
+        console.log("[avatar] generateAvatar retornó null — revisar logs de Replicate/Blob");
+      }
+    }
+
     revalidatePath("/marciano");
     revalidatePath("/marciano/perfil-marciano");
-
-    // Generar avatar alien en background (no bloquea la respuesta al usuario)
-    if (!client.avatarUrl && input.frameBase64 && input.favoriteColor) {
-      const frameBase64 = input.frameBase64;
-      const favoriteColor = input.favoriteColor;
-      const clientId = client.id;
-      after(async () => {
-        const avatarUrl = await generateAvatar(frameBase64, favoriteColor, clientId);
-        if (avatarUrl) {
-          await db
-            .update(clients)
-            .set({ avatarUrl, updatedAt: new Date() })
-            .where(eq(clients.id, clientId));
-        }
-      });
-    }
 
     return { success: true, profile };
   } catch (err) {

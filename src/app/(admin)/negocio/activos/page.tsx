@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { barberShopAssets } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import DarDeBajaButton from "./_DarDeBajaButton";
-import { ASSET_CATEGORIAS, type AssetCategoria } from "./actions";
+import { ASSET_CATEGORIAS, type AssetCategoria } from "./types";
 
 function formatARS(value: number): string {
   return new Intl.NumberFormat("es-AR", {
