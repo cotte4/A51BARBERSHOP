@@ -75,7 +75,7 @@ function DrumPicker({
     const i = prices.indexOf(value);
     return i >= 0 ? i : 0;
   });
-  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const padding = ITEM_H * Math.floor(VISIBLE / 2);
   const containerH = ITEM_H * VISIBLE;
 
