@@ -255,6 +255,15 @@ select {
   to   { transform: scale(1);    opacity: 1; }
 }
 
+@keyframes a51-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: a51-marquee 30s linear infinite;
+}
+
 /* ── Glitch ──────────────────────────────────────────────────────── */
 
 @keyframes a51-glitch {

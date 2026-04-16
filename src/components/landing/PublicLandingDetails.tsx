@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PublicGaleriaCortes from "./PublicGaleriaCortes";
 
 const services = [
   {
@@ -267,6 +268,9 @@ export default function PublicLandingDetails({
             </div>
           </div>
         </div>
+
+        {/* ── GALERÍA DE CORTES ── */}
+        <PublicGaleriaCortes />
 
         {/* ── HORARIOS + UBICACIÓN ── */}
         <div className="grid gap-4 sm:grid-cols-2">
