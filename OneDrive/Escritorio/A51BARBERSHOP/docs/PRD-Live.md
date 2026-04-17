@@ -1,7 +1,7 @@
 # A51 Barber - PRD Live
 
 **Estado real del sistema**
-Actualizado: 16/04/2026 (sesion 25)
+Actualizado: 17/04/2026 (sesion 27)
 
 ## 1. Proposito del documento
 
@@ -617,6 +617,17 @@ Implementado en:
 
 - `src/lib/caja-atencion.ts` — `baseParaComision = Math.min(precioCobrado, servicio.precioBase)`. La comisión del barbero se calcula sobre el precio base del servicio, no sobre la propina. Si el cliente paga propina, esa diferencia no entra en el 60% de Gabote.
 
+### Galería de Cortes en Landing — Marquee Animado (sesion 26, 16/04/2026)
+
+Implementado en:
+
+- `src/components/landing/PublicGaleriaCortes.tsx` — Server Component que query `barbero_portfolio_items` ordenado por `orden`; si no hay fotos no renderiza nada (invisible hasta que haya contenido)
+- `src/components/landing/_GaleriaScroller.tsx` — Client Component con marquee infinito CSS: duplica el array de fotos, animación `a51-marquee` 30s linear, se pausa al hover, fade en bordes via `mask-image`
+- `src/components/landing/PublicLandingDetails.tsx` — importa y renderiza `PublicGaleriaCortes` entre la sección Club Marciano y Horarios
+- `src/app/globals.css` — keyframe `@keyframes a51-marquee` + clase `.animate-marquee`
+
+Flujo de carga de fotos: admin/asesor va a `/configuracion/barberos/[id]/editar`, sube fotos con caption via `_PortfolioAdmin` (ya existía), aparecen automáticamente en la landing.
+
 ### Formato de Fechas DD/MM/YYYY (sesion 25, 16/04/2026)
 
 Corregidos 5 archivos que usaban formateo manual o timezone incorrecto, reemplazados por `formatFecha()` de `@/lib/fecha`:
@@ -702,6 +713,23 @@ No agregar aqui:
 - ideas de producto futuras sin implementacion
 - debate conceptual del negocio
 - formulas nuevas no aprobadas
+
+### Sesion 27 — Auditoría de planes completados (17/04/2026)
+
+Sesión de auditoría: verificación de todos los planes sin codear. Ningún plan tenía código pendiente — todos habían sido implementados en sesiones anteriores.
+
+**Planes auditados y marcados como completados:**
+
+- `docs/plans/avatar-alien-marciano.md` — Avatar v2 con color picker separado, análisis Haiku, `_AvatarCard.tsx`, migración `favorite_color + style_analysis` aplicada (0013)
+- `a51-barber/planning/features/spotify-playback-control.md` — 6 fases completas: módulos `spotify-api/sdk/server`, device selector, Turnos automation (`handleClienteLlego`), jukebox manual, transport controls, hardening
+- `a51-barber/planning/features/music-auto-jam-completion.md` — `clienteLlegoAction` delega al engine, `previousMusicAction` en UI, auto-resume state, sync on arrival/mode/queue changes
+- `a51-barber/planning/features/jam-shared-session-secondary-barber.md` — host vs participants separados vía `musicEvents`, `joinJamSessionAction`, `MusicJamSessionSummary` con roster, `MusicOperationConsoleSections`
+- `a51-barber/planning/features/public-reservation-multi-barber-access.md` — DB-driven slugs (`publicSlug`, `publicReservaActiva`, `publicReservaPasswordHash`), `/reservar` landing, `PublicReservaAccessGate`, Marciano bypass
+- `a51-barber/planning/features/refactor-safety-foundation.md` — extracción completada: `music-dashboard-helpers`, `music-engine-store`, `music-engine-events`, `music-arrival-helpers`, `MusicOperationConsoleSections`
+
+**Build:** `npm run build` limpio verificado en todos los casos.
+
+**Próxima sesión:** `perfil-marciano-fase-b.md` (draft — Interrogatorio + Face Analysis + Timeline Visual con IA) o smoke tests manuales pre-go-live.
 
 ## 11. Proximos pasos recomendados
 
