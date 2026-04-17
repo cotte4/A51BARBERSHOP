@@ -12,7 +12,7 @@ type QuestionOption = {
 type QuestionProps = {
   eyebrow: string;
   title: string;
-  type: "choice-text" | "choice-image" | "free-text" | "choice-color";
+  type: "choice-text" | "choice-image" | "free-text";
   options: QuestionOption[];
   onAnswer: (value: string) => void;
   progress: number;
@@ -106,33 +106,6 @@ export default function Question({ eyebrow, title, type, options, onAnswer, prog
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2">
                   <span className="text-white text-xs font-medium">{opt.label}</span>
                 </div>
-              </button>
-            ))}
-          </div>
-        ) : type === "choice-color" ? (
-          <div className="grid grid-cols-4 gap-3 max-w-sm mx-auto w-full">
-            {options.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => handleSelect(opt.value)}
-                title={opt.label}
-                aria-label={opt.label}
-                className={[
-                  "aspect-square rounded-[20px] border-2 transition-all duration-200 relative",
-                  selected === opt.value
-                    ? "border-white scale-110 shadow-lg"
-                    : "border-transparent hover:scale-105",
-                ].join(" ")}
-                style={{ backgroundColor: opt.imageUrl }}
-              >
-                {selected === opt.value && (
-                  <span className="absolute inset-0 flex items-center justify-center">
-                    <svg viewBox="0 0 24 24" className="h-5 w-5 text-white drop-shadow" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M20 6L9 17l-5-5" />
-                    </svg>
-                  </span>
-                )}
               </button>
             ))}
           </div>

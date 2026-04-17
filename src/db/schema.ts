@@ -450,6 +450,8 @@ export const configuracionNegocio = pgTable("configuracion_negocio", {
   tcReferencia: numeric("tc_referencia", { precision: 10, scale: 2 }).default("1400.00"),
   actualizadoEn: timestamp("actualizado_en", { withTimezone: true }).defaultNow(),
   actualizadoPor: text("actualizado_por"),
+  jukeboxEnabled: boolean("jukebox_enabled").notNull().default(true),
+  jukeboxAutoApprove: boolean("jukebox_auto_approve").notNull().default(false),
 });
 
 // ————————————————————————————————————————————————————————
@@ -487,6 +489,8 @@ export const clients = pgTable(
     faceShape: text("face_shape"),
     styleProfile: jsonb("style_profile").$type<import("@/lib/types").StyleProfile>(),
     styleCompletedAt: timestamp("style_completed_at", { withTimezone: true }),
+    favoriteColor: text("favorite_color"),
+    styleAnalysis: jsonb("style_analysis").$type<import("@/lib/types").StyleAnalysis>(),
   },
   (table) => [
     uniqueIndex("clients_email_idx").on(table.email),
@@ -620,24 +624,6 @@ export const pantallaEvents = pgTable(
   ]
 );
 
-export const pantallaVotes = pgTable(
-  "pantalla_votes",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    eventId: uuid("event_id")
-      .notNull()
-      .references(() => pantallaEvents.id, { onDelete: "cascade" }),
-    deviceKeyHash: text("device_key_hash").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    index("pantalla_votes_event_id_idx").on(table.eventId),
-    uniqueIndex("pantalla_votes_event_device_key_idx").on(
-      table.eventId,
-      table.deviceKeyHash
-    ),
-  ]
-);
 
 export const visitLogs = pgTable(
   "visit_logs",
@@ -1046,6 +1032,57 @@ export const barberoPortfolioItems = pgTable(
   },
   (table) => [
     index("portfolio_barbero_idx").on(table.barberoId),
+  ]
+);
+
+// ————————————————————————————
+// JUKEBOX SOCIAL
+// ————————————————————————————
+export const jukeboxProposals = pgTable(
+  "jukebox_proposals",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    youtubeVideoId: text("youtube_video_id").notNull(),
+    videoTitle: text("video_title").notNull(),
+    channelTitle: text("channel_title").notNull(),
+    thumbnailUrl: text("thumbnail_url"),
+    durationSeconds: integer("duration_seconds"),
+    proposedByName: text("proposed_by_name").notNull(),
+    deviceKeyHash: text("device_key_hash").notNull(),
+    status: text("status")
+      .notNull()
+      .default("pending")
+      .$type<"pending" | "approved" | "rejected" | "played">(),
+    autoApproved: boolean("auto_approved").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("jukebox_proposals_status_idx").on(table.status),
+    index("jukebox_proposals_created_at_idx").on(table.createdAt),
+    index("jukebox_proposals_device_idx").on(table.deviceKeyHash, table.createdAt),
+  ]
+);
+
+export const jukeboxQueue = pgTable(
+  "jukebox_queue",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    proposalId: uuid("proposal_id")
+      .notNull()
+      .references(() => jukeboxProposals.id, { onDelete: "cascade" }),
+    positionHint: integer("position_hint").notNull(),
+    state: text("state")
+      .notNull()
+      .default("queued")
+      .$type<"queued" | "playing" | "played" | "skipped">(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("jukebox_queue_state_idx").on(table.state),
+    index("jukebox_queue_position_idx").on(table.positionHint),
   ]
 );
 

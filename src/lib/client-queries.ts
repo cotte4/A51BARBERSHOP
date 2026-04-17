@@ -135,6 +135,7 @@ export async function getClientProfileForActor(
         limit 1
       )`,
       archivedAt: clients.archivedAt,
+      styleAnalysis: clients.styleAnalysis,
     })
     .from(clients)
     .leftJoin(barberos, eq(barberos.id, clients.lastVisitBarberoId))
@@ -244,6 +245,7 @@ export async function getClientProfileForActor(
     })),
     auditEvents,
     marcianoUsage: usage ?? null,
+    styleAnalysis: (client.styleAnalysis ?? null) as import("@/lib/types").StyleAnalysis | null,
   };
 }
 

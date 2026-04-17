@@ -54,6 +54,7 @@ export async function requireMarcianoClient() {
       styleCompletedAt: clients.styleCompletedAt,
       styleProfile: clients.styleProfile,
       faceShape: clients.faceShape,
+      favoriteColor: clients.favoriteColor,
       usageMes: marcianoBeneficiosUso.mes,
       cortesUsados: marcianoBeneficiosUso.cortesUsados,
       consumicionesUsadas: marcianoBeneficiosUso.consumicionesUsadas,
@@ -105,6 +106,8 @@ export async function getMarcianoDashboardData(userId: string) {
       preferences: clients.preferences,
       totalVisits: clients.totalVisits,
       lastVisitAt: clients.lastVisitAt,
+      styleCompletedAt: clients.styleCompletedAt,
+      favoriteColor: clients.favoriteColor,
     })
     .from(clients)
     .where(and(eq(clients.userId, userId), eq(clients.esMarciano, true), isNull(clients.archivedAt)))

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getMarcianoUpcomingTurno } from "@/lib/marciano-turnos";
 import { getMarcianoDashboardData, requireMarcianoClient } from "@/lib/marciano-portal";
 import { MARCIANO_BENEFICIOS } from "@/lib/marciano-config";
+import AvatarCard from "./_AvatarCard";
 
 function formatFecha(value: Date | null) {
   if (!value) return null;
@@ -119,6 +120,13 @@ export default async function MarcianoPortalPage() {
           </div>
         )}
       </section>
+
+      {/* Avatar Marciano */}
+      <AvatarCard
+        styleCompletedAt={data.client.styleCompletedAt ?? null}
+        avatarUrl={data.client.avatarUrl ?? null}
+        favoriteColor={data.client.favoriteColor ?? null}
+      />
 
       {/* Quick access */}
       <div className="grid grid-cols-2 gap-4">

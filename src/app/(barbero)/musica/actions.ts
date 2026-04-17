@@ -331,3 +331,58 @@ export async function deleteScheduleRuleAction(ruleId: string): Promise<ActionRe
     return { error: error instanceof Error ? error.message : "No pude borrar la franja." };
   }
 }
+
+// ————————————————————————————
+// JUKEBOX SOCIAL ACTIONS
+// ————————————————————————————
+
+import {
+  approveJukeboxProposal,
+  dismissJukeboxProposal,
+  skipJukeboxCurrent,
+  setJukeboxAutoApprove,
+} from "@/lib/jukebox-admin";
+
+export async function approveJukeboxProposalAction(proposalId: string): Promise<ActionResult> {
+  try {
+    await requireMusicActor();
+    await approveJukeboxProposal(proposalId);
+    revalidatePath("/musica");
+    return { ok: true };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No pude aprobar la propuesta." };
+  }
+}
+
+export async function dismissJukeboxProposalAction(proposalId: string): Promise<ActionResult> {
+  try {
+    await requireMusicActor();
+    await dismissJukeboxProposal(proposalId);
+    revalidatePath("/musica");
+    return { ok: true };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No pude rechazar la propuesta." };
+  }
+}
+
+export async function skipJukeboxAction(): Promise<ActionResult> {
+  try {
+    await requireMusicActor();
+    await skipJukeboxCurrent();
+    revalidatePath("/musica");
+    return { ok: true };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No pude saltar el tema." };
+  }
+}
+
+export async function toggleJukeboxAutoApproveAction(enabled: boolean): Promise<ActionResult> {
+  try {
+    await requireMusicAdmin();
+    await setJukeboxAutoApprove(enabled);
+    revalidatePath("/musica");
+    return { ok: true };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No pude cambiar el modo auto-aprobar." };
+  }
+}

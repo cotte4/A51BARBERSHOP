@@ -3,11 +3,22 @@
 import MusicStateBadge from "@/components/musica/MusicStateBadge";
 import type { MusicDashboardState } from "@/lib/music-types";
 
+function Spinner() {
+  return (
+    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
 type ActionButtonProps = {
   children: React.ReactNode;
   className: string;
   disabled?: boolean;
   onClick: () => void;
+  actionId?: string;
+  pendingAction?: string | null;
 };
 
 export function ActionButton({
@@ -15,10 +26,22 @@ export function ActionButton({
   className,
   disabled,
   onClick,
+  actionId,
+  pendingAction,
 }: ActionButtonProps) {
+  const isThisPending = Boolean(actionId && pendingAction === actionId);
   return (
-    <button type="button" disabled={disabled} onClick={onClick} className={className}>
-      {children}
+    <button
+      type="button"
+      disabled={disabled || isThisPending}
+      onClick={onClick}
+      className={className}
+    >
+      {isThisPending ? (
+        <span className="flex items-center justify-center">
+          <Spinner />
+        </span>
+      ) : children}
     </button>
   );
 }
@@ -51,7 +74,6 @@ type MusicOverviewSectionProps = {
   lastPlaybackSuccessLabel: string;
   lastPlaybackAttemptLabel: string;
   resumedAtLabel: string;
-  feedback: string | null;
   formatDateTime: (value: string | null) => string;
 };
 
@@ -67,7 +89,6 @@ export function MusicOverviewSection({
   lastPlaybackSuccessLabel,
   lastPlaybackAttemptLabel,
   resumedAtLabel,
-  feedback,
 }: MusicOverviewSectionProps) {
   return (
     <section className="rounded-[30px] border border-zinc-800 bg-zinc-900/80 p-5 shadow-[0_24px_60px_rgba(0,0,0,0.28)] sm:p-6">
@@ -107,11 +128,6 @@ export function MusicOverviewSection({
             <p className="rounded-2xl border border-[#8cff59]/15 bg-[#8cff59]/5 px-4 py-3 text-sm text-zinc-300">
               Auto ya recupero su contexto. Ultima reanudacion:{" "}
               <span className="font-semibold text-white">{resumedAtLabel}</span>.
-            </p>
-          ) : null}
-          {feedback ? (
-            <p className="rounded-2xl border border-[#8cff59]/20 bg-[#8cff59]/10 px-4 py-3 text-sm text-[#d8ffc7]">
-              {feedback}
             </p>
           ) : null}
         </div>
@@ -158,7 +174,7 @@ export function MusicOverviewSection({
 
 type MusicProposalsSectionProps = {
   proposals: MusicDashboardState["proposals"];
-  isPending: boolean;
+  pendingAction: string | null;
   jamNeedsJoinBeforeAdding: boolean;
   formatDateTime: (value: string | null) => string;
   onAcceptProposal: (proposalId: string, mode: "dj" | "jam", clientName: string) => void;
@@ -167,7 +183,7 @@ type MusicProposalsSectionProps = {
 
 export function MusicProposalsSection({
   proposals,
-  isPending,
+  pendingAction,
   jamNeedsJoinBeforeAdding,
   formatDateTime,
   onAcceptProposal,
@@ -211,21 +227,26 @@ export function MusicProposalsSection({
               </div>
               <div className="flex flex-wrap gap-2">
                 <ActionButton
-                  disabled={isPending || !proposal.spotifyTrackUri}
+                  disabled={!proposal.spotifyTrackUri}
+                  actionId={`accept-dj-${proposal.id}`}
+                  pendingAction={pendingAction}
                   onClick={() => onAcceptProposal(proposal.id, "dj", proposal.clienteNombre)}
                   className="rounded-2xl border border-[#8cff59]/30 bg-[#8cff59]/10 px-4 py-3 text-sm font-semibold text-[#d8ffc7] hover:bg-[#8cff59]/20 disabled:opacity-50"
                 >
                   A DJ
                 </ActionButton>
                 <ActionButton
-                  disabled={isPending || !proposal.spotifyTrackUri || jamNeedsJoinBeforeAdding}
+                  disabled={!proposal.spotifyTrackUri || jamNeedsJoinBeforeAdding}
+                  actionId={`accept-jam-${proposal.id}`}
+                  pendingAction={pendingAction}
                   onClick={() => onAcceptProposal(proposal.id, "jam", proposal.clienteNombre)}
                   className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-3 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/20 disabled:opacity-50"
                 >
                   {jamNeedsJoinBeforeAdding ? "Unite primero" : "A Jam"}
                 </ActionButton>
                 <ActionButton
-                  disabled={isPending}
+                  actionId={`dismiss-${proposal.id}`}
+                  pendingAction={pendingAction}
                   onClick={() => onDismissProposal(proposal.id)}
                   className="rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-300 hover:bg-zinc-800 disabled:opacity-50"
                 >
@@ -242,13 +263,13 @@ export function MusicProposalsSection({
 
 type MusicPlaylistsSectionProps = {
   playlists: MusicDashboardState["playlists"];
-  isPending: boolean;
+  pendingAction: string | null;
   onPlayPlaylist: (playlistUri: string, playlistName: string) => void;
 };
 
 export function MusicPlaylistsSection({
   playlists,
-  isPending,
+  pendingAction,
   onPlayPlaylist,
 }: MusicPlaylistsSectionProps) {
   return (
@@ -282,7 +303,8 @@ export function MusicPlaylistsSection({
               </p>
             </div>
             <ActionButton
-              disabled={isPending}
+              actionId={`playlist-${playlist.id}`}
+              pendingAction={pendingAction}
               onClick={() => onPlayPlaylist(playlist.uri, playlist.name)}
               className="rounded-2xl bg-[#8cff59] px-4 py-3 text-sm font-semibold text-[#07130a] hover:bg-[#b6ff84] disabled:opacity-60"
             >

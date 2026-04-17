@@ -1,12 +1,14 @@
 import Replicate from "replicate";
 import { put } from "@vercel/blob";
+import { FACE_SHAPE_DESCRIPTIONS } from "@/lib/marciano-colors";
+import type { FaceShape } from "@/lib/types";
 
-// Prompt alien trap — {COLOR} se reemplaza con el color elegido por el usuario
-// InstantID preserva la identidad de la cara — el prompt controla el estilo
+// {COLOR} → nombre del color elegido, {FACE_SHAPE} → descripción de la forma de cara
 const AVATAR_PROMPT =
   "illustrated alien avatar, Buenos Aires trap barber, {COLOR} extraterrestrial skin, " +
-  "large dark reflective eyes, styled hair with sharp fade, oversized hoodie, silver chain necklace, " +
-  "holding a styrofoam cup, confident relaxed pose, tattoos on neck and hands, " +
+  "large dark reflective eyes, styled hair framing a {FACE_SHAPE} with sharp fade, " +
+  "oversized hoodie, silver chain necklace, holding a styrofoam cup, " +
+  "confident relaxed pose, tattoos on neck and hands, " +
   "dark background with glowing {COLOR} neon light and floating barber pole holograms, " +
   "clean cartoon illustration, bold black outlines, vibrant flat colors, " +
   "trap aesthetic, futuristic streetwear, NFT avatar art, 2D digital art, high detail";
@@ -17,11 +19,15 @@ const AVATAR_NEGATIVE_PROMPT =
 
 export async function generateAvatar(
   frameBase64: string,
-  favoriteColor: string,
+  colorNombre: string,
+  faceShape: FaceShape,
   clientId: string
 ): Promise<string | null> {
   try {
-    const prompt = AVATAR_PROMPT.replaceAll("{COLOR}", favoriteColor);
+    const shapeDesc = FACE_SHAPE_DESCRIPTIONS[faceShape] ?? "oval face";
+    const prompt = AVATAR_PROMPT
+      .replaceAll("{COLOR}", colorNombre)
+      .replaceAll("{FACE_SHAPE}", shapeDesc);
     const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN! });
 
     console.log("[avatar] Llamando InstantID + IP-Adapter...");

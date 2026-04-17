@@ -76,8 +76,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/repago") ||
     pathname.startsWith("/mi-resultado") ||
     pathname.startsWith("/gastos-rapidos") ||
-    pathname.startsWith("/finanzas") ||
-    pathname.startsWith("/pantalla")
+    pathname.startsWith("/finanzas")
   ) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
@@ -175,8 +174,6 @@ export const config = {
     "/mi-resultado/:path*",
     "/gastos-rapidos/:path*",
     "/finanzas/:path*",
-    "/pantalla/:path*",
-    "/pantalla",
     "/caja/:path*",
     "/clientes/:path*",
     "/marciano/:path*",

@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { clients, clientBriefingCache, marcianoCutsConfig } from "@/db/schema";
 import { requireMarcianoClient } from "@/lib/marciano-portal";
 import { generateStyleProfile, matchIdealBarbero } from "@/lib/marciano-style";
-import { generateAvatar } from "@/lib/marciano-avatar";
+import { generateStyleAnalysis } from "@/lib/marciano-analysis";
 import type { FaceShape, InterrogatoryAnswers, StyleProfile } from "@/lib/types";
 import type { FaceMetrics } from "@/lib/marciano-style";
 
@@ -62,8 +62,6 @@ export async function saveStyleProfileAction(input: {
   shape: FaceShape;
   answers: InterrogatoryAnswers;
   metrics: FaceMetrics | null;
-  frameBase64?: string | null;
-  favoriteColor?: string | null;
 }): Promise<{ success: true; profile: StyleProfile } | { success: false; error: string }> {
   try {
     const { client } = await requireMarcianoClient();
@@ -98,19 +96,17 @@ export async function saveStyleProfileAction(input: {
       .delete(clientBriefingCache)
       .where(eq(clientBriefingCache.clientId, client.id));
 
-    // Generar avatar alien de forma sincrónica (el usuario espera en la pantalla "saving")
-    if (!client.avatarUrl && input.frameBase64 && input.favoriteColor) {
-      console.log("[avatar] Iniciando generación para client:", client.id);
-      const avatarUrl = await generateAvatar(input.frameBase64, input.favoriteColor, client.id);
-      if (avatarUrl) {
-        console.log("[avatar] Generado OK:", avatarUrl);
+    // Psychology analysis — non-blocking, Haiku, failure doesn't affect profile save
+    try {
+      const analysis = await generateStyleAnalysis(input.answers);
+      if (analysis) {
         await db
           .update(clients)
-          .set({ avatarUrl, updatedAt: new Date() })
+          .set({ styleAnalysis: analysis, updatedAt: new Date() })
           .where(eq(clients.id, client.id));
-      } else {
-        console.log("[avatar] generateAvatar retornó null — revisar logs de Replicate/Blob");
       }
+    } catch (err) {
+      console.error("[style-analysis] wrapper error:", err);
     }
 
     revalidatePath("/marciano");

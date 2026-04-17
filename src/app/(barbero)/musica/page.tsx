@@ -3,6 +3,7 @@ import MusicStateBadge from "@/components/musica/MusicStateBadge";
 import { getMusicDashboardState } from "@/lib/music-engine";
 import MusicOperationConsole from "@/components/musica/MusicOperationConsole";
 import { getTurnosActorContext } from "@/lib/turnos-access";
+import { isAutoApproveEnabled, listPendingProposals, listQueue } from "@/lib/jukebox";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,12 @@ export default async function MusicaPage() {
     );
   }
 
-  const state = await getMusicDashboardState({ sync: true });
+  const [state, jukeboxProposals, jukeboxQueue, jukeboxAutoApprove] = await Promise.all([
+    getMusicDashboardState({ sync: true }),
+    listPendingProposals(),
+    listQueue(),
+    isAutoApproveEnabled(),
+  ]);
 
   return (
     <main className="public-shell min-h-screen pb-28 text-white">
@@ -94,6 +100,9 @@ export default async function MusicaPage() {
             <MusicOperationConsole
               state={state}
               viewerBarberoId={actor.barberoId}
+              jukeboxProposals={jukeboxProposals}
+              jukeboxQueue={jukeboxQueue}
+              jukeboxAutoApprove={jukeboxAutoApprove}
             />
           </div>
         </div>

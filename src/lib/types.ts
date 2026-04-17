@@ -66,6 +66,7 @@ export interface ClientProfile extends ClientSummary {
   visits: VisitLogSummary[];
   auditEvents: ClientProfileEvent[];
   marcianoUsage: MarcianoUsage | null;
+  styleAnalysis?: StyleAnalysis | null;
 }
 
 export type TurnoEstado = "pendiente" | "confirmado" | "completado" | "cancelado";
@@ -134,8 +135,16 @@ export type InterrogatoryAnswers = {
   barberTrust?: "le-explico-todo" | "le-muestro-foto" | "confio-en-el" | "mitad-y-mitad";
   // Pregunta 11: texto libre
   freeText?: string;
-  // Color favorito para avatar alien (pregunta 12, antes de la cámara)
-  favoriteColor?: string;
+};
+
+export type StyleAnalysis = {
+  perfil: string;
+  estilosProbables: string[];
+  actitudCambio: "conservador" | "abierto" | "aventurero";
+  notasBarbero: string;
+  confianza: number;
+  generadoEn: string;
+  modelo: string;
 };
 
 export type StyleDominante =

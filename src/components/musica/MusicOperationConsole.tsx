@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useDeferredValue, useState, useTransition } from "react";
 import {
   acceptMusicProposalAction,
   activateDjModeAction,
   activateJamModeAction,
+  approveJukeboxProposalAction,
+  dismissJukeboxProposalAction,
   dismissMusicProposalAction,
   joinJamSessionAction,
   pauseMusicAction,
@@ -14,19 +16,28 @@ import {
   queueTrackAction,
   resumeMusicAction,
   setAutoModeAction,
+  skipJukeboxAction,
   skipMusicAction,
   syncMusicDashboardAction,
+  toggleJukeboxAutoApproveAction,
 } from "@/app/(barbero)/musica/actions";
 import BeatsStudio from "@/components/musica/BeatsStudio";
+import JukeboxPlayer from "@/components/musica/JukeboxPlayer";
+import JukeboxProposalsSection from "@/components/musica/JukeboxProposalsSection";
+import JukeboxQueueSection from "@/components/musica/JukeboxQueueSection";
 import {
+  ActionButton,
   MusicOverviewSection,
   MusicPlaylistsSection,
   MusicProposalsSection,
   MusicQueueSection,
 } from "@/components/musica/MusicOperationConsoleSections";
+import type { JukeboxProposalSummary, JukeboxQueueItem } from "@/lib/jukebox";
 import type { MusicDashboardState } from "@/lib/music-types";
 
-type MusicTab = "spotify" | "beats";
+type MusicTab = "spotify" | "beats" | "jukebox";
+
+const JUKEBOX_ACTIVE_KEY = "a51-jukebox-active";
 
 type SearchTrackResult = {
   id: string;
@@ -40,6 +51,9 @@ type SearchTrackResult = {
 type OperationConsoleProps = {
   state: MusicDashboardState;
   viewerBarberoId: string | null;
+  jukeboxProposals: JukeboxProposalSummary[];
+  jukeboxQueue: JukeboxQueueItem[];
+  jukeboxAutoApprove: boolean;
 };
 
 function modeLabel(mode: MusicDashboardState["mode"]["activeMode"]) {
@@ -56,54 +70,70 @@ function formatDateTime(value: string | null) {
   }).format(new Date(value));
 }
 
-function ActionButton({
-  children,
-  className,
-  disabled,
-  onClick,
-}: {
-  children: React.ReactNode;
-  className: string;
-  disabled?: boolean;
-  onClick: () => void;
-}) {
+function FeedbackToast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 3000);
+    return () => clearTimeout(t);
+  }, [onDismiss]);
+
   return (
-    <button type="button" disabled={disabled} onClick={onClick} className={className}>
-      {children}
-    </button>
+    <div className="fixed bottom-6 right-4 z-50 max-w-xs rounded-2xl border border-[#8cff59]/30 bg-zinc-900 px-4 py-3 text-sm text-white shadow-xl transition-opacity">
+      {message}
+    </div>
   );
 }
 
 export default function MusicOperationConsole({
   state,
   viewerBarberoId,
+  jukeboxProposals,
+  jukeboxQueue,
+  jukeboxAutoApprove,
 }: OperationConsoleProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<MusicTab>("spotify");
+  const [jukeboxActive, setJukeboxActive] = useState(false);
   const [query, setQuery] = useState("");
-  const deferredQuery = useDeferredValue(query);
+
+  useEffect(() => {
+    setJukeboxActive(localStorage.getItem(JUKEBOX_ACTIVE_KEY) === "1");
+  }, []);
+
+  function toggleJukebox() {
+    const next = !jukeboxActive;
+    setJukeboxActive(next);
+    localStorage.setItem(JUKEBOX_ACTIVE_KEY, next ? "1" : "0");
+    if (next) setFeedback("Jukebox activado — el audio corre en cualquier tab.");
+    else setFeedback("Jukebox apagado.");
+  }
   const [searchResults, setSearchResults] = useState<SearchTrackResult[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
 
-  function runMutation(task: () => Promise<{ error?: string }>, successMessage: string) {
-    startTransition(async () => {
-      const result = await task();
-      if (result.error) {
-        setFeedback(result.error);
-        return;
-      }
-
-      setFeedback(successMessage);
-      router.refresh();
-    });
+  function runMutation(
+    task: () => Promise<{ error?: string }>,
+    successMessage: string,
+    actionId: string,
+  ) {
+    setPendingAction(actionId);
+    task()
+      .then((result) => {
+        setFeedback(result.error ?? successMessage);
+        router.refresh();
+      })
+      .catch(() => {
+        setFeedback("Algo salió mal. Intentá de nuevo.");
+      })
+      .finally(() => {
+        setPendingAction(null);
+      });
   }
 
   async function handleSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const nextQuery = deferredQuery.trim();
+    const nextQuery = query.trim();
     if (!nextQuery) {
       setSearchError("Escribi una busqueda primero.");
       return;
@@ -170,6 +200,13 @@ export default function MusicOperationConsole({
 
   return (
     <div className="space-y-6">
+      {feedback && (
+        <FeedbackToast message={feedback} onDismiss={() => setFeedback(null)} />
+      )}
+
+      {/* JukeboxPlayer siempre montado cuando está activo — corre en cualquier tab */}
+      {jukeboxActive ? <JukeboxPlayer /> : null}
+
       <div className="flex gap-2 rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-2">
         <button
           type="button"
@@ -189,9 +226,94 @@ export default function MusicOperationConsole({
         >
           Beats
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("jukebox")}
+          className={`relative flex-1 rounded-[20px] px-4 py-3 text-sm font-semibold transition-colors ${
+            activeTab === "jukebox" ? "bg-[#8cff59] text-[#07130a]" : "text-zinc-400 hover:text-white"
+          }`}
+        >
+          Jukebox
+          {jukeboxProposals.length > 0 && activeTab !== "jukebox" && (
+            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-amber-400" />
+          )}
+        </button>
       </div>
 
-      {activeTab === "beats" ? <BeatsStudio /> : null}
+      {activeTab === "beats" ? (
+        <div className="space-y-6">
+          <BeatsStudio />
+        </div>
+      ) : null}
+
+      {activeTab === "jukebox" ? (
+        <div className="space-y-6">
+          {/* Activar / Apagar Jukebox */}
+          <section className="rounded-[30px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Modo</p>
+                <h3 className="mt-2 text-xl font-semibold text-white">Jukebox social</h3>
+                <p className="mt-1 text-sm text-zinc-400">
+                  {jukeboxActive
+                    ? "El audio corre en cualquier tab. Apagalo cuando terminés el turno."
+                    : "Activalo para que el local empiece a reproducir las propuestas del público."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={toggleJukebox}
+                className={`rounded-2xl px-5 py-3 text-sm font-semibold transition-colors ${
+                  jukeboxActive
+                    ? "border border-red-400/30 bg-red-500/10 text-red-200 hover:bg-red-500/20"
+                    : "bg-[#8cff59] text-[#07130a] hover:bg-[#b6ff84]"
+                }`}
+              >
+                {jukeboxActive ? "Apagar Jukebox" : "Activar Jukebox"}
+              </button>
+            </div>
+            {jukeboxActive && (
+              <p className="mt-3 rounded-2xl border border-[#8cff59]/20 bg-[#8cff59]/8 px-4 py-2.5 text-sm text-[#d8ffc7]">
+                Jukebox activo — reproduciendo en este browser.
+              </p>
+            )}
+          </section>
+
+          <JukeboxProposalsSection
+            proposals={jukeboxProposals}
+            pendingAction={pendingAction}
+            onApprove={(id) =>
+              runMutation(
+                () => approveJukeboxProposalAction(id),
+                "Propuesta aprobada — a la cola.",
+                `jukebox-approve-${id}`,
+              )
+            }
+            onDismiss={(id) =>
+              runMutation(
+                () => dismissJukeboxProposalAction(id),
+                "Propuesta rechazada.",
+                `jukebox-dismiss-${id}`,
+              )
+            }
+          />
+          <JukeboxQueueSection
+            queue={jukeboxQueue}
+            autoApproveEnabled={jukeboxAutoApprove}
+            pendingAction={pendingAction}
+            onSkip={() =>
+              runMutation(() => skipJukeboxAction(), "Tema saltado.", "jukebox-skip")
+            }
+            onToggleAutoApprove={(enabled) =>
+              runMutation(
+                () => toggleJukeboxAutoApproveAction(enabled),
+                enabled ? "Auto-aprobar activado." : "Auto-aprobar desactivado.",
+                "jukebox-auto-toggle",
+              )
+            }
+          />
+        </div>
+      ) : null}
 
       {activeTab === "spotify" ? (
         <div className="space-y-6">
@@ -207,7 +329,6 @@ export default function MusicOperationConsole({
             lastPlaybackSuccessLabel={formatDateTime(state.runtime.lastPlaybackSuccessAt)}
             lastPlaybackAttemptLabel={formatDateTime(state.runtime.lastPlaybackAttemptAt)}
             resumedAtLabel={formatDateTime(state.autoResume.resumedAt)}
-            feedback={feedback}
             formatDateTime={formatDateTime}
           />
 
@@ -251,11 +372,13 @@ export default function MusicOperationConsole({
                 <div className="mt-5 flex flex-wrap gap-2">
                   {!state.jam.active || state.mode.activeMode !== "jam" ? (
                     <ActionButton
-                      disabled={isPending}
+                      actionId="jam-init"
+                      pendingAction={pendingAction}
                       onClick={() =>
                         runMutation(
                           () => activateJamModeAction(),
                           "Jam activa. Esta sesion queda lista para que otros se sumen.",
+                          "jam-init",
                         )
                       }
                       className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-3 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/20 disabled:opacity-60"
@@ -266,11 +389,13 @@ export default function MusicOperationConsole({
 
                   {viewerCanJoinJam ? (
                     <ActionButton
-                      disabled={isPending}
+                      actionId="join-jam"
+                      pendingAction={pendingAction}
                       onClick={() =>
                         runMutation(
                           () => joinJamSessionAction(),
                           `Te sumaste a la Jam de ${jamHostName}.`,
+                          "join-jam",
                         )
                       }
                       className="rounded-2xl border border-[#8cff59]/30 bg-[#8cff59]/10 px-4 py-3 text-sm font-semibold text-[#d8ffc7] hover:bg-[#8cff59]/20 disabled:opacity-60"
@@ -299,7 +424,8 @@ export default function MusicOperationConsole({
                 </div>
 
                 <p className="mt-4 text-sm text-cyan-50/75">
-                  Para sumar temas: unite a la Jam y despues usa <span className="font-semibold text-white">Cola Jam</span> en el buscador de Spotify.
+                  Para sumar temas: unite a la Jam y despues usa{" "}
+                  <span className="font-semibold text-white">Cola Jam</span> en el buscador de Spotify.
                 </p>
               </section>
 
@@ -316,34 +442,39 @@ export default function MusicOperationConsole({
 
                 <div className="mt-5 flex flex-wrap gap-2">
                   <ActionButton
-                    disabled={isPending}
-                    onClick={() => runMutation(() => syncMusicDashboardAction(), "Estado actualizado.")}
+                    actionId="refresh"
+                    pendingAction={pendingAction}
+                    onClick={() => runMutation(() => syncMusicDashboardAction(), "Estado actualizado.", "refresh")}
                     className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-200 hover:bg-zinc-800 disabled:opacity-60"
                   >
                     Refrescar
                   </ActionButton>
                   <ActionButton
-                    disabled={isPending}
-                    onClick={() => runMutation(() => setAutoModeAction(), "Volvimos a Auto.")}
+                    actionId="auto"
+                    pendingAction={pendingAction}
+                    onClick={() => runMutation(() => setAutoModeAction(), "Volvimos a Auto.", "auto")}
                     className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-200 hover:bg-zinc-800 disabled:opacity-60"
                   >
                     Auto
                   </ActionButton>
                   <ActionButton
-                    disabled={isPending}
-                    onClick={() => runMutation(() => activateDjModeAction(), "Soy DJ activo.")}
+                    actionId="dj"
+                    pendingAction={pendingAction}
+                    onClick={() => runMutation(() => activateDjModeAction(), "Soy DJ activo.", "dj")}
                     className="rounded-2xl bg-[#8cff59] px-4 py-3 text-sm font-semibold text-[#07130a] hover:bg-[#b6ff84] disabled:opacity-60"
                   >
                     Soy DJ
                   </ActionButton>
                   <ActionButton
-                    disabled={isPending}
+                    actionId="jam"
+                    pendingAction={pendingAction}
                     onClick={() =>
                       runMutation(
                         () => activateJamModeAction(),
                         state.jam.active
                           ? "Jam sigue activa. Puedes seguir sumando gente y temas."
                           : "Jam activa.",
+                        "jam",
                       )
                     }
                     className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-3 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/20 disabled:opacity-60"
@@ -354,29 +485,37 @@ export default function MusicOperationConsole({
 
                 <div className="mt-5 flex flex-wrap gap-2">
                   <ActionButton
-                    disabled={isPending || state.runtime.state !== "ready"}
-                    onClick={() => runMutation(() => previousMusicAction(), "Volvimos al track anterior.")}
+                    actionId="prev"
+                    pendingAction={pendingAction}
+                    disabled={state.runtime.state !== "ready"}
+                    onClick={() => runMutation(() => previousMusicAction(), "Volvimos al track anterior.", "prev")}
                     className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
                   >
                     Anterior
                   </ActionButton>
                   <ActionButton
-                    disabled={isPending || state.runtime.state !== "ready"}
-                    onClick={() => runMutation(() => pauseMusicAction(), "Playback pausado.")}
+                    actionId="pause"
+                    pendingAction={pendingAction}
+                    disabled={state.runtime.state !== "ready"}
+                    onClick={() => runMutation(() => pauseMusicAction(), "Playback pausado.", "pause")}
                     className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
                   >
                     Pausar
                   </ActionButton>
                   <ActionButton
-                    disabled={isPending || state.runtime.state !== "ready"}
-                    onClick={() => runMutation(() => resumeMusicAction(), "Playback reanudado.")}
+                    actionId="resume"
+                    pendingAction={pendingAction}
+                    disabled={state.runtime.state !== "ready"}
+                    onClick={() => runMutation(() => resumeMusicAction(), "Playback reanudado.", "resume")}
                     className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
                   >
                     Reanudar
                   </ActionButton>
                   <ActionButton
-                    disabled={isPending || state.runtime.state !== "ready"}
-                    onClick={() => runMutation(() => skipMusicAction(), "Saltamos al siguiente track.")}
+                    actionId="skip"
+                    pendingAction={pendingAction}
+                    disabled={state.runtime.state !== "ready"}
+                    onClick={() => runMutation(() => skipMusicAction(), "Saltamos al siguiente track.", "skip")}
                     className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
                   >
                     Siguiente
@@ -405,9 +544,14 @@ export default function MusicOperationConsole({
                   <button
                     type="submit"
                     disabled={searching}
-                    className="rounded-2xl bg-[#8cff59] px-5 py-3 text-sm font-semibold text-[#07130a] hover:bg-[#b6ff84] disabled:opacity-60"
+                    className="flex min-h-[52px] items-center justify-center rounded-2xl bg-[#8cff59] px-5 py-3 text-sm font-semibold text-[#07130a] hover:bg-[#b6ff84] disabled:opacity-60"
                   >
-                    {searching ? "Buscando..." : "Buscar"}
+                    {searching ? (
+                      <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : "Buscar"}
                   </button>
                 </form>
 
@@ -420,7 +564,8 @@ export default function MusicOperationConsole({
                 <div className="mt-5 grid gap-3">
                   {jamNeedsJoinBeforeAdding ? (
                     <div className="rounded-3xl border border-cyan-400/20 bg-cyan-500/8 p-4 text-sm text-cyan-50/85">
-                      Primero unite a la Jam actual y despues se habilita <span className="font-semibold text-white">Cola Jam</span>.
+                      Primero unite a la Jam actual y despues se habilita{" "}
+                      <span className="font-semibold text-white">Cola Jam</span>.
                     </div>
                   ) : null}
                   {searchResults.length === 0 && !searchError ? (
@@ -442,7 +587,8 @@ export default function MusicOperationConsole({
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <ActionButton
-                          disabled={isPending}
+                          actionId={`queue-dj-${track.id}`}
+                          pendingAction={pendingAction}
                           onClick={() =>
                             runMutation(
                               () =>
@@ -452,7 +598,8 @@ export default function MusicOperationConsole({
                                   trackName: track.name,
                                   artistName: track.artistNames.join(", "),
                                 }),
-                              `Tema ${track.name} agregado a tu cola DJ.`,
+                              `${track.name} agregado a tu cola DJ.`,
+                              `queue-dj-${track.id}`,
                             )
                           }
                           className="rounded-2xl border border-[#8cff59]/30 bg-[#8cff59]/10 px-4 py-3 text-sm font-semibold text-[#d8ffc7] hover:bg-[#8cff59]/20 disabled:opacity-60"
@@ -460,7 +607,9 @@ export default function MusicOperationConsole({
                           Cola DJ
                         </ActionButton>
                         <ActionButton
-                          disabled={isPending || jamNeedsJoinBeforeAdding}
+                          actionId={`queue-jam-${track.id}`}
+                          pendingAction={pendingAction}
+                          disabled={jamNeedsJoinBeforeAdding}
                           onClick={() =>
                             runMutation(
                               () =>
@@ -471,8 +620,9 @@ export default function MusicOperationConsole({
                                   artistName: track.artistNames.join(", "),
                                 }),
                               state.jam.active
-                                ? `Tema ${track.name} agregado a la Jam compartida.`
-                                : `Tema ${track.name} agregado a Jam.`,
+                                ? `${track.name} agregado a la Jam compartida.`
+                                : `${track.name} agregado a Jam.`,
+                              `queue-jam-${track.id}`,
                             )
                           }
                           className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-3 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/20 disabled:opacity-60"
@@ -489,18 +639,20 @@ export default function MusicOperationConsole({
             <div className="space-y-6">
               <MusicProposalsSection
                 proposals={state.proposals}
-                isPending={isPending}
+                pendingAction={pendingAction}
                 jamNeedsJoinBeforeAdding={jamNeedsJoinBeforeAdding}
                 onAcceptProposal={(proposalId, mode, clientName) =>
                   runMutation(
                     () => acceptMusicProposalAction({ eventId: proposalId }, mode),
                     `Propuesta de ${clientName} enviada a ${mode === "dj" ? "DJ" : "Jam"}.`,
+                    `accept-${mode}-${proposalId}`,
                   )
                 }
                 onDismissProposal={(proposalId) =>
                   runMutation(
                     () => dismissMusicProposalAction({ eventId: proposalId }),
                     "Propuesta ocultada.",
+                    `dismiss-${proposalId}`,
                   )
                 }
                 formatDateTime={formatDateTime}
@@ -508,7 +660,7 @@ export default function MusicOperationConsole({
 
               <MusicPlaylistsSection
                 playlists={state.playlists}
-                isPending={isPending}
+                pendingAction={pendingAction}
                 onPlayPlaylist={(playlistUri, playlistName) =>
                   runMutation(
                     () =>
@@ -517,6 +669,7 @@ export default function MusicOperationConsole({
                         playlistName,
                       }),
                     `Playlist ${playlistName} enviada al modo DJ.`,
+                    `playlist-${playlistUri}`,
                   )
                 }
               />

@@ -15,6 +15,7 @@ import { getClientActorContext } from "@/lib/client-access";
 import { getClientProfileForActor } from "@/lib/client-queries";
 import { MARCIANO_BENEFICIOS } from "@/lib/marciano-config";
 import ClienteDetalleClient from "./_ClienteDetalleClient";
+import StyleAnalysisCard from "./_StyleAnalysisCard";
 
 type ClientPageProps = {
   params: Promise<{ id: string }>;
@@ -71,6 +72,7 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
 
   const historialContent = (
     <div className="space-y-5">
+      {client.styleAnalysis ? <StyleAnalysisCard analysis={client.styleAnalysis} /> : null}
       {client.esMarciano ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">

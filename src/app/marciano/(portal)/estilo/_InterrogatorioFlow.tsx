@@ -14,7 +14,6 @@ type FlowState =
   | "intro"
   | "q1" | "q2" | "q3" | "q4" | "q5"
   | "q6" | "q7" | "q8" | "q9" | "q10" | "q11"
-  | "color-favorito"
   | "face-capture" | "saving" | "reveal";
 
 const QUESTIONS = [
@@ -161,24 +160,8 @@ const FLOW_ORDER: FlowState[] = [
   "intro",
   "q1", "q2", "q3", "q4", "q5",
   "q6", "q7", "q8", "q9", "q10", "q11",
-  "color-favorito",
   "face-capture", "saving", "reveal",
 ];
-
-const COLOR_QUESTION = {
-  eyebrow: "Último detalle",
-  title: "¿Cuál es tu color?",
-  options: [
-    { value: "verde neón",     label: "Verde neón",     imageUrl: "#39ff14" },
-    { value: "rojo fuego",     label: "Rojo fuego",     imageUrl: "#ff2d2d" },
-    { value: "azul eléctrico", label: "Azul eléctrico", imageUrl: "#0080ff" },
-    { value: "violeta",        label: "Violeta",        imageUrl: "#9b30ff" },
-    { value: "dorado",         label: "Dorado",         imageUrl: "#ffd700" },
-    { value: "naranja",        label: "Naranja",        imageUrl: "#ff6600" },
-    { value: "cyan",           label: "Cyan",           imageUrl: "#00e5ff" },
-    { value: "blanco hueso",   label: "Blanco",         imageUrl: "#f0f0e8" },
-  ],
-};
 
 function nextState(current: FlowState): FlowState {
   const idx = FLOW_ORDER.indexOf(current);
@@ -247,7 +230,6 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
   const [flowState, setFlowState] = useState<FlowState>("intro");
   const [answers, setAnswers] = useState<Partial<InterrogatoryAnswers>>({});
   const [captureResult, setCaptureResult] = useState<{ shape: FaceShape; metrics: FaceMetrics | null } | null>(null);
-  const [, setFrameBase64] = useState<string | null>(null);
   const [profile, setProfile] = useState<StyleProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -268,10 +250,8 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
   async function handleCapture(result: { shape: FaceShape; metrics: FaceMetrics | null; frameBase64: string | null } | null) {
     const shape: FaceShape = result?.shape ?? "oval";
     const metrics = result?.metrics ?? null;
-    const frame = result?.frameBase64 ?? null;
 
     setCaptureResult(result ? { shape: result.shape, metrics: result.metrics } : null);
-    setFrameBase64(frame);
     setFlowState("saving");
 
     const finalAnswers = answers as InterrogatoryAnswers;
@@ -281,8 +261,6 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
         shape,
         answers: finalAnswers,
         metrics,
-        frameBase64: frame,
-        favoriteColor: answers.favoriteColor ?? null,
       });
 
       if (!res.success) {
@@ -325,32 +303,8 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
               type={q.type}
               options={q.options}
               progress={QUESTION_PROGRESS[flowState]}
-              total={12}
+              total={11}
               onAnswer={(value) => handleAnswer(q.field, value)}
-            />
-          </motion.div>
-        </AnimatePresence>
-      </>
-    );
-  }
-
-  if (flowState === "color-favorito") {
-    return (
-      <>
-        <MuteToggle />
-        <AnimatePresence mode="wait">
-          <motion.div key="color-favorito" {...motionProps} className="contents">
-            <Question
-              eyebrow={COLOR_QUESTION.eyebrow}
-              title={COLOR_QUESTION.title}
-              type="choice-color"
-              options={COLOR_QUESTION.options}
-              progress={12}
-              total={12}
-              onAnswer={(value) => {
-                setAnswers((prev) => ({ ...prev, favoriteColor: value }));
-                setFlowState("face-capture");
-              }}
             />
           </motion.div>
         </AnimatePresence>
@@ -379,7 +333,7 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
         <Spinner />
         <p className="text-sm text-zinc-400">Generando tu Perfil Marciano...</p>
         <p className="text-xs text-zinc-600 text-center max-w-[220px]">
-          Creando tu avatar alien. Puede tardar hasta 30 segundos.
+          Analizando tu estilo. Un momento.
         </p>
       </div>
     );
@@ -416,7 +370,7 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
           Hola {clientName}, vamos a conocerte.
         </h1>
         <p className="text-sm text-zinc-400 text-center max-w-xs">
-          12 preguntas + análisis de rostro. 3 minutos.
+          11 preguntas + análisis de rostro. 3 minutos.
         </p>
         <button
           type="button"

@@ -1,0 +1,1 @@
+DROP TABLE "pantalla_votes" CASCADE;
