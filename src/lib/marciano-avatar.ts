@@ -10,19 +10,20 @@ const AVATAR_MODEL_VERSION =
   "32402fb5c493d883aa6cf098ce3e4cc80f1fe6871f6ae7f632a8dbde01a3d161";
 
 const AVATAR_PROMPT =
-  "cartoon alien character, entire face and neck painted solid {COLOR} hex({HEX}), " +
-  "{COLOR} alien skin tone, skin color is {HEX}, non-human extraterrestrial complexion, " +
-  "glowing {COLOR} skin covering the whole head, no human skin color anywhere, " +
-  "big black almond-shaped alien eyes, small nose, subtle pointed ears, " +
-  "stylized {FACE_SHAPE} with a sharp modern fade haircut, " +
-  "cartoon illustration, thick bold black outlines, vibrant flat cel-shaded colors, " +
-  "cute streetwear alien mascot, NFT cartoon avatar, 2D vector art, clean graphic style, " +
-  "dark minimal background with soft {COLOR} glow";
+  "2D cartoon alien portrait, flat {COLOR} ({HEX}) skin covering 100% of the face neck and head, " +
+  "solid {COLOR} skin color everywhere, cel-shaded {COLOR} extraterrestrial, " +
+  "oversized glossy black alien eyes, tiny stylized nose, pointed ears, " +
+  "{FACE_SHAPE} face shape, sharp modern fade haircut, " +
+  "bold black ink outlines, vibrant flat colors, no shading gradients, " +
+  "cartoon mascot style, comic book illustration, sticker art, clean vector look, " +
+  "outer space background with stars and purple nebula, cosmos background, deep space setting";
 
 const AVATAR_NEGATIVE_PROMPT =
-  "human skin, realistic skin, beige skin, tan skin, pale skin, caucasian, asian, latino, " +
-  "flesh color, skin tone, natural complexion, brown skin, pink skin, " +
-  "photograph, photorealistic, 3D render, realistic face, live action, " +
+  "human skin, realistic skin, photographic skin, natural skin tone, flesh color, " +
+  "beige, tan, pale, brown, pink, peach skin, caucasian, asian, african, latino, " +
+  "photograph, photorealistic, hyperrealistic, 3D render, CGI, live action, portrait photo, " +
+  "realistic face, realistic eyes, realistic nose, realistic hair, " +
+  "indoor background, room background, wall background, studio background, " +
   "blurry, low quality, ugly, deformed, extra limbs, multiple faces, watermark, text, logo";
 
 export async function startAvatarPrediction(input: {
@@ -49,9 +50,10 @@ export async function startAvatarPrediction(input: {
         negative_prompt: AVATAR_NEGATIVE_PROMPT,
         width: 1024,
         height: 1024,
-        steps: 30,
-        instantid_weight: 0.15,
-        ipadapter_weight: 0.98,
+        steps: 35,
+        instantid_weight: 0.05,
+        ipadapter_weight: 1.0,
+        guidance_scale: 10,
       },
       webhook: `${appUrl}/api/replicate/avatar-webhook`,
       webhook_events_filter: ["completed"],
