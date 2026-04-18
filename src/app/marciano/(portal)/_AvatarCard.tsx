@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import FaceCapture from "./estilo/_FaceCapture";
@@ -164,7 +164,10 @@ export default function AvatarCard({
   const router = useRouter();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(favoriteColor);
   const [selectedPreset, setSelectedPreset] = useState<AvatarPreset>("galactic");
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [adjusting, setAdjusting] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
   const [localFlow, setLocalFlow] = useState<LocalFlow>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -205,6 +208,35 @@ export default function AvatarCard({
       clearInterval(interval);
     };
   }, [avatarStatus, router, showingProcessing]);
+
+  // Restore saved crop when avatar URL is known
+  useEffect(() => {
+    if (!avatarUrl) return;
+    const saved = localStorage.getItem(`avatar-crop:${avatarUrl}`);
+    if (saved) {
+      try {
+        const { zoom: z, x, y } = JSON.parse(saved);
+        setZoom(z ?? 1);
+        setPan({ x: x ?? 0, y: y ?? 0 });
+      } catch { /* ignore */ }
+    }
+  }, [avatarUrl]);
+
+  const saveCrop = useCallback((z: number, x: number, y: number) => {
+    if (!avatarUrl) return;
+    localStorage.setItem(`avatar-crop:${avatarUrl}`, JSON.stringify({ zoom: z, x, y }));
+  }, [avatarUrl]);
+
+  function handleDragStart(clientX: number, clientY: number) {
+    dragRef.current = { startX: clientX, startY: clientY, panX: pan.x, panY: pan.y };
+  }
+  function handleDragMove(clientX: number, clientY: number) {
+    if (!dragRef.current) return;
+    const dx = clientX - dragRef.current.startX;
+    const dy = clientY - dragRef.current.startY;
+    setPan({ x: dragRef.current.panX + dx, y: dragRef.current.panY + dy });
+  }
+  function handleDragEnd() { dragRef.current = null; }
 
   function handleSelectColor(slug: string) {
     setSelectedSlug(slug);
@@ -338,60 +370,91 @@ export default function AvatarCard({
   }
 
   if (hasAvatar) {
+    const imgStyle = {
+      transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+      transformOrigin: "center center",
+      transition: dragRef.current ? "none" : "transform 0.15s ease",
+    };
+
     return (
       <section className="panel-card rounded-[28px] p-5 flex flex-col items-center gap-4">
         <p className="eyebrow text-xs text-[#8cff59] self-start">Tu Avatar Marciano</p>
 
-        {/* Tappable avatar — opens lightbox */}
-        <button
-          type="button"
-          onClick={() => setLightboxOpen(true)}
-          className="relative h-40 w-40 overflow-hidden rounded-full border-2 border-[#8cff59]/40 shadow-[0_0_24px_rgba(140,255,89,0.2)] bg-zinc-900 hover:scale-105 transition-transform duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8cff59]"
-          aria-label="Ver avatar en pantalla completa"
+        {/* Avatar circle with pan/zoom applied */}
+        <div className="relative h-40 w-40 overflow-hidden rounded-full border-2 border-[#8cff59]/40 shadow-[0_0_24px_rgba(140,255,89,0.2)] bg-zinc-900 cursor-grab active:cursor-grabbing select-none"
+          onMouseDown={(e) => { if (adjusting) handleDragStart(e.clientX, e.clientY); }}
+          onMouseMove={(e) => { if (adjusting && e.buttons === 1) handleDragMove(e.clientX, e.clientY); }}
+          onMouseUp={handleDragEnd}
+          onMouseLeave={handleDragEnd}
+          onTouchStart={(e) => { if (adjusting) handleDragStart(e.touches[0].clientX, e.touches[0].clientY); }}
+          onTouchMove={(e) => { if (adjusting) { e.preventDefault(); handleDragMove(e.touches[0].clientX, e.touches[0].clientY); } }}
+          onTouchEnd={handleDragEnd}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             key={avatarUrl!}
             src={avatarUrl!}
             alt="Avatar Marciano"
-            className="h-full w-full object-cover transition-opacity duration-500 opacity-0"
+            draggable={false}
+            className="h-full w-full object-cover opacity-0"
+            style={imgStyle}
             onLoad={(e) => { (e.currentTarget as HTMLImageElement).classList.replace("opacity-0", "opacity-100"); }}
           />
-          <span className="absolute inset-0 flex items-end justify-center pb-3 opacity-0 hover:opacity-100 transition-opacity duration-200">
-            <span className="rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-white backdrop-blur-sm">
-              Toca para ampliar
+          {adjusting && (
+            <span className="pointer-events-none absolute inset-0 flex items-end justify-center pb-3">
+              <span className="rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-white backdrop-blur-sm">
+                Arrastrá para mover
+              </span>
             </span>
-          </span>
-        </button>
+          )}
+        </div>
 
-        {/* Lightbox */}
-        {lightboxOpen && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
-            onClick={() => setLightboxOpen(false)}
-          >
-            <button
-              type="button"
-              onClick={() => setLightboxOpen(false)}
-              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
-              aria-label="Cerrar"
-            >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
-                <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" />
+        {/* Adjust controls */}
+        {adjusting ? (
+          <div className="flex w-full flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-zinc-400" fill="none" stroke="currentColor" strokeWidth="1.9">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6" strokeLinecap="round"/>
               </svg>
-            </button>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={avatarUrl!}
-              alt="Avatar Marciano"
-              onClick={(e) => e.stopPropagation()}
-              className="max-h-[90vh] max-w-[90vw] rounded-3xl object-contain shadow-2xl"
-              style={{ touchAction: "pinch-zoom" }}
-            />
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="0.05"
+                value={zoom}
+                onChange={(e) => setZoom(parseFloat(e.target.value))}
+                className="flex-1 accent-[#8cff59]"
+              />
+              <span className="w-8 text-right text-xs text-zinc-400">{zoom.toFixed(1)}×</span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
+                className="flex-1 ghost-button rounded-[20px] px-3 py-2 text-xs font-medium"
+              >
+                Resetear
+              </button>
+              <button
+                type="button"
+                onClick={() => { saveCrop(zoom, pan.x, pan.y); setAdjusting(false); }}
+                className="flex-1 neon-button rounded-[20px] px-3 py-2 text-xs font-semibold"
+              >
+                Guardar
+              </button>
+            </div>
           </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAdjusting(true)}
+            className="ghost-button rounded-[20px] px-4 py-2 text-xs font-medium"
+          >
+            Ajustar encuadre
+          </button>
         )}
 
-        <p className="text-xs text-zinc-500 text-center max-w-[220px]">Tu forma alienígena. Tocá para ampliar.</p>
+        <p className="text-xs text-zinc-500 text-center max-w-[220px]">Tu forma alienígena.</p>
 
         {errorMsg && (
           <p className="w-full rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
