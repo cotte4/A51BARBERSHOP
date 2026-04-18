@@ -14,6 +14,12 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import {
+  CAPITAL_MOVIMIENTO_TYPES,
+  HANGAR_ASSET_CATEGORIAS,
+  HANGAR_ASSET_ESTADOS_COMPRA,
+  HANGAR_ASSET_PAYMENT_TYPES,
+} from "@/lib/hangar";
 
 // ————————————————————————————
 // BETTER AUTH TABLES
@@ -491,6 +497,10 @@ export const clients = pgTable(
     styleCompletedAt: timestamp("style_completed_at", { withTimezone: true }),
     favoriteColor: text("favorite_color"),
     styleAnalysis: jsonb("style_analysis").$type<import("@/lib/types").StyleAnalysis>(),
+    avatarStatus: text("avatar_status").notNull().default("idle"),
+    avatarPredictionId: text("avatar_prediction_id"),
+    avatarRequestedAt: timestamp("avatar_requested_at", { withTimezone: true }),
+    avatarErrorMessage: text("avatar_error_message"),
   },
   (table) => [
     uniqueIndex("clients_email_idx").on(table.email),
@@ -503,8 +513,12 @@ export const clients = pgTable(
       table.lastVisitAt
     ),
     index("clients_created_by_barbero_id_idx").on(table.createdByBarberoId),
+    uniqueIndex("clients_avatar_prediction_id_idx").on(table.avatarPredictionId),
     check("clients_face_shape_check",
       sql`${table.faceShape} IN ('oval', 'cuadrado', 'redondo', 'corazon', 'diamante', 'alien') OR ${table.faceShape} IS NULL`
+    ),
+    check("clients_avatar_status_check",
+      sql`${table.avatarStatus} IN ('idle', 'processing', 'ready', 'failed')`
     ),
   ]
 );
@@ -988,7 +1002,10 @@ export const capitalMovimientos = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    check("capital_movimientos_tipo_check", sql`${table.tipo} IN ('aporte', 'retiro')`),
+    check(
+      "capital_movimientos_tipo_check",
+      sql`${table.tipo} IN (${sql.raw(CAPITAL_MOVIMIENTO_TYPES.map((item) => `'${item}'`).join(", "))})`
+    ),
     index("capital_movimientos_fecha_idx").on(table.fecha),
   ]
 );
@@ -1094,14 +1111,55 @@ export const barberShopAssets = pgTable("barber_shop_assets", {
   nombre: text("nombre").notNull(),
   categoria: text("categoria")
     .notNull()
-    .$type<"Mobiliario" | "Equipamiento" | "Iluminación" | "Herramientas" | "Tecnología" | "Otros">(),
-  precioCompra: numeric("precio_compra", { precision: 12, scale: 2 }).notNull(),
-  fechaCompra: date("fecha_compra").notNull(),
+    .$type<(typeof HANGAR_ASSET_CATEGORIAS)[number]>(),
+  precioCompra: numeric("precio_compra", { precision: 12, scale: 2 }),
+  precioObjetivo: numeric("precio_objetivo", { precision: 12, scale: 2 }),
+  fechaCompra: date("fecha_compra"),
+  fechaPrimerPago: date("fecha_primer_pago"),
+  fechaPagoCompleto: date("fecha_pago_completo"),
   proveedor: text("proveedor"),
+  marca: text("marca"),
+  modelo: text("modelo"),
+  fotoUrl: text("foto_url"),
+  comprobanteUrl: text("comprobante_url"),
   notas: text("notas"),
   estado: text("estado")
     .notNull()
     .default("activo")
     .$type<"activo" | "dado_de_baja">(),
+  estadoCompra: text("estado_compra")
+    .notNull()
+    .default("pagado")
+    .$type<(typeof HANGAR_ASSET_ESTADOS_COMPRA)[number]>(),
   creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
-});
+}, (table) => [
+  index("barber_shop_assets_categoria_idx").on(table.categoria),
+  index("barber_shop_assets_estado_compra_idx").on(table.estadoCompra),
+  check(
+    "barber_shop_assets_estado_compra_check",
+    sql`${table.estadoCompra} IN (${sql.raw(HANGAR_ASSET_ESTADOS_COMPRA.map((item) => `'${item}'`).join(", "))})`
+  ),
+]);
+
+export const barberShopAssetPayments = pgTable("barber_shop_asset_payments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  assetId: uuid("asset_id")
+    .notNull()
+    .references(() => barberShopAssets.id, { onDelete: "cascade" }),
+  capitalMovimientoId: uuid("capital_movimiento_id").references(() => capitalMovimientos.id),
+  tipo: text("tipo")
+    .notNull()
+    .$type<(typeof HANGAR_ASSET_PAYMENT_TYPES)[number]>(),
+  monto: numeric("monto", { precision: 12, scale: 2 }).notNull(),
+  fecha: date("fecha").notNull(),
+  descripcion: text("descripcion"),
+  comprobanteUrl: text("comprobante_url"),
+  creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index("barber_shop_asset_payments_asset_idx").on(table.assetId),
+  uniqueIndex("barber_shop_asset_payments_capital_movimiento_idx").on(table.capitalMovimientoId),
+  check(
+    "barber_shop_asset_payments_tipo_check",
+    sql`${table.tipo} IN (${sql.raw(HANGAR_ASSET_PAYMENT_TYPES.map((item) => `'${item}'`).join(", "))})`
+  ),
+]);

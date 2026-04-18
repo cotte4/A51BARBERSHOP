@@ -86,9 +86,30 @@ export function checkFaceAlignment(landmarks: Landmark[]): AlignmentStatus {
 }
 
 let landmarkerInstance: unknown | null = null;
+let lastVideoTime = -1;
+
+// MediaPipe's WASM writes "INFO: Created TensorFlow Lite XNNPACK delegate for CPU"
+// to emscripten stderr, which becomes console.error. Next.js Turbopack's dev
+// overlay catches console.error and surfaces it as a blocking runtime error,
+// even though it's just an init log. Silence that specific line at the source.
+let consoleFilterInstalled = false;
+function installMediapipeLogFilter() {
+  if (consoleFilterInstalled || typeof window === "undefined") return;
+  consoleFilterInstalled = true;
+  const benign = /TensorFlow Lite|XNNPACK|TfLite|feedback tensors|^INFO:|^WARNING:|^W\d+|^I\d+/;
+  const isBenign = (args: unknown[]) => typeof args[0] === "string" && benign.test(args[0]);
+  for (const method of ["error", "warn", "info", "log"] as const) {
+    const original = console[method].bind(console);
+    console[method] = (...args: unknown[]) => {
+      if (isBenign(args)) return;
+      original(...args);
+    };
+  }
+}
 
 export async function loadFaceLandmarker() {
   if (landmarkerInstance) return landmarkerInstance;
+  installMediapipeLogFilter();
 
   const vision = await import("@mediapipe/tasks-vision");
   const { FaceLandmarker, FilesetResolver } = vision;
@@ -101,7 +122,7 @@ export async function loadFaceLandmarker() {
     baseOptions: {
       modelAssetPath:
         "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-      delegate: "GPU",
+      delegate: "CPU",
     },
     outputFaceBlendshapes: false,
     runningMode: "VIDEO",
@@ -118,6 +139,8 @@ export async function detectLandmarksFromVideo(
   landmarker: any
 ): Promise<Landmark[] | null> {
   try {
+    if (video.currentTime === lastVideoTime) return null;
+    lastVideoTime = video.currentTime;
     const result = landmarker.detectForVideo(video, performance.now());
     const landmarks = result?.faceLandmarks?.[0];
     if (!landmarks || landmarks.length < 468) return null;

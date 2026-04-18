@@ -126,6 +126,8 @@ export default async function MarcianoPortalPage() {
         styleCompletedAt={data.client.styleCompletedAt ?? null}
         avatarUrl={data.client.avatarUrl ?? null}
         favoriteColor={data.client.favoriteColor ?? null}
+        avatarStatus={(data.client.avatarStatus ?? "idle") as "idle" | "processing" | "ready" | "failed"}
+        avatarErrorMessage={data.client.avatarErrorMessage ?? null}
       />
 
       {/* Quick access */}

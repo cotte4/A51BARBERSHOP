@@ -113,6 +113,20 @@
       "when": 1776452528092,
       "tag": "0015_drop_pantalla_votes",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1776463200000,
+      "tag": "0016_hangar_finanzas",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1776478568828,
+      "tag": "0017_wide_fabian_cortez",
+      "breakpoints": true
     }
   ]
 }
