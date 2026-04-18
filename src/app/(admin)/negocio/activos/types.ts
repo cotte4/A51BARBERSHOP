@@ -1,10 +1,11 @@
-export const ASSET_CATEGORIAS = [
-  "Mobiliario",
-  "Equipamiento",
-  "Iluminación",
-  "Herramientas",
-  "Tecnología",
-  "Otros",
-] as const;
+export {
+  HANGAR_ASSET_CATEGORIAS as ASSET_CATEGORIAS,
+  HANGAR_ASSET_ESTADOS_COMPRA as ASSET_ESTADOS_COMPRA,
+  HANGAR_ASSET_PAYMENT_TYPES as ASSET_PAYMENT_TYPES,
+} from "@/lib/hangar";
 
-export type AssetCategoria = (typeof ASSET_CATEGORIAS)[number];
+export type {
+  HangarAssetCategoria as AssetCategoria,
+  HangarAssetEstadoCompra as AssetEstadoCompra,
+  HangarAssetPaymentType as AssetPaymentType,
+} from "@/lib/hangar";

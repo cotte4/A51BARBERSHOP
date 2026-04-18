@@ -24,7 +24,7 @@ export default function NuevoMovimientoForm() {
 
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-zinc-300">Tipo de movimiento</label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 md:grid-cols-3">
           <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 has-[:checked]:border-[#8cff59]/60 has-[:checked]:bg-[#8cff59]/8">
             <input type="radio" name="tipo" value="aporte" defaultChecked className="accent-[#8cff59]" />
             <div>
@@ -37,6 +37,13 @@ export default function NuevoMovimientoForm() {
             <div>
               <p className="text-sm font-semibold text-white">Retiro</p>
               <p className="text-xs text-zinc-500">Dinero que sale del negocio</p>
+            </div>
+          </label>
+          <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 has-[:checked]:border-sky-500/60 has-[:checked]:bg-sky-500/8">
+            <input type="radio" name="tipo" value="inversion_activo" className="accent-sky-400" />
+            <div>
+              <p className="text-sm font-semibold text-white">Inversion activo</p>
+              <p className="text-xs text-zinc-500">Movimiento ligado a compras del Hangar</p>
             </div>
           </label>
         </div>

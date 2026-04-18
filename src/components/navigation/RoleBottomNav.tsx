@@ -148,6 +148,20 @@ function SettingsIcon() {
   );
 }
 
+function BuildingIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M4 21V6.5A1.5 1.5 0 0 1 5.5 5H10v16" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 21V3h8.5A1.5 1.5 0 0 1 20 4.5V21" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M7 8.5h.01M7 12h.01M7 15.5h.01M13.5 7h.01M13.5 10.5h.01M13.5 14h.01M17 7h.01M17 10.5h.01M17 14h.01"
+        strokeLinecap="round"
+      />
+      <path d="M2.5 21h19" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const BARBERO_NAV_ITEMS: NavItem[] = [
   {
     href: "/hoy",
@@ -225,6 +239,12 @@ const ADMIN_NAV_RIGHT: NavItem[] = [
       pathname.startsWith("/mi-resultado") ||
       pathname.startsWith("/turnos") ||
       pathname.startsWith("/clientes"),
+  },
+  {
+    href: "/negocio",
+    label: "Negocio",
+    icon: <BuildingIcon />,
+    isActive: (pathname) => pathname.startsWith("/negocio"),
   },
   {
     href: "/configuracion",
@@ -334,7 +354,7 @@ export default function RoleBottomNav({
             <div className="mx-1 h-10 w-px shrink-0 rounded-full bg-zinc-700/60" />
 
             {/* Grupo derecho — Gestión */}
-            <div className="grid grid-cols-2 gap-1">
+            <div className="grid grid-cols-3 gap-1">
               {ADMIN_NAV_RIGHT.map((item) => {
                 const active = item.isActive(pathname);
                 return (

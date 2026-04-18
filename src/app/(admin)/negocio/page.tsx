@@ -37,7 +37,7 @@ const utilityLinks = [
   { href: "/configuracion/medios-de-pago", label: "Cobros", detail: "Tarjeta, transferencia y comisiones" },
   { href: "/configuracion/gastos-fijos", label: "Gastos fijos", detail: "Alquiler, servicios y base del mes" },
   { href: "/negocio/estilo", label: "Cortes Marciano", detail: "Configurar cortes por forma de cara" },
-  { href: "/negocio/activos", label: "Equipamiento", detail: "Inversiones y activos del local" },
+  { href: "/negocio/activos", label: "Hangar", detail: "Activos, compras y flujo de inversion inicial" },
   { href: "/mi-resultado", label: "Mi resultado", detail: "Ver tu numero personal" },
   { href: "/dashboard/pl", label: "Reporte mensual", detail: "Abrir el detalle largo" },
 ] as const;

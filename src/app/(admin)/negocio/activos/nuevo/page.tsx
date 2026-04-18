@@ -19,20 +19,22 @@ export default async function NuevoAssetPage() {
             href="/negocio/activos"
             className="text-sm text-zinc-400 hover:text-[#8cff59] transition"
           >
-            ← Equipamiento
+            ← Hangar
           </Link>
         </div>
       </header>
+
       <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 pb-24">
         <div>
-          <p className="eyebrow text-xs font-semibold">Negocio / Equipamiento</p>
+          <p className="eyebrow text-xs font-semibold">Negocio / Hangar</p>
           <h1 className="font-display mt-2 text-2xl font-semibold text-white">
-            Registrar equipo
+            Crear activo
           </h1>
           <p className="mt-1 text-sm text-zinc-400">
-            Cada ítem suma al capital físico del negocio.
+            Suma una compra nueva o deja planificado lo que todavia falta entrar al local.
           </p>
         </div>
+
         <NuevoAssetForm />
       </main>
     </div>

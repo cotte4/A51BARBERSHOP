@@ -1,11 +1,18 @@
-import { db } from "@/db";
-import { costosFijosNegocio, costosFijosValores, capitalMovimientos } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
+import { desc, eq } from "drizzle-orm";
 import BrandMark from "@/components/BrandMark";
-import { formatARS } from "@/lib/format";
+import { db } from "@/db";
+import {
+  barberShopAssetPayments,
+  barberShopAssets,
+  capitalMovimientos,
+  costosFijosNegocio,
+  costosFijosValores,
+} from "@/db/schema";
 import { formatFecha } from "@/lib/fecha";
-import { eliminarCosto, eliminarMovimiento, copiarMesAnterior } from "./actions";
+import { formatARS } from "@/lib/format";
+import { getCapitalMovimientoLabel } from "@/lib/hangar";
+import { copiarMesAnterior, eliminarCosto, eliminarMovimiento } from "./actions";
 
 function getMesActualAR(): string {
   return new Date().toLocaleDateString("en-CA", {
@@ -90,25 +97,43 @@ export default async function FinanzasPage({
   const mesNext = getAdjacentMonth(mes, 1);
   const mesActual = getMesActualAR();
 
-  const [costos, valoresMes, valoresMesPrev, movimientos] = await Promise.all([
+  const [costos, valoresMes, valoresMesPrev, movimientos, hangarLinks] = await Promise.all([
     db.select().from(costosFijosNegocio).orderBy(costosFijosNegocio.categoria, costosFijosNegocio.nombre),
     db.select().from(costosFijosValores).where(eq(costosFijosValores.mes, mes)),
     db.select().from(costosFijosValores).where(eq(costosFijosValores.mes, mesPrev)),
     db.select().from(capitalMovimientos).orderBy(desc(capitalMovimientos.fecha)),
+    db
+      .select({
+        capitalMovimientoId: barberShopAssetPayments.capitalMovimientoId,
+        assetId: barberShopAssetPayments.assetId,
+        assetNombre: barberShopAssets.nombre,
+      })
+      .from(barberShopAssetPayments)
+      .innerJoin(barberShopAssets, eq(barberShopAssetPayments.assetId, barberShopAssets.id)),
   ]);
 
-  const valoresMap = new Map(valoresMes.map((v) => [v.costoId, v.monto]));
-  const totalMes = valoresMes.reduce((acc, v) => acc + Number(v.monto), 0);
+  const valoresMap = new Map(valoresMes.map((value) => [value.costoId, value.monto]));
+  const totalMes = valoresMes.reduce((acc, value) => acc + Number(value.monto), 0);
   const hasMesValues = valoresMes.length > 0;
   const hasPrevValues = valoresMesPrev.length > 0;
 
   const totalAportado = movimientos
-    .filter((m) => m.tipo === "aporte")
-    .reduce((acc, m) => acc + Number(m.monto ?? 0), 0);
+    .filter((movement) => movement.tipo === "aporte")
+    .reduce((acc, movement) => acc + Number(movement.monto ?? 0), 0);
   const totalRetirado = movimientos
-    .filter((m) => m.tipo === "retiro")
-    .reduce((acc, m) => acc + Number(m.monto ?? 0), 0);
+    .filter((movement) => movement.tipo === "retiro")
+    .reduce((acc, movement) => acc + Number(movement.monto ?? 0), 0);
+  const totalInvertidoHangar = movimientos
+    .filter((movement) => movement.tipo === "inversion_activo")
+    .reduce((acc, movement) => acc + Number(movement.monto ?? 0), 0);
+
   const capitalNeto = totalAportado - totalRetirado;
+  const capitalDisponible = capitalNeto - totalInvertidoHangar;
+  const hangarPaymentMap = new Map(
+    hangarLinks
+      .filter((link) => link.capitalMovimientoId)
+      .map((link) => [link.capitalMovimientoId as string, link])
+  );
 
   return (
     <div className="app-shell min-h-screen">
@@ -119,8 +144,6 @@ export default async function FinanzasPage({
       </header>
 
       <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 pb-24">
-
-        {/* ── COSTOS FIJOS ── */}
         <section className="overflow-hidden rounded-[28px] border border-zinc-800 bg-zinc-950">
           <div className="bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.10),_transparent_34%)] p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -134,11 +157,10 @@ export default async function FinanzasPage({
                 href="/finanzas/nuevo"
                 className="neon-button inline-flex min-h-[44px] items-center rounded-2xl px-4 text-sm font-semibold"
               >
-                + Nuevo ítem
+                + Nuevo item
               </Link>
             </div>
 
-            {/* Navegación de meses */}
             <div className="mt-4 flex items-center justify-between gap-2">
               <Link
                 href={`/finanzas?mes=${mesPrev}`}
@@ -153,11 +175,11 @@ export default async function FinanzasPage({
                 <p className="font-display text-base font-semibold capitalize text-white">
                   {getMesLabel(mes)}
                 </p>
-                {mes === mesActual && (
+                {mes === mesActual ? (
                   <span className="mt-0.5 rounded-full bg-[#8cff59]/15 px-2 py-0.5 text-[10px] font-semibold text-[#8cff59]">
                     Mes actual
                   </span>
-                )}
+                ) : null}
               </div>
 
               <Link
@@ -170,7 +192,6 @@ export default async function FinanzasPage({
               </Link>
             </div>
 
-            {/* Total del mes */}
             <div className="mt-4 flex items-center justify-between rounded-[20px] border border-zinc-800 bg-zinc-900/60 px-4 py-3">
               <p className="text-sm font-medium text-zinc-400">Total del mes</p>
               <p className={`font-display text-xl font-bold ${hasMesValues ? "text-[#8cff59]" : "text-zinc-600"}`}>
@@ -179,11 +200,13 @@ export default async function FinanzasPage({
             </div>
           </div>
 
-          {/* Lista de costos */}
           {costos.length === 0 ? (
             <div className="px-5 pb-6 pt-2 text-center">
-              <p className="text-sm text-zinc-500">No hay ítems de costo configurados.</p>
-              <Link href="/finanzas/nuevo" className="mt-3 inline-flex min-h-[44px] items-center rounded-2xl bg-zinc-800 px-4 text-sm font-medium text-white hover:bg-zinc-700">
+              <p className="text-sm text-zinc-500">No hay items de costo configurados.</p>
+              <Link
+                href="/finanzas/nuevo"
+                className="mt-3 inline-flex min-h-[44px] items-center rounded-2xl bg-zinc-800 px-4 text-sm font-medium text-white hover:bg-zinc-700"
+              >
                 Agregar el primero
               </Link>
             </div>
@@ -191,7 +214,7 @@ export default async function FinanzasPage({
             <>
               <div className="divide-y divide-zinc-800/60">
                 {costos.map((costo) => {
-                  const valor = valoresMap.get(costo.id);
+                  const value = valoresMap.get(costo.id);
                   return (
                     <div key={costo.id} className="flex items-center gap-3 px-5 py-3.5">
                       <div className="min-w-0 flex-1">
@@ -202,15 +225,15 @@ export default async function FinanzasPage({
                           </span>
                         </div>
                       </div>
-                      <p className={`font-display shrink-0 text-base font-semibold ${valor ? "text-white" : "text-zinc-700"}`}>
-                        {valor ? formatARS(valor) : "—"}
+                      <p className={`font-display shrink-0 text-base font-semibold ${value ? "text-white" : "text-zinc-700"}`}>
+                        {value ? formatARS(value) : "—"}
                       </p>
                       <div className="flex shrink-0 gap-1.5">
                         <Link
                           href={`/finanzas/${costo.id}/editar`}
                           className="inline-flex min-h-[36px] items-center rounded-xl bg-zinc-800 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-700"
                         >
-                          Ítem
+                          Item
                         </Link>
                         <DeleteCostoButton id={costo.id} />
                       </div>
@@ -219,7 +242,6 @@ export default async function FinanzasPage({
                 })}
               </div>
 
-              {/* Acciones del mes */}
               <div className="flex flex-wrap gap-3 border-t border-zinc-800/60 px-5 py-4">
                 <Link
                   href={`/finanzas/mes/${mes}/editar`}
@@ -227,20 +249,17 @@ export default async function FinanzasPage({
                 >
                   Editar valores de {getMesLabel(mes).split(" ")[0]}
                 </Link>
-                {!hasMesValues && hasPrevValues && (
-                  <CopiarMesButton mes={mes} />
-                )}
+                {!hasMesValues && hasPrevValues ? <CopiarMesButton mes={mes} /> : null}
               </div>
             </>
           )}
         </section>
 
-        {/* ── ÍTEMS DE COSTO (gestión) ── */}
         <details className="group overflow-hidden rounded-[28px] border border-zinc-800 bg-zinc-950">
           <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4">
             <div>
-              <p className="eyebrow text-xs font-semibold">Configuración</p>
-              <p className="mt-1 text-sm font-semibold text-white">Gestionar ítems de costo</p>
+              <p className="eyebrow text-xs font-semibold">Configuracion</p>
+              <p className="mt-1 text-sm font-semibold text-white">Gestionar items de costo</p>
             </div>
             <svg viewBox="0 0 24 24" className="h-4 w-4 text-zinc-500 transition group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
@@ -251,7 +270,7 @@ export default async function FinanzasPage({
               <div key={costo.id} className="flex items-center gap-3 px-5 py-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-white">{costo.nombre}</p>
-                  {costo.notas && <p className="text-xs text-zinc-500">{costo.notas}</p>}
+                  {costo.notas ? <p className="text-xs text-zinc-500">{costo.notas}</p> : null}
                 </div>
                 <span className="rounded-full border border-zinc-800 px-2 py-0.5 text-[10px] font-semibold text-zinc-500">
                   {categoriaLabel(costo.categoria)}
@@ -268,14 +287,13 @@ export default async function FinanzasPage({
           </div>
         </details>
 
-        {/* ── CAPITAL E INVERSIÓN ── */}
         <section className="overflow-hidden rounded-[28px] border border-zinc-800 bg-zinc-950">
           <div className="bg-[radial-gradient(circle_at_top_left,_rgba(140,255,89,0.07),_transparent_40%)] p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="eyebrow text-xs font-semibold">Inversión inicial</p>
+                <p className="eyebrow text-xs font-semibold">Inversion inicial</p>
                 <h2 className="font-display mt-2 text-xl font-semibold text-white">
-                  Capital e inversión
+                  Capital e inversion
                 </h2>
               </div>
               <Link
@@ -286,67 +304,124 @@ export default async function FinanzasPage({
               </Link>
             </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              <div className="rounded-[20px] bg-white/6 px-3 py-3 ring-1 ring-white/8">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">Aportado</p>
-                <p className="mt-1.5 font-display text-lg font-bold text-[#8cff59]">{formatARS(totalAportado)}</p>
-              </div>
-              <div className="rounded-[20px] bg-white/6 px-3 py-3 ring-1 ring-white/8">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">Retirado</p>
-                <p className="mt-1.5 font-display text-lg font-bold text-amber-300">{formatARS(totalRetirado)}</p>
-              </div>
-              <div className={`rounded-[20px] px-3 py-3 ring-1 ${capitalNeto >= 0 ? "bg-[#8cff59]/8 ring-[#8cff59]/20" : "bg-red-500/8 ring-red-500/20"}`}>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">Neto</p>
-                <p className={`mt-1.5 font-display text-lg font-bold ${capitalNeto >= 0 ? "text-[#8cff59]" : "text-red-400"}`}>
-                  {formatARS(capitalNeto)}
-                </p>
-              </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <CapitalMetric label="Aportado" value={formatARS(totalAportado)} tone="accent" />
+              <CapitalMetric label="Retirado" value={formatARS(totalRetirado)} tone="warn" />
+              <CapitalMetric label="Hangar" value={formatARS(totalInvertidoHangar)} tone="info" />
+              <CapitalMetric label="Disponible" value={formatARS(capitalDisponible)} tone={capitalDisponible >= 0 ? "accent" : "danger"} />
             </div>
           </div>
 
           {movimientos.length === 0 ? (
             <div className="px-5 pb-6 pt-2 text-center">
               <p className="text-sm text-zinc-500">No hay movimientos registrados.</p>
-              <Link href="/finanzas/movimiento/nuevo" className="mt-3 inline-flex min-h-[44px] items-center rounded-2xl bg-zinc-800 px-4 text-sm font-medium text-white hover:bg-zinc-700">
+              <Link
+                href="/finanzas/movimiento/nuevo"
+                className="mt-3 inline-flex min-h-[44px] items-center rounded-2xl bg-zinc-800 px-4 text-sm font-medium text-white hover:bg-zinc-700"
+              >
                 Registrar el primero
               </Link>
             </div>
           ) : (
             <div className="divide-y divide-zinc-800/60">
-              {movimientos.map((mov) => (
-                <div key={mov.id} className="flex items-center justify-between gap-4 px-5 py-3.5">
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                      mov.tipo === "aporte" ? "bg-[#8cff59]/15 text-[#8cff59]" : "bg-amber-500/15 text-amber-300"
-                    }`}>
-                      {mov.tipo === "aporte" ? "+" : "−"}
+              {movimientos.map((movement) => {
+                const linkedHangar = hangarPaymentMap.get(movement.id);
+                const isAporte = movement.tipo === "aporte";
+                const isRetiro = movement.tipo === "retiro";
+                const tone = isAporte
+                  ? "bg-[#8cff59]/15 text-[#8cff59]"
+                  : isRetiro
+                    ? "bg-amber-500/15 text-amber-300"
+                    : "bg-sky-500/15 text-sky-300";
+                const amountTone = isAporte
+                  ? "text-[#8cff59]"
+                  : isRetiro
+                    ? "text-amber-300"
+                    : "text-sky-300";
+                const prefix = isRetiro ? "−" : "+";
+
+                return (
+                  <div key={movement.id} className="flex items-center justify-between gap-4 px-5 py-3.5">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${tone}`}>
+                        {prefix}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-white">
+                            {getCapitalMovimientoLabel(movement.tipo)}
+                          </p>
+                          {linkedHangar ? (
+                            <span className="rounded-full border border-sky-400/25 bg-sky-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-200">
+                              Hangar
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="text-xs text-zinc-500">
+                          {formatFecha(movement.fecha)}
+                          {movement.descripcion ? ` · ${movement.descripcion}` : ""}
+                          {linkedHangar ? ` · ${linkedHangar.assetNombre}` : ""}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold capitalize text-white">{mov.tipo}</p>
-                      <p className="text-xs text-zinc-500">
-                        {formatFecha(mov.fecha)}{mov.descripcion ? ` · ${mov.descripcion}` : ""}
+
+                    <div className="flex shrink-0 items-center gap-3">
+                      <p className={`font-display text-base font-semibold ${amountTone}`}>
+                        {prefix}
+                        {formatARS(movement.monto)}
                       </p>
+                      {linkedHangar ? (
+                        <Link
+                          href={`/negocio/activos/${linkedHangar.assetId}`}
+                          className="inline-flex min-h-[40px] items-center rounded-xl bg-zinc-800 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-700"
+                        >
+                          Ver activo
+                        </Link>
+                      ) : (
+                        <>
+                          <Link
+                            href={`/finanzas/movimiento/${movement.id}/editar`}
+                            className="inline-flex min-h-[40px] items-center rounded-xl bg-zinc-800 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-700"
+                          >
+                            Editar
+                          </Link>
+                          <DeleteMovimientoButton id={movement.id} />
+                        </>
+                      )}
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <p className={`font-display text-base font-semibold ${mov.tipo === "aporte" ? "text-[#8cff59]" : "text-amber-300"}`}>
-                      {mov.tipo === "retiro" ? "−" : "+"}{formatARS(mov.monto)}
-                    </p>
-                    <Link
-                      href={`/finanzas/movimiento/${mov.id}/editar`}
-                      className="inline-flex min-h-[40px] items-center rounded-xl bg-zinc-800 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-700"
-                    >
-                      Editar
-                    </Link>
-                    <DeleteMovimientoButton id={mov.id} />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
-
       </main>
+    </div>
+  );
+}
+
+function CapitalMetric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "accent" | "warn" | "danger" | "info";
+}) {
+  const className =
+    tone === "accent"
+      ? "text-[#8cff59]"
+      : tone === "warn"
+        ? "text-amber-300"
+        : tone === "info"
+          ? "text-sky-300"
+          : "text-red-400";
+
+  return (
+    <div className="rounded-[20px] bg-white/6 px-3 py-3 ring-1 ring-white/8">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">{label}</p>
+      <p className={`mt-1.5 font-display text-lg font-bold ${className}`}>{value}</p>
     </div>
   );
 }

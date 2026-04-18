@@ -1,8 +1,14 @@
 "use server";
 
 import { db } from "@/db";
-import { costosFijosNegocio, costosFijosValores, capitalMovimientos } from "@/db/schema";
+import {
+  barberShopAssetPayments,
+  capitalMovimientos,
+  costosFijosNegocio,
+  costosFijosValores,
+} from "@/db/schema";
 import { requireAsesorSession } from "@/lib/asesor-action";
+import { isCapitalMovimientoLinkedToHangar } from "@/lib/hangar-server";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -216,7 +222,9 @@ export async function crearMovimiento(
 
   const fieldErrors: MovimientoFormState["fieldErrors"] = {};
   if (!fecha) fieldErrors.fecha = "La fecha es requerida";
-  if (!tipo || !["aporte", "retiro"].includes(tipo)) fieldErrors.tipo = "Seleccioná un tipo";
+  if (!tipo || !["aporte", "retiro", "inversion_activo"].includes(tipo)) {
+    fieldErrors.tipo = "Selecciona un tipo";
+  }
   if (!montoStr || isNaN(Number(montoStr)) || Number(montoStr) <= 0)
     fieldErrors.monto = "Ingresá un monto mayor a 0";
 
@@ -241,6 +249,10 @@ export async function editarMovimiento(
     return { error: "Sin permisos para editar movimientos." };
   }
 
+  if (await isCapitalMovimientoLinkedToHangar(id)) {
+    return { error: "Este movimiento viene de Hangar. Editalo desde el activo." };
+  }
+
   const fecha = (formData.get("fecha") as string)?.trim();
   const tipo = (formData.get("tipo") as string)?.trim();
   const montoStr = (formData.get("monto") as string)?.trim();
@@ -248,7 +260,9 @@ export async function editarMovimiento(
 
   const fieldErrors: MovimientoFormState["fieldErrors"] = {};
   if (!fecha) fieldErrors.fecha = "La fecha es requerida";
-  if (!tipo || !["aporte", "retiro"].includes(tipo)) fieldErrors.tipo = "Seleccioná un tipo";
+  if (!tipo || !["aporte", "retiro", "inversion_activo"].includes(tipo)) {
+    fieldErrors.tipo = "Selecciona un tipo";
+  }
   if (!montoStr || isNaN(Number(montoStr)) || Number(montoStr) <= 0)
     fieldErrors.monto = "Ingresá un monto mayor a 0";
 
@@ -269,6 +283,13 @@ export async function editarMovimiento(
 
 export async function eliminarMovimiento(id: string): Promise<void> {
   if (!(await requireAsesorSession())) return;
+  const linkedPayment = await db.query.barberShopAssetPayments.findFirst({
+    where: eq(barberShopAssetPayments.capitalMovimientoId, id),
+  });
+  if (linkedPayment) {
+    revalidatePath("/finanzas");
+    redirect("/finanzas");
+  }
   await db.delete(capitalMovimientos).where(eq(capitalMovimientos.id, id));
   revalidatePath("/finanzas");
   redirect("/finanzas");
