@@ -141,7 +141,7 @@ export default function FaceCapture({ onCapture }: FaceCaptureProps) {
       // Use pre-loaded landmarker if available, otherwise load with timeout
       let landmarker = landmarkerRef.current;
       if (!landmarker) {
-        setLoadingMsg("Preparando el analizador de rostro...");
+        setLoadingMsg("Iniciando escáner alienígena...");
         landmarker = await Promise.race([
           loadFaceLandmarker(),
           new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 15000)),
@@ -174,7 +174,7 @@ export default function FaceCapture({ onCapture }: FaceCaptureProps) {
           : Promise.resolve({ shape: null });
 
       // Multi-frame geometric sampling
-      setLoadingMsg("Analizando tu rostro...");
+      setLoadingMsg("Leyendo tu forma alien...");
       const samples: FaceMetrics[] = [];
       for (let i = 0; i < SAMPLE_FRAMES; i++) {
         const lms = await detectLandmarksFromVideo(video, landmarker);
@@ -197,7 +197,7 @@ export default function FaceCapture({ onCapture }: FaceCaptureProps) {
       const metrics = samples.length > 1 ? averageMetrics(samples) : samples[0];
       const geoShape = classifyFaceShape(metrics);
 
-      setLoadingMsg("Validando con IA...");
+      setLoadingMsg("Calculando tu especie...");
 
       // Wait for AI result (usually ready by now since geometric took ~1s)
       const { shape: aiShape } = await aiPromise;
@@ -336,16 +336,11 @@ export default function FaceCapture({ onCapture }: FaceCaptureProps) {
 
       {state === "analyzing" && (
         <>
-          {aiStatus !== "agree" && aiStatus !== "differ" && <Spinner />}
-          {(aiStatus === "agree" || aiStatus === "differ") && (
-            <div className={`text-4xl ${aiStatus === "agree" ? "text-[#8cff59]" : "text-amber-400"}`}>
-              {aiStatus === "agree" ? "✓" : "~"}
-            </div>
-          )}
+          <Spinner />
           <p className="text-sm text-zinc-400 text-center">
-            {loadingMsg || "Analizando tu rostro..."}
+            {loadingMsg || "Escaneando tu forma alien..."}
           </p>
-          {sampleProgress > 0 && aiStatus === "idle" && (
+          {sampleProgress > 0 && sampleProgress < SAMPLE_FRAMES && (
             <div className="flex gap-1.5">
               {Array.from({ length: SAMPLE_FRAMES }).map((_, i) => (
                 <div
@@ -356,18 +351,6 @@ export default function FaceCapture({ onCapture }: FaceCaptureProps) {
                 />
               ))}
             </div>
-          )}
-          {aiStatus === "running" && (
-            <p className="text-xs text-zinc-500 text-center">IA validando...</p>
-          )}
-          {aiStatus === "agree" && (
-            <p className="text-xs text-[#8cff59]/80 text-center">Geometría e IA coinciden</p>
-          )}
-          {aiStatus === "differ" && (
-            <p className="text-xs text-amber-400/80 text-center">IA ajustó el resultado</p>
-          )}
-          {aiStatus === "failed" && (
-            <p className="text-xs text-zinc-500 text-center">IA no disponible — usando análisis geométrico</p>
           )}
         </>
       )}
