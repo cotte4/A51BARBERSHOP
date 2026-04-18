@@ -9,21 +9,21 @@ import type { FaceShape } from "@/lib/types";
 const AVATAR_MODEL_VERSION = "a07f252abbbd832009640b27f063ea52d87d7a23a185ca165bec23b5adc8deaf";
 
 const AVATAR_PROMPT =
-  "{COLOR} skin, {HEX} skin color, entirely {COLOR} alien skin from forehead to neck, " +
-  "close-up portrait of a cartoon alien, face and neck only, tight headshot, no body visible, " +
-  "100% {COLOR} ({HEX}) skin tone covering every part of the face and neck, " +
-  "looking directly forward, front-facing, eyes looking straight at viewer, " +
-  "calm expression, mouth closed, " +
-  "elongated narrow alien skull with high forehead, extremely large almond-shaped oval black eyes dominating the face, small pointed ears, dark hair on top with skin fade haircut, trimmed sides, " +
-  "cel-shaded flat cartoon colors, bold black ink outlines, vibrant cartoon alien mascot illustration, " +
-  "background: outer space with stars and colorful nebula, flying saucer UFO spaceship visible in the background sky";
+  "{COLOR} skin, {HEX} skin color, entirely {COLOR} alien skin, " +
+  "close-up portrait of a cartoon alien, face and neck only, no body, " +
+  "100% {COLOR} skin tone on entire face and neck, " +
+  "looking directly forward, calm expression, mouth closed, " +
+  "elongated oval alien head, very large almond-shaped oval black eyes, small pointed ears, " +
+  "dark hair on top with skin fade haircut, trimmed sides, " +
+  "outer space background with stars and colorful nebula, flying saucer UFO in the background";
 
 const AVATAR_NEGATIVE_PROMPT =
-  "human skin color, realistic skin, natural skin tone, flesh color, beige, tan, pale, brown, pink skin, " +
-  "full body, torso, arms, shoulders, hands, " +
-  "screaming, yelling, open mouth, side view, profile view, looking away, " +
-  "photograph, photorealistic, indoor background, plain background, " +
-  "bald, no hair, shaved head, blurry, low quality, ugly, deformed, watermark, text";
+  "human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, " +
+  "small eyes, round eyes, human eyes, " +
+  "full body, torso, arms, shoulders, " +
+  "screaming, open mouth, side view, looking away, " +
+  "bald, no hair, shaved head, " +
+  "blurry, low quality, ugly, deformed, watermark";
 
 export async function startAvatarPrediction(input: {
   frameBase64: string;
@@ -48,10 +48,10 @@ export async function startAvatarPrediction(input: {
         prompt,
         negative_prompt: AVATAR_NEGATIVE_PROMPT,
         style: "Emoji",
-        prompt_strength: 14,
-        instant_id_strength: 0.18,
-        denoising_strength: 0.9,
-        control_depth_strength: 0.48,
+        prompt_strength: 12,
+        instant_id_strength: 0.22,
+        denoising_strength: 0.88,
+        control_depth_strength: 0.58,
         num_steps: 35,
       },
       webhook: `${appUrl}/api/replicate/avatar-webhook`,
