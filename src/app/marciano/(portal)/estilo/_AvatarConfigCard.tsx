@@ -288,15 +288,16 @@ export default function AvatarConfigCard({ favoriteColor, avatarUrl, avatarStatu
         </div>
       )}
 
-      <div className="h-px bg-zinc-800" />
-
-      {/* Config: clase + color */}
-      <PresetGrid selected={selectedPreset} onSelect={handlePresetSelect} />
-      <ColorGrid selected={selectedSlug} onSelect={handleColorSelect} />
-
-      <button type="button" onClick={handleSaveConfig} className="neon-button w-full rounded-[20px] px-4 py-3 text-sm font-semibold">
-        {configSaved ? "✓ Configuración guardada" : "Guardar configuración"}
-      </button>
+      {!isProcessing && (
+        <>
+          <div className="h-px bg-zinc-800" />
+          <PresetGrid selected={selectedPreset} onSelect={handlePresetSelect} />
+          <ColorGrid selected={selectedSlug} onSelect={handleColorSelect} />
+          <button type="button" onClick={handleSaveConfig} className="neon-button w-full rounded-[20px] px-4 py-3 text-sm font-semibold">
+            {configSaved ? "✓ Configuración guardada" : "Guardar configuración"}
+          </button>
+        </>
+      )}
     </div>
   );
 }
