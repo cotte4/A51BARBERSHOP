@@ -11,7 +11,7 @@ import type { AvatarPreset } from "@/lib/marciano-avatar-presets";
 export type { AvatarPreset } from "@/lib/marciano-avatar-presets";
 
 const AVATAR_MODEL_VERSION = "a07f252abbbd832009640b27f063ea52d87d7a23a185ca165bec23b5adc8deaf";
-const CLEAN_MODEL_VERSION = "b0bb4c529bb749ac98145e70f42f88d36598e89310beeeba4ee00e14238d1b4d"; // nightmareai/real-esrgan + face_enhance
+const CLEAN_MODEL_VERSION = "f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa"; // nightmareai/real-esrgan + face_enhance
 
 export async function startAvatarPrediction(input: {
   frameBase64: string;
