@@ -10,19 +10,20 @@ import type { FaceShape } from "@/lib/types";
 const AVATAR_MODEL = "fofr/face-to-many";
 
 const AVATAR_PROMPT =
-  "close-up portrait of a cartoon alien, face and neck only, tight headshot from chin to top of head, " +
-  "solid {COLOR} ({HEX}) skin covering entire face and neck, {COLOR} alien complexion everywhere, " +
+  "{COLOR} skin, {HEX} skin color, entirely {COLOR} alien skin from forehead to neck, " +
+  "close-up portrait of a cartoon alien, face and neck only, tight headshot, no body visible, " +
+  "100% {COLOR} ({HEX}) skin tone covering every part of the face and neck, " +
   "looking directly forward, front-facing, eyes looking straight at viewer, " +
-  "maintaining facial expression from photo, calm composed expression, mouth closed, " +
+  "calm expression, mouth closed, " +
   "big glossy black alien eyes, small pointed ears, {FACE_SHAPE} face shape, sharp modern fade haircut, " +
-  "cel-shaded flat cartoon colors, bold black ink outlines, vibrant illustration, cartoon alien mascot, " +
+  "cel-shaded flat cartoon colors, bold black ink outlines, vibrant cartoon alien mascot illustration, " +
   "deep space background with stars, colorful nebula, small flying saucer UFO in the distance";
 
 const AVATAR_NEGATIVE_PROMPT =
-  "full body, torso, arms, shoulders, hands, body below neck, " +
-  "screaming, yelling, open mouth, different expression, side view, profile view, looking away, " +
-  "human skin, realistic skin, natural skin tone, flesh color, beige, tan, pale, brown, pink skin, " +
-  "photograph, photorealistic, realistic face, indoor background, plain background, white background, " +
+  "human skin color, realistic skin, natural skin tone, flesh color, beige, tan, pale, brown, pink skin, " +
+  "full body, torso, arms, shoulders, hands, " +
+  "screaming, yelling, open mouth, side view, profile view, looking away, " +
+  "photograph, photorealistic, indoor background, plain background, " +
   "blurry, low quality, ugly, deformed, watermark, text";
 
 export async function startAvatarPrediction(input: {
