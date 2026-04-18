@@ -14,25 +14,25 @@ export default function MarcianoPasswordRecoveryForm() {
 
   return (
     <form action={formAction} className="space-y-5" aria-busy={pending}>
-      <div className="rounded-[26px] border border-white/10 bg-white/5 p-4">
+      <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-          Paso unico
+          Reset de clave
         </p>
         <p className="mt-2 text-sm leading-6 text-zinc-300">
-          Te enviamos un link seguro al correo registrado. Usalo una sola vez para crear una nueva
-          clave.
+          Te mandamos un link seguro al correo registrado para que vuelvas a entrar sin vueltas.
         </p>
       </div>
 
       <div className="flex flex-col gap-2">
         <label htmlFor="email" className="text-sm font-medium text-zinc-300">
-          Email Marciano
+          Email
         </label>
         <input
           id="email"
           name="email"
           type="email"
           autoComplete="email"
+          required
           className="h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-950/75 px-4 text-zinc-50 outline-none transition focus:border-[#8cff59] focus:ring-2 focus:ring-[#8cff59]/20"
           placeholder="tu@email.com"
         />
@@ -54,17 +54,17 @@ export default function MarcianoPasswordRecoveryForm() {
       <button
         type="submit"
         disabled={pending}
-        className="neon-button h-12 w-full rounded-[20px] text-sm font-semibold disabled:opacity-50"
+        className="neon-button h-[52px] w-full rounded-[22px] text-base font-semibold disabled:opacity-50"
       >
         {pending ? "Enviando..." : "Mandar link seguro"}
       </button>
 
-      <p className="text-center text-sm text-zinc-400">
-        Ya recuperaste el acceso?{" "}
-        <Link href="/marciano/login" className="text-[#8cff59] hover:text-[#b6ff84]">
-          Volver al login
-        </Link>
-      </p>
+      <Link
+        href="/marciano/login"
+        className="flex min-h-[52px] items-center justify-center rounded-[22px] border border-white/10 bg-white/5 px-4 text-center text-sm font-medium text-zinc-300 transition hover:border-[#8cff59]/22 hover:text-white"
+      >
+        Volver al login
+      </Link>
     </form>
   );
 }

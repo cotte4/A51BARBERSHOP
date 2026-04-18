@@ -58,13 +58,12 @@ export default function MarcianoRegisterForm() {
 
   return (
     <form action={formAction} className="space-y-5" aria-busy={pending}>
-      <div className="rounded-[26px] border border-white/10 bg-white/5 p-4">
+      <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-          Como funciona
+          Alta Marciana
         </p>
         <p className="mt-2 text-sm leading-6 text-zinc-300">
-          Primero validamos tu email, despues creas la clave y al final intentamos abrir tu portal
-          Marciano automaticamente.
+          Validamos tu email, armas tu clave y te intentamos meter al portal en la misma pasada.
         </p>
       </div>
 
@@ -88,7 +87,7 @@ export default function MarcianoRegisterForm() {
 
       <div className="flex flex-col gap-2">
         <label htmlFor="password" className="text-sm font-medium text-zinc-300">
-          Contrasena
+          Clave
         </label>
         <input
           id="password"
@@ -126,17 +125,17 @@ export default function MarcianoRegisterForm() {
       <button
         type="submit"
         disabled={pending}
-        className="neon-button h-12 w-full rounded-2xl text-base font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+        className="neon-button h-[52px] w-full rounded-[22px] text-base font-semibold disabled:cursor-not-allowed disabled:opacity-50"
       >
         {pending ? "Creando acceso..." : "Activar mi portal"}
       </button>
 
-      <p className="text-center text-sm text-zinc-400">
-        Ya tenes cuenta?{" "}
-        <Link href="/marciano/login" className="font-medium text-[#8cff59] hover:text-[#b6ff95]">
-          Entrar desde aca
-        </Link>
-      </p>
+      <Link
+        href="/marciano/login"
+        className="flex min-h-[52px] items-center justify-center rounded-[22px] border border-white/10 bg-white/5 px-4 text-center text-sm font-medium text-zinc-300 transition hover:border-[#8cff59]/22 hover:text-white"
+      >
+        Ya tenes cuenta? Entrar desde aca
+      </Link>
     </form>
   );
 }

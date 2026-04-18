@@ -1,4 +1,3 @@
-import Link from "next/link";
 import MarcianoPublicShell from "@/components/marciano/MarcianoPublicShell";
 import MarcianoRegisterForm from "@/components/marciano/MarcianoRegisterForm";
 
@@ -17,16 +16,9 @@ export default function MarcianoRegistroPage() {
         { label: "Ruta", value: "/marciano/registro" },
       ]}
       footer={
-        <>
-          <p className="text-center text-sm text-zinc-500">
-            Si todavia no figuras, escribinos en la barber para validar tu email primero.
-          </p>
-          <p className="mt-3 text-center text-sm text-zinc-400">
-            <Link href="/marciano/login" className="hover:text-white">
-              Volver al login Marciano
-            </Link>
-          </p>
-        </>
+        <div className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-4 text-sm text-zinc-400">
+          Si todavia no figuras, escribinos en la barber para validar tu email primero.
+        </div>
       }
     >
       <MarcianoRegisterForm />

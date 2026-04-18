@@ -6,17 +6,19 @@ import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { sendMarcianoPasswordResetEmail } from "@/lib/email";
 
-// Definir los statements y roles del sistema A51 Barber
-const ac = createAccessControl({
+const privilegedPermissions = {
   user: ["create", "list", "set-role", "ban", "delete", "set-password", "get", "update"],
   session: ["list", "revoke", "delete"],
-} as const);
+} as const;
+
+// Definir los statements y roles del sistema A51 Barber
+const ac = createAccessControl(privilegedPermissions);
 
 // Rol admin: acceso completo
-const adminRole = ac.newRole({
-  user: ["create", "list", "set-role", "ban", "delete", "set-password", "get", "update"],
-  session: ["list", "revoke", "delete"],
-});
+const adminRole = ac.newRole(privilegedPermissions);
+
+// Rol asesor: misma jerarquia operativa que admin, sin convertirse en barbero
+const asesorRole = ac.newRole(privilegedPermissions);
 
 // Rol barbero: sin permisos de administración de usuarios
 const barberoRole = ac.newRole({
@@ -52,9 +54,10 @@ export const auth = betterAuth({
   plugins: [
     admin({
       defaultRole: "barbero",
-      adminRoles: ["admin"],
+      adminRoles: ["admin", "asesor"],
       roles: {
         admin: adminRole,
+        asesor: asesorRole,
         barbero: barberoRole,
         marciano: marcianoRole,
       },

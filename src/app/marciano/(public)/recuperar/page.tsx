@@ -1,4 +1,3 @@
-import Link from "next/link";
 import MarcianoPasswordRecoveryForm from "@/components/marciano/MarcianoPasswordRecoveryForm";
 import MarcianoPublicShell from "@/components/marciano/MarcianoPublicShell";
 
@@ -16,13 +15,6 @@ export default function MarcianoRecoverPage() {
         { label: "Tiempo", value: "En pocos minutos" },
         { label: "Ruta", value: "/marciano/recuperar" },
       ]}
-      footer={
-        <p className="text-center text-sm text-zinc-400">
-          <Link href="/marciano/login" className="text-[#8cff59] hover:text-[#b6ff84]">
-            Volver al login
-          </Link>
-        </p>
-      }
     >
       <MarcianoPasswordRecoveryForm />
     </MarcianoPublicShell>

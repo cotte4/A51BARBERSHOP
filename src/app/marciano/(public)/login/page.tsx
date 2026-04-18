@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import MarcianoPublicShell from "@/components/marciano/MarcianoPublicShell";
 import { signIn } from "@/lib/auth-client";
 
@@ -13,7 +13,7 @@ export default function MarcianoLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError("");
@@ -24,7 +24,7 @@ export default function MarcianoLoginPage() {
     });
 
     if (authError) {
-      setError("No pudimos validar tu acceso Marciano. Revisá tu email y contraseña.");
+      setError("No pudimos validar tu acceso. Revisa tu email y tu clave.");
       setLoading(false);
       return;
     }
@@ -36,41 +36,35 @@ export default function MarcianoLoginPage() {
   return (
     <MarcianoPublicShell
       badge="Club Marciano"
-      title="Sube a la nave"
-      description="Usa el email que A51 cargo para tu membresia. Desde aca reservas, ves tus beneficios y te mueves por tu carril sin tocar la base interna."
-      sideTitle="El acceso VIP del club: turnos, beneficios y codigo propio."
-      sideDescription="Esto no es el login del staff. Es la entrada Marciana: mas club, mas noche, mas acceso rapido para la gente que ya juega del lado de adentro."
+      title="La entrada al club"
+      description="Entra con tu email y tu clave para ver tus cortes, mover tus turnos y entrar a tu Perfil Marciano."
+      sideTitle="La entrada del club."
+      sideDescription="Aca cae lo real de ser Marciano: tus cortes del mes, agenda propia, Style DNA y acceso al portal sin pasar por el staff."
       notes={[
-        { label: "Ingreso", value: "Email y clave" },
-        { label: "Ruta", value: "/marciano/login" },
-        { label: "Codigo", value: "VIP Marciano" },
-        { label: "Uso", value: "Portal, turnos y seguridad" },
+        { label: "Cortes", value: "2 por mes" },
+        { label: "Agenda", value: "Reserva y reprograma" },
+        { label: "Perfil", value: "Style DNA propio" },
+        { label: "Portal", value: "Turnos y seguridad" },
       ]}
+      highlight="Gestiona cambios en tu agenda hasta 11 horas antes."
       footer={
-        <div className="grid gap-3 rounded-[24px] border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
-          <p>
-            <Link href="/marciano/recuperar" className="font-medium text-[#8cff59] hover:text-[#b6ff95]">
-              Recuperar acceso
-            </Link>
-          </p>
-          <p>
-            <Link href="/marciano/registro" className="font-medium text-[#8cff59] hover:text-[#b6ff95]">
-              Activar mi portal
-            </Link>
-          </p>
+        <div className="grid gap-3 sm:flex sm:flex-wrap">
+          <Link
+            href="/marciano/recuperar"
+            className="flex min-h-[52px] items-center justify-center rounded-[22px] border border-white/10 bg-white/5 px-4 py-4 text-sm font-medium text-zinc-200 transition hover:border-[#8cff59]/22 hover:text-white sm:min-h-[44px] sm:flex-1 sm:rounded-full sm:px-5 sm:py-0"
+          >
+            Recuperar acceso
+          </Link>
+          <Link
+            href="/marciano/registro"
+            className="flex min-h-[52px] items-center justify-center rounded-[22px] border border-[#8cff59]/18 bg-[#8cff59]/8 px-4 py-4 text-sm font-medium text-[#d8ffca] transition hover:border-[#8cff59]/28 hover:bg-[#8cff59]/12 sm:min-h-[44px] sm:flex-1 sm:rounded-full sm:px-5 sm:py-0"
+          >
+            Activar mi portal
+          </Link>
         </div>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="rounded-[26px] border border-white/10 bg-white/5 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-            Acceso del club
-          </p>
-          <p className="mt-2 text-sm leading-6 text-zinc-300">
-            Solo para Marcianos. Si eres staff, la puerta correcta sigue siendo la base interna.
-          </p>
-        </div>
-
         <div className="space-y-2">
           <label htmlFor="email" className="block text-sm font-medium text-zinc-300">
             Email
@@ -88,7 +82,7 @@ export default function MarcianoLoginPage() {
 
         <div className="space-y-2">
           <label htmlFor="password" className="block text-sm font-medium text-zinc-300">
-            Contrasena
+            Clave
           </label>
           <input
             id="password"
@@ -112,7 +106,7 @@ export default function MarcianoLoginPage() {
           disabled={loading}
           className="neon-button h-12 w-full rounded-2xl text-base font-semibold disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Subiendo..." : "Entrar"}
+          {loading ? "Entrando..." : "Entrar"}
         </button>
       </form>
     </MarcianoPublicShell>

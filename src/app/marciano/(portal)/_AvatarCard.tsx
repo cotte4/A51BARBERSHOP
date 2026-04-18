@@ -22,8 +22,8 @@ type AvatarCardProps = {
   avatarErrorMessage: string | null;
 };
 
-// Only used locally to track UI-only states (scan flow)
-type LocalFlow = "idle" | "scanning";
+// Only used locally to bridge UI while fresh server props are still loading
+type LocalFlow = "idle" | "scanning" | "starting-generation" | "resetting-avatar";
 
 function ColorGrid({
   selected,
@@ -125,10 +125,23 @@ export default function AvatarCard({
 
   const locked = styleCompletedAt === null;
   const hasAvatar = avatarStatus === "ready" && avatarUrl !== null;
+  const showingProcessing = localFlow === "starting-generation" || avatarStatus === "processing";
+  const showingResetting = localFlow === "resetting-avatar";
+
+  useEffect(() => {
+    if (avatarStatus === "idle" && localFlow === "resetting-avatar") {
+      setLocalFlow("idle");
+      return;
+    }
+
+    if (avatarStatus === "processing" || avatarStatus === "ready" || avatarStatus === "failed") {
+      setLocalFlow("idle");
+    }
+  }, [avatarStatus, localFlow]);
 
   // Poll DB while status is 'processing'. When it flips, refresh server component.
   useEffect(() => {
-    if (avatarStatus !== "processing") return;
+    if (avatarStatus !== "processing" || !showingProcessing) return;
 
     const poll = async () => {
       const snap = await getAvatarStatusAction();
@@ -143,7 +156,7 @@ export default function AvatarCard({
       clearTimeout(first);
       clearInterval(interval);
     };
-  }, [avatarStatus, router]);
+  }, [avatarStatus, router, showingProcessing]);
 
   function handleSelectColor(slug: string) {
     setSelectedSlug(slug);
@@ -158,8 +171,6 @@ export default function AvatarCard({
     const frameBase64 = result?.frameBase64 ?? null;
     const faceShape = result?.shape ?? "oval";
 
-    setLocalFlow("idle");
-
     if (!frameBase64) {
       setErrorMsg("No se capturó el rostro. Intentá de nuevo.");
       return;
@@ -170,6 +181,7 @@ export default function AvatarCard({
     }
 
     setErrorMsg(null);
+    setLocalFlow("starting-generation");
 
     const res = await startAvatarGenerationAction({
       frameBase64,
@@ -178,6 +190,7 @@ export default function AvatarCard({
     });
 
     if (!res.success) {
+      setLocalFlow("idle");
       setErrorMsg(res.error);
       return;
     }
@@ -188,9 +201,12 @@ export default function AvatarCard({
 
   async function handleReset() {
     setResetting(true);
+    setLocalFlow("resetting-avatar");
+    setErrorMsg(null);
     const res = await resetAvatarAction();
     setResetting(false);
     if (!res.success) {
+      setLocalFlow("idle");
       setErrorMsg(res.error);
       setConfirmReset(false);
       return;
@@ -201,8 +217,14 @@ export default function AvatarCard({
 
   async function handleRegenerateConfirm() {
     setResetting(true);
-    await resetAvatarAction();
+    setLocalFlow("resetting-avatar");
+    const res = await resetAvatarAction();
     setResetting(false);
+    if (!res.success) {
+      setLocalFlow("idle");
+      setErrorMsg(res.error);
+      return;
+    }
     setConfirmReset(false);
     setErrorMsg(null);
     router.refresh();
@@ -214,7 +236,20 @@ export default function AvatarCard({
     return <FaceCapture onCapture={handleCapture} />;
   }
 
-  if (avatarStatus === "processing") {
+  if (showingResetting) {
+    return (
+      <section className="panel-card rounded-[28px] p-5 flex min-h-[220px] flex-col items-center justify-center gap-4">
+        <p className="eyebrow text-xs self-start">Tu Avatar Marciano</p>
+        <Spinner />
+        <p className="text-sm font-medium text-zinc-300">Preparando nuevo scan...</p>
+        <p className="text-xs text-zinc-500 text-center max-w-[240px]">
+          Limpiamos tu avatar actual para que vuelvas a capturarlo sin arrastrar la version vieja.
+        </p>
+      </section>
+    );
+  }
+
+  if (showingProcessing) {
     return (
       <section className="panel-card rounded-[28px] p-5 flex min-h-[220px] flex-col items-center justify-center gap-4">
         <p className="eyebrow text-xs self-start">Tu Avatar Marciano</p>
