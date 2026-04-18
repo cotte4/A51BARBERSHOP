@@ -75,7 +75,7 @@ export async function startAvatarCleanPrediction(input: {
   } catch (err) {
     const msg = err instanceof Error ? err.message : JSON.stringify(err);
     console.error("[avatar-clean] error:", msg);
-    return { error: "No pudimos iniciar la limpieza. Intentá de nuevo." };
+    return { error: `[avatar-clean] ${msg}` };
   }
 }
 
