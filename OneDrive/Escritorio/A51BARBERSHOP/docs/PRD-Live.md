@@ -1,7 +1,7 @@
 # A51 Barber - PRD Live
 
 **Estado real del sistema**
-Actualizado: 17/04/2026 (sesion 27)
+Actualizado: 18/04/2026 (sesion 29)
 
 ## 1. Proposito del documento
 
@@ -148,6 +148,8 @@ Archivos de soporte detectados:
 - `/marciano/seguridad`
 - `/marciano/recuperar`
 - `/marciano/reset`
+- `/marciano/(portal)/estilo` — interrogatorio + face capture + style DNA reveal
+- `/credencial/[slug]` — credencial pública del Marciano (compartible, OG image incluida)
 
 ### Estructura de permisos
 
@@ -713,6 +715,50 @@ No agregar aqui:
 - ideas de producto futuras sin implementacion
 - debate conceptual del negocio
 - formulas nuevas no aprobadas
+
+### Sesion 29 — Fases 1-4 Marciano: Avatar Restyle + ID Card + Calibrador + Psicología (18/04/2026)
+
+**Fase 1 — Avatar Restyle + Exagerador**
+
+- `src/lib/marciano-avatar-presets.ts` — `AvatarPresetData` type con `restylePrompt` y `emoji`; `INTENSITY_MODIFIERS` para 3 niveles de intensidad
+- `src/lib/marciano-avatar.ts` — `startAvatarRestylePrediction(avatarUrl, preset, intensity)` via flux-kontext-pro
+- `src/app/marciano/(portal)/_AvatarCard.actions.ts` — `restyleAvatarAction`
+- `src/app/marciano/(portal)/estilo/_AvatarConfigCard.tsx` — botón "Cambiar estilo alien", grid 3×2 de presets, slider de intensidad 1-3, polling idéntico al recolor
+
+**Fase 2 — Credencial Marciana**
+
+- `src/db/schema.ts` — columna `public_card_slug text UNIQUE` en `clients`; migración aplicada en Neon (18/04/2026)
+- `src/components/marciano/MarcianoIDCard.tsx` — Server Component con barcode SVG generado desde serial seed
+- `src/components/marciano/ShareCardButton.tsx` — `navigator.share` mobile / clipboard desktop
+- `src/app/marciano/(portal)/actions.ts` — `generateCardSlugAction` con `crypto.getRandomValues`
+- `src/app/marciano/(portal)/page.tsx` — sección ID card + share button en dashboard
+- `src/app/credencial/[slug]/page.tsx` — página pública con banner "Membresía inactiva" si `esMarciano = false`
+- `src/app/credencial/[slug]/opengraph-image.tsx` — OG image 1200×630, cache `s-maxage=3600`
+
+**Fase 3 — Alien Calibrator A/B**
+
+- `src/lib/marciano-calibration-images.ts` — 24 imágenes Unsplash (4 por preset), `getCalibrationPair` con deduplicación por `seenImageIds`
+- `src/app/marciano/(portal)/estilo/_AlienCalibrator.tsx` — 5 rondas A/B, tiebreak automático, `ResultScreen` 2.5s auto-advance, `PairScreen` con `motion.button` whileTap
+- `src/app/marciano/(portal)/estilo/_InterrogatorioFlow.tsx` — estado `calibrator` insertado entre q11 y face-capture; `selectedPreset` pasado a `saveStyleProfileAction`
+
+**Fase 4 — Psicología + Naming**
+
+- `src/lib/types.ts` — 3 campos psicológicos nuevos: `praiseResponse?`, `feedbackTolerance?`, `socialProjection?`; campos viejos `arrival`/`turnoff`/`weekendStyle` marcados opcionales (legacy compat); `StyleDominante` reemplazada: 16 títulos nuevos + El Intergaláctico
+- `src/app/marciano/(portal)/estilo/_InterrogatorioFlow.tsx` — Q1, Q5, Q7 actualizadas con preguntas psicológicas reales
+- `src/lib/marciano-style.ts` — `getTitleFromAnswers` reescrita: matriz `lifestyle × feedbackTolerance`; `applyFeedbackToleranceFilter` ordena cortes según actitud (conservadora/audaz); aplicada en `generateStyleProfile`
+- `src/app/api/clients/[id]/briefing/route.ts` — nuevas señales psicológicas en prompt del barbero; fallback legacy para `turnoff`
+- `src/app/(admin)/negocio/estilo/page.tsx` — `DUMMY_ANSWERS` actualizado sin campos legacy
+
+**TypeScript:** limpio en todos los archivos. **Commit:** `91afd1d`. **Pusheado.**
+
+### Sesion 28 — Recolor avatar: migración a flux-kontext-pro (18/04/2026)
+
+- `src/lib/marciano-avatar.ts` — `startAvatarRecolorPrediction` migrada de `timothybrooks/instruct-pix2pix` a `black-forest-labs/flux-kontext-pro`
+- Motivo: pix2pix ignoraba los prompts de cambio de color de piel; kontext-pro sigue instrucciones de edición con alta fidelidad
+- Cambios técnicos: `version` → `model` (slug directo, sin hash), `image` → `input_image`, prompt reescrito para ser más instructivo
+- `promptName` de `MARCIANO_COLORS` ya está en inglés — correcto para kontext-pro
+- Commiteado y pusheado: `d8437f5`
+- **Pendiente**: verificar en Vercel que el recolor funciona y la piel del alien cambia correctamente
 
 ### Sesion 27 — Auditoría de planes completados (17/04/2026)
 
