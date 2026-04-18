@@ -6,8 +6,7 @@ import { clients } from "@/db/schema";
 import { FACE_SHAPE_DESCRIPTIONS } from "@/lib/marciano-colors";
 import type { FaceShape } from "@/lib/types";
 
-// fofr/face-to-many: designed for face-to-cartoon transformation, style param controls output type
-const AVATAR_MODEL = "fofr/face-to-many";
+const AVATAR_MODEL_VERSION = "a07f252abbbd832009640b27f063ea52d87d7a23a185ca165bec23b5adc8deaf";
 
 const AVATAR_PROMPT =
   "{COLOR} skin, {HEX} skin color, entirely {COLOR} alien skin from forehead to neck, " +
@@ -43,7 +42,7 @@ export async function startAvatarPrediction(input: {
 
   try {
     const prediction = await replicate.predictions.create({
-      model: AVATAR_MODEL,
+      version: AVATAR_MODEL_VERSION,
       input: {
         image: `data:image/jpeg;base64,${input.frameBase64}`,
         prompt,
@@ -60,7 +59,8 @@ export async function startAvatarPrediction(input: {
     console.log("[avatar] prediction creada:", prediction.id);
     return { predictionId: prediction.id };
   } catch (err) {
-    console.error("[avatar] startAvatarPrediction error:", err);
+    const msg = err instanceof Error ? err.message : JSON.stringify(err);
+    console.error("[avatar] startAvatarPrediction error:", msg);
     return { error: "No pudimos iniciar la generación. Intentá de nuevo." };
   }
 }
