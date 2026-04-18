@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
+import { del } from "@vercel/blob";
 import { db } from "@/db";
 import { clients } from "@/db/schema";
 import { requireMarcianoClient } from "@/lib/marciano-portal";
@@ -139,6 +140,10 @@ export async function resetAvatarAction(): Promise<
 
   if (client.avatarStatus === "processing" && client.avatarPredictionId) {
     await cancelReplicatePrediction(client.avatarPredictionId);
+  }
+
+  if (client.avatarUrl && process.env.BLOB_READ_WRITE_TOKEN) {
+    await del(client.avatarUrl).catch(() => {});
   }
 
   await db

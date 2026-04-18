@@ -49,7 +49,7 @@ export async function startAvatarPrediction(input: {
         negative_prompt: AVATAR_NEGATIVE_PROMPT,
         style: "3D",
         prompt_strength: 10,
-        instant_id_strength: 0.11,
+        instant_id_strength: 0.42,
         denoising_strength: 0.85,
         num_steps: 30,
       },
@@ -95,7 +95,7 @@ export async function finalizePrediction(
         }
         const buffer = await response.arrayBuffer();
         const blob = await put(
-          `marciano/avatars/${clientId}.jpg`,
+          `marciano/avatars/${clientId}-${prediction.id.slice(0, 12)}.jpg`,
           Buffer.from(buffer),
           { access: "public", contentType: "image/jpeg", allowOverwrite: true }
         );

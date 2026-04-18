@@ -133,7 +133,7 @@ export default function AvatarCard({
     const poll = async () => {
       const snap = await getAvatarStatusAction();
       if (snap.status === "ready" || snap.status === "failed") {
-        router.refresh();
+        router.push("/marciano");
       }
     };
 
@@ -216,9 +216,9 @@ export default function AvatarCard({
       <section className="panel-card rounded-[28px] p-5 flex min-h-[220px] flex-col items-center justify-center gap-4">
         <p className="eyebrow text-xs self-start">Tu Avatar Marciano</p>
         <Spinner />
-        <p className="text-sm font-medium text-zinc-300">Generando tu avatar alien...</p>
+        <p className="text-sm font-medium text-zinc-300">Alienizándote...</p>
         <p className="text-xs text-zinc-500 text-center max-w-[240px]">
-          Puede tardar 2–3 minutos. Podés cerrar esta pantalla y volver más tarde.
+          Estamos transformando tu rostro. Tarda 2–3 minutos.
         </p>
         <button
           type="button"
