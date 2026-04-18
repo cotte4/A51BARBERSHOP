@@ -14,7 +14,7 @@ const AVATAR_PROMPT =
   "100% {COLOR} ({HEX}) skin tone covering every part of the face and neck, " +
   "looking directly forward, front-facing, eyes looking straight at viewer, " +
   "calm expression, mouth closed, " +
-  "big glossy black alien eyes, small pointed ears, {FACE_SHAPE} face shape, sharp modern fade haircut, " +
+  "elongated oval alien head shape, very large oval glossy black eyes covering most of the face, small pointed ears, sharp modern fade haircut, " +
   "cel-shaded flat cartoon colors, bold black ink outlines, vibrant cartoon alien mascot illustration, " +
   "deep space background with stars, colorful nebula, small flying saucer UFO in the distance";
 
