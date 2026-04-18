@@ -14,6 +14,7 @@ const AVATAR_PROMPT =
   "100% {COLOR} skin tone on entire face and neck, " +
   "looking directly forward, calm expression, mouth closed, " +
   "elongated oval alien head, very large almond-shaped oval black eyes, small pointed ears, " +
+  "alien markings on forehead, bioluminescent spots, glowing veins on skin, " +
   "dark hair on top with skin fade haircut, trimmed sides, " +
   "outer space background with stars and colorful nebula, flying saucer UFO in the background";
 
@@ -48,10 +49,10 @@ export async function startAvatarPrediction(input: {
         prompt,
         negative_prompt: AVATAR_NEGATIVE_PROMPT,
         style: "Emoji",
-        prompt_strength: 12,
+        prompt_strength: 13,
         instant_id_strength: 0.22,
         denoising_strength: 0.88,
-        control_depth_strength: 0.58,
+        control_depth_strength: 0.5,
         num_steps: 35,
       },
       webhook: `${appUrl}/api/replicate/avatar-webhook`,
