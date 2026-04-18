@@ -751,6 +751,14 @@ No agregar aqui:
 
 **TypeScript:** limpio en todos los archivos. **Commit:** `91afd1d`. **Pusheado.**
 
+### Sesion 29 (cont.) — Título Marciano generado por IA (18/04/2026)
+
+- `src/lib/marciano-analysis.ts` — `generateStyleTitle(answers)`: llama Haiku con las 11 respuestas del interrogatorio, devuelve "El [Sustantivo]" único para esa persona
+- `src/lib/marciano-style.ts` — `generateStyleProfile` acepta `titleOverride?`; si existe, usa el título de IA; si no, fallback a la matriz `lifestyle × feedbackTolerance`
+- `src/lib/types.ts` — `StyleDominante` cambia de union fija a `string` (títulos ahora son únicos por persona)
+- `src/app/marciano/(portal)/estilo/actions.ts` — `generateStyleTitle` y la query de cortes corren en `Promise.all` (paralelo); alien siempre recibe "El Intergaláctico" sin llamada IA
+- Commit: `ef963b0`
+
 ### Sesion 28 — Recolor avatar: migración a flux-kontext-pro (18/04/2026)
 
 - `src/lib/marciano-avatar.ts` — `startAvatarRecolorPrediction` migrada de `timothybrooks/instruct-pix2pix` a `black-forest-labs/flux-kontext-pro`
