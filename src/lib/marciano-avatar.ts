@@ -176,10 +176,21 @@ export async function finalizePrediction(
 }
 
 async function markFailed(clientId: string, errorMessage: string): Promise<void> {
+  // If the client already has a ready avatar URL, a clean attempt failed —
+  // restore to "ready" so the original avatar stays visible instead of
+  // showing the error state (which has a "retry" button that deletes the blob).
+  const [current] = await db
+    .select({ avatarUrl: clients.avatarUrl })
+    .from(clients)
+    .where(eq(clients.id, clientId))
+    .limit(1);
+
+  const statusOnFail = current?.avatarUrl ? "ready" : "failed";
+
   await db
     .update(clients)
     .set({
-      avatarStatus: "failed",
+      avatarStatus: statusOnFail,
       avatarErrorMessage: errorMessage.slice(0, 500),
       updatedAt: new Date(),
     })
