@@ -10,6 +10,7 @@ import type { AvatarPreset } from "@/lib/marciano-avatar-presets";
 export type { AvatarPreset } from "@/lib/marciano-avatar-presets";
 
 const AVATAR_MODEL_VERSION = "a07f252abbbd832009640b27f063ea52d87d7a23a185ca165bec23b5adc8deaf";
+const CLEAN_MODEL_VERSION = "9283608cc6b7be6b65a8e44983db012355f25c68ef4e6d5a1f12a380e2a04e1e"; // tencentarc/gfpgan
 
 export async function startAvatarPrediction(input: {
   frameBase64: string;
@@ -49,6 +50,32 @@ export async function startAvatarPrediction(input: {
     const msg = err instanceof Error ? err.message : JSON.stringify(err);
     console.error("[avatar] startAvatarPrediction error:", msg);
     return { error: "No pudimos iniciar la generación. Intentá de nuevo." };
+  }
+}
+
+export async function startAvatarCleanPrediction(input: {
+  avatarUrl: string;
+}): Promise<{ predictionId: string } | { error: string }> {
+  const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN! });
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  try {
+    const prediction = await replicate.predictions.create({
+      version: CLEAN_MODEL_VERSION,
+      input: {
+        img: input.avatarUrl,
+        version: "v1.4",
+        scale: 1,
+      },
+      webhook: `${appUrl}/api/replicate/avatar-webhook`,
+      webhook_events_filter: ["completed"],
+    });
+    console.log("[avatar-clean] prediction creada:", prediction.id);
+    return { predictionId: prediction.id };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : JSON.stringify(err);
+    console.error("[avatar-clean] error:", msg);
+    return { error: "No pudimos iniciar la limpieza. Intentá de nuevo." };
   }
 }
 

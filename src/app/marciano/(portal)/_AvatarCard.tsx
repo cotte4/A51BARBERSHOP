@@ -12,6 +12,7 @@ import {
   startAvatarGenerationAction,
   getAvatarStatusAction,
   resetAvatarAction,
+  cleanAvatarAction,
 } from "./_AvatarCard.actions";
 import type { FaceShape } from "@/lib/types";
 import type { FaceMetrics } from "@/lib/marciano-style";
@@ -172,6 +173,7 @@ export default function AvatarCard({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const [, startTransition] = useTransition();
 
   const locked = styleCompletedAt === null;
@@ -277,6 +279,18 @@ export default function AvatarCard({
     }
 
     // status='processing' now in DB; refresh brings the new props into this component
+    router.refresh();
+  }
+
+  async function handleClean() {
+    setCleaning(true);
+    setErrorMsg(null);
+    const res = await cleanAvatarAction();
+    setCleaning(false);
+    if (!res.success) {
+      setErrorMsg(res.error);
+      return;
+    }
     router.refresh();
   }
 
@@ -445,13 +459,23 @@ export default function AvatarCard({
             </div>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setAdjusting(true)}
-            className="ghost-button rounded-[20px] px-4 py-2 text-xs font-medium"
-          >
-            Ajustar encuadre
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setAdjusting(true)}
+              className="ghost-button rounded-[20px] px-4 py-2 text-xs font-medium"
+            >
+              Ajustar encuadre
+            </button>
+            <button
+              type="button"
+              disabled={cleaning}
+              onClick={handleClean}
+              className="ghost-button rounded-[20px] px-4 py-2 text-xs font-medium disabled:opacity-40"
+            >
+              {cleaning ? "Limpiando..." : "✦ Limpiar imagen"}
+            </button>
+          </div>
         )}
 
         <p className="text-xs text-zinc-500 text-center max-w-[220px]">Tu forma alienígena.</p>

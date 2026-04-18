@@ -9,6 +9,7 @@ import { requireMarcianoClient } from "@/lib/marciano-portal";
 import { findColorBySlug } from "@/lib/marciano-colors";
 import {
   startAvatarPrediction,
+  startAvatarCleanPrediction,
   finalizePrediction,
   getReplicatePrediction,
   cancelReplicatePrediction,
@@ -134,6 +135,32 @@ export async function getAvatarStatusAction(): Promise<{
     avatarUrl: client.avatarUrl,
     errorMessage: client.avatarErrorMessage,
   };
+}
+
+export async function cleanAvatarAction(): Promise<
+  { success: true } | { success: false; error: string }
+> {
+  const { client } = await requireMarcianoClient();
+
+  if (!client.avatarUrl || client.avatarStatus !== "ready") {
+    return { success: false, error: "No hay avatar listo para limpiar." };
+  }
+
+  const result = await startAvatarCleanPrediction({ avatarUrl: client.avatarUrl });
+  if ("error" in result) return { success: false, error: result.error };
+
+  await db
+    .update(clients)
+    .set({
+      avatarStatus: "processing",
+      avatarPredictionId: result.predictionId,
+      avatarErrorMessage: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(clients.id, client.id));
+
+  revalidatePath("/marciano");
+  return { success: true };
 }
 
 export async function resetAvatarAction(): Promise<
