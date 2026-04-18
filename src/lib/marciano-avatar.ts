@@ -49,7 +49,7 @@ export async function startAvatarPrediction(input: {
         negative_prompt: AVATAR_NEGATIVE_PROMPT,
         style: "Cartoon",
         prompt_strength: 2.0,
-        ip_adapter_noise: 0.3,
+        ip_adapter_noise: 0.9,
         guidance_scale: 8.5,
         num_steps: 35,
       },
