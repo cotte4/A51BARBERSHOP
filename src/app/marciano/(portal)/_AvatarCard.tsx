@@ -199,10 +199,13 @@ export default function AvatarCard({
     router.refresh();
   }
 
-  function handleRegenerateConfirm() {
+  async function handleRegenerateConfirm() {
+    setResetting(true);
+    await resetAvatarAction();
+    setResetting(false);
     setConfirmReset(false);
     setErrorMsg(null);
-    setLocalFlow("scanning");
+    router.refresh();
   }
 
   // --- States ---
@@ -296,10 +299,11 @@ export default function AvatarCard({
               </button>
               <button
                 type="button"
+                disabled={resetting}
                 onClick={handleRegenerateConfirm}
-                className="flex-1 neon-button rounded-[20px] px-4 py-2 text-sm font-semibold"
+                className="flex-1 neon-button rounded-[20px] px-4 py-2 text-sm font-semibold disabled:opacity-40"
               >
-                Sí, escanear de nuevo
+                {resetting ? "Borrando..." : "Sí, regenerar"}
               </button>
             </div>
           </div>
