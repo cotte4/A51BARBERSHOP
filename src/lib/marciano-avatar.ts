@@ -1,4 +1,5 @@
 import Replicate from "replicate";
+import sharp from "sharp";
 import { put } from "@vercel/blob";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/db";
@@ -53,6 +54,27 @@ export async function startAvatarPrediction(input: {
   }
 }
 
+const CLEAN_MAX_PIXELS = 2_000_000; // stay under Real-ESRGAN GPU limit (~2.1M)
+
+async function fetchAndResizeForClean(avatarUrl: string): Promise<string> {
+  const res = await fetch(avatarUrl);
+  const buffer = Buffer.from(await res.arrayBuffer());
+  const meta = await sharp(buffer).metadata();
+  const w = meta.width ?? 1024;
+  const h = meta.height ?? 1024;
+
+  if (w * h <= CLEAN_MAX_PIXELS) {
+    return `data:image/jpeg;base64,${buffer.toString("base64")}`;
+  }
+
+  const ratio = Math.sqrt(CLEAN_MAX_PIXELS / (w * h));
+  const newW = Math.floor(w * ratio);
+  const newH = Math.floor(h * ratio);
+  const resized = await sharp(buffer).resize(newW, newH).jpeg({ quality: 92 }).toBuffer();
+  console.log(`[avatar-clean] resized ${w}×${h} → ${newW}×${newH}`);
+  return `data:image/jpeg;base64,${resized.toString("base64")}`;
+}
+
 export async function startAvatarCleanPrediction(input: {
   avatarUrl: string;
 }): Promise<{ predictionId: string } | { error: string }> {
@@ -60,10 +82,12 @@ export async function startAvatarCleanPrediction(input: {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   try {
+    const imageData = await fetchAndResizeForClean(input.avatarUrl);
+
     const prediction = await replicate.predictions.create({
       version: CLEAN_MODEL_VERSION,
       input: {
-        image: input.avatarUrl,
+        image: imageData,
         scale: 2,
         face_enhance: true,
       },
