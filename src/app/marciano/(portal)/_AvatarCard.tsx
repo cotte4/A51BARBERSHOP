@@ -254,9 +254,15 @@ export default function AvatarCard({
     return (
       <section className="panel-card rounded-[28px] p-5 flex flex-col items-center gap-4">
         <p className="eyebrow text-xs text-[#8cff59] self-start">Tu Avatar Marciano</p>
-        <div className="relative h-40 w-40 overflow-hidden rounded-full border-2 border-[#8cff59]/40 shadow-[0_0_24px_rgba(140,255,89,0.2)]">
+        <div className="relative h-40 w-40 overflow-hidden rounded-full border-2 border-[#8cff59]/40 shadow-[0_0_24px_rgba(140,255,89,0.2)] bg-zinc-900">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={avatarUrl!} alt="Avatar Marciano" className="h-full w-full object-cover" />
+          <img
+            key={avatarUrl!}
+            src={avatarUrl!}
+            alt="Avatar Marciano"
+            className="h-full w-full object-cover transition-opacity duration-500 opacity-0"
+            onLoad={(e) => { (e.currentTarget as HTMLImageElement).classList.replace("opacity-0", "opacity-100"); }}
+          />
         </div>
         <p className="text-xs text-zinc-500 text-center max-w-[220px]">Tu forma alienígena.</p>
 
