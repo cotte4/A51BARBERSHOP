@@ -10,14 +10,19 @@ import type { FaceShape } from "@/lib/types";
 const AVATAR_MODEL = "fofr/face-to-many";
 
 const AVATAR_PROMPT =
-  "alien with solid {COLOR} ({HEX}) skin, {COLOR} extraterrestrial, " +
-  "oversized black alien eyes, small pointed ears, {FACE_SHAPE} face, modern fade haircut, " +
-  "cel-shaded flat colors, bold black outlines, vibrant cartoon mascot, " +
-  "outer space background with stars and nebula";
+  "close-up portrait of a cartoon alien, face and neck only, tight headshot from chin to top of head, " +
+  "solid {COLOR} ({HEX}) skin covering entire face and neck, {COLOR} alien complexion everywhere, " +
+  "looking directly forward, front-facing, eyes looking straight at viewer, " +
+  "maintaining facial expression from photo, calm composed expression, mouth closed, " +
+  "big glossy black alien eyes, small pointed ears, {FACE_SHAPE} face shape, sharp modern fade haircut, " +
+  "cel-shaded flat cartoon colors, bold black ink outlines, vibrant illustration, cartoon alien mascot, " +
+  "deep space background with stars, colorful nebula, small flying saucer UFO in the distance";
 
 const AVATAR_NEGATIVE_PROMPT =
+  "full body, torso, arms, shoulders, hands, body below neck, " +
+  "screaming, yelling, open mouth, different expression, side view, profile view, looking away, " +
   "human skin, realistic skin, natural skin tone, flesh color, beige, tan, pale, brown, pink skin, " +
-  "photograph, photorealistic, realistic face, indoor background, plain background, " +
+  "photograph, photorealistic, realistic face, indoor background, plain background, white background, " +
   "blurry, low quality, ugly, deformed, watermark, text";
 
 export async function startAvatarPrediction(input: {
@@ -43,10 +48,10 @@ export async function startAvatarPrediction(input: {
         prompt,
         negative_prompt: AVATAR_NEGATIVE_PROMPT,
         style: "Cartoon",
-        prompt_strength: 2.5,
-        ip_adapter_noise: 0.4,
-        guidance_scale: 7.5,
-        num_steps: 30,
+        prompt_strength: 2.0,
+        ip_adapter_noise: 0.3,
+        guidance_scale: 8.5,
+        num_steps: 35,
       },
       webhook: `${appUrl}/api/replicate/avatar-webhook`,
       webhook_events_filter: ["completed"],
