@@ -47,7 +47,7 @@ export async function startAvatarPrediction(input: {
         image: `data:image/jpeg;base64,${input.frameBase64}`,
         prompt,
         negative_prompt: AVATAR_NEGATIVE_PROMPT,
-        style: "Clay",
+        style: "Emoji",
         prompt_strength: 12,
         instant_id_strength: 0.2,
         denoising_strength: 0.95,
