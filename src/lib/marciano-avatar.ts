@@ -14,7 +14,7 @@ const AVATAR_PROMPT =
   "100% {COLOR} ({HEX}) skin tone covering every part of the face and neck, " +
   "looking directly forward, front-facing, eyes looking straight at viewer, " +
   "calm expression, mouth closed, " +
-  "elongated oval alien head shape, very large oval glossy black eyes covering most of the face, small pointed ears, sharp modern fade haircut, " +
+  "elongated oval alien head shape, very large oval glossy black eyes, small pointed ears, sharp skin fade haircut with trimmed sides clearly visible, short hair on top, " +
   "cel-shaded flat cartoon colors, bold black ink outlines, vibrant cartoon alien mascot illustration, " +
   "deep space background with stars, colorful nebula, small flying saucer UFO in the distance";
 
@@ -23,7 +23,7 @@ const AVATAR_NEGATIVE_PROMPT =
   "full body, torso, arms, shoulders, hands, " +
   "screaming, yelling, open mouth, side view, profile view, looking away, " +
   "photograph, photorealistic, indoor background, plain background, " +
-  "blurry, low quality, ugly, deformed, watermark, text";
+  "bald, no hair, shaved head, blurry, low quality, ugly, deformed, watermark, text";
 
 export async function startAvatarPrediction(input: {
   frameBase64: string;
@@ -47,10 +47,10 @@ export async function startAvatarPrediction(input: {
         image: `data:image/jpeg;base64,${input.frameBase64}`,
         prompt,
         negative_prompt: AVATAR_NEGATIVE_PROMPT,
-        style: "Emoji",
-        prompt_strength: 12,
-        instant_id_strength: 0.2,
-        denoising_strength: 0.95,
+        style: "Toy",
+        prompt_strength: 10,
+        instant_id_strength: 0.35,
+        denoising_strength: 0.9,
         num_steps: 35,
       },
       webhook: `${appUrl}/api/replicate/avatar-webhook`,
