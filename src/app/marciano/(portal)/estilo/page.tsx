@@ -24,7 +24,11 @@ export default async function PerfilMarcianoPage({
           totalVisits={client.totalVisits}
           allowRedo
         />
-        <AvatarConfigCard favoriteColor={client.favoriteColor} />
+        <AvatarConfigCard
+          favoriteColor={client.favoriteColor}
+          avatarUrl={client.avatarUrl}
+          avatarStatus={client.avatarStatus ?? "idle"}
+        />
       </div>
     );
   }
