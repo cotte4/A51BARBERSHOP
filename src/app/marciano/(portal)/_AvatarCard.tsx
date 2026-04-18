@@ -165,6 +165,12 @@ export default function AvatarCard({
   const router = useRouter();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(favoriteColor);
   const [selectedPreset, setSelectedPreset] = useState<AvatarPreset>("galactic");
+
+  // Sync preset from localStorage (set in /estilo config card)
+  useEffect(() => {
+    const stored = localStorage.getItem("marciano-avatar-preset") as AvatarPreset | null;
+    if (stored && stored in AVATAR_PRESETS) setSelectedPreset(stored);
+  }, []);
   const [adjusting, setAdjusting] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });

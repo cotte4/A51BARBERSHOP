@@ -1,6 +1,7 @@
 import { requireMarcianoClient } from "@/lib/marciano-portal";
 import InterrogatorioFlow from "./_InterrogatorioFlow";
 import StyleDNACard from "@/components/marciano/StyleDNACard";
+import AvatarConfigCard from "./_AvatarConfigCard";
 import type { StyleProfile, FaceShape } from "@/lib/types";
 
 export default async function PerfilMarcianoPage({
@@ -23,6 +24,7 @@ export default async function PerfilMarcianoPage({
           totalVisits={client.totalVisits}
           allowRedo
         />
+        <AvatarConfigCard favoriteColor={client.favoriteColor} />
       </div>
     );
   }
