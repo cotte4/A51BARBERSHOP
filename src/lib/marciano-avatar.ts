@@ -10,8 +10,9 @@ const AVATAR_MODEL_VERSION =
   "32402fb5c493d883aa6cf098ce3e4cc80f1fe6871f6ae7f632a8dbde01a3d161";
 
 const AVATAR_PROMPT =
-  "cartoon alien character with solid {COLOR} ({HEX}) skin all over the face and neck, " +
-  "{COLOR} skinned extraterrestrial, non-human skin color, glowing alien complexion, " +
+  "cartoon alien character, entire face and neck painted solid {COLOR} hex({HEX}), " +
+  "{COLOR} alien skin tone, skin color is {HEX}, non-human extraterrestrial complexion, " +
+  "glowing {COLOR} skin covering the whole head, no human skin color anywhere, " +
   "big black almond-shaped alien eyes, small nose, subtle pointed ears, " +
   "stylized {FACE_SHAPE} with a sharp modern fade haircut, " +
   "cartoon illustration, thick bold black outlines, vibrant flat cel-shaded colors, " +
@@ -20,6 +21,7 @@ const AVATAR_PROMPT =
 
 const AVATAR_NEGATIVE_PROMPT =
   "human skin, realistic skin, beige skin, tan skin, pale skin, caucasian, asian, latino, " +
+  "flesh color, skin tone, natural complexion, brown skin, pink skin, " +
   "photograph, photorealistic, 3D render, realistic face, live action, " +
   "blurry, low quality, ugly, deformed, extra limbs, multiple faces, watermark, text, logo";
 
@@ -47,9 +49,9 @@ export async function startAvatarPrediction(input: {
         negative_prompt: AVATAR_NEGATIVE_PROMPT,
         width: 1024,
         height: 1024,
-        steps: 28,
-        instantid_weight: 0.35,
-        ipadapter_weight: 0.95,
+        steps: 30,
+        instantid_weight: 0.15,
+        ipadapter_weight: 0.98,
       },
       webhook: `${appUrl}/api/replicate/avatar-webhook`,
       webhook_events_filter: ["completed"],
