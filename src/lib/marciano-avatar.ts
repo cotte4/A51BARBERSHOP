@@ -16,7 +16,7 @@ const AVATAR_PROMPT =
   "calm expression, mouth closed, " +
   "elongated tall oval alien skull, very large oval black eyes, small pointed ears, dark short hair on top with skin fade haircut, trimmed sides, fresh barbershop cut, " +
   "cel-shaded flat cartoon colors, bold black ink outlines, vibrant cartoon alien mascot illustration, " +
-  "deep space background with stars, colorful nebula, small flying saucer UFO in the distance";
+  "background: outer space with stars and colorful nebula, flying saucer UFO spaceship visible in the background sky";
 
 const AVATAR_NEGATIVE_PROMPT =
   "human skin color, realistic skin, natural skin tone, flesh color, beige, tan, pale, brown, pink skin, " +
@@ -51,7 +51,7 @@ export async function startAvatarPrediction(input: {
         prompt_strength: 12,
         instant_id_strength: 0.12,
         denoising_strength: 0.95,
-        control_depth_strength: 0.35,
+        control_depth_strength: 0.6,
         num_steps: 35,
       },
       webhook: `${appUrl}/api/replicate/avatar-webhook`,
