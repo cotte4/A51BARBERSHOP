@@ -6,25 +6,19 @@ import { clients } from "@/db/schema";
 import { FACE_SHAPE_DESCRIPTIONS } from "@/lib/marciano-colors";
 import type { FaceShape } from "@/lib/types";
 
-const AVATAR_MODEL_VERSION =
-  "32402fb5c493d883aa6cf098ce3e4cc80f1fe6871f6ae7f632a8dbde01a3d161";
+// fofr/face-to-many: designed for face-to-cartoon transformation, style param controls output type
+const AVATAR_MODEL = "fofr/face-to-many";
 
 const AVATAR_PROMPT =
-  "2D cartoon alien portrait, flat {COLOR} ({HEX}) skin covering 100% of the face neck and head, " +
-  "solid {COLOR} skin color everywhere, cel-shaded {COLOR} extraterrestrial, " +
-  "oversized glossy black alien eyes, tiny stylized nose, pointed ears, " +
-  "{FACE_SHAPE} face shape, sharp modern fade haircut, " +
-  "bold black ink outlines, vibrant flat colors, no shading gradients, " +
-  "cartoon mascot style, comic book illustration, sticker art, clean vector look, " +
-  "outer space background with stars and purple nebula, cosmos background, deep space setting";
+  "alien with solid {COLOR} ({HEX}) skin, {COLOR} extraterrestrial, " +
+  "oversized black alien eyes, small pointed ears, {FACE_SHAPE} face, modern fade haircut, " +
+  "cel-shaded flat colors, bold black outlines, vibrant cartoon mascot, " +
+  "outer space background with stars and nebula";
 
 const AVATAR_NEGATIVE_PROMPT =
-  "human skin, realistic skin, photographic skin, natural skin tone, flesh color, " +
-  "beige, tan, pale, brown, pink, peach skin, caucasian, asian, african, latino, " +
-  "photograph, photorealistic, hyperrealistic, 3D render, CGI, live action, portrait photo, " +
-  "realistic face, realistic eyes, realistic nose, realistic hair, " +
-  "indoor background, room background, wall background, studio background, " +
-  "blurry, low quality, ugly, deformed, extra limbs, multiple faces, watermark, text, logo";
+  "human skin, realistic skin, natural skin tone, flesh color, beige, tan, pale, brown, pink skin, " +
+  "photograph, photorealistic, realistic face, indoor background, plain background, " +
+  "blurry, low quality, ugly, deformed, watermark, text";
 
 export async function startAvatarPrediction(input: {
   frameBase64: string;
@@ -43,17 +37,16 @@ export async function startAvatarPrediction(input: {
 
   try {
     const prediction = await replicate.predictions.create({
-      version: AVATAR_MODEL_VERSION,
+      model: AVATAR_MODEL,
       input: {
         image: `data:image/jpeg;base64,${input.frameBase64}`,
         prompt,
         negative_prompt: AVATAR_NEGATIVE_PROMPT,
-        width: 1024,
-        height: 1024,
-        steps: 35,
-        instantid_weight: 0.05,
-        ipadapter_weight: 1.0,
-        guidance_scale: 10,
+        style: "Cartoon",
+        prompt_strength: 2.5,
+        ip_adapter_noise: 0.4,
+        guidance_scale: 7.5,
+        num_steps: 30,
       },
       webhook: `${appUrl}/api/replicate/avatar-webhook`,
       webhook_events_filter: ["completed"],
