@@ -12,7 +12,7 @@ export type { AvatarPreset } from "@/lib/marciano-avatar-presets";
 
 const AVATAR_MODEL_VERSION = "a07f252abbbd832009640b27f063ea52d87d7a23a185ca165bec23b5adc8deaf";
 const CLEAN_MODEL_VERSION = "f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa"; // nightmareai/real-esrgan + face_enhance
-const RECOLOR_MODEL_VERSION = "30c1d0b916a6f8efce20493f5d61ee27491ab2a60437c13c588468b9810ec23f"; // timothybrooks/instruct-pix2pix
+const RECOLOR_MODEL = "black-forest-labs/flux-kontext-pro"; // instruction-following image editor
 
 export async function startAvatarPrediction(input: {
   frameBase64: string;
@@ -111,17 +111,14 @@ export async function startAvatarRecolorPrediction(input: {
   const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN! });
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  const prompt = `Change the skin color to entirely ${input.colorPromptName}. Make the face, neck, and all skin completely ${input.colorPromptName}. Keep the same alien features, hairstyle, eyes, and background.`;
+  const prompt = `Change the skin color of this alien character to ${input.colorPromptName}. Apply the color uniformly across all skin — face, neck, and any visible body parts. Keep the hairstyle, eyes, clothing, alien facial features, and background exactly the same. Only the skin color changes.`;
 
   try {
     const prediction = await replicate.predictions.create({
-      version: RECOLOR_MODEL_VERSION,
+      model: RECOLOR_MODEL,
       input: {
-        image: input.avatarUrl,
+        input_image: input.avatarUrl,
         prompt,
-        image_cfg_scale: 1.5,
-        text_cfg_scale: 10,
-        num_inference_steps: 100,
       },
       webhook: `${appUrl}/api/replicate/avatar-webhook`,
       webhook_events_filter: ["completed"],
