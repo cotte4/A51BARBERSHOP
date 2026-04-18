@@ -10,7 +10,7 @@ import type { AvatarPreset } from "@/lib/marciano-avatar-presets";
 export type { AvatarPreset } from "@/lib/marciano-avatar-presets";
 
 const AVATAR_MODEL_VERSION = "a07f252abbbd832009640b27f063ea52d87d7a23a185ca165bec23b5adc8deaf";
-const CLEAN_MODEL_VERSION = "9283608cc6b7be6b65a8e44983db012355fde4132009bf99d976b2f0896856a3"; // tencentarc/gfpgan v1.4
+const CLEAN_MODEL_VERSION = "b0bb4c529bb749ac98145e70f42f88d36598e89310beeeba4ee00e14238d1b4d"; // nightmareai/real-esrgan + face_enhance
 
 export async function startAvatarPrediction(input: {
   frameBase64: string;
@@ -63,9 +63,9 @@ export async function startAvatarCleanPrediction(input: {
     const prediction = await replicate.predictions.create({
       version: CLEAN_MODEL_VERSION,
       input: {
-        img: input.avatarUrl,
-        version: "v1.4",
+        image: input.avatarUrl,
         scale: 2,
+        face_enhance: true,
       },
       webhook: `${appUrl}/api/replicate/avatar-webhook`,
       webhook_events_filter: ["completed"],
