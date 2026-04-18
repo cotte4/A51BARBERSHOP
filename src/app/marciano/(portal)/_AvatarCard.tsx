@@ -199,7 +199,17 @@ export default function AvatarCard({
     router.refresh();
   }
 
+  function handleRegenerateConfirm() {
+    setConfirmReset(false);
+    setErrorMsg(null);
+    setLocalFlow("scanning");
+  }
+
   // --- States ---
+
+  if (localFlow === "scanning") {
+    return <FaceCapture onCapture={handleCapture} />;
+  }
 
   if (avatarStatus === "processing") {
     return (
@@ -280,11 +290,10 @@ export default function AvatarCard({
               </button>
               <button
                 type="button"
-                disabled={resetting}
-                onClick={handleReset}
-                className="flex-1 neon-button rounded-[20px] px-4 py-2 text-sm font-semibold disabled:opacity-40"
+                onClick={handleRegenerateConfirm}
+                className="flex-1 neon-button rounded-[20px] px-4 py-2 text-sm font-semibold"
               >
-                {resetting ? "Borrando..." : "Sí, regenerar"}
+                Sí, escanear de nuevo
               </button>
             </div>
           </div>
@@ -311,10 +320,6 @@ export default function AvatarCard({
         </Link>
       </section>
     );
-  }
-
-  if (localFlow === "scanning") {
-    return <FaceCapture onCapture={handleCapture} />;
   }
 
   return (

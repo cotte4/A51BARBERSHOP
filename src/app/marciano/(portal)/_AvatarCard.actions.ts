@@ -45,12 +45,13 @@ export async function startAvatarGenerationAction(input: {
 
   const { client } = await requireMarcianoClient();
 
-  if (client.avatarStatus === "ready" && client.avatarUrl) {
-    return { success: true, status: "ready", avatarUrl: client.avatarUrl };
-  }
-
   if (client.avatarStatus === "processing") {
     return { success: false, error: "Ya hay una generación en curso. Esperá un momento." };
+  }
+
+  // If there's an existing avatar, cancel the old prediction first (no-op if idle)
+  if (client.avatarStatus === "ready" && client.avatarPredictionId) {
+    await cancelReplicatePrediction(client.avatarPredictionId);
   }
 
   const result = await startAvatarPrediction({
