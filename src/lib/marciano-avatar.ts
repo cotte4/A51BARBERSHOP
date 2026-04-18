@@ -19,7 +19,7 @@ const AVATAR_PROMPT =
   "outer space background with stars and colorful nebula, flying saucer UFO in the background";
 
 const AVATAR_NEGATIVE_PROMPT =
-  "human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, " +
+  "uncanny valley, 3D render, human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, " +
   "small eyes, round eyes, human eyes, " +
   "full body, torso, arms, shoulders, " +
   "screaming, open mouth, side view, looking away, " +
@@ -49,10 +49,10 @@ export async function startAvatarPrediction(input: {
         prompt,
         negative_prompt: AVATAR_NEGATIVE_PROMPT,
         style: "Emoji",
-        prompt_strength: 13,
+        prompt_strength: 8,
         instant_id_strength: 0.22,
         denoising_strength: 0.88,
-        control_depth_strength: 0.5,
+        control_depth_strength: 0.1,
         num_steps: 35,
       },
       webhook: `${appUrl}/api/replicate/avatar-webhook`,
