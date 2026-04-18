@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import FaceCapture from "./estilo/_FaceCapture";
 import { MARCIANO_COLORS } from "@/lib/marciano-colors";
+import { AVATAR_PRESETS } from "@/lib/marciano-avatar";
 import {
   saveFavoriteColorAction,
   startAvatarGenerationAction,
@@ -13,6 +14,7 @@ import {
 } from "./_AvatarCard.actions";
 import type { FaceShape } from "@/lib/types";
 import type { FaceMetrics } from "@/lib/marciano-style";
+import type { AvatarPreset } from "@/lib/marciano-avatar";
 
 type AvatarCardProps = {
   styleCompletedAt: Date | string | null;
@@ -99,6 +101,50 @@ function ColorGrid({
   );
 }
 
+const PRESET_ORDER: AvatarPreset[] = ["galactic", "elf", "demon", "android", "cosmic", "orc"];
+
+function PresetGrid({
+  selected,
+  onSelect,
+  disabled,
+}: {
+  selected: AvatarPreset;
+  onSelect: (p: AvatarPreset) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs font-medium text-zinc-400">Clase de avatar</p>
+      <div className="grid grid-cols-2 gap-2">
+        {PRESET_ORDER.map((key) => {
+          const p = AVATAR_PRESETS[key];
+          const isSelected = selected === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              disabled={disabled}
+              onClick={() => onSelect(key)}
+              className={[
+                "flex flex-col items-start rounded-2xl border px-3 py-2.5 text-left transition-all duration-150",
+                disabled ? "cursor-not-allowed opacity-30" : "hover:bg-white/5",
+                isSelected
+                  ? "border-[#8cff59]/60 bg-[#8cff59]/10 shadow-[0_0_12px_rgba(140,255,89,0.15)]"
+                  : "border-zinc-700/60 bg-zinc-900/60",
+              ].join(" ")}
+            >
+              <span className={`text-xs font-semibold ${isSelected ? "text-[#8cff59]" : "text-white"}`}>
+                {p.label}
+              </span>
+              <span className="text-[11px] text-zinc-500">{p.vibe}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function Spinner() {
   return (
     <svg className="h-8 w-8 animate-spin text-[#8cff59]" fill="none" viewBox="0 0 24 24">
@@ -117,6 +163,7 @@ export default function AvatarCard({
 }: AvatarCardProps) {
   const router = useRouter();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(favoriteColor);
+  const [selectedPreset, setSelectedPreset] = useState<AvatarPreset>("galactic");
   const [localFlow, setLocalFlow] = useState<LocalFlow>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -187,6 +234,7 @@ export default function AvatarCard({
       frameBase64,
       faceShape,
       colorSlug: selectedSlug,
+      preset: selectedPreset,
     });
 
     if (!res.success) {
@@ -356,6 +404,7 @@ export default function AvatarCard({
             Elegí tu color y completá el cuestionario para desbloquearlo.
           </p>
         </div>
+        <PresetGrid disabled selected={selectedPreset} onSelect={() => {}} />
         <ColorGrid disabled selected={selectedSlug} onSelect={() => {}} />
         <Link
           href="/marciano/estilo"
@@ -371,8 +420,10 @@ export default function AvatarCard({
     <section className="panel-card rounded-[28px] p-5 flex flex-col gap-4">
       <div>
         <p className="eyebrow text-xs">Tu Avatar Marciano</p>
-        <p className="mt-1 text-sm text-zinc-400">Elegí tu color alien.</p>
+        <p className="mt-1 text-sm text-zinc-400">Elegí tu clase y tu color.</p>
       </div>
+
+      <PresetGrid selected={selectedPreset} onSelect={setSelectedPreset} />
 
       <ColorGrid selected={selectedSlug} onSelect={handleSelectColor} />
 

@@ -14,6 +14,7 @@ import {
   cancelReplicatePrediction,
 } from "@/lib/marciano-avatar";
 import type { FaceShape } from "@/lib/types";
+import type { AvatarPreset } from "@/lib/marciano-avatar";
 
 export async function saveFavoriteColorAction(
   slug: string
@@ -36,6 +37,7 @@ export async function startAvatarGenerationAction(input: {
   frameBase64: string;
   faceShape: FaceShape;
   colorSlug: string;
+  preset?: AvatarPreset;
 }): Promise<
   | { success: true; status: "processing" | "ready"; avatarUrl?: string }
   | { success: false; error: string }
@@ -60,6 +62,7 @@ export async function startAvatarGenerationAction(input: {
     colorNombre: color.nombre,
     colorHex: color.hex,
     faceShape: input.faceShape,
+    preset: input.preset,
   });
 
   if ("error" in result) {

@@ -88,7 +88,6 @@ function DrumPicker({
       el.scrollTop = idx * ITEM_H;
       setLiveIndex(idx);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // When parent changes the value (e.g. service changed), scroll there
