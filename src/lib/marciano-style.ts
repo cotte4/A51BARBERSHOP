@@ -253,9 +253,10 @@ export function generateStyleProfile(
   shape: FaceShape,
   answers: InterrogatoryAnswers,
   metrics: FaceMetrics | null,
-  cutsOverride: string[] | null = null
+  cutsOverride: string[] | null = null,
+  titleOverride?: string
 ): Omit<StyleProfile, "idealBarberoId"> {
-  const dominantStyle = getTitleFromAnswers(shape, answers);
+  const dominantStyle = titleOverride ?? getTitleFromAnswers(shape, answers);
   const rawCuts = cutsOverride && cutsOverride.length > 0
     ? cutsOverride
     : getDefaultCuts(shape, answers);

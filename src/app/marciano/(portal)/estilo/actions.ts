@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { clients, clientBriefingCache, marcianoCutsConfig } from "@/db/schema";
 import { requireMarcianoClient } from "@/lib/marciano-portal";
 import { generateStyleProfile, matchIdealBarbero } from "@/lib/marciano-style";
-import { generateStyleAnalysis } from "@/lib/marciano-analysis";
+import { generateStyleAnalysis, generateStyleTitle } from "@/lib/marciano-analysis";
 import type { FaceShape, InterrogatoryAnswers, StyleProfile } from "@/lib/types";
 import type { FaceMetrics } from "@/lib/marciano-style";
 import type { AvatarPreset } from "@/lib/marciano-avatar-presets";
@@ -68,14 +68,18 @@ export async function saveStyleProfileAction(input: {
   try {
     const { client } = await requireMarcianoClient();
 
-    const [cutsConfigRow] = await db
-      .select({ cuts: marcianoCutsConfig.cuts })
-      .from(marcianoCutsConfig)
-      .where(eq(marcianoCutsConfig.faceShape, input.shape))
-      .limit(1);
+    const [[cutsConfigRow], aiTitle] = await Promise.all([
+      db
+        .select({ cuts: marcianoCutsConfig.cuts })
+        .from(marcianoCutsConfig)
+        .where(eq(marcianoCutsConfig.faceShape, input.shape))
+        .limit(1),
+      input.shape !== "alien" ? generateStyleTitle(input.answers) : Promise.resolve(null),
+    ]);
 
     const cutsOverride = cutsConfigRow?.cuts ?? null;
-    const partial = generateStyleProfile(input.shape, input.answers, input.metrics, cutsOverride);
+    const titleOverride = input.shape === "alien" ? "El Intergaláctico" : (aiTitle ?? undefined);
+    const partial = generateStyleProfile(input.shape, input.answers, input.metrics, cutsOverride, titleOverride);
     const idealBarberoId = await matchIdealBarbero(input.shape, db);
 
     const profile: StyleProfile = {

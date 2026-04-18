@@ -150,12 +150,7 @@ export type StyleAnalysis = {
   modelo: string;
 };
 
-export type StyleDominante =
-  | "El Quebrado" | "El Contador" | "El Ancla" | "El Silueta"
-  | "El Espectro" | "El Vinilo" | "El Filo" | "El Pesado"
-  | "El Raíz" | "El Mapa" | "El Gravedad" | "El Humo"
-  | "El Satélite" | "El Órbita" | "El Caldo" | "El Núcleo"
-  | "El Intergaláctico";
+export type StyleDominante = string;
 
 export type StyleProfile = {
   version: 1;
