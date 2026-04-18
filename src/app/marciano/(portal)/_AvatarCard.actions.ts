@@ -11,6 +11,7 @@ import {
   startAvatarPrediction,
   startAvatarCleanPrediction,
   startAvatarRecolorPrediction,
+  startAvatarRestylePrediction,
   finalizePrediction,
   getReplicatePrediction,
   cancelReplicatePrediction,
@@ -190,6 +191,42 @@ export async function recolorAvatarAction(input: {
       avatarPredictionId: result.predictionId,
       avatarErrorMessage: null,
       favoriteColor: input.colorSlug,
+      updatedAt: new Date(),
+    })
+    .where(eq(clients.id, client.id));
+
+  revalidatePath("/marciano");
+  revalidatePath("/marciano/estilo");
+  return { success: true };
+}
+
+export async function restyleAvatarAction(input: {
+  preset: AvatarPreset;
+  intensity: 1 | 2 | 3;
+}): Promise<{ success: true } | { success: false; error: string }> {
+  const { client } = await requireMarcianoClient();
+
+  if (!client.avatarUrl) {
+    return { success: false, error: "No tenés avatar para transformar." };
+  }
+  if (client.avatarStatus === "processing") {
+    return { success: false, error: "Ya hay una transformación en curso. Esperá un momento." };
+  }
+
+  const result = await startAvatarRestylePrediction({
+    avatarUrl: client.avatarUrl,
+    preset: input.preset,
+    intensity: input.intensity,
+  });
+
+  if ("error" in result) return { success: false, error: result.error };
+
+  await db
+    .update(clients)
+    .set({
+      avatarStatus: "processing",
+      avatarPredictionId: result.predictionId,
+      avatarErrorMessage: null,
       updatedAt: new Date(),
     })
     .where(eq(clients.id, client.id));

@@ -121,19 +121,22 @@ export interface QuickActionDefaults {
 export type FaceShape = "oval" | "cuadrado" | "redondo" | "corazon" | "diamante" | "alien";
 
 export type InterrogatoryAnswers = {
-  // Preguntas 1-5 (originales)
   lifestyle: "minimal" | "nocturno" | "outdoor" | "formal";
   morningMinutes: 0 | 3 | 5 | 10;
-  arrival: "caminando" | "auto" | "apurado" | "con-tiempo";
   perfectCut: "otros-notan" | "lo-siento" | "dura-semanas";
-  turnoff: "musica-boluda" | "gente-de-mas" | "apuro" | "charla-forzada";
-  // Preguntas 6-10 (nuevas, opcionales para no romper perfiles existentes)
-  music?: "trap" | "rock" | "reggaeton" | "electronica";
+  // Psychological questions (Fase 4)
+  praiseResponse?: "reafirma" | "duda" | "indiferente" | "incomodo";
+  feedbackTolerance?: "lo_pruebo" | "pregunto" | "dudo" | "rechazo";
+  socialProjection?: "mucho" | "equilibrado" | "poco" | "nada";
+  // Legacy fields (pre-Fase 4) — kept for backward compat with existing JSONB
+  arrival?: "caminando" | "auto" | "apurado" | "con-tiempo";
+  turnoff?: "musica-boluda" | "gente-de-mas" | "apuro" | "charla-forzada";
   weekendStyle?: "todo-negro" | "sporty" | "como-siempre" | "me-armo";
+  // Preguntas 6-10
+  music?: "trap" | "rock" | "reggaeton" | "electronica";
   chairBehavior?: "celular" | "duermo" | "hablo" | "miro-todo";
   beard?: "rapada" | "prolija" | "descuidada" | "no-tengo";
   barberTrust?: "le-explico-todo" | "le-muestro-foto" | "confio-en-el" | "mitad-y-mitad";
-  // Pregunta 11: texto libre
   freeText?: string;
 };
 
@@ -148,10 +151,10 @@ export type StyleAnalysis = {
 };
 
 export type StyleDominante =
-  | "El Victor" | "El Código" | "El Turbio"
-  | "El Espectro" | "El Pesado" | "El Clandestino"
-  | "El Detonante" | "El Bardo" | "El Humo"
-  | "El Satélite" | "El Filo" | "El Umbral"
+  | "El Quebrado" | "El Contador" | "El Ancla" | "El Silueta"
+  | "El Espectro" | "El Vinilo" | "El Filo" | "El Pesado"
+  | "El Raíz" | "El Mapa" | "El Gravedad" | "El Humo"
+  | "El Satélite" | "El Órbita" | "El Caldo" | "El Núcleo"
   | "El Intergaláctico";
 
 export type StyleProfile = {

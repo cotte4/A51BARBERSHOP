@@ -1,9 +1,14 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { clients } from "@/db/schema";
 import { getMarcianoUpcomingTurno } from "@/lib/marciano-turnos";
 import { getMarcianoDashboardData, requireMarcianoClient } from "@/lib/marciano-portal";
 import { MARCIANO_BENEFICIOS } from "@/lib/marciano-config";
 import AvatarCard from "./_AvatarCard";
+import MarcianoIDCard from "@/components/marciano/MarcianoIDCard";
+import ShareCardButton from "@/components/marciano/ShareCardButton";
 
 function formatFecha(value: Date | null) {
   if (!value) return null;
@@ -44,9 +49,23 @@ function CalendarIcon() {
 
 export default async function MarcianoPortalPage() {
   const { session, client } = await requireMarcianoClient();
-  const [data, proximoTurno] = await Promise.all([
+  const [data, proximoTurno, cardData] = await Promise.all([
     getMarcianoDashboardData(session.user.id),
     getMarcianoUpcomingTurno(client.id),
+    db
+      .select({
+        publicCardSlug: clients.publicCardSlug,
+        createdAt: clients.createdAt,
+        styleProfile: clients.styleProfile,
+        totalVisits: clients.totalVisits,
+        name: clients.name,
+        avatarUrl: clients.avatarUrl,
+        id: clients.id,
+      })
+      .from(clients)
+      .where(eq(clients.id, client.id))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
   ]);
 
   if (!data) return null;
@@ -132,6 +151,21 @@ export default async function MarcianoPortalPage() {
           avatarErrorMessage={data.client.avatarErrorMessage ?? null}
         />
       </Suspense>
+
+      {/* Credencial Marciano */}
+      {cardData && (
+        <section className="flex flex-col gap-3">
+          <MarcianoIDCard
+            avatarUrl={cardData.avatarUrl}
+            clientName={cardData.name}
+            alienTitle={cardData.styleProfile?.dominantStyle ?? "El Intergaláctico"}
+            memberSince={cardData.createdAt}
+            totalVisits={cardData.totalVisits}
+            serialNumber={`MCN-${cardData.createdAt.toISOString().slice(0, 7)}-${cardData.id.slice(0, 4)}`}
+          />
+          <ShareCardButton slug={cardData.publicCardSlug} />
+        </section>
+      )}
 
       {/* Quick access */}
       <div className="grid grid-cols-2 gap-4">

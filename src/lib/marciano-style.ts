@@ -1,33 +1,62 @@
 import type { FaceShape, InterrogatoryAnswers, StyleDominante, StyleProfile } from "@/lib/types";
 
 // ————————————————————————————
-// Title from answers: lifestyle × perfectCut → título
+// Title from answers: lifestyle × feedbackTolerance → título
 // Alien face shape is always El Intergaláctico regardless of answers
 // ————————————————————————————
 function getTitleFromAnswers(shape: FaceShape, answers: InterrogatoryAnswers): StyleDominante {
   if (shape === "alien") return "El Intergaláctico";
 
-  const { lifestyle, perfectCut } = answers;
+  const { lifestyle, feedbackTolerance } = answers;
+  const ft = feedbackTolerance ?? "dudo"; // legacy fallback for pre-Fase 4 profiles
 
   if (lifestyle === "formal") {
-    if (perfectCut === "otros-notan") return "El Victor";
-    if (perfectCut === "lo-siento")   return "El Código";
-    return "El Turbio";
+    if (ft === "lo_pruebo") return "El Quebrado";
+    if (ft === "pregunto")  return "El Contador";
+    if (ft === "dudo")      return "El Ancla";
+    return "El Silueta";
   }
   if (lifestyle === "nocturno") {
-    if (perfectCut === "otros-notan") return "El Espectro";
-    if (perfectCut === "lo-siento")   return "El Pesado";
-    return "El Clandestino";
+    if (ft === "lo_pruebo") return "El Espectro";
+    if (ft === "pregunto")  return "El Vinilo";
+    if (ft === "dudo")      return "El Filo";
+    return "El Pesado";
   }
   if (lifestyle === "outdoor") {
-    if (perfectCut === "otros-notan") return "El Detonante";
-    if (perfectCut === "lo-siento")   return "El Bardo";
+    if (ft === "lo_pruebo") return "El Raíz";
+    if (ft === "pregunto")  return "El Mapa";
+    if (ft === "dudo")      return "El Gravedad";
     return "El Humo";
   }
   // minimal
-  if (perfectCut === "otros-notan") return "El Satélite";
-  if (perfectCut === "lo-siento")   return "El Filo";
-  return "El Umbral";
+  if (ft === "lo_pruebo") return "El Satélite";
+  if (ft === "pregunto")  return "El Órbita";
+  if (ft === "dudo")      return "El Caldo";
+  return "El Núcleo";
+}
+
+const CONSERVATIVE_CUTS = new Set([
+  "Crew Cut", "French Crop", "Ivy League", "Buzz Cut",
+  "Blunt Crop", "Side Part", "Textured Crop", "Caesar Cut", "Modern Caesar",
+]);
+const BOLD_CUTS = new Set([
+  "Wolf Cut", "Mullet Moderno", "Messy Shag", "Faux Hawk",
+  "Korean Two Block", "Curtain Fringe", "Pompadour Moderno", "Shag Cut", "E-boy Fringe",
+]);
+
+function applyFeedbackToleranceFilter(cuts: string[], feedbackTolerance?: string): string[] {
+  if (!feedbackTolerance || feedbackTolerance === "dudo" || feedbackTolerance === "pregunto") {
+    return cuts;
+  }
+  if (feedbackTolerance === "rechazo") {
+    const conserv = cuts.filter((c) => CONSERVATIVE_CUTS.has(c));
+    const rest = cuts.filter((c) => !CONSERVATIVE_CUTS.has(c));
+    return [...conserv, ...rest];
+  }
+  // lo_pruebo
+  const bold = cuts.filter((c) => BOLD_CUTS.has(c));
+  const rest = cuts.filter((c) => !BOLD_CUTS.has(c));
+  return [...bold, ...rest];
 }
 
 // ————————————————————————————
@@ -227,9 +256,10 @@ export function generateStyleProfile(
   cutsOverride: string[] | null = null
 ): Omit<StyleProfile, "idealBarberoId"> {
   const dominantStyle = getTitleFromAnswers(shape, answers);
-  const recommendedCuts = cutsOverride && cutsOverride.length > 0
+  const rawCuts = cutsOverride && cutsOverride.length > 0
     ? cutsOverride
     : getDefaultCuts(shape, answers);
+  const recommendedCuts = applyFeedbackToleranceFilter(rawCuts, answers.feedbackTolerance);
   const chairTimeMin = estimateChairTime(answers.morningMinutes);
 
   return {

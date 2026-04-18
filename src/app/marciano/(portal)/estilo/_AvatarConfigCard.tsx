@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { MARCIANO_COLORS } from "@/lib/marciano-colors";
-import { resetAvatarAction, cleanAvatarAction, recolorAvatarAction, getAvatarStatusAction } from "../_AvatarCard.actions";
+import { resetAvatarAction, cleanAvatarAction, recolorAvatarAction, restyleAvatarAction, getAvatarStatusAction } from "../_AvatarCard.actions";
+import { AVATAR_PRESETS } from "@/lib/marciano-avatar-presets";
+import type { AvatarPreset } from "@/lib/marciano-avatar-presets";
 
 function Spinner({ size = "md" }: { size?: "sm" | "md" }) {
   const cls = size === "sm" ? "h-4 w-4" : "h-6 w-6";
@@ -80,8 +82,15 @@ export default function AvatarConfigCard({ avatarUrl, avatarStatus }: Props) {
   const [recoloring, setRecoloring] = useState(false);
   const [recolorPolling, setRecolorPolling] = useState(false);
 
+  // Restyle state
+  const [restyleOpen, setRestyleOpen] = useState(false);
+  const [restylePreset, setRestylePreset] = useState<AvatarPreset | null>(null);
+  const [intensity, setIntensity] = useState<1 | 2 | 3>(2);
+  const [restyling, setRestyling] = useState(false);
+  const [restylePolling, setRestylePolling] = useState(false);
+
   const hasAvatar = avatarStatus === "ready" && avatarUrl !== null;
-  const isProcessing = avatarStatus === "processing" || recolorPolling;
+  const isProcessing = avatarStatus === "processing" || recolorPolling || restylePolling;
 
   useEffect(() => {
     if (!avatarUrl) return;
@@ -109,6 +118,21 @@ export default function AvatarConfigCard({ avatarUrl, avatarStatus }: Props) {
     const interval = setInterval(poll, 3500);
     return () => { clearTimeout(first); clearInterval(interval); };
   }, [recolorPolling, router]);
+
+  // Poll after restyle starts
+  useEffect(() => {
+    if (!restylePolling) return;
+    const poll = async () => {
+      const snap = await getAvatarStatusAction();
+      if (snap.status === "ready" || snap.status === "failed") {
+        setRestylePolling(false);
+        router.refresh();
+      }
+    };
+    const first = setTimeout(poll, 800);
+    const interval = setInterval(poll, 3500);
+    return () => { clearTimeout(first); clearInterval(interval); };
+  }, [restylePolling, router]);
 
   const saveCrop = useCallback((z: number, x: number, y: number) => {
     if (!avatarUrl) return;
@@ -146,6 +170,18 @@ export default function AvatarConfigCard({ avatarUrl, avatarStatus }: Props) {
     setRecolorOpen(false);
     setRecolorSlug(null);
     setRecolorPolling(true);
+  }
+
+  async function handleRestyle() {
+    if (!restylePreset) return;
+    setRestyling(true);
+    setErrorMsg(null);
+    const res = await restyleAvatarAction({ preset: restylePreset, intensity });
+    setRestyling(false);
+    if (!res.success) { setErrorMsg(res.error); return; }
+    setRestyleOpen(false);
+    setRestylePreset(null);
+    setRestylePolling(true);
   }
 
   async function handleRegen() {
@@ -251,6 +287,61 @@ export default function AvatarConfigCard({ avatarUrl, avatarStatus }: Props) {
                 </div>
               )}
 
+              {/* Cambiar estilo alien */}
+              <button
+                type="button"
+                onClick={() => { setRestyleOpen((v) => !v); setRestylePreset(null); setErrorMsg(null); }}
+                className="w-full ghost-button rounded-[20px] px-3 py-2 text-xs font-medium flex items-center justify-center gap-2"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
+                  <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8L12 2z" strokeLinejoin="round"/>
+                </svg>
+                Cambiar estilo alien
+              </button>
+
+              {restyleOpen && (
+                <div className="flex w-full flex-col gap-3 rounded-[22px] border border-zinc-700/60 bg-zinc-900/60 p-3">
+                  <p className="text-xs text-zinc-400">Elegí el estilo nuevo</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(Object.entries(AVATAR_PRESETS) as [AvatarPreset, typeof AVATAR_PRESETS[AvatarPreset]][]).map(([key, data]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setRestylePreset(key)}
+                        className={[
+                          "flex flex-col items-center gap-1 rounded-2xl p-3 transition-all",
+                          restylePreset === key
+                            ? "ring-2 ring-[#8cff59] bg-[#8cff59]/10"
+                            : "ring-1 ring-white/10 hover:ring-white/20",
+                        ].join(" ")}
+                      >
+                        <span className="text-2xl">{data.emoji}</span>
+                        <span className="text-xs font-semibold text-white">{data.label}</span>
+                        <span className="text-[10px] text-zinc-500">{data.vibe}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between text-[10px] text-zinc-500">
+                      <span>Sutil</span><span>Normal</span><span>Exagerado</span>
+                    </div>
+                    <input
+                      type="range" min="1" max="3" step="1" value={intensity}
+                      onChange={(e) => setIntensity(parseInt(e.target.value, 10) as 1 | 2 | 3)}
+                      className="w-full accent-[#8cff59]"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!restylePreset || restyling}
+                    onClick={handleRestyle}
+                    className="neon-button rounded-[20px] px-4 py-2.5 text-xs font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+                  >
+                    {restyling ? <><Spinner size="sm" /><span>Iniciando...</span></> : "Aplicar transformación"}
+                  </button>
+                </div>
+              )}
+
               {cleanSuccess && (
                 <p className="w-full rounded-2xl border border-[#8cff59]/25 bg-[#8cff59]/10 px-4 py-2.5 text-sm text-[#8cff59] text-center">
                   ✓ Imagen mejorada
@@ -287,9 +378,9 @@ export default function AvatarConfigCard({ avatarUrl, avatarStatus }: Props) {
         <div className="flex flex-col items-center justify-center gap-3 py-6">
           <Spinner />
           <p className="text-sm text-zinc-400">
-            {recolorPolling ? "Cambiando color..." : "Procesando tu avatar..."}
+            {recolorPolling ? "Cambiando color..." : restylePolling ? "Transformando avatar..." : "Procesando tu avatar..."}
           </p>
-          {recolorPolling && (
+          {(recolorPolling || restylePolling) && (
             <p className="text-xs text-zinc-500 text-center max-w-[220px]">Tarda aprox. 40 segundos.</p>
           )}
         </div>

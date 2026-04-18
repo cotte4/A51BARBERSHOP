@@ -7,27 +7,30 @@ import { playSound, toggleSoundMute, isSoundMuted } from "@/lib/marciano-sounds"
 import Question from "./_Question";
 import FaceCapture from "./_FaceCapture";
 import StyleDNAReveal from "./_StyleDNAReveal";
+import AlienCalibrator from "./_AlienCalibrator";
 import type { FaceShape, InterrogatoryAnswers, StyleProfile } from "@/lib/types";
 import type { FaceMetrics } from "@/lib/marciano-style";
+import type { AvatarPreset } from "@/lib/marciano-avatar-presets";
 
 type FlowState =
   | "intro"
   | "q1" | "q2" | "q3" | "q4" | "q5"
   | "q6" | "q7" | "q8" | "q9" | "q10" | "q11"
+  | "calibrator"
   | "face-capture" | "saving" | "reveal";
 
 const QUESTIONS = [
   {
     key: "q1",
     eyebrow: "Pregunta 1 de 11",
-    title: "¿Cómo llegás?",
+    title: "Alguien te dice que tu corte quedó bueno. ¿Qué te pasa por dentro?",
     type: "choice-text" as const,
-    field: "arrival" as const,
+    field: "praiseResponse" as const,
     options: [
-      { value: "caminando", label: "A pie, sin apuro" },
-      { value: "auto", label: "En auto, música a fondo" },
-      { value: "apurado", label: "Tarde, como siempre" },
-      { value: "con-tiempo", label: "Con tiempo de sobra" },
+      { value: "reafirma", label: "Se confirma lo que ya sabías" },
+      { value: "duda", label: "Te preguntás si realmente quedó" },
+      { value: "indiferente", label: "Te da lo mismo lo que piensen" },
+      { value: "incomodo", label: "Te incomoda que lo noten" },
     ],
   },
   {
@@ -71,14 +74,14 @@ const QUESTIONS = [
   {
     key: "q5",
     eyebrow: "Pregunta 5 de 11",
-    title: "¿Qué te arruina el momento?",
+    title: "Si el barbero te sugiere algo distinto a lo que pediste...",
     type: "choice-text" as const,
-    field: "turnoff" as const,
+    field: "feedbackTolerance" as const,
     options: [
-      { value: "musica-boluda", label: "Música que no pega" },
-      { value: "gente-de-mas", label: "Mucha gente" },
-      { value: "apuro", label: "Que te metan presión" },
-      { value: "charla-forzada", label: "Charla forzada" },
+      { value: "lo_pruebo", label: "Lo probás sin dudar" },
+      { value: "pregunto", label: "Preguntás antes de decir que sí" },
+      { value: "dudo", label: "Lo escuchás pero igual pedís lo tuyo" },
+      { value: "rechazo", label: "Preferís quedarte con lo que ya funciona" },
     ],
   },
   {
@@ -97,14 +100,14 @@ const QUESTIONS = [
   {
     key: "q7",
     eyebrow: "Pregunta 7 de 11",
-    title: "El sábado a la noche te vestís...",
+    title: "¿Cuánto te importa cómo te ven los demás?",
     type: "choice-text" as const,
-    field: "weekendStyle" as const,
+    field: "socialProjection" as const,
     options: [
-      { value: "todo-negro", label: "Todo negro, como siempre" },
-      { value: "sporty", label: "Cómodo y ya" },
-      { value: "como-siempre", label: "Igual que cualquier día" },
-      { value: "me-armo", label: "Te armás algo" },
+      { value: "mucho", label: "Bastante — la imagen dice mucho" },
+      { value: "equilibrado", label: "Lo justo — ni obsesión ni indiferencia" },
+      { value: "poco", label: "Poco — te vestís para vos" },
+      { value: "nada", label: "Nada — no va con tu filosofía" },
     ],
   },
   {
@@ -160,6 +163,7 @@ const FLOW_ORDER: FlowState[] = [
   "intro",
   "q1", "q2", "q3", "q4", "q5",
   "q6", "q7", "q8", "q9", "q10", "q11",
+  "calibrator",
   "face-capture", "saving", "reveal",
 ];
 
@@ -232,6 +236,7 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
   const [captureResult, setCaptureResult] = useState<{ shape: FaceShape; metrics: FaceMetrics | null } | null>(null);
   const [profile, setProfile] = useState<StyleProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<AvatarPreset | null>(null);
 
   function handleAnswer(field: keyof InterrogatoryAnswers, rawValue: string) {
     let value: InterrogatoryAnswers[typeof field];
@@ -261,6 +266,7 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
         shape,
         answers: finalAnswers,
         metrics,
+        preset: selectedPreset ?? undefined,
       });
 
       if (!res.success) {
@@ -308,6 +314,20 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
             />
           </motion.div>
         </AnimatePresence>
+      </>
+    );
+  }
+
+  if (flowState === "calibrator") {
+    return (
+      <>
+        <MuteToggle />
+        <AlienCalibrator
+          onDone={(preset) => {
+            setSelectedPreset(preset);
+            setFlowState("face-capture");
+          }}
+        />
       </>
     );
   }
@@ -370,7 +390,7 @@ export default function InterrogatorioFlow({ clientName }: { clientName: string 
           Hola {clientName}, vamos a conocerte.
         </h1>
         <p className="text-sm text-zinc-400 text-center max-w-xs">
-          11 preguntas + análisis de rostro. 3 minutos.
+          11 preguntas + mini test visual + análisis de rostro. 4 minutos.
         </p>
         <button
           type="button"

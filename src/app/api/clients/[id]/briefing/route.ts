@@ -82,7 +82,18 @@ function buildPrompt(params: {
     lines.push(`- Estilo dominante: ${sp.dominantStyle}`);
     lines.push(`- Cortes recomendados: ${sp.recommendedCuts.join(", ")}`);
     lines.push(`- Tiempo al pelo por mañana: ${sp.answers.morningMinutes} min`);
-    lines.push(`- Lo que le baja: ${sp.answers.turnoff}`);
+    if (sp.answers.feedbackTolerance) {
+      lines.push(`- Actitud ante sugerencias del barbero: ${sp.answers.feedbackTolerance}`);
+    }
+    if (sp.answers.praiseResponse) {
+      lines.push(`- Reacción al reconocimiento: ${sp.answers.praiseResponse}`);
+    }
+    if (sp.answers.socialProjection) {
+      lines.push(`- Proyección social: ${sp.answers.socialProjection}`);
+    }
+    if (!sp.answers.feedbackTolerance && sp.answers.turnoff) {
+      lines.push(`- Lo que le baja: ${sp.answers.turnoff}`);
+    }
   }
 
   if (params.daysSinceLastVisit !== null) {

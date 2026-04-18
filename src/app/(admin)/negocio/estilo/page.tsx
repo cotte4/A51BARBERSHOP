@@ -21,9 +21,8 @@ const FACE_SHAPES: { shape: FaceShape; label: string; description: string }[] = 
 const DUMMY_ANSWERS = {
   lifestyle: "minimal" as const,
   morningMinutes: 5 as const,
-  arrival: "caminando" as const,
   perfectCut: "lo-siento" as const,
-  turnoff: "charla-forzada" as const,
+  feedbackTolerance: "pregunto" as const,
 };
 
 export default async function EstiloConfigPage() {

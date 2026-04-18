@@ -10,6 +10,7 @@ import { generateStyleProfile, matchIdealBarbero } from "@/lib/marciano-style";
 import { generateStyleAnalysis } from "@/lib/marciano-analysis";
 import type { FaceShape, InterrogatoryAnswers, StyleProfile } from "@/lib/types";
 import type { FaceMetrics } from "@/lib/marciano-style";
+import type { AvatarPreset } from "@/lib/marciano-avatar-presets";
 
 const VALID_SHAPES = new Set<FaceShape>(["oval", "cuadrado", "redondo", "corazon", "diamante"]);
 
@@ -62,6 +63,7 @@ export async function saveStyleProfileAction(input: {
   shape: FaceShape;
   answers: InterrogatoryAnswers;
   metrics: FaceMetrics | null;
+  preset?: AvatarPreset;
 }): Promise<{ success: true; profile: StyleProfile } | { success: false; error: string }> {
   try {
     const { client } = await requireMarcianoClient();

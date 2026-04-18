@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { clients } from "@/db/schema";
 import { FACE_SHAPE_DESCRIPTIONS } from "@/lib/marciano-colors";
 import type { FaceShape } from "@/lib/types";
-import { AVATAR_PRESETS } from "@/lib/marciano-avatar-presets";
+import { AVATAR_PRESETS, INTENSITY_MODIFIERS } from "@/lib/marciano-avatar-presets";
 import type { AvatarPreset } from "@/lib/marciano-avatar-presets";
 export type { AvatarPreset } from "@/lib/marciano-avatar-presets";
 
@@ -129,6 +129,37 @@ export async function startAvatarRecolorPrediction(input: {
     const msg = err instanceof Error ? err.message : JSON.stringify(err);
     console.error("[avatar-recolor] error:", msg);
     return { error: "No pudimos iniciar el cambio de color. Intentá de nuevo." };
+  }
+}
+
+export async function startAvatarRestylePrediction(input: {
+  avatarUrl: string;
+  preset: AvatarPreset;
+  intensity: 1 | 2 | 3;
+}): Promise<{ predictionId: string } | { error: string }> {
+  const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN! });
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  const presetData = AVATAR_PRESETS[input.preset];
+  const modifier = INTENSITY_MODIFIERS[input.intensity];
+  const prompt = `${modifier}${presetData.restylePrompt}`;
+
+  try {
+    const prediction = await replicate.predictions.create({
+      model: RECOLOR_MODEL,
+      input: {
+        input_image: input.avatarUrl,
+        prompt,
+      },
+      webhook: `${appUrl}/api/replicate/avatar-webhook`,
+      webhook_events_filter: ["completed"],
+    });
+    console.log("[avatar-restyle] prediction creada:", prediction.id);
+    return { predictionId: prediction.id };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : JSON.stringify(err);
+    console.error("[avatar-restyle] error:", msg);
+    return { error: "No pudimos iniciar la transformación. Intentá de nuevo." };
   }
 }
 

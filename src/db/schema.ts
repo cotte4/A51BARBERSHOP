@@ -501,6 +501,7 @@ export const clients = pgTable(
     avatarPredictionId: text("avatar_prediction_id"),
     avatarRequestedAt: timestamp("avatar_requested_at", { withTimezone: true }),
     avatarErrorMessage: text("avatar_error_message"),
+    publicCardSlug: text("public_card_slug").unique(),
   },
   (table) => [
     uniqueIndex("clients_email_idx").on(table.email),
