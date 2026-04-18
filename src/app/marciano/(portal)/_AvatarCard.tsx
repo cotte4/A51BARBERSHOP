@@ -164,6 +164,7 @@ export default function AvatarCard({
   const router = useRouter();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(favoriteColor);
   const [selectedPreset, setSelectedPreset] = useState<AvatarPreset>("galactic");
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [localFlow, setLocalFlow] = useState<LocalFlow>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -340,7 +341,14 @@ export default function AvatarCard({
     return (
       <section className="panel-card rounded-[28px] p-5 flex flex-col items-center gap-4">
         <p className="eyebrow text-xs text-[#8cff59] self-start">Tu Avatar Marciano</p>
-        <div className="relative h-40 w-40 overflow-hidden rounded-full border-2 border-[#8cff59]/40 shadow-[0_0_24px_rgba(140,255,89,0.2)] bg-zinc-900">
+
+        {/* Tappable avatar — opens lightbox */}
+        <button
+          type="button"
+          onClick={() => setLightboxOpen(true)}
+          className="relative h-40 w-40 overflow-hidden rounded-full border-2 border-[#8cff59]/40 shadow-[0_0_24px_rgba(140,255,89,0.2)] bg-zinc-900 hover:scale-105 transition-transform duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8cff59]"
+          aria-label="Ver avatar en pantalla completa"
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             key={avatarUrl!}
@@ -349,8 +357,41 @@ export default function AvatarCard({
             className="h-full w-full object-cover transition-opacity duration-500 opacity-0"
             onLoad={(e) => { (e.currentTarget as HTMLImageElement).classList.replace("opacity-0", "opacity-100"); }}
           />
-        </div>
-        <p className="text-xs text-zinc-500 text-center max-w-[220px]">Tu forma alienígena.</p>
+          <span className="absolute inset-0 flex items-end justify-center pb-3 opacity-0 hover:opacity-100 transition-opacity duration-200">
+            <span className="rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-white backdrop-blur-sm">
+              Toca para ampliar
+            </span>
+          </span>
+        </button>
+
+        {/* Lightbox */}
+        {lightboxOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+            onClick={() => setLightboxOpen(false)}
+          >
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(false)}
+              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+              aria-label="Cerrar"
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+                <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" />
+              </svg>
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={avatarUrl!}
+              alt="Avatar Marciano"
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-[90vh] max-w-[90vw] rounded-3xl object-contain shadow-2xl"
+              style={{ touchAction: "pinch-zoom" }}
+            />
+          </div>
+        )}
+
+        <p className="text-xs text-zinc-500 text-center max-w-[220px]">Tu forma alienígena. Tocá para ampliar.</p>
 
         {errorMsg && (
           <p className="w-full rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
