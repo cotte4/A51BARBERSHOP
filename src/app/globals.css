@@ -255,6 +255,12 @@ select {
   to   { transform: scale(1);    opacity: 1; }
 }
 
+@keyframes a51-nav-glide {
+  0%   { transform: translateX(-130%); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translateX(420%); opacity: 0.95; }
+}
+
 @keyframes a51-marquee {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }

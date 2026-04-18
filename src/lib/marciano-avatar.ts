@@ -12,6 +12,7 @@ export type { AvatarPreset } from "@/lib/marciano-avatar-presets";
 
 const AVATAR_MODEL_VERSION = "a07f252abbbd832009640b27f063ea52d87d7a23a185ca165bec23b5adc8deaf";
 const CLEAN_MODEL_VERSION = "f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa"; // nightmareai/real-esrgan + face_enhance
+const RECOLOR_MODEL_VERSION = "30c1d0b916a6f8efce20493f5d61ee27491ab2a60437c13c588468b9810ec23f"; // timothybrooks/instruct-pix2pix
 
 export async function startAvatarPrediction(input: {
   frameBase64: string;
@@ -100,6 +101,37 @@ export async function startAvatarCleanPrediction(input: {
     const msg = err instanceof Error ? err.message : JSON.stringify(err);
     console.error("[avatar-clean] error:", msg);
     return { error: "No pudimos iniciar la limpieza. Intentá de nuevo." };
+  }
+}
+
+export async function startAvatarRecolorPrediction(input: {
+  avatarUrl: string;
+  colorPromptName: string;
+}): Promise<{ predictionId: string } | { error: string }> {
+  const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN! });
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  const prompt = `Change the skin color to entirely ${input.colorPromptName}. Make the face, neck, and all skin completely ${input.colorPromptName}. Keep the same alien features, hairstyle, eyes, and background.`;
+
+  try {
+    const prediction = await replicate.predictions.create({
+      version: RECOLOR_MODEL_VERSION,
+      input: {
+        image: input.avatarUrl,
+        prompt,
+        image_cfg_scale: 1.5,
+        text_cfg_scale: 10,
+        num_inference_steps: 100,
+      },
+      webhook: `${appUrl}/api/replicate/avatar-webhook`,
+      webhook_events_filter: ["completed"],
+    });
+    console.log("[avatar-recolor] prediction creada:", prediction.id);
+    return { predictionId: prediction.id };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : JSON.stringify(err);
+    console.error("[avatar-recolor] error:", msg);
+    return { error: "No pudimos iniciar el cambio de color. Intentá de nuevo." };
   }
 }
 

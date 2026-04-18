@@ -10,6 +10,7 @@ import { findColorBySlug } from "@/lib/marciano-colors";
 import {
   startAvatarPrediction,
   startAvatarCleanPrediction,
+  startAvatarRecolorPrediction,
   finalizePrediction,
   getReplicatePrediction,
   cancelReplicatePrediction,
@@ -60,7 +61,7 @@ export async function startAvatarGenerationAction(input: {
 
   const result = await startAvatarPrediction({
     frameBase64: input.frameBase64,
-    colorNombre: color.nombre,
+    colorNombre: color.promptName,
     colorHex: color.hex,
     faceShape: input.faceShape,
     preset: input.preset,
@@ -160,6 +161,41 @@ export async function cleanAvatarAction(): Promise<
     .where(eq(clients.id, client.id));
 
   revalidatePath("/marciano");
+  return { success: true };
+}
+
+export async function recolorAvatarAction(input: {
+  colorSlug: string;
+}): Promise<{ success: true } | { success: false; error: string }> {
+  const color = findColorBySlug(input.colorSlug);
+  if (!color) return { success: false, error: "Color inválido." };
+
+  const { client } = await requireMarcianoClient();
+
+  if (!client.avatarUrl || client.avatarStatus !== "ready") {
+    return { success: false, error: "No hay avatar listo para recolorear." };
+  }
+
+  const result = await startAvatarRecolorPrediction({
+    avatarUrl: client.avatarUrl,
+    colorPromptName: color.promptName,
+  });
+
+  if ("error" in result) return { success: false, error: result.error };
+
+  await db
+    .update(clients)
+    .set({
+      avatarStatus: "processing",
+      avatarPredictionId: result.predictionId,
+      avatarErrorMessage: null,
+      favoriteColor: input.colorSlug,
+      updatedAt: new Date(),
+    })
+    .where(eq(clients.id, client.id));
+
+  revalidatePath("/marciano");
+  revalidatePath("/marciano/estilo");
   return { success: true };
 }
 

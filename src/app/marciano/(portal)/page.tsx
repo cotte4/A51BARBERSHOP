@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { getMarcianoUpcomingTurno } from "@/lib/marciano-turnos";
 import { getMarcianoDashboardData, requireMarcianoClient } from "@/lib/marciano-portal";
@@ -121,14 +122,16 @@ export default async function MarcianoPortalPage() {
         )}
       </section>
 
-      {/* Avatar Marciano */}
-      <AvatarCard
-        styleCompletedAt={data.client.styleCompletedAt ?? null}
-        avatarUrl={data.client.avatarUrl ?? null}
-        favoriteColor={data.client.favoriteColor ?? null}
-        avatarStatus={(data.client.avatarStatus ?? "idle") as "idle" | "processing" | "ready" | "failed"}
-        avatarErrorMessage={data.client.avatarErrorMessage ?? null}
-      />
+      {/* Avatar Marciano — Suspense required for useSearchParams in AvatarCard */}
+      <Suspense fallback={<div className="panel-card rounded-[28px] p-5 min-h-[120px]" />}>
+        <AvatarCard
+          styleCompletedAt={data.client.styleCompletedAt ?? null}
+          avatarUrl={data.client.avatarUrl ?? null}
+          favoriteColor={data.client.favoriteColor ?? null}
+          avatarStatus={(data.client.avatarStatus ?? "idle") as "idle" | "processing" | "ready" | "failed"}
+          avatarErrorMessage={data.client.avatarErrorMessage ?? null}
+        />
+      </Suspense>
 
       {/* Quick access */}
       <div className="grid grid-cols-2 gap-4">

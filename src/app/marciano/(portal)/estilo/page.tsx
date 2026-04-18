@@ -25,7 +25,6 @@ export default async function PerfilMarcianoPage({
           allowRedo
         />
         <AvatarConfigCard
-          favoriteColor={client.favoriteColor}
           avatarUrl={client.avatarUrl}
           avatarStatus={client.avatarStatus ?? "idle"}
         />
