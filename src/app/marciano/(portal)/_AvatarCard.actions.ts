@@ -14,7 +14,7 @@ import {
   cancelReplicatePrediction,
 } from "@/lib/marciano-avatar";
 import type { FaceShape } from "@/lib/types";
-import type { AvatarPreset } from "@/lib/marciano-avatar";
+import type { AvatarPreset } from "@/lib/marciano-avatar-presets";
 
 export async function saveFavoriteColorAction(
   slug: string

@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import FaceCapture from "./estilo/_FaceCapture";
 import { MARCIANO_COLORS } from "@/lib/marciano-colors";
-import { AVATAR_PRESETS } from "@/lib/marciano-avatar";
+import { AVATAR_PRESETS } from "@/lib/marciano-avatar-presets";
+import type { AvatarPreset } from "@/lib/marciano-avatar-presets";
 import {
   saveFavoriteColorAction,
   startAvatarGenerationAction,
@@ -14,7 +15,6 @@ import {
 } from "./_AvatarCard.actions";
 import type { FaceShape } from "@/lib/types";
 import type { FaceMetrics } from "@/lib/marciano-style";
-import type { AvatarPreset } from "@/lib/marciano-avatar";
 
 type AvatarCardProps = {
   styleCompletedAt: Date | string | null;
