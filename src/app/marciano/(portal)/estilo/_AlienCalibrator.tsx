@@ -10,8 +10,8 @@ import type { CalibrationImage } from "@/lib/marciano-calibration-images";
 type Props = { onDone: (preset: AvatarPreset) => void };
 
 const TOTAL_ROUNDS = 5;
-const ALL_PRESETS: AvatarPreset[] = ["galactic", "elf", "demon", "android", "cosmic", "orc"];
-const INITIAL_SCORES: Record<AvatarPreset, number> = { galactic: 0, elf: 0, demon: 0, android: 0, cosmic: 0, orc: 0 };
+const ALL_PRESETS: AvatarPreset[] = ["galactic", "marcianeke", "raptus", "navi", "lisail", "homew", "triloviti"];
+const INITIAL_SCORES: Record<AvatarPreset, number> = { galactic: 0, marcianeke: 0, raptus: 0, navi: 0, lisail: 0, homew: 0, triloviti: 0 };
 
 function ResultScreen({ preset, onDone }: { preset: AvatarPreset; onDone: (p: AvatarPreset) => void }) {
   const data = AVATAR_PRESETS[preset];

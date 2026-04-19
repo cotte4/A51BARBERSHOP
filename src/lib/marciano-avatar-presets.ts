@@ -1,4 +1,11 @@
-export type AvatarPreset = "galactic" | "elf" | "demon" | "android" | "cosmic" | "orc";
+export type AvatarPreset =
+  | "galactic"
+  | "marcianeke"
+  | "raptus"
+  | "navi"
+  | "lisail"
+  | "homew"
+  | "triloviti";
 
 export type AvatarPresetData = {
   label: string;
@@ -7,6 +14,7 @@ export type AvatarPresetData = {
   negativePrompt: string;
   restylePrompt: string;
   emoji: string;
+  bald?: boolean; // Triloviti: única raza sin pelo — ignora el hairstyle del cliente
 };
 
 export const INTENSITY_MODIFIERS: Record<1 | 2 | 3, string> = {
@@ -17,7 +25,7 @@ export const INTENSITY_MODIFIERS: Record<1 | 2 | 3, string> = {
 
 export const AVATAR_PRESETS: Record<AvatarPreset, AvatarPresetData> = {
   galactic: {
-    label: "Galactic Alien",
+    label: "Galáctico",
     vibe: "Clásico espacial",
     emoji: "👽",
     prompt:
@@ -27,59 +35,78 @@ export const AVATAR_PRESETS: Record<AvatarPreset, AvatarPresetData> = {
     restylePrompt:
       "Transform this character into a classic space alien. Keep the hair, facial structure, and skin color. Replace the features with: elongated oval alien head, very large almond-shaped solid black eyes, small pointed ears, subtle bioluminescent spots on the face. Change the background to outer space with stars and colorful nebula.",
   },
-  elf: {
-    label: "Fantasy Elf",
-    vibe: "Mágico / RPG",
-    emoji: "🧝",
+
+  marcianeke: {
+    label: "Marcianeke",
+    vibe: "Trap / Urbano argentino",
+    emoji: "🧢",
     prompt:
-      "{COLOR} skin, {HEX} skin color, entirely {COLOR} fantasy elf skin, close-up portrait of a cartoon fantasy elf, face and neck only, 100% {COLOR} skin tone on entire face and neck, looking directly forward, calm expression, mouth closed, very long pointed elven ears, glowing magical eyes, ethereal glowing aura on skin, visible hairstyle, detailed hair, enchanted glowing forest background with magical fireflies.",
+      "{COLOR} skin, {HEX} skin color, entirely {COLOR} alien skin, close-up portrait of a cartoon street alien, face and neck only, 100% {COLOR} skin tone on entire face and neck, looking directly forward, relaxed cool expression, mouth closed, slightly oversized alien head, large expressive almond eyes with a chill look, subtle glowing street-art marks on cheeks, visible hairstyle, detailed hair, urban neon city background at night with graffiti and colorful lights.",
     negativePrompt:
-      "human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, round ears, human ears, human eyes, full body, screaming, open mouth, bald, shaved head, no hair, sci-fi, blurry, low quality, ugly, deformed.",
+      "human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, angry expression, scary, horror, full body, screaming, open mouth, bald, shaved head, no hair, forest, nature, blurry, low quality, ugly, deformed.",
     restylePrompt:
-      "Transform this character into a fantasy elf. Keep the hair, facial structure, and skin color. Add very long pointed elven ears, glowing magical eyes, subtle ethereal glow on the skin. Change the background to an enchanted glowing forest with magical fireflies.",
+      "Transform this character into a street-style alien from the barrio. Keep the hair, facial structure, and skin color. Add a slightly oversized alien head shape, large expressive almond eyes with a relaxed cool look, subtle glowing marks on the cheeks like street-art tags. Change the background to an urban neon city at night with graffiti and colorful lights.",
   },
-  demon: {
-    label: "Underworld Demon",
-    vibe: "Dark fantasy",
-    emoji: "😈",
+
+  raptus: {
+    label: "Raptus",
+    vibe: "Peleador callejero",
+    emoji: "🥊",
     prompt:
-      "{COLOR} skin, {HEX} skin color, entirely {COLOR} demon skin, close-up portrait of a cartoon demon, face and neck only, 100% {COLOR} skin tone on entire face and neck, looking directly forward, calm expression, mouth closed, dark demonic horns protruding from forehead, glowing solid red eyes, pointed ears, subtle textured scales on jawline, visible hairstyle, detailed hair, background of dark glowing embers and fiery smoke.",
+      "{COLOR} skin, {HEX} skin color, entirely {COLOR} alien skin, close-up portrait of a cartoon alien street fighter, face and neck only, 100% {COLOR} skin tone on entire face and neck, looking directly forward, intense fierce expression, mouth closed, strong prominent jaw, deep-set glowing eyes with vertical pupils, alien battle scars and markings across the face, thick alien brow ridges, visible hairstyle, detailed hair, dark gritty urban alley background with dim neon lights and smoke.",
     negativePrompt:
-      "human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, human eyes, round eyes, halo, angelic, full body, screaming, open mouth, bald, shaved head, no hair, blurry, low quality, ugly, deformed.",
+      "human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, soft features, cute, friendly, full body, screaming, open mouth, bald, shaved head, no hair, nature, bright background, blurry, low quality, ugly, deformed.",
     restylePrompt:
-      "Transform this character into a demon. Keep the hair, facial structure, and skin color. Add dark demonic horns protruding from the forehead, glowing solid red eyes, pointed ears, subtle textured scales on the jawline. Change the background to dark glowing embers and fiery smoke.",
+      "Transform this character into an alien street fighter. Keep the hair, facial structure, and skin color. Add a strong prominent alien jaw, deep-set glowing eyes with vertical pupils, alien battle scars and markings on the face, thick brow ridges. Change the background to a dark gritty urban alley with dim neon lights and smoke.",
   },
-  android: {
-    label: "Cyberpunk Android",
-    vibe: "Sci-Fi / Tech",
-    emoji: "🤖",
+
+  navi: {
+    label: "Navi",
+    vibe: "Explorador espacial",
+    emoji: "🚀",
     prompt:
-      "{COLOR} skin, {HEX} skin color, entirely {COLOR} android skin, close-up portrait of a cartoon cyberpunk android, face and neck only, 100% {COLOR} skin tone on entire face and neck, looking directly forward, calm expression, mouth closed, glowing mechanical neon eyes, subtle futuristic metallic panel lines on cheeks, glowing {COLOR} circuit lines on neck, visible hairstyle, detailed hair, futuristic neon cyberpunk city background at night.",
+      "{COLOR} skin, {HEX} skin color, entirely {COLOR} alien skin, close-up portrait of a cartoon alien space explorer, face and neck only, 100% {COLOR} skin tone on entire face and neck, looking directly forward, calm intelligent expression, mouth closed, smooth elongated head, large clear luminous eyes, subtle technological markings on temples, faint antenna-like sensory organs on forehead, visible hairstyle, detailed hair, outer space background with distant planets and star clusters.",
     negativePrompt:
-      "human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, human eyes, completely organic face, primitive, full body, screaming, open mouth, bald, shaved head, no hair, nature background, blurry, low quality, ugly, deformed.",
+      "human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, scary, aggressive, full body, screaming, open mouth, bald, shaved head, no hair, urban, dark alley, blurry, low quality, ugly, deformed.",
     restylePrompt:
-      "Transform this character into a cyberpunk android. Keep the hair, facial structure, and skin color. Add glowing mechanical neon eyes, subtle futuristic metallic panel lines on the cheeks, glowing circuit lines on the neck. Change the background to a futuristic neon cyberpunk city at night.",
+      "Transform this character into an alien space explorer. Keep the hair, facial structure, and skin color. Add a smooth elongated head, large clear luminous eyes, subtle technological markings on the temples, faint antenna-like sensory organs on the forehead. Change the background to outer space with distant planets and star clusters.",
   },
-  cosmic: {
-    label: "Cosmic Star-Being",
-    vibe: "Celestial / Dios",
-    emoji: "✨",
+
+  lisail: {
+    label: "Lisail",
+    vibe: "Inmortal / Oscuro",
+    emoji: "🌑",
     prompt:
-      "{COLOR} skin, {HEX} skin color, entirely {COLOR} cosmic skin, close-up portrait of a cartoon celestial star-being, face and neck only, 100% {COLOR} skin tone on entire face and neck, looking directly forward, calm expression, mouth closed, skin looks like a sparkling galaxy with subtle stars, glowing solid white eyes with no pupils, radiant energy aura, visible hairstyle, detailed hair, bright cosmic supernova background.",
+      "{COLOR} skin, {HEX} skin color, entirely {COLOR} alien skin, close-up portrait of a cartoon immortal alien, face and neck only, 100% {COLOR} skin tone on entire face and neck, looking directly forward, cold timeless expression, mouth closed, sharp elegant alien features, ageless smooth face, solid glowing silver eyes with no pupils, subtle ancient alien rune markings etched on skin, elongated neck, visible hairstyle, detailed hair, dark atmospheric background with ancient stone arches and ethereal mist.",
     negativePrompt:
-      "human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, human eyes, flat skin texture, normal skin, full body, screaming, open mouth, bald, shaved head, no hair, blurry, low quality, ugly, deformed.",
+      "human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, warm expression, friendly, young, full body, screaming, open mouth, bald, shaved head, no hair, bright background, cheerful, blurry, low quality, ugly, deformed.",
     restylePrompt:
-      "Transform this character into a celestial star-being. Keep the hair and facial structure. Make the skin look like a sparkling galaxy with subtle stars on it. Change the eyes to glowing solid white with no pupils, add a radiant energy aura around the head. Change the background to a bright cosmic supernova.",
+      "Transform this character into an immortal alien. Keep the hair, facial structure, and skin color. Add sharp elegant alien features, solid glowing silver eyes with no pupils, subtle ancient alien rune markings etched into the skin, an elongated elegant neck. Change the background to a dark atmospheric scene with ancient stone arches and ethereal mist.",
   },
-  orc: {
-    label: "Orc / Goblin",
-    vibe: "Gamer / Combate",
-    emoji: "👹",
+
+  homew: {
+    label: "Homew",
+    vibe: "Hip-hop / Artista urbano",
+    emoji: "🎤",
     prompt:
-      "{COLOR} skin, {HEX} skin color, entirely {COLOR} orc skin, close-up portrait of a cartoon fantasy orc, face and neck only, 100% {COLOR} skin tone on entire face and neck, looking directly forward, calm expression, mouth closed, rugged textured skin, prominent lower jaw, fierce glowing eyes, large pointed ears, visible hairstyle, detailed hair, dramatic fantasy battleground background with storm clouds.",
+      "{COLOR} skin, {HEX} skin color, entirely {COLOR} alien skin, close-up portrait of a cartoon urban artist alien, face and neck only, 100% {COLOR} skin tone on entire face and neck, looking directly forward, confident cool expression, mouth closed, rounded alien head with attitude, large stylized eyes with gold or neon iris, subtle holographic tattoo markings on neck, glowing alien jewelry accents near ears, visible hairstyle, detailed hair, vibrant neon music studio background with colorful lights and sound waves.",
     negativePrompt:
-      "human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, soft features, cute, human eyes, full body, screaming, open mouth, bald, shaved head, no hair, sci-fi, blurry, low quality, ugly, deformed.",
+      "human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, scared, aggressive, full body, screaming, open mouth, bald, shaved head, no hair, nature, dark forest, blurry, low quality, ugly, deformed.",
     restylePrompt:
-      "Transform this character into a fantasy orc. Keep the hair, facial structure, and skin color. Add rugged textured skin, a prominent lower jaw, fierce glowing eyes, large pointed ears. Change the background to a dramatic fantasy battleground with storm clouds.",
+      "Transform this character into an urban artist alien. Keep the hair, facial structure, and skin color. Add large stylized eyes with a gold or neon iris, subtle holographic tattoo markings on the neck, glowing alien jewelry accents near the ears. Change the background to a vibrant neon music studio with colorful lights and sound waves.",
+  },
+
+  triloviti: {
+    label: "Triloviti",
+    vibe: "Ancestral / Tecnológico / Deportivo",
+    emoji: "⚡",
+    bald: true,
+    prompt:
+      "{COLOR} skin, {HEX} skin color, entirely {COLOR} alien skin, close-up portrait of a cartoon ancient athletic alien, face and neck only, 100% {COLOR} skin tone on entire face and neck, looking directly forward, focused powerful expression, mouth closed, completely bald smooth alien head, intricate ancient tribal markings combined with glowing tech circuit tattoos on the scalp, strong athletic jaw, intense glowing eyes, absolutely no hair, visible neck hinting powerful athletic build, ancient alien temple with glowing technological ruins background.",
+    negativePrompt:
+      "human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, hair, hairstyle, any hair, wig, bangs, curls, full body, screaming, open mouth, blurry, low quality, ugly, deformed.",
+    restylePrompt:
+      "Transform this character into an ancient athletic alien of the Triloviti — the only hairless alien race. Remove ALL hair completely, make the head completely bald and smooth. Add intricate ancient tribal markings combined with glowing tech circuit tattoos on the scalp. Add intense glowing eyes and a strong athletic jaw. Change the background to an ancient alien temple with glowing technological ruins.",
+    // bald: true signals the generator to skip the hairstyle step and add hair removal to the prompt
   },
 };

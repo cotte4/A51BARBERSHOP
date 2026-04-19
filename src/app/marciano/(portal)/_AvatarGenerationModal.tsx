@@ -98,7 +98,7 @@ function ColorGrid({
   );
 }
 
-const PRESET_ORDER: AvatarPreset[] = ["galactic", "elf", "demon", "android", "cosmic", "orc"];
+const PRESET_ORDER: AvatarPreset[] = ["galactic", "marcianeke", "raptus", "navi", "lisail", "homew", "triloviti"];
 
 function PresetGrid({
   selected,
