@@ -141,16 +141,18 @@ export default async function MarcianoPortalPage() {
         )}
       </section>
 
-      {/* Avatar Marciano — Suspense required for useSearchParams in AvatarCard */}
-      <Suspense fallback={<div className="panel-card rounded-[28px] p-5 min-h-[120px]" />}>
-        <AvatarCard
-          styleCompletedAt={data.client.styleCompletedAt ?? null}
-          avatarUrl={data.client.avatarUrl ?? null}
-          favoriteColor={data.client.favoriteColor ?? null}
-          avatarStatus={(data.client.avatarStatus ?? "idle") as "idle" | "processing" | "ready" | "failed"}
-          avatarErrorMessage={data.client.avatarErrorMessage ?? null}
-        />
-      </Suspense>
+      {/* Avatar Marciano — solo se muestra si el avatar no está listo todavía */}
+      {data.client.avatarStatus !== "ready" && (
+        <Suspense fallback={<div className="panel-card rounded-[28px] p-5 min-h-[120px]" />}>
+          <AvatarCard
+            styleCompletedAt={data.client.styleCompletedAt ?? null}
+            avatarUrl={data.client.avatarUrl ?? null}
+            favoriteColor={data.client.favoriteColor ?? null}
+            avatarStatus={(data.client.avatarStatus ?? "idle") as "idle" | "processing" | "ready" | "failed"}
+            avatarErrorMessage={data.client.avatarErrorMessage ?? null}
+          />
+        </Suspense>
+      )}
 
       {/* Credencial Marciano */}
       {cardData && (
