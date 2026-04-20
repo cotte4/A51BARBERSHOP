@@ -1,0 +1,7 @@
+{
+  "crons": [
+    { "path": "/api/cron/ovnis/refund-bets", "schedule": "0 * * * *" },
+    { "path": "/api/cron/ovnis/burn-stale", "schedule": "0 7 * * *" },
+    { "path": "/api/cron/ovnis/audit", "schedule": "0 8 * * *" }
+  ]
+}

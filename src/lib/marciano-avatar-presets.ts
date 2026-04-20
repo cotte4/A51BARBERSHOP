@@ -102,11 +102,11 @@ export const AVATAR_PRESETS: Record<AvatarPreset, AvatarPresetData> = {
     emoji: "⚡",
     bald: true,
     prompt:
-      "{COLOR} skin, {HEX} skin color, entirely {COLOR} alien skin, close-up portrait of a cartoon ancient athletic alien, face and neck only, 100% {COLOR} skin tone on entire face and neck, looking directly forward, focused powerful expression, mouth closed, completely bald smooth alien head, intricate ancient tribal markings combined with glowing tech circuit tattoos on the scalp, strong athletic jaw, intense glowing eyes, absolutely no hair, visible neck hinting powerful athletic build, ancient alien temple with glowing technological ruins background.",
+      "{COLOR} skin, {HEX} skin color, entirely {COLOR} alien skin, close-up portrait of a cartoon ancient athletic alien, face and neck only, 100% {COLOR} skin tone on entire face and neck, looking directly forward, confident proud expression, mouth closed, completely bald perfectly smooth alien head, intricate ancient tribal markings combined with glowing tech circuit tattoos covering the entire scalp, strong defined athletic jaw, intense calm glowing eyes that command respect, absolutely no hair of any kind, visible powerful neck hinting elite athletic build, ancient alien colosseum with glowing technological ruins background.",
     negativePrompt:
-      "human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, hair, hairstyle, any hair, wig, bangs, curls, full body, screaming, open mouth, blurry, low quality, ugly, deformed.",
+      "human skin color, natural skin tone, flesh color, beige, tan, brown, pink skin, hair, hairstyle, any hair, wig, bangs, curls, stubble on head, full body, screaming, open mouth, blurry, low quality, ugly, deformed.",
     restylePrompt:
-      "Transform this character into an ancient athletic alien of the Triloviti — the only hairless alien race. Remove ALL hair completely, make the head completely bald and smooth. Add intricate ancient tribal markings combined with glowing tech circuit tattoos on the scalp. Add intense glowing eyes and a strong athletic jaw. Change the background to an ancient alien temple with glowing technological ruins.",
+      "Transform this character into an ancient athletic alien of the Triloviti — the only hairless alien race, proud of their baldness like a badge of power. Remove ALL hair completely, make the head completely bald and perfectly smooth. Cover the entire scalp with intricate ancient tribal markings combined with glowing tech circuit tattoos. Add intense calm glowing eyes that command respect, a strong defined athletic jaw. Change the background to an ancient alien colosseum with glowing technological ruins.",
     // bald: true signals the generator to skip the hairstyle step and add hair removal to the prompt
   },
 };

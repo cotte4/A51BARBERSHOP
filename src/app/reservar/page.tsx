@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { getBarberosPublicosReserva } from "@/lib/turnos";
 
 export default async function ReservarLandingPage() {
+  await connection();
+
   const barberos = await getBarberosPublicosReserva();
 
   return (

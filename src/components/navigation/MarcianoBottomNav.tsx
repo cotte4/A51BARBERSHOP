@@ -51,6 +51,16 @@ function UserIcon() {
   );
 }
 
+function UfoIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <ellipse cx="12" cy="11" rx="9" ry="4" />
+      <ellipse cx="12" cy="10" rx="4.5" ry="3" />
+      <path d="M6 14l-2 3M18 14l2 3M12 15v3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function PendingGlyph() {
   return (
     <span className="absolute right-2.5 top-2.5 flex h-3.5 w-3.5 items-center justify-center">
@@ -84,6 +94,15 @@ const NAV_ITEMS: NavItem[] = [
     label: "Perfil",
     icon: <UserIcon />,
     isActive: (p: string) => p.startsWith("/marciano/perfil") || p.startsWith("/marciano/seguridad"),
+  },
+  {
+    href: "/marciano/ovnis",
+    label: "OVNIS",
+    icon: <UfoIcon />,
+    isActive: (p: string) =>
+      p.startsWith("/marciano/ovnis") ||
+      p.startsWith("/marciano/ruleta") ||
+      p.startsWith("/marciano/juegos"),
   },
 ];
 
@@ -140,7 +159,7 @@ export default function MarcianoBottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-4 z-30 px-3 sm:px-4">
       <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-5 gap-1">
           {NAV_ITEMS.map((item) => {
             const active = item.isActive(pathname);
             const optimisticPending = pendingHref === item.href && !active;

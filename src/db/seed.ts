@@ -317,6 +317,129 @@ async function seed() {
     }
   }
 
+  // ————————————————————————————
+  // 9. OVNIS — Economía de puntos
+  // ————————————————————————————
+  console.log("\nInsertando datos OVNIS...");
+
+  // 9a. Premios canjeables
+  const consumicionItem = await db.query.ovnisRedemptionItems.findFirst({
+    where: (i, { eq }) => eq(i.label, "Consumición gratis"),
+  });
+
+  let consumicionItemId: string;
+  if (!consumicionItem) {
+    const [item] = await db.insert(schema.ovnisRedemptionItems).values({
+      label: "Consumición gratis",
+      type: "consumicion",
+      costOvnis: 200,
+      value: 0,
+      activo: true,
+      stock: null,
+    }).returning();
+    consumicionItemId = item.id;
+    console.log("  ✓ Premio: Consumición gratis (200 OVNIS)");
+  } else {
+    consumicionItemId = consumicionItem.id;
+    console.log("  ~ Premio Consumición gratis ya existe");
+  }
+
+  const premioDescuento = await db.query.ovnisRedemptionItems.findFirst({
+    where: (i, { eq }) => eq(i.label, "Descuento 10% en tu próximo corte"),
+  });
+  if (!premioDescuento) {
+    await db.insert(schema.ovnisRedemptionItems).values({
+      label: "Descuento 10% en tu próximo corte",
+      type: "descuento_pct",
+      costOvnis: 333,
+      value: 10,
+      activo: true,
+      stock: null,
+    });
+    console.log("  ✓ Premio: Descuento 10% (333 OVNIS)");
+  } else {
+    console.log("  ~ Premio descuento ya existe");
+  }
+
+  const premioCorte = await db.query.ovnisRedemptionItems.findFirst({
+    where: (i, { eq }) => eq(i.label, "Corte gratis"),
+  });
+  if (!premioCorte) {
+    await db.insert(schema.ovnisRedemptionItems).values({
+      label: "Corte gratis",
+      type: "descuento_pct",
+      costOvnis: 777,
+      value: 100,
+      activo: true,
+      stock: null,
+    });
+    console.log("  ✓ Premio: Corte gratis (777 OVNIS)");
+  } else {
+    console.log("  ~ Premio corte gratis ya existe");
+  }
+
+  // 9b. Premios de ruleta
+  const ruletaPrizesData = [
+    { label: "+111 OVNIS", type: "ovnis" as const, ovnisAmount: 111, weight: 10, activo: true, redemptionItemId: null },
+    { label: "+55 OVNIS", type: "ovnis" as const, ovnisAmount: 55, weight: 20, activo: true, redemptionItemId: null },
+    { label: "+22 OVNIS", type: "ovnis" as const, ovnisAmount: 22, weight: 35, activo: true, redemptionItemId: null },
+    { label: "Consumición gratis", type: "redemption_item" as const, ovnisAmount: 0, weight: 15, activo: true, redemptionItemId: consumicionItemId },
+    { label: "Suerte la próxima", type: "nada" as const, ovnisAmount: 0, weight: 20, activo: true, redemptionItemId: null },
+  ];
+
+  for (const prize of ruletaPrizesData) {
+    const existing = await db.query.ovnisRuletaPrizes.findFirst({
+      where: (p, { eq }) => eq(p.label, prize.label),
+    });
+    if (!existing) {
+      await db.insert(schema.ovnisRuletaPrizes).values(prize);
+      console.log(`  ✓ Ruleta: ${prize.label} (peso ${prize.weight})`);
+    } else {
+      console.log(`  ~ Ruleta ${prize.label} ya existe`);
+    }
+  }
+
+  // 9c. Juegos
+  const gamesData = [
+    { nombre: "Subasta Futbongera", type: "digital" as const, externalUrl: "https://subasta-futbongera.vercel.app/", activo: true },
+    { nombre: "Trucong", type: "digital" as const, externalUrl: "https://trucong-web.vercel.app/", activo: true },
+    { nombre: "Impostor", type: "digital" as const, externalUrl: null, activo: false },
+    { nombre: "Ternas", type: "digital" as const, externalUrl: null, activo: false },
+  ];
+
+  for (const game of gamesData) {
+    const existing = await db.query.ovnisGames.findFirst({
+      where: (g, { eq }) => eq(g.nombre, game.nombre),
+    });
+    if (!existing) {
+      await db.insert(schema.ovnisGames).values(game);
+      console.log(`  ✓ Juego: ${game.nombre} (${game.activo ? "activo" : "inactivo"})`);
+    } else {
+      console.log(`  ~ Juego ${game.nombre} ya existe`);
+    }
+  }
+
+  // 9d. Actualizar ovnisValue en servicios
+  const todosServicios = await db.select().from(schema.servicios);
+  for (const s of todosServicios) {
+    const nombre = s.nombre.toLowerCase();
+    let ovnisValue = 111; // default: corte regular
+    if (nombre.includes("premium") || nombre.includes("degradé") || nombre.includes("color")) {
+      ovnisValue = 167;
+    } else if ((nombre.includes("barba") || nombre.includes("beard")) && !nombre.includes("corte")) {
+      ovnisValue = 55;
+    }
+    await db.update(schema.servicios).set({ ovnisValue }).where(eq(schema.servicios.id, s.id));
+    console.log(`  ✓ Servicio "${s.nombre}" → ${ovnisValue} OVNIS`);
+  }
+
+  // 9e. Actualizar ovnisValue en productos
+  await db.update(schema.productos).set({ ovnisValue: 22 }).where(eq(schema.productos.esConsumicion, true));
+  await db.update(schema.productos).set({ ovnisValue: 44 }).where(eq(schema.productos.esConsumicion, false));
+  console.log("  ✓ Productos consumición → 22 OVNIS, productos venta → 44 OVNIS");
+
+  console.log("\n✓ OVNIS seed completado.");
+
   console.log("Usuarios creados:");
   console.log("  Admin:   pinky@a51barber.com  / pinky1234");
   console.log("  Barbero: gabote@a51barber.com / gabote1234");

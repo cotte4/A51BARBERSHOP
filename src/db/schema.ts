@@ -132,6 +132,7 @@ export const servicios = pgTable(
     precioBase: numeric("precio_base", { precision: 12, scale: 2 }),
     duracionMinutos: integer("duracion_minutos").notNull().default(60),
     activo: boolean("activo").default(true),
+    ovnisValue: integer("ovnis_value").notNull().default(0),
   },
   (table) => [
     check(
@@ -283,6 +284,7 @@ export const productos = pgTable("productos", {
   stockMinimo: integer("stock_minimo").default(5),
   esConsumicion: boolean("es_consumicion").notNull().default(false),
   activo: boolean("activo").default(true),
+  ovnisValue: integer("ovnis_value").notNull().default(0),
 });
 
 export const stockMovimientos = pgTable(
@@ -1164,3 +1166,211 @@ export const barberShopAssetPayments = pgTable("barber_shop_asset_payments", {
     sql`${table.tipo} IN (${sql.raw(HANGAR_ASSET_PAYMENT_TYPES.map((item) => `'${item}'`).join(", "))})`
   ),
 ]);
+
+// ————————————————————————————
+// ECONOMÍA DE OVNIS
+// ————————————————————————————
+
+export const ovnisBalance = pgTable(
+  "ovnis_balance",
+  {
+    clientId: uuid("client_id")
+      .primaryKey()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    balance: integer("balance").notNull().default(0),
+    pendingBalance: integer("pending_balance").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check("ovnis_balance_non_negative", sql`${table.balance} >= 0 AND ${table.pendingBalance} >= 0`),
+  ]
+);
+
+export const ovnisPendingCredits = pgTable(
+  "ovnis_pending_credits",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    atencionId: uuid("atencion_id")
+      .notNull()
+      .references(() => atenciones.id, { onDelete: "cascade" }),
+    amount: integer("amount").notNull(),
+    description: text("description").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    redeemedAt: timestamp("redeemed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("ovnis_pending_credits_atencion_id_idx").on(table.atencionId),
+    index("ovnis_pending_credits_client_unredeemed_idx").on(table.clientId, table.redeemedAt),
+    check("ovnis_pending_credits_amount_positive", sql`${table.amount} > 0`),
+  ]
+);
+
+export const ovnisTransactions = pgTable(
+  "ovnis_transactions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "restrict" }),
+    amount: integer("amount").notNull(),
+    type: text("type").notNull(),
+    description: text("description").notNull(),
+    relatedClientId: uuid("related_client_id").references(() => clients.id, { onDelete: "set null" }),
+    relatedAtencionId: uuid("related_atencion_id").references(() => atenciones.id, { onDelete: "set null" }),
+    relatedBetId: uuid("related_bet_id"),
+    relatedRedemptionId: uuid("related_redemption_id"),
+    idempotencyKey: text("idempotency_key"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "ovnis_transactions_type_check",
+      sql`${table.type} IN ('welcome','atencion','ruleta','redemption','redemption_refund','donation_sent','donation_received','bet_lock','bet_unlock','bet_win','bet_refund','bet_burn','admin_adjust')`
+    ),
+    check("ovnis_transactions_amount_nonzero", sql`${table.amount} <> 0`),
+    uniqueIndex("ovnis_transactions_idempotency_key_idx").on(table.idempotencyKey),
+    index("ovnis_transactions_client_id_idx").on(table.clientId),
+    index("ovnis_transactions_created_at_idx").on(table.createdAt),
+  ]
+);
+
+export const ovnisRedemptionItems = pgTable(
+  "ovnis_redemption_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    label: text("label").notNull(),
+    type: text("type").notNull(),
+    costOvnis: integer("cost_ovnis").notNull(),
+    value: integer("value").notNull().default(0),
+    productoId: uuid("producto_id").references(() => productos.id, { onDelete: "set null" }),
+    activo: boolean("activo").notNull().default(true),
+    stock: integer("stock"),
+  },
+  (table) => [
+    check("ovnis_redemption_items_type_check", sql`${table.type} IN ('consumicion','descuento_pct','descuento_fijo','producto')`),
+    check("ovnis_redemption_items_cost_positive", sql`${table.costOvnis} > 0`),
+    check("ovnis_redemption_items_stock_nonneg", sql`${table.stock} IS NULL OR ${table.stock} >= 0`),
+  ]
+);
+
+export const ovnisRedemptions = pgTable(
+  "ovnis_redemptions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "restrict" }),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => ovnisRedemptionItems.id, { onDelete: "restrict" }),
+    costOvnis: integer("cost_ovnis").notNull(),
+    status: text("status").notNull().default("pending"),
+    redeemedAt: timestamp("redeemed_at", { withTimezone: true }).notNull().defaultNow(),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    deliveredByBarberoId: uuid("delivered_by_barbero_id").references(() => barberos.id, { onDelete: "set null" }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelledByUserId: text("cancelled_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    cancelReason: text("cancel_reason"),
+    notas: text("notas"),
+  },
+  (table) => [
+    check("ovnis_redemptions_status_check", sql`${table.status} IN ('pending','delivered','cancelled')`),
+    index("ovnis_redemptions_client_id_idx").on(table.clientId),
+    index("ovnis_redemptions_status_idx").on(table.status),
+  ]
+);
+
+export const ovnisRuletaPrizes = pgTable(
+  "ovnis_ruleta_prizes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    label: text("label").notNull(),
+    type: text("type").notNull(),
+    ovnisAmount: integer("ovnis_amount").notNull().default(0),
+    redemptionItemId: uuid("redemption_item_id").references(() => ovnisRedemptionItems.id, { onDelete: "restrict" }),
+    weight: integer("weight").notNull().default(1),
+    activo: boolean("activo").notNull().default(true),
+  },
+  (table) => [
+    check("ovnis_ruleta_prizes_type_check", sql`${table.type} IN ('ovnis','redemption_item','nada')`),
+    check("ovnis_ruleta_prizes_weight_positive", sql`${table.weight} > 0`),
+    check(
+      "ovnis_ruleta_prizes_type_consistency",
+      sql`(${table.type} = 'ovnis' AND ${table.ovnisAmount} > 0 AND ${table.redemptionItemId} IS NULL) OR
+          (${table.type} = 'redemption_item' AND ${table.redemptionItemId} IS NOT NULL) OR
+          (${table.type} = 'nada')`
+    ),
+  ]
+);
+
+export const ovnisRuletaSpins = pgTable("ovnis_ruleta_spins", {
+  clientId: uuid("client_id")
+    .primaryKey()
+    .references(() => clients.id, { onDelete: "restrict" }),
+  prizeId: uuid("prize_id")
+    .notNull()
+    .references(() => ovnisRuletaPrizes.id, { onDelete: "restrict" }),
+  spunAt: timestamp("spun_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const ovnisGames = pgTable(
+  "ovnis_games",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    nombre: text("nombre").notNull(),
+    type: text("type").notNull(),
+    externalUrl: text("external_url"),
+    descripcion: text("descripcion"),
+    activo: boolean("activo").notNull().default(true),
+  },
+  (table) => [
+    check("ovnis_games_type_check", sql`${table.type} IN ('physical','digital')`),
+  ]
+);
+
+export const ovnisBets = pgTable(
+  "ovnis_bets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    gameId: uuid("game_id")
+      .notNull()
+      .references(() => ovnisGames.id, { onDelete: "restrict" }),
+    challengerId: uuid("challenger_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "restrict" }),
+    opponentId: uuid("opponent_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "restrict" }),
+    amount: integer("amount").notNull(),
+    status: text("status").notNull().default("pending"),
+    challengerClaim: text("challenger_claim"),
+    opponentClaim: text("opponent_claim"),
+    claimAttempts: integer("claim_attempts").notNull().default(0),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolvedByUserId: text("resolved_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    acceptanceExpiresAt: timestamp("acceptance_expires_at", { withTimezone: true }).notNull(),
+    playExpiresAt: timestamp("play_expires_at", { withTimezone: true }),
+  },
+  (table) => [
+    check(
+      "ovnis_bets_status_check",
+      sql`${table.status} IN ('pending','accepted','disputed','challenger_won','opponent_won','refunded','cancelled','both_lost','stale_burned')`
+    ),
+    check("ovnis_bets_claim_check", sql`${table.challengerClaim} IS NULL OR ${table.challengerClaim} IN ('won','lost','forfeit')`),
+    check("ovnis_bets_opp_claim_check", sql`${table.opponentClaim} IS NULL OR ${table.opponentClaim} IN ('won','lost','forfeit')`),
+    check("ovnis_bets_claim_attempts_max", sql`${table.claimAttempts} >= 0 AND ${table.claimAttempts} <= 3`),
+    check("ovnis_bets_amount_positive", sql`${table.amount} > 0`),
+    check("ovnis_bets_distinct_players", sql`${table.challengerId} <> ${table.opponentId}`),
+    index("ovnis_bets_status_idx").on(table.status),
+    index("ovnis_bets_challenger_idx").on(table.challengerId),
+    index("ovnis_bets_opponent_idx").on(table.opponentId),
+    index("ovnis_bets_acceptance_expiry_idx").on(table.acceptanceExpiresAt),
+    index("ovnis_bets_play_expiry_idx").on(table.playExpiresAt),
+  ]
+);

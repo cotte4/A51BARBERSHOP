@@ -127,6 +127,13 @@
       "when": 1776478568828,
       "tag": "0017_wide_fabian_cortez",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1776656006495,
+      "tag": "0018_thin_iron_patriot",
+      "breakpoints": true
     }
   ]
 }

@@ -162,6 +162,15 @@ export async function crearAtencionDesdeInput(input: AtencionCreationInput) {
   const adicionalesIds = input.adicionalesIds ?? [];
   const productosSeleccionados = input.productos ?? [];
 
+  // Fetch product ovnisValue for OVNIS hook (outside tx — read-only, no contention)
+  const productosParaOvnis =
+    productosSeleccionados.length > 0 && input.clientId
+      ? await db
+          .select({ id: productos.id, ovnisValue: productos.ovnisValue })
+          .from(productos)
+          .where(inArray(productos.id, productosSeleccionados.map((p) => p.productoId)))
+      : [];
+
   return db.transaction(async (tx) => {
     const [nuevaAtencion] = await tx
       .insert(atenciones)
@@ -209,6 +218,34 @@ export async function crearAtencionDesdeInput(input: AtencionCreationInput) {
         medioPagoId: input.medioPagoId,
         productosSeleccionados,
       });
+    }
+
+    // OVNIS: emit pending credit for Marciano clients
+    if (input.clientId) {
+      const [cliente] = await tx
+        .select({ esMarciano: clients.esMarciano })
+        .from(clients)
+        .where(eq(clients.id, input.clientId))
+        .limit(1);
+
+      if (cliente?.esMarciano) {
+        const servicioOvnis = servicio.ovnisValue ?? 0;
+        const productosOvnis = productosSeleccionados.reduce((sum, p) => {
+          const prod = productosParaOvnis.find((pr) => pr.id === p.productoId);
+          return sum + (prod?.ovnisValue ?? 0) * p.cantidad;
+        }, 0);
+        const totalOvnis = servicioOvnis + productosOvnis;
+
+        if (totalOvnis > 0) {
+          const { createPendingCreditInTx } = await import("@/lib/ovnis-server");
+          await createPendingCreditInTx(tx, {
+            clientId: input.clientId,
+            atencionId: nuevaAtencion.id,
+            amount: totalOvnis,
+            description: `Atención del ${nuevaAtencion.fecha} — ${servicio.nombre}`,
+          });
+        }
+      }
     }
 
     return nuevaAtencion;

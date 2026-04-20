@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import PublicReservaAccessGate from "@/components/turnos/PublicReservaAccessGate";
 import PortfolioGallery from "@/components/turnos/PortfolioGallery";
 import ReservaForm from "../../../components/turnos/ReservaForm";
@@ -18,6 +19,8 @@ type ReservarPageProps = {
 };
 
 export default async function ReservarPage({ params }: ReservarPageProps) {
+  await connection();
+
   const { slug } = await params;
   const barbero = await resolvePublicBarberoBySlug(slug);
 
