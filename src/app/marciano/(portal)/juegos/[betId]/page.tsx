@@ -7,7 +7,8 @@ import { clients, ovnisBets, ovnisGames } from "@/db/schema";
 import { requireMarcianoClient } from "@/lib/marciano-portal";
 import { formatOvnis } from "@/lib/ovnis";
 import ClaimResultPanel from "./_ClaimResultPanel";
-import { aceptarApuestaAction, cancelarApuestaAction } from "../actions";
+import AcceptButton from "./_AcceptButton";
+import { cancelarApuestaAction } from "../actions";
 
 const TERMINAL_STATUSES = [
   "challenger_won",
@@ -190,6 +191,7 @@ export default async function BetDetailPage({
         <AcceptButton betId={bet.id} />
       )}
 
+
       {!isTerminal && (bet.status === "accepted" || bet.status === "disputed") && (
         <section className="panel-card rounded-[28px] p-5">
           <p className="eyebrow mb-4 text-xs">Tu resultado</p>
@@ -202,24 +204,6 @@ export default async function BetDetailPage({
         </section>
       )}
     </div>
-  );
-}
-
-function AcceptButton({ betId }: { betId: string }) {
-  return (
-    <form
-      action={async () => {
-        "use server";
-        await aceptarApuestaAction(betId);
-      }}
-    >
-      <button
-        type="submit"
-        className="neon-button w-full rounded-[20px] py-4 text-sm font-bold"
-      >
-        Aceptar apuesta
-      </button>
-    </form>
   );
 }
 
