@@ -810,6 +810,21 @@ Sesión de auditoría: verificación de todos los planes sin codear. Ningún pla
 - iteracion futura avatar: pin de version Replicate a actualizar cuando salga version nueva; opcion de reset de avatar desde panel admin; mostrar avatar en StyleDNAReveal; ajuste de prompt si resultado no es suficientemente cartoon (migrar a fal.ai IP-Adapter si necesario)
 - OVNIS economy deployado a produccion (sesion 30, 20/04/2026)
 - cron refund-bets cambiado de cada hora a diario (6am) por limite del plan Hobby de Vercel (sesion 30, 20/04/2026)
+- UX fixes OVNIS bets: error visible al no tener fondos, rechazar apuesta, max 3 activas, expiracion 24hs (sesion 31, 20/04/2026)
+- Fix avatar encuadre persistido por clientId en vez de URL (sesion 31, 20/04/2026)
+- Portal Marciano: logout en header, borrar cuenta con devolucion de OVNIS (sesion 31, 20/04/2026)
+- Inicio portal: oculta panel avatar cuando ya esta listo (sesion 31, 20/04/2026)
+
+### Sesion 31 — UX fixes OVNIS + portal Marciano (20/04/2026)
+
+- **OVNIS bets**: aceptar mostraba silencio cuando no habia fondos — ahora error inline rojo
+- **Rechazar apuesta**: boton ghost para el oponente, devuelve OVNIS al retador inmediatamente
+- **Max 3 apuestas activas**: validacion en `createBet`, error claro al intentar crear la 4ta
+- **Expiracion 24hs**: `BET_ACCEPTANCE_HOURS` 48 → 24; schema migrado con status `rejected`
+- **Encuadre avatar**: persistia por URL (rota al restyle/recolor) → ahora por `clientId`
+- **Logout header**: reemplaza badge "Acceso activo" por icono touch-friendly con hover rojo
+- **Borrar cuenta**: zona de peligro en `/seguridad`, confirmacion 2 pasos, cancela apuestas y devuelve OVNIS, archiva cliente sin borrar historial
+- **Inicio portal**: `AvatarCard` se oculta cuando `avatarStatus === "ready"` — la credencial ya lo muestra
 
 ### Sesion 30 — Deploy OVNIS economy a produccion (20/04/2026)
 
