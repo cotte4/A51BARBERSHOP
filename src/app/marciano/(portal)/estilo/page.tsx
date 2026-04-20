@@ -27,6 +27,7 @@ export default async function PerfilMarcianoPage({
         <AvatarConfigCard
           avatarUrl={client.avatarUrl}
           avatarStatus={client.avatarStatus ?? "idle"}
+          clientId={client.id}
         />
       </div>
     );

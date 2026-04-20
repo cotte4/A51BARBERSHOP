@@ -58,9 +58,10 @@ function ColorSwatches({
 type Props = {
   avatarUrl: string | null;
   avatarStatus: string;
+  clientId: string;
 };
 
-export default function AvatarConfigCard({ avatarUrl, avatarStatus }: Props) {
+export default function AvatarConfigCard({ avatarUrl, avatarStatus, clientId }: Props) {
   const router = useRouter();
 
   // Zoom/pan state
@@ -94,7 +95,7 @@ export default function AvatarConfigCard({ avatarUrl, avatarStatus }: Props) {
 
   useEffect(() => {
     if (!avatarUrl) return;
-    const saved = localStorage.getItem(`avatar-crop:${avatarUrl}`);
+    const saved = localStorage.getItem(`avatar-crop:${clientId}`);
     if (saved) {
       try {
         const { zoom: z, x, y } = JSON.parse(saved);
@@ -102,7 +103,7 @@ export default function AvatarConfigCard({ avatarUrl, avatarStatus }: Props) {
         setPan({ x: x ?? 0, y: y ?? 0 });
       } catch { /* ignore */ }
     }
-  }, [avatarUrl]);
+  }, [avatarUrl, clientId]);
 
   // Poll after recolor starts
   useEffect(() => {
@@ -136,8 +137,8 @@ export default function AvatarConfigCard({ avatarUrl, avatarStatus }: Props) {
 
   const saveCrop = useCallback((z: number, x: number, y: number) => {
     if (!avatarUrl) return;
-    localStorage.setItem(`avatar-crop:${avatarUrl}`, JSON.stringify({ zoom: z, x, y }));
-  }, [avatarUrl]);
+    localStorage.setItem(`avatar-crop:${clientId}`, JSON.stringify({ zoom: z, x, y }));
+  }, [avatarUrl, clientId]);
 
   function handleDragStart(clientX: number, clientY: number) {
     dragRef.current = { startX: clientX, startY: clientY, panX: pan.x, panY: pan.y };
