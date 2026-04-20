@@ -808,6 +808,21 @@ Sesión de auditoría: verificación de todos los planes sin codear. Ningún pla
 - `YOUTUBE_API_KEY` ya configurada en Vercel dashboard (15/04/2026)
 - iteracion futura opcional: integrar Beats Mode al Music Engine (colas, modos); Web Playback SDK para reproduccion automatica en pantalla musical; notificaciones de turno para Marcianos (Resend)
 - iteracion futura avatar: pin de version Replicate a actualizar cuando salga version nueva; opcion de reset de avatar desde panel admin; mostrar avatar en StyleDNAReveal; ajuste de prompt si resultado no es suficientemente cartoon (migrar a fal.ai IP-Adapter si necesario)
+- OVNIS economy deployado a produccion (sesion 30, 20/04/2026)
+- cron refund-bets cambiado de cada hora a diario (6am) por limite del plan Hobby de Vercel (sesion 30, 20/04/2026)
+
+### Sesion 30 — Deploy OVNIS economy a produccion (20/04/2026)
+
+Sesion operativa de deploy y limpieza:
+
+- OVNIS economy (commits `024b200` y `e9bf29c`) estaban en `master` sin deployar — Vercel no habia triggereado automaticamente
+- Raiz del problema: `vercel.json` tenia cron `0 * * * *` (cada hora) incompatible con Hobby plan — bloqueaba el deploy
+- Fix: cron `refund-bets` cambiado a `0 6 * * *` (una vez al dia a las 6am) — caso edge, no impacta operacion
+- Deploy manual via `vercel --prod` exitoso — 88 paginas, build limpio
+- Docs, QA y research commiteados al repo outer (branch `codex/find-login-screen-copy`)
+- `.mcp.json` agregado al repo outer para persistir config de servidores MCP
+
+**Proxima sesion:** seed de datos reales + capacitacion Pinky/Gabote para go-live
 
 ### Sesion 22 — P&L y Flujo correctamente mapeados (15/04/2026)
 
