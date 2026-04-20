@@ -10,7 +10,7 @@ import {
   settleBetInTx,
   unlockOvnisForBet,
 } from "@/lib/ovnis-server";
-import { BET_ACCEPTANCE_HOURS, BET_MAX_CLAIM_ATTEMPTS, BET_MIN_AMOUNT } from "@/lib/ovnis";
+import { BET_ACCEPTANCE_HOURS, BET_MAX_ACTIVE, BET_MAX_CLAIM_ATTEMPTS, BET_MIN_AMOUNT } from "@/lib/ovnis";
 
 // ─── Create ───────────────────────────────────────────────────────────────────
 
@@ -25,7 +25,8 @@ type CreateBetResult =
         | "opponent_not_marciano"
         | "amount_below_min"
         | "game_not_found"
-        | "game_inactive";
+        | "game_inactive"
+        | "too_many_active_bets";
     };
 
 export async function createBet(input: {
@@ -38,13 +39,20 @@ export async function createBet(input: {
   if (input.amount < BET_MIN_AMOUNT) return { success: false, reason: "amount_below_min" };
 
   return db.transaction(async (tx) => {
-    const [challenger, opponent] = await Promise.all([
+    const [challenger, opponent, activeBets] = await Promise.all([
       tx.select({ esMarciano: clients.esMarciano }).from(clients).where(eq(clients.id, input.challengerId)).limit(1),
       tx.select({ esMarciano: clients.esMarciano }).from(clients).where(eq(clients.id, input.opponentId)).limit(1),
+      tx.select({ id: ovnisBets.id }).from(ovnisBets).where(
+        and(
+          or(eq(ovnisBets.challengerId, input.challengerId), eq(ovnisBets.opponentId, input.challengerId)),
+          inArray(ovnisBets.status, ["pending", "accepted", "disputed"])
+        )
+      ),
     ]);
 
     if (!challenger[0]?.esMarciano) return { success: false, reason: "challenger_not_marciano" };
     if (!opponent[0]?.esMarciano) return { success: false, reason: "opponent_not_marciano" };
+    if (activeBets.length >= BET_MAX_ACTIVE) return { success: false, reason: "too_many_active_bets" };
 
     const { ovnisGames } = await import("@/db/schema");
     const [game] = await tx.select().from(ovnisGames).where(eq(ovnisGames.id, input.gameId)).limit(1);
@@ -153,6 +161,44 @@ export async function cancelBet(input: {
     await tx
       .update(ovnisBets)
       .set({ status: "cancelled", resolvedAt: new Date() })
+      .where(eq(ovnisBets.id, input.betId));
+
+    return { success: true };
+  });
+}
+
+// ─── Reject ───────────────────────────────────────────────────────────────────
+
+type RejectBetResult =
+  | { success: true }
+  | { success: false; reason: "not_found" | "wrong_opponent" | "not_pending" };
+
+export async function rejectBet(input: {
+  betId: string;
+  opponentClientId: string;
+}): Promise<RejectBetResult> {
+  return db.transaction(async (tx) => {
+    const [bet] = await tx
+      .select()
+      .from(ovnisBets)
+      .where(eq(ovnisBets.id, input.betId))
+      .limit(1)
+      .for("update");
+
+    if (!bet) return { success: false, reason: "not_found" };
+    if (bet.opponentId !== input.opponentClientId) return { success: false, reason: "wrong_opponent" };
+    if (bet.status !== "pending") return { success: false, reason: "not_pending" };
+
+    await unlockOvnisForBet(tx, {
+      clientId: bet.challengerId,
+      amount: bet.amount,
+      betId: bet.id,
+      type: "bet_refund",
+    });
+
+    await tx
+      .update(ovnisBets)
+      .set({ status: "rejected", resolvedAt: new Date() })
       .where(eq(ovnisBets.id, input.betId));
 
     return { success: true };

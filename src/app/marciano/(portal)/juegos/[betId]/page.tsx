@@ -8,6 +8,7 @@ import { requireMarcianoClient } from "@/lib/marciano-portal";
 import { formatOvnis } from "@/lib/ovnis";
 import ClaimResultPanel from "./_ClaimResultPanel";
 import AcceptButton from "./_AcceptButton";
+import RejectButton from "./_RejectButton";
 import { cancelarApuestaAction } from "../actions";
 
 const TERMINAL_STATUSES = [
@@ -17,6 +18,7 @@ const TERMINAL_STATUSES = [
   "cancelled",
   "both_lost",
   "stale_burned",
+  "rejected",
 ];
 
 const TERMINAL_MESSAGES: Record<string, (challengerName: string, opponentName: string) => string> = {
@@ -26,6 +28,7 @@ const TERMINAL_MESSAGES: Record<string, (challengerName: string, opponentName: s
   cancelled: () => "La apuesta fue cancelada.",
   both_lost: () => "No se pusieron de acuerdo tres veces. El universo los castigó a ambos.",
   stale_burned: () => "30 días sin actividad. Los OVNIS fueron quemados por el universo.",
+  rejected: (c) => `El oponente rechazó la apuesta. Los OVNIS de ${c} fueron devueltos.`,
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -37,6 +40,7 @@ function StatusBadge({ status }: { status: string }) {
     opponent_won: "border-[#8cff59]/25 bg-[#8cff59]/10 text-[#8cff59]",
     refunded: "border-zinc-700 bg-zinc-800 text-zinc-400",
     cancelled: "border-zinc-700 bg-zinc-800 text-zinc-400",
+    rejected: "border-red-500/35 bg-red-500/10 text-red-300",
     both_lost: "border-red-500/35 bg-red-500/10 text-red-300",
     stale_burned: "border-red-500/35 bg-red-500/10 text-red-300",
   };
@@ -48,6 +52,7 @@ function StatusBadge({ status }: { status: string }) {
     opponent_won: "Resuelto",
     refunded: "Devuelta",
     cancelled: "Cancelada",
+    rejected: "Rechazada",
     both_lost: "Quemada",
     stale_burned: "Quemada",
   };
@@ -188,7 +193,10 @@ export default async function BetDetailPage({
       )}
 
       {!isTerminal && bet.status === "pending" && isOpponent && (
-        <AcceptButton betId={bet.id} />
+        <div className="flex flex-col gap-2">
+          <AcceptButton betId={bet.id} />
+          <RejectButton betId={bet.id} />
+        </div>
       )}
 
 

@@ -1,5 +1,6 @@
 export const OVNIS_WELCOME_BONUS = 51;
-export const BET_ACCEPTANCE_HOURS = 48;
+export const BET_ACCEPTANCE_HOURS = 24;
+export const BET_MAX_ACTIVE = 3;
 export const PENDING_CREDIT_TTL_DAYS = 7;
 export const BET_MAX_CLAIM_ATTEMPTS = 3;
 export const BET_MIN_AMOUNT = 11;

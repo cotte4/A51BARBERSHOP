@@ -1360,7 +1360,7 @@ export const ovnisBets = pgTable(
   (table) => [
     check(
       "ovnis_bets_status_check",
-      sql`${table.status} IN ('pending','accepted','disputed','challenger_won','opponent_won','refunded','cancelled','both_lost','stale_burned')`
+      sql`${table.status} IN ('pending','accepted','disputed','challenger_won','opponent_won','refunded','cancelled','rejected','both_lost','stale_burned')`
     ),
     check("ovnis_bets_claim_check", sql`${table.challengerClaim} IS NULL OR ${table.challengerClaim} IN ('won','lost','forfeit')`),
     check("ovnis_bets_opp_claim_check", sql`${table.opponentClaim} IS NULL OR ${table.opponentClaim} IN ('won','lost','forfeit')`),

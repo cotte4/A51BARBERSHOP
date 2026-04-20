@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { clients } from "@/db/schema";
 import { requireMarcianoClient } from "@/lib/marciano-portal";
-import { createBet, acceptBet, cancelBet } from "@/lib/ovnis-bets";
+import { createBet, acceptBet, cancelBet, rejectBet } from "@/lib/ovnis-bets";
 
 export async function searchMarcianoForBetAction(
   query: string
@@ -51,6 +51,7 @@ export async function crearApuestaAction(
       amount_below_min: "La apuesta mínima es 11 OVNIS.",
       game_not_found: "Juego no encontrado.",
       game_inactive: "Este juego no está disponible.",
+      too_many_active_bets: "Ya tenés 3 apuestas activas. Resolvé alguna antes de crear otra.",
     };
     return {
       success: false,
@@ -80,6 +81,30 @@ export async function aceptarApuestaAction(
     return {
       success: false,
       error: messages[result.reason] ?? "No se pudo aceptar.",
+    };
+  }
+
+  revalidatePath("/marciano/juegos");
+  revalidatePath(`/marciano/juegos/${betId}`);
+  return { success: true };
+}
+
+export async function rechazarApuestaAction(
+  betId: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  const { client } = await requireMarcianoClient();
+
+  const result = await rejectBet({ betId, opponentClientId: client.id });
+
+  if (!result.success) {
+    const messages: Record<string, string> = {
+      not_found: "Apuesta no encontrada.",
+      wrong_opponent: "Esta apuesta no es para vos.",
+      not_pending: "La apuesta ya no está disponible.",
+    };
+    return {
+      success: false,
+      error: messages[result.reason] ?? "No se pudo rechazar.",
     };
   }
 
