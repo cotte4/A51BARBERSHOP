@@ -1,5 +1,6 @@
 import Link from "next/link";
 import MarcianoChangePasswordForm from "@/components/marciano/MarcianoChangePasswordForm";
+import DeleteAccountPanel from "./_DeleteAccountPanel";
 import { requireMarcianoClient } from "@/lib/marciano-portal";
 
 export default async function MarcianoSecurityPage() {
@@ -62,6 +63,12 @@ export default async function MarcianoSecurityPage() {
           la recuperacion de contrasena
         </Link>
         .
+      </section>
+
+      {/* Zona de peligro */}
+      <section className="flex flex-col gap-3">
+        <p className="eyebrow text-xs text-red-400/70">Zona de peligro</p>
+        <DeleteAccountPanel />
       </section>
     </div>
   );

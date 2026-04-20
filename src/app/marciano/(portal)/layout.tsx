@@ -1,4 +1,5 @@
 import MarcianoBottomNav from "@/components/navigation/MarcianoBottomNav";
+import MarcianoLogoutButton from "@/components/marciano/MarcianoLogoutButton";
 import { requireMarcianoClient } from "@/lib/marciano-portal";
 
 export default async function MarcianoPortalLayout({
@@ -16,9 +17,7 @@ export default async function MarcianoPortalLayout({
             <p className="eyebrow text-xs text-[#8cff59]">Portal Marciano</p>
             <p className="font-display mt-0.5 text-lg font-semibold text-white">{client.name}</p>
           </div>
-          <span className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/10 px-3 py-1 text-[11px] font-semibold text-[#d8ffc7]">
-            Acceso activo
-          </span>
+          <MarcianoLogoutButton />
         </div>
       </header>
 
