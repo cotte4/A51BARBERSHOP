@@ -3,7 +3,7 @@
 import { ilike } from "drizzle-orm";
 import { db } from "@/db";
 import { clients } from "@/db/schema";
-import { getAdminSessionContext } from "@/lib/admin-action";
+import { getAdminActorContext } from "@/lib/dal/authz";
 import { adminAdjustBalance } from "@/lib/ovnis-server";
 
 export async function ajustarBalanceAction(
@@ -11,7 +11,7 @@ export async function ajustarBalanceAction(
   delta: number,
   reason: string
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const ctx = await getAdminSessionContext();
+  const ctx = await getAdminActorContext();
   if (!ctx) return { success: false, error: "No autorizado" };
 
   if (!reason.trim()) return { success: false, error: "El motivo es requerido" };
@@ -34,7 +34,7 @@ export async function ajustarBalanceAction(
 export async function searchClientAction(
   query: string
 ): Promise<{ id: string; name: string; balance: number }[]> {
-  const ctx = await getAdminSessionContext();
+  const ctx = await getAdminActorContext();
   if (!ctx) return [];
 
   if (!query.trim()) return [];

@@ -1,14 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAdminSessionContext } from "@/lib/admin-action";
+import { getAdminActorContext } from "@/lib/dal/authz";
 import { adminResolveDispute } from "@/lib/ovnis-bets";
 
 export async function resolverDisputaAction(
   betId: string,
   winnerClientId: string
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const ctx = await getAdminSessionContext();
+  const ctx = await getAdminActorContext();
   if (!ctx) return { success: false, error: "No autorizado" };
 
   const result = await adminResolveDispute({

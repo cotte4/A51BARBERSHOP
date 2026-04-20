@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { barberos, cierresCaja } from "@/db/schema";
+import { cierresCaja } from "@/db/schema";
 import { normalizeCierreResumen, type ResumenBarberoCierre } from "@/lib/caja-finance";
 import { formatARS } from "@/lib/format";
+import { getCajaActorContext } from "@/lib/dal/caja";
 import PrintButton from "./_PrintButton";
 
 export default async function CierreDetallePage({
@@ -16,10 +15,8 @@ export default async function CierreDetallePage({
 }) {
   const { fecha } = await params;
 
-  const session = await auth.api.getSession({ headers: await headers() });
-  const userRole = (session?.user as { role?: string })?.role;
-  const isAdmin = userRole === "admin";
-  const userId = session?.user?.id;
+  const actor = await getCajaActorContext();
+  const isAdmin = actor?.isAdmin ?? false;
 
   const [cierre] = await db
     .select()
@@ -35,15 +32,7 @@ export default async function CierreDetallePage({
     totalProductos: cierre.totalProductos,
   });
 
-  let barberoIdDelUsuario: string | null = null;
-  if (!isAdmin && userId) {
-    const [barberoDelUsuario] = await db
-      .select({ id: barberos.id })
-      .from(barberos)
-      .where(eq(barberos.userId, userId))
-      .limit(1);
-    barberoIdDelUsuario = barberoDelUsuario?.id ?? null;
-  }
+  const barberoIdDelUsuario = isAdmin ? null : actor?.barberoId ?? null;
 
   const resumenFiltrado: Record<string, ResumenBarberoCierre> = isAdmin
     ? resumen.barberos

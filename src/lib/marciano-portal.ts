@@ -1,9 +1,8 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { auth } from "@/lib/auth";
 import { barberos, clients, marcianoBeneficiosUso, productos, servicios, visitLogs } from "@/db/schema";
+import { getCurrentActorContext } from "@/lib/dal/authz";
 import { MARCIANO_BENEFICIOS } from "@/lib/marciano-config";
 
 export function normalizeMarcianoEmail(value: FormDataEntryValue | null): string | null {
@@ -12,11 +11,11 @@ export function normalizeMarcianoEmail(value: FormDataEntryValue | null): string
 }
 
 export async function getMarcianoPortalSession() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  const role = (session?.user as { role?: string } | undefined)?.role;
+  const actor = await getCurrentActorContext();
+  const role = actor?.role;
 
   return {
-    session,
+    session: actor?.session ?? null,
     role,
     isMarciano: role === "marciano",
   };

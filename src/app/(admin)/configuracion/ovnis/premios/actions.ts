@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { ovnisRedemptionItems } from "@/db/schema";
-import { getAdminSessionContext } from "@/lib/admin-action";
+import { getAdminActorContext } from "@/lib/dal/authz";
 
 type PremioData = {
   label: string;
@@ -17,7 +17,7 @@ type PremioData = {
 export async function createPremioAction(
   data: PremioData
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const ctx = await getAdminSessionContext();
+  const ctx = await getAdminActorContext();
   if (!ctx) return { success: false, error: "No autorizado" };
 
   if (!data.label.trim()) return { success: false, error: "El nombre es requerido" };
@@ -43,7 +43,7 @@ export async function togglePremioActivoAction(
   id: string,
   activo: boolean
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const ctx = await getAdminSessionContext();
+  const ctx = await getAdminActorContext();
   if (!ctx) return { success: false, error: "No autorizado" };
 
   try {

@@ -1,17 +1,18 @@
 import Link from "next/link";
 import { eq, asc } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { db } from "@/db";
-import { cierresCaja, mediosPago, productos } from "@/db/schema";
+import { mediosPago, productos } from "@/db/schema";
 import VentaProductoForm from "@/components/caja/VentaProductoForm";
 import { formatARS } from "@/lib/format";
+import {
+  getCajaActorContext,
+  getCajaFechaHoyArgentina,
+  hasCajaCerrada,
+} from "@/lib/dal/caja";
 import { registrarVentaProducto } from "../actions";
 
 function getFechaHoy(): string {
-  return new Date().toLocaleDateString("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires",
-  });
+  return getCajaFechaHoyArgentina();
 }
 
 function getLowStockLabel(stockActual: number) {
@@ -21,8 +22,8 @@ function getLowStockLabel(stockActual: number) {
 }
 
 export default async function VenderProductoPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
+  const actor = await getCajaActorContext();
+  if (!actor || (!actor.isAdmin && !actor.barberoId)) {
     return (
       <main className="mx-auto flex min-h-screen max-w-3xl items-center px-4 py-10">
         <section className="w-full rounded-[32px] border border-zinc-800 bg-zinc-900 p-6 text-center shadow-[0_24px_60px_rgba(0,0,0,0.35)]">
@@ -54,13 +55,7 @@ export default async function VenderProductoPage() {
   }
 
   const fechaHoy = getFechaHoy();
-  const [cierreExistente] = await db
-    .select({ id: cierresCaja.id })
-    .from(cierresCaja)
-    .where(eq(cierresCaja.fecha, fechaHoy))
-    .limit(1);
-
-  if (cierreExistente) {
+  if (await hasCajaCerrada(fechaHoy)) {
     return (
       <main className="mx-auto flex min-h-screen max-w-3xl items-center px-4 py-10">
         <section className="w-full rounded-[32px] border border-zinc-800 bg-zinc-900 p-6 text-center shadow-[0_24px_60px_rgba(0,0,0,0.35)]">

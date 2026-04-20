@@ -12,20 +12,24 @@ import {
   stockMovimientos,
   productos,
 } from "@/db/schema";
-import { eq, inArray, and, gte, lte, sql } from "drizzle-orm";
-import { auth } from "@/lib/auth";
+import { eq, inArray, and, gte, lte } from "drizzle-orm";
 import { buildCierreResumen } from "@/lib/caja-finance";
-import { getCajaActorContext } from "@/lib/caja-access";
+import {
+  canManageCajaBarbero,
+  getCajaActorContext,
+  getCajaClosingBarberoIdForActor,
+  hasCajaCerrada,
+  hasCajaCerradaHoy,
+  resolveCajaActorBarberoIdForActor,
+} from "@/lib/dal/caja";
 import {
   crearAtencionDesdeInput,
   getFechaHoyArgentina,
   getQuickActionDefaultsForBarbero,
-  resolveCajaActorBarberoId,
-  hasCajaCerradaHoy,
+  registrarVentaProductoDesdeInput,
   syncProductosAtencion,
   type ProductoSeleccionadoInput,
 } from "@/lib/caja-atencion";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -130,7 +134,7 @@ export async function registrarAtencion(
     if (!actor.barberoId) {
       return { error: "Tu usuario no tiene un barbero activo vinculado." };
     }
-    if (barberoId && barberoId !== actor.barberoId) {
+    if (barberoId && !canManageCajaBarbero(actor, barberoId)) {
       fieldErrors.barberoId = "Solo podes registrar atenciones para tu perfil.";
     }
   }
@@ -182,11 +186,9 @@ export type AtencionRapidaState = {
 async function registrarAtencionRapidaInterna(
   medioPagoIdOverride?: string
 ): Promise<AtencionRapidaState> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  const userId = session?.user?.id;
-  const userRole = (session?.user as { role?: string } | undefined)?.role;
+  const actor = await getCajaActorContext();
 
-  if (!userId) {
+  if (!actor) {
     return { error: "Debes iniciar sesion para registrar una atencion." };
   }
 
@@ -194,7 +196,7 @@ async function registrarAtencionRapidaInterna(
     return { error: "La caja del dia ya fue cerrada. No se pueden registrar nuevas atenciones." };
   }
 
-  const barberoId = await resolveCajaActorBarberoId(userId, userRole === "admin");
+  const barberoId = await resolveCajaActorBarberoIdForActor(actor);
   if (!barberoId) {
     return { error: "No encontre un barbero activo vinculado para usar la accion rapida." };
   }
@@ -254,14 +256,12 @@ export async function registrarAtencionExpressAction(
   prevState: AtencionRapidaState,
   formData: FormData
 ): Promise<AtencionRapidaState> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  const userId = session?.user?.id;
-  const userRole = (session?.user as { role?: string } | undefined)?.role;
+  const actor = await getCajaActorContext();
 
-  if (!userId) return { error: "Debes iniciar sesion para registrar una atencion." };
+  if (!actor) return { error: "Debes iniciar sesion para registrar una atencion." };
   if (await hasCajaCerradaHoy()) return { error: "La caja del dia ya fue cerrada." };
 
-  const barberoId = await resolveCajaActorBarberoId(userId, userRole === "admin");
+  const barberoId = await resolveCajaActorBarberoIdForActor(actor);
   if (!barberoId) return { error: "No encontre un barbero activo vinculado." };
 
   const servicioId = formData.get("servicioId") as string | null;
@@ -336,23 +336,17 @@ export async function editarAtencion(
     if (!actor.barberoId) {
       return { error: "Tu usuario no tiene un barbero activo vinculado." };
     }
-    if (atencionExistente.barberoId !== actor.barberoId) {
+    if (!canManageCajaBarbero(actor, atencionExistente.barberoId)) {
       return { error: "Solo podes editar atenciones de tu perfil." };
     }
-    if (barberoId && barberoId !== actor.barberoId) {
+    if (barberoId && !canManageCajaBarbero(actor, barberoId)) {
       fieldErrors.barberoId = "Solo podes editar atenciones de tu perfil.";
     }
   }
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
   // Verificar que no hay cierre para hoy
-  const [cierreExistenteEditar] = await db
-    .select({ id: cierresCaja.id })
-    .from(cierresCaja)
-    .where(eq(cierresCaja.fecha, getFechaHoy()))
-    .limit(1);
-
-  if (cierreExistenteEditar) {
+  if (await hasCajaCerrada(getFechaHoy())) {
     const d = new Date(getFechaHoy() + "T12:00:00");
     const fechaFormateada = d.toLocaleDateString("es-AR", { day: "numeric", month: "long", timeZone: "America/Argentina/Buenos_Aires" });
     return { error: `La caja del ${fechaFormateada} ya fue cerrada. No se pueden registrar nuevas atenciones.` };
@@ -455,9 +449,8 @@ export async function anularAtencion(
   formData: FormData
 ): Promise<AtencionFormState> {
   // Verificar que el usuario es admin
-  const session = await auth.api.getSession({ headers: await headers() });
-  const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin") {
+  const actor = await getCajaActorContext();
+  if (!actor?.isAdmin) {
     return { error: "Solo el administrador puede anular atenciones." };
   }
 
@@ -500,22 +493,15 @@ export async function cerrarCaja(
   formData: FormData
 ): Promise<CierreFormState> {
   // 1. Verificar sesion admin
-  const session = await auth.api.getSession({ headers: await headers() });
-  const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin") {
+  const actor = await getCajaActorContext();
+  if (!actor?.isAdmin) {
     return { error: "Solo el administrador puede cerrar la caja." };
   }
 
   const fechaHoy = getFechaHoy();
 
   // 2. Verificar que no existe cierre para hoy
-  const [cierreExistente] = await db
-    .select({ id: cierresCaja.id })
-    .from(cierresCaja)
-    .where(eq(cierresCaja.fecha, fechaHoy))
-    .limit(1);
-
-  if (cierreExistente) {
+  if (await hasCajaCerrada(fechaHoy)) {
     const d = new Date(fechaHoy + "T12:00:00");
     const fechaFormateada = d.toLocaleDateString("es-AR", { day: "numeric", month: "long", timeZone: "America/Argentina/Buenos_Aires" });
     return { error: `La caja del ${fechaFormateada} ya fue cerrada.` };
@@ -593,11 +579,7 @@ export async function cerrarCaja(
       .reduce((sum, [, v]) => sum + v, 0);
 
     // 6. Obtener barbero del admin que cierra (para cerradoPor)
-    const [barberoAdmin] = await db
-      .select({ id: barberos.id })
-      .from(barberos)
-      .where(eq(barberos.userId, session!.user.id))
-      .limit(1);
+    const barberoAdminId = await getCajaClosingBarberoIdForActor(actor);
 
     // 7. Insertar cierre
     const [nuevoCierre] = await db
@@ -615,7 +597,7 @@ export async function cerrarCaja(
         totalProductos: String(cierreResumen.totales.totalProductosBruto.toFixed(2)),
         resumenBarberos: cierreResumen,
         cantidadAtenciones,
-        cerradoPor: barberoAdmin?.id ?? null,
+        cerradoPor: barberoAdminId,
         cerradoEn: new Date(),
       })
       .returning();
@@ -675,57 +657,37 @@ export async function registrarVentaProducto(
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
   // Verificar sesion
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
+  const actor = await getCajaActorContext();
+  if (!actor) {
     return { error: "Debes iniciar sesion para realizar esta operacion." };
+  }
+  if (!actor.isAdmin && !actor.barberoId) {
+    return { error: "Tu usuario no tiene un barbero activo vinculado." };
   }
 
   // Verificar que no hay cierre para hoy
   const fechaHoy = getFechaHoy();
-  const [cierreExistente] = await db
-    .select({ id: cierresCaja.id })
-    .from(cierresCaja)
-    .where(eq(cierresCaja.fecha, fechaHoy))
-    .limit(1);
-
-  if (cierreExistente) {
+  if (await hasCajaCerrada(fechaHoy)) {
     return { error: "La caja ya fue cerrada. No se pueden registrar nuevas ventas." };
   }
 
   const cantidad = parseInt(cantidadStr, 10);
   const precioCobrado = Number(precioCobradoStr);
 
-  // Verificar que el producto exista, este activo y tenga stock suficiente
-  const [producto] = await db
-    .select()
-    .from(productos)
-    .where(eq(productos.id, productoId))
-    .limit(1);
-
-  if (!producto) return { fieldErrors: { productoId: "Producto no encontrado" } };
-  if (!producto.activo) return { fieldErrors: { productoId: "El producto no esta activo" } };
-  if ((producto.stockActual ?? 0) < cantidad) {
-    return { error: `Sin stock disponible. Stock actual: ${producto.stockActual ?? 0}` };
-  }
-
   try {
-    // Decrementar stock
-    await db
-      .update(productos)
-      .set({ stockActual: sql`${productos.stockActual} - ${cantidad}` })
-      .where(eq(productos.id, productoId));
-
-    // Insertar movimiento de stock
-    const precioUnitario = precioCobrado / cantidad;
-    const costoUnitarioSnapshot = Number(producto.costoCompra ?? 0);
-    await db.insert(stockMovimientos).values({
+    const result = await registrarVentaProductoDesdeInput({
       productoId,
-      tipo: "venta",
-      cantidad: -cantidad,
-      precioUnitario: String(precioUnitario.toFixed(2)),
-      costoUnitarioSnapshot: String(costoUnitarioSnapshot.toFixed(2)),
-      notas: medioPagoId,
+      cantidad,
+      precioCobrado,
+      medioPagoId,
     });
+
+    if (!result.ok) {
+      return {
+        error: result.error,
+        fieldErrors: result.fieldErrors,
+      };
+    }
   } catch (e) {
     console.error("Error registrando venta de producto:", e);
     return { error: "No se pudo registrar la venta. Intenta de nuevo." };

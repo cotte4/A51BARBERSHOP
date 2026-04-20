@@ -15,9 +15,10 @@ import {
   servicios,
   stockMovimientos,
 } from "@/db/schema";
-import { auth } from "@/lib/auth";
-import { resolveCajaActorBarberoId } from "@/lib/caja-atencion";
-import { headers } from "next/headers";
+import {
+  getCajaActorContext,
+  resolveCajaActorBarberoIdForActor,
+} from "@/lib/dal/caja";
 import {
   formatARS,
   formatFechaLarga,
@@ -54,16 +55,14 @@ type MovementItem = {
 };
 
 export default async function CajaPage({ searchParams }: CajaPageProps) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  const userRole = (session?.user as { role?: string })?.role;
-  const isAdmin = userRole === "admin";
-  const userId = session?.user?.id;
+  const actor = await getCajaActorContext();
+  const isAdmin = actor?.isAdmin ?? false;
   const params = await searchParams;
   const vista = params.vista === "detalle" ? "detalle" : "simple";
 
   const fechaHoy = getFechaHoy();
-  const quickActionBarberoId = userId
-    ? await resolveCajaActorBarberoId(userId, isAdmin)
+  const quickActionBarberoId = actor
+    ? await resolveCajaActorBarberoIdForActor(actor)
     : null;
 
   const [cierreHoy] = await db
@@ -79,12 +78,12 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
     .where(eq(cierresCaja.fecha, fechaHoy))
     .limit(1);
 
-  const [barberoDelUsuario] = isAdmin
+  const [barberoDelUsuario] = isAdmin || !actor?.barberoId
     ? [null]
     : await db
         .select()
         .from(barberos)
-        .where(eq(barberos.userId, userId!))
+        .where(eq(barberos.id, actor.barberoId))
         .limit(1);
 
   const atencionesDelDia = isAdmin

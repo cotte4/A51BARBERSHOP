@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   atenciones,
@@ -6,7 +6,6 @@ import {
   atencionesProductos,
   barberos,
   clients,
-  cierresCaja,
   marcianoBeneficiosUso,
   mediosPago,
   productos,
@@ -16,6 +15,10 @@ import {
 } from "@/db/schema";
 import type { QuickActionDefaults } from "@/lib/types";
 import { MARCIANO_BENEFICIOS } from "@/lib/marciano-config";
+import {
+  hasCajaCerradaHoy as hasCajaCerradaHoyInDal,
+  resolveCajaActorBarberoIdByUser,
+} from "@/lib/dal/caja";
 
 export type AtencionCreationInput = {
   barberoId: string;
@@ -34,6 +37,23 @@ export type ProductoSeleccionadoInput = {
   precioUnitario: number;
   esMarcianoIncluido?: boolean;
 };
+
+export type VentaProductoInput = {
+  productoId: string;
+  cantidad: number;
+  precioCobrado: number;
+  medioPagoId: string;
+};
+
+export type VentaProductoResult =
+  | { ok: true }
+  | {
+      ok: false;
+      error?: string;
+      fieldErrors?: {
+        productoId?: string;
+      };
+    };
 
 export function getFechaHoyArgentina(): string {
   return new Date().toLocaleDateString("en-CA", {
@@ -107,13 +127,7 @@ async function applyMarcianoConsumicionesDelta(input: {
 }
 
 export async function hasCajaCerradaHoy() {
-  const [cierre] = await db
-    .select({ id: cierresCaja.id })
-    .from(cierresCaja)
-    .where(eq(cierresCaja.fecha, getFechaHoyArgentina()))
-    .limit(1);
-
-  return !!cierre;
+  return hasCajaCerradaHoyInDal();
 }
 
 export async function crearAtencionDesdeInput(input: AtencionCreationInput) {
@@ -410,10 +424,15 @@ export async function syncProductosAtencion({
         producto.costoCompra === null ? null : String(Number(producto.costoCompra).toFixed(2)),
     });
 
-    await tx
+    const [updatedProduct] = await tx
       .update(productos)
       .set({ stockActual: sql`${productos.stockActual} - ${item.cantidad}` })
-      .where(eq(productos.id, item.productoId));
+      .where(and(eq(productos.id, item.productoId), gte(productos.stockActual, item.cantidad)))
+      .returning({ id: productos.id });
+
+    if (!updatedProduct) {
+      throw new Error(`Sin stock para ${producto.nombre}`);
+    }
 
     await tx.insert(stockMovimientos).values({
       productoId: item.productoId,
@@ -486,15 +505,73 @@ export async function getQuickActionDefaultsForBarbero(barberoId: string): Promi
 }
 
 export async function resolveCajaActorBarberoId(userId: string, isAdmin: boolean) {
-  const [barbero] = await db
-    .select({ id: barberos.id })
-    .from(barberos)
-    .where(
-      isAdmin
-        ? and(eq(barberos.rol, "admin"), eq(barberos.activo, true))
-        : and(eq(barberos.userId, userId), eq(barberos.activo, true))
-    )
-    .limit(1);
+  return resolveCajaActorBarberoIdByUser(userId, isAdmin);
+}
 
-  return barbero?.id ?? null;
+export async function registrarVentaProductoDesdeInput(
+  input: VentaProductoInput
+): Promise<VentaProductoResult> {
+  if (input.cantidad < 1 || !Number.isFinite(input.cantidad)) {
+    return { ok: false, error: "La cantidad debe ser al menos 1." };
+  }
+
+  if (input.precioCobrado < 0 || !Number.isFinite(input.precioCobrado)) {
+    return { ok: false, error: "El precio no puede ser negativo." };
+  }
+
+  return db.transaction(async (tx) => {
+    const [producto] = await tx
+      .select()
+      .from(productos)
+      .where(eq(productos.id, input.productoId))
+      .limit(1);
+
+    if (!producto) {
+      return { ok: false, fieldErrors: { productoId: "Producto no encontrado" } };
+    }
+
+    if (!producto.activo) {
+      return { ok: false, fieldErrors: { productoId: "El producto no esta activo" } };
+    }
+
+    if ((producto.stockActual ?? 0) < input.cantidad) {
+      return {
+        ok: false,
+        error: `Sin stock disponible. Stock actual: ${producto.stockActual ?? 0}`,
+      };
+    }
+
+    const [updatedProduct] = await tx
+      .update(productos)
+      .set({ stockActual: sql`${productos.stockActual} - ${input.cantidad}` })
+      .where(
+        and(
+          eq(productos.id, input.productoId),
+          eq(productos.activo, true),
+          gte(productos.stockActual, input.cantidad)
+        )
+      )
+      .returning({ id: productos.id });
+
+    if (!updatedProduct) {
+      return {
+        ok: false,
+        error: `Sin stock disponible. Stock actual: ${producto.stockActual ?? 0}`,
+      };
+    }
+
+    const precioUnitario = input.precioCobrado / input.cantidad;
+    const costoUnitarioSnapshot = Number(producto.costoCompra ?? 0);
+
+    await tx.insert(stockMovimientos).values({
+      productoId: input.productoId,
+      tipo: "venta",
+      cantidad: -input.cantidad,
+      precioUnitario: String(precioUnitario.toFixed(2)),
+      costoUnitarioSnapshot: String(costoUnitarioSnapshot.toFixed(2)),
+      notas: input.medioPagoId,
+    });
+
+    return { ok: true };
+  });
 }

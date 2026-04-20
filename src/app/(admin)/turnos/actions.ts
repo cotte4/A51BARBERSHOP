@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { atenciones, barberos, cierresCaja, mediosPago, pantallaEvents, servicios, turnos, turnosDisponibilidad } from "@/db/schema";
 import { handleClienteLlego } from "@/lib/music-engine";
-import { getTurnosActorContext } from "@/lib/turnos-access";
+import { canManageTurnoForBarbero, getTurnosActorContext } from "@/lib/turnos-access";
 import {
   TURNO_DURACIONES,
   findClientByPhone,
@@ -64,7 +64,7 @@ async function getManagedTurno(turnoId: string) {
   return {
     actor,
     turno,
-    allowed: actor.isAdmin || actor.barberoId === turno.barberoId,
+    allowed: canManageTurnoForBarbero(actor, turno.barberoId),
   };
 }
 
@@ -214,7 +214,7 @@ export async function crearDisponibilidadAction(
   if (!actor) {
     return { error: "Necesitas iniciar sesion para gestionar disponibilidad." };
   }
-  if (!actor.isAdmin && actor.barberoId !== barberoId) {
+  if (!canManageTurnoForBarbero(actor, barberoId)) {
     return { error: "Solo podes gestionar tu propia disponibilidad." };
   }
 
@@ -317,7 +317,7 @@ export async function eliminarDisponibilidadAction(slotId: string): Promise<void
   if (!slot) {
     return;
   }
-  if (!actor.isAdmin && actor.barberoId !== slot.barberoId) {
+  if (!canManageTurnoForBarbero(actor, slot.barberoId)) {
     return;
   }
 
@@ -362,7 +362,7 @@ export async function crearTurnoRapidoAction(
   if (!actor) {
     return { error: "Debes iniciar sesion para crear turnos." };
   }
-  if (!actor.isAdmin && actor.barberoId !== barberoId) {
+  if (!canManageTurnoForBarbero(actor, barberoId)) {
     return { error: "Solo podes crear turnos para tu propia agenda." };
   }
 
@@ -594,7 +594,7 @@ export async function crearDisponibilidadLoteAction(
 ): Promise<TurnoActionState> {
   const actor = await getTurnosActorContext();
   if (!actor) return { error: "Necesitas iniciar sesion." };
-  if (!actor.isAdmin && actor.barberoId !== barberoId) {
+  if (!canManageTurnoForBarbero(actor, barberoId)) {
     return { error: "Solo podes gestionar tu propia disponibilidad." };
   }
 
@@ -700,7 +700,7 @@ export async function eliminarDisponibilidadDiaSemanaAction(
 ): Promise<TurnoActionState> {
   const actor = await getTurnosActorContext();
   if (!actor) return { error: "Necesitas iniciar sesion." };
-  if (!actor.isAdmin && actor.barberoId !== barberoId) {
+  if (!canManageTurnoForBarbero(actor, barberoId)) {
     return { error: "Solo podes gestionar tu propia disponibilidad." };
   }
 

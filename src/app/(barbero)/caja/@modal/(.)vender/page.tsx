@@ -1,16 +1,19 @@
 import { db } from "@/db";
-import { productos, mediosPago, cierresCaja } from "@/db/schema";
+import { productos, mediosPago } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import Link from "next/link";
 import VentaProductoForm from "@/components/caja/VentaProductoForm";
 import Modal from "@/components/ui/Modal";
+import {
+  getCajaActorContext,
+  getCajaFechaHoyArgentina,
+  hasCajaCerrada,
+} from "@/lib/dal/caja";
 import { registrarVentaProducto } from "../../actions";
 
 export default async function VenderModal() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
+  const actor = await getCajaActorContext();
+  if (!actor || (!actor.isAdmin && !actor.barberoId)) {
     return (
       <Modal>
         <p className="text-sm text-zinc-400">Debés iniciar sesión para acceder.</p>
@@ -18,17 +21,9 @@ export default async function VenderModal() {
     );
   }
 
-  const fechaHoy = new Date().toLocaleDateString("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires",
-  });
+  const fechaHoy = getCajaFechaHoyArgentina();
 
-  const [cierreExistente] = await db
-    .select({ id: cierresCaja.id })
-    .from(cierresCaja)
-    .where(eq(cierresCaja.fecha, fechaHoy))
-    .limit(1);
-
-  if (cierreExistente) {
+  if (await hasCajaCerrada(fechaHoy)) {
     return (
       <Modal>
         <div className="py-4 text-center">

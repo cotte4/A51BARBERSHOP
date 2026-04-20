@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { ovnisRuletaPrizes } from "@/db/schema";
-import { getAdminSessionContext } from "@/lib/admin-action";
+import { getAdminActorContext } from "@/lib/dal/authz";
 
 type RuletaPrizeData = {
   label: string;
@@ -17,7 +17,7 @@ type RuletaPrizeData = {
 export async function createRuletaPrizeAction(
   data: RuletaPrizeData
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const ctx = await getAdminSessionContext();
+  const ctx = await getAdminActorContext();
   if (!ctx) return { success: false, error: "No autorizado" };
 
   if (!data.label.trim()) return { success: false, error: "El nombre es requerido" };
@@ -43,7 +43,7 @@ export async function updateRuletaPrizeWeightAction(
   id: string,
   weight: number
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const ctx = await getAdminSessionContext();
+  const ctx = await getAdminActorContext();
   if (!ctx) return { success: false, error: "No autorizado" };
 
   if (!Number.isInteger(weight) || weight <= 0) {
@@ -63,7 +63,7 @@ export async function toggleRuletaPrizeActivoAction(
   id: string,
   activo: boolean
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const ctx = await getAdminSessionContext();
+  const ctx = await getAdminActorContext();
   if (!ctx) return { success: false, error: "No autorizado" };
 
   try {

@@ -9,41 +9,11 @@ import {
 } from "@/db/schema";
 import type { ClientProfile, ClientSummary } from "@/lib/types";
 import { normalizePhone } from "@/lib/phone";
-import { and, asc, desc, eq, exists, ilike, isNotNull, isNull, like, lt, or, sql } from "drizzle-orm";
-
-type SearchActor = {
-  isAdmin: boolean;
-  barberoId?: string;
-};
-
-function getClientVisibilityFilter(actor: SearchActor) {
-  if (actor.isAdmin) {
-    return undefined;
-  }
-
-  if (!actor.barberoId) {
-    return sql`false`;
-  }
-
-  return or(
-    eq(clients.esMarciano, true),
-    eq(clients.createdByBarberoId, actor.barberoId),
-    exists(
-      db
-        .select({ id: visitLogs.id })
-        .from(visitLogs)
-        .where(
-          and(
-            eq(visitLogs.clientId, clients.id),
-            eq(visitLogs.createdByBarberoId, actor.barberoId)
-          )
-        )
-    )
-  );
-}
+import { getClientVisibilityFilter, type ClientVisibilityActor } from "@/lib/dal/clients";
+import { and, asc, desc, eq, ilike, isNotNull, isNull, like, lt, or, sql } from "drizzle-orm";
 
 export async function searchVisibleClients(
-  actor: SearchActor,
+  actor: ClientVisibilityActor,
   query: string,
   options?: { limit?: number }
 ): Promise<ClientSummary[]> {
@@ -104,7 +74,7 @@ export async function searchVisibleClients(
 }
 
 export async function getClientProfileForActor(
-  actor: SearchActor & { userId: string },
+  actor: ClientVisibilityActor & { userId: string },
   clientId: string
 ): Promise<ClientProfile | null> {
   const visibility = getClientVisibilityFilter(actor);

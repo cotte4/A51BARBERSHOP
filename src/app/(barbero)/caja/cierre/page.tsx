@@ -1,13 +1,10 @@
 import Link from "next/link";
 import { and, eq, gte, lte } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import {
   atenciones,
   barberos,
-  cierresCaja,
   liquidaciones,
   mediosPago,
   productos,
@@ -17,6 +14,11 @@ import { buildCierreResumen } from "@/lib/caja-finance";
 import CerrarCajaButton from "@/components/caja/CerrarCajaButton";
 import EfectivoChecker from "@/components/caja/EfectivoChecker";
 import { formatARS } from "@/lib/format";
+import {
+  getCajaActorContext,
+  getCajaFechaHoyArgentina,
+  hasCajaCerrada,
+} from "@/lib/dal/caja";
 import { cerrarCaja } from "../actions";
 
 type SummaryCard = {
@@ -27,19 +29,12 @@ type SummaryCard = {
 };
 
 export default async function CierrePage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin") redirect("/caja");
+  const actor = await getCajaActorContext();
+  if (!actor?.isAdmin) redirect("/caja");
 
   const fechaHoy = getFechaHoy();
 
-  const [cierreExistente] = await db
-    .select({ id: cierresCaja.id })
-    .from(cierresCaja)
-    .where(eq(cierresCaja.fecha, fechaHoy))
-    .limit(1);
-
-  if (cierreExistente) redirect(`/caja/cierre/${fechaHoy}`);
+  if (await hasCajaCerrada(fechaHoy)) redirect(`/caja/cierre/${fechaHoy}`);
 
   const atencionesDelDia = await db
     .select()
@@ -466,9 +461,7 @@ export default async function CierrePage() {
 }
 
 function getFechaHoy(): string {
-  return new Date().toLocaleDateString("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires",
-  });
+  return getCajaFechaHoyArgentina();
 }
 
 function formatFechaLarga(fecha: string): string {

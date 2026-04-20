@@ -4,14 +4,14 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { productos, servicios } from "@/db/schema";
-import { getAdminSessionContext } from "@/lib/admin-action";
+import { getAdminActorContext } from "@/lib/dal/authz";
 
 export async function updateOvnisValueAction(
   id: string,
   type: "servicio" | "producto",
   value: number
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const ctx = await getAdminSessionContext();
+  const ctx = await getAdminActorContext();
   if (!ctx) return { success: false, error: "No autorizado" };
 
   if (!Number.isInteger(value) || value < 0) {
