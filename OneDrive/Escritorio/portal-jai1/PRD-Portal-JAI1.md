@@ -6,9 +6,9 @@
 
 ---
 
-| **Versión**                    | 1.6 - Dashboard Track Filters             |
+| **Versión**                    | 1.7 - IRS Scheduler Control + Screenshot Hover |
 | ------------------------------ | ----------------------------------------- |
-| **Fecha Última Actualización** | 12 de Marzo, 2026                         |
+| **Fecha Última Actualización** | 21 de Abril, 2026                         |
 | **Fecha Creación**             | 27 de Diciembre, 2024                    |
 | **Deadline MVP**               | 10 de Enero, 2025                        |
 | **Inicio Temporada**           | 28 de Enero, 2025 (Temporada Fiscal USA) |
@@ -318,6 +318,28 @@ Portal JAI1 es una aplicación web full-stack diseñada para gestionar el servic
 54. ✅ **Total Clientes — Corrección (v1.6)** - COMPLETADO
     - `getSeasonStats().totalClients` ahora cuenta TODOS los `clientProfile` (no solo taxes_filed)
     - Dashboard y Estadísticas muestran el mismo número total de clientes
+
+### ✅ Sesión 21-Abr-2026 — IRS Scheduler Control + Screenshot Hover (v1.7):
+
+55. ✅ **IRS Scheduler Control — Start/Stop desde la UI (v1.7)** - COMPLETADO
+    - Problema: el scheduler corría siempre (hardcoded @Cron), sin forma de pausarlo
+    - Solución: reemplazado @Cron estático por SchedulerRegistry dinámico
+    - Backend: `IrsMonitorSchedulerService` maneja start/stop con `SchedulerRegistry.addCronJob/deleteCronJob`
+    - Estado persistido en `SystemSetting` key `irs_scheduler_active` (sobrevive reinicios)
+    - `OnModuleInit` restaura el estado del DB al arrancar NestJS
+    - 3 nuevos endpoints: `POST /v1/irs-monitor/scheduler/start`, `/stop`, `GET /status`
+    - Frontend: indicador 🟢/🔴 + botón Iniciar/Detener en el top bar del IRS Monitor
+    - Polling cada 30s para mantener el indicador sincronizado
+    - PM2 configurado (`pm2.config.js`) para correr el backend en background sin terminal
+    - Verificado en producción local: cron disparando a las :00/:30 NY time (= :00/:30 +1h Argentina)
+
+56. ✅ **IRS Monitor — Screenshot Hover Tooltip (v1.7)** - COMPLETADO
+    - Reemplazado botón "📸 Ver captura" (1 click) por hover directo sobre el resultado del check
+    - Tooltip fixed 820px de ancho aparece al pasar el mouse — suficiente para leer en desktop
+    - Carga lazy: la URL firmada se fetcha solo la primera vez que se hoverea ese check
+    - Queda cacheada en `mainScreenshotUrls` para hovers subsiguientes sin re-request
+    - Indicador 📸 sutil en la celda cuando el check tiene captura disponible
+    - Animación fade-in 120ms, se reposiciona automáticamente si está cerca del borde derecho
 
 ### ⏳ Pendiente (Próximas prioridades):
 
