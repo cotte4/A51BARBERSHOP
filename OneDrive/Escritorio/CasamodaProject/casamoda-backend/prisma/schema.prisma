@@ -1,0 +1,518 @@
+// Prisma schema - Casamoda Backend
+// Alineado al PRD v2.0 Division y Reposicion (seccion 9: Modelo de datos funcional).
+//
+// Nota: esta es la base Fase 0. El motor (DivisionProposal / AllocationLine)
+// y auth se refinan en Fase 1+. Aqui dejamos los modelos listos para no
+// romper datos cuando lleguen las fases siguientes.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================
+// Taxonomia de catalogo
+// ===========================
+
+model Group {
+  id         String     @id @default(cuid())
+  code       String     @unique
+  name       String
+  active     Boolean    @default(true)
+  categories Category[]
+  blockings  StoreBlockingRule[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@map("groups")
+}
+
+model Category {
+  id              String         @id @default(cuid())
+  code            String         @unique
+  name            String
+  groupId         String
+  group           Group          @relation(fields: [groupId], references: [id])
+  multiplo        Int            @default(1) // multiplo de carga por default (ej. 12 labiales)
+  myMaxBase       Int?           // tope logico por categoria x tienda (default)
+  tipos           TipoArticulo[]
+  blockings       StoreBlockingRule[]
+  salesScores    SalesScore[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([groupId])
+  @@map("categories")
+}
+
+model TipoArticulo {
+  id          String     @id @default(cuid())
+  code        String     @unique
+  name        String
+  categoryId  String
+  category    Category   @relation(fields: [categoryId], references: [id])
+  tieneTalle  Boolean    @default(false)
+  curvaDefault Json?     // estructura de curva default (talles estandar)
+  products    Product[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([categoryId])
+  @@map("tipo_articulos")
+}
+
+model Family {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String // proveedor
+  active    Boolean   @default(true)
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("families")
+}
+
+enum Equivalencia {
+  VERANO
+  ALTO_VERANO
+  INVIERNO
+  ALTO_INVIERNO
+  ATEMPORAL
+}
+
+enum ProductStatus {
+  ACTIVO
+  DISCONTINUADO
+  PILOTO
+}
+
+model Product {
+  id             String         @id @default(cuid())
+  sku            String         @unique
+  zeusId         String?        @unique
+  description    String
+  tipoArticuloId String
+  tipoArticulo   TipoArticulo   @relation(fields: [tipoArticuloId], references: [id])
+  familyId       String?
+  family         Family?        @relation(fields: [familyId], references: [id])
+  color          String?
+  talle          String?
+  equivalencia   Equivalencia   @default(ATEMPORAL)
+  price          Decimal?       @db.Decimal(12, 2)
+  cost           Decimal?       @db.Decimal(12, 2)
+  multiplo       Int?           // override sobre categoria
+  minimoBase     Int?           // minimo base por tienda (factor tienda se aplica luego)
+  maximoProducto Int?           // tope por SKU / tienda
+  status         ProductStatus  @default(ACTIVO)
+  stockSnapshots StockSnapshot[]
+  lotLines       LotLine[]
+  allocations    AllocationLine[]
+  mlScores       MlScoreSnapshot[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  lastSyncedAt   DateTime?      // marca de ultima sync con Zeus (export o API futura)
+
+  @@index([tipoArticuloId])
+  @@index([familyId])
+  @@index([equivalencia])
+  @@map("products")
+}
+
+// ===========================
+// Tiendas y bloqueos
+// ===========================
+
+enum StoreTier {
+  A
+  B
+  C
+}
+
+enum StoreCapacity {
+  NORMAL
+  LIMITADA
+  OUTLET
+}
+
+model Store {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  name          String
+  tier          StoreTier
+  factorTienda  Decimal   @db.Decimal(4, 2) // A=1.00, B=0.85, C=0.70
+  capacity      StoreCapacity @default(NORMAL)
+  esOutlet      Boolean   @default(false) // true solo para Luro por ahora
+  // Topes especificos por categoria (ej. Tandil, seccion 4.4)
+  maxCapacidadPorCategoria Json? // { categoryCode: int }
+  active        Boolean   @default(true)
+  blockingRules StoreBlockingRule[]
+  salesScores   SalesScore[]
+  stockSnapshots StockSnapshot[]
+  allocations   AllocationLine[]
+  mlScores      MlScoreSnapshot[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("stores")
+}
+
+enum BlockingStatus {
+  HABILITADO
+  BLOQUEADO
+}
+
+// Regla de bloqueo con granularidad: grupo, categoria o grupo+categoria.
+// Seccion 4.2 del PRD: matriz explicita de bloqueos por tienda.
+model StoreBlockingRule {
+  id         String         @id @default(cuid())
+  storeId    String
+  store      Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  groupId    String?
+  group      Group?         @relation(fields: [groupId], references: [id])
+  categoryId String?
+  category   Category?      @relation(fields: [categoryId], references: [id])
+  status     BlockingStatus @default(BLOQUEADO)
+  motivo     String?
+  vigenciaDesde DateTime?
+  vigenciaHasta DateTime?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@unique([storeId, groupId, categoryId])
+  @@index([storeId])
+  @@index([status])
+  @@map("store_blocking_rules")
+}
+
+// ===========================
+// Stock (espejo local de Zeus)
+// ===========================
+
+model StockSnapshot {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storeId    String?  // null = deposito central
+  store      Store?   @relation(fields: [storeId], references: [id])
+  cantidad   Int      @default(0)
+  source     String   // 'zeus-xlsx' | 'zeus-api' | 'manual' | 'mock'
+  takenAt    DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([productId])
+  @@index([storeId])
+  @@index([takenAt])
+  @@map("stock_snapshots")
+}
+
+// ===========================
+// Ingresos (lotes / facturas)
+// ===========================
+
+enum LotOrigen {
+  NACIONAL
+  IMPORTADO
+}
+
+enum LotTipo {
+  NUEVA
+  REPOSICION
+}
+
+model StockIngressLot {
+  id           String     @id @default(cuid())
+  lotCode      String     @unique
+  facturaRef   String?
+  fechaIngreso DateTime
+  origen       LotOrigen
+  tipo         LotTipo
+  creadoPor    String?    // userId (pendiente auth)
+  notas        String?
+  lines        LotLine[]
+  proposals    DivisionProposal[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("stock_ingress_lots")
+}
+
+model LotLine {
+  id        String          @id @default(cuid())
+  lotId     String
+  lot       StockIngressLot @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product         @relation(fields: [productId], references: [id])
+  cantidad  Int
+  multiplo  Int // captura del multiplo al momento del ingreso
+  createdAt DateTime        @default(now())
+
+  @@index([lotId])
+  @@index([productId])
+  @@map("lot_lines")
+}
+
+// ===========================
+// Motor: propuestas y asignaciones (Fase 1+)
+// ===========================
+
+enum ProposalEstado {
+  BORRADOR
+  VALIDADA
+  REQUIERE_EXCEPCION
+  PUBLICADA
+  DESCARTADA
+}
+
+model DivisionProposal {
+  id                  String             @id @default(cuid())
+  lotId               String
+  lot                 StockIngressLot    @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  estado              ProposalEstado     @default(BORRADOR)
+  resumenValidaciones Json?
+  generadoPor         String?
+  publicadoPor        String?
+  publicadaEn         DateTime?
+  allocations         AllocationLine[]
+  audits              AuditEvent[]
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([lotId])
+  @@index([estado])
+  @@map("division_proposals")
+}
+
+model AllocationLine {
+  id               String           @id @default(cuid())
+  proposalId       String
+  proposal         DivisionProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product          @relation(fields: [productId], references: [id])
+  storeId          String
+  store            Store            @relation(fields: [storeId], references: [id])
+  cantidadSugerida Int
+  cantidadAprobada Int?
+  score            Decimal?         @db.Decimal(8, 4)
+  flags            Json? // e.g. ["top3", "curva_incompleta"]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([proposalId])
+  @@index([productId])
+  @@index([storeId])
+  @@map("allocation_lines")
+}
+
+// ===========================
+// Scoring ventas por grupo+categoria+tienda
+// ===========================
+
+model SalesScore {
+  id              String   @id @default(cuid())
+  storeId         String
+  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  categoryId      String
+  category        Category @relation(fields: [categoryId], references: [id])
+  sellThrough90d  Decimal  @default(0) @db.Decimal(6, 4)
+  rotacion60d     Decimal  @default(0) @db.Decimal(6, 4)
+  quiebre30d      Decimal  @default(0) @db.Decimal(6, 4)
+  scoreCalculado  Decimal  @default(0) @db.Decimal(8, 4)
+  /// Dias de historia de ventas; con lote REPOSICION y valor <14 activa fallback sin_historial (PRD UAT #7).
+  diasHistorialVentas Int?
+  actualizado     DateTime @default(now())
+
+  @@unique([storeId, categoryId])
+  @@index([categoryId])
+  @@map("sales_scores")
+}
+
+// ===========================
+// Capa estadistica (forecast / score hibrido)
+// ===========================
+
+model MlScoreSnapshot {
+  id              String   @id @default(cuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storeId         String
+  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  horizonDays     Int      @default(14)
+  forecastDemand  Decimal  @default(0) @db.Decimal(10, 4)
+  mlScore         Decimal  @default(0) @db.Decimal(8, 4)
+  confidence      Decimal? @db.Decimal(5, 4)
+  modelVersion    String   @default("v0")
+  featureVersion  String?  // versionado de dataset/features usadas
+  source          String   @default("manual")
+  createdAt       DateTime @default(now())
+
+  @@unique([productId, storeId, horizonDays, modelVersion])
+  @@index([storeId, horizonDays])
+  @@index([productId, horizonDays])
+  @@index([createdAt])
+  @@map("ml_score_snapshots")
+}
+
+// ===========================
+// Directivas de dueñas (override)
+// ===========================
+
+enum DirectiveAlcance {
+  GLOBAL
+  GRUPO
+  CATEGORIA
+  TIENDA
+  TIENDA_CATEGORIA
+  SKU
+}
+
+model OwnerDirective {
+  id             String           @id @default(cuid())
+  alcance        DirectiveAlcance
+  targetStoreId  String?
+  targetGroupId  String?
+  targetCategoryId String?
+  targetProductId String?
+  valor          Json // estructura libre: { tipo: 'priorizar'|'no_mandar'|'forzar_cantidad', ... }
+  motivo         String
+  emisor         String // nombre/id de la duenia
+  vigenciaDesde  DateTime
+  vigenciaHasta  DateTime?
+  activa         Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([alcance, activa])
+  @@index([targetStoreId])
+  @@index([targetCategoryId])
+  @@map("owner_directives")
+}
+
+// ===========================
+// Auditoria
+// ===========================
+
+model AuditEvent {
+  id          String   @id @default(cuid())
+  proposalId  String?
+  proposal    DivisionProposal? @relation(fields: [proposalId], references: [id], onDelete: SetNull)
+  tipoEvento  String // 'propuesta.generada' | 'override.aplicado' | 'directiva.aplicada' | ...
+  payload     Json
+  actor       String?
+  timestamp   DateTime @default(now())
+
+  @@index([proposalId])
+  @@index([tipoEvento])
+  @@index([timestamp])
+  @@map("audit_events")
+}
+
+// ===========================
+// Alertas (Fase 4)
+// ===========================
+
+enum AlertTipo {
+  QUIEBRE
+  SOBRESTOCK
+  REPOSICION
+}
+
+enum AlertSeveridad {
+  BAJA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum AlertEstado {
+  ABIERTA
+  EN_REVISION
+  RESUELTA
+  IGNORADA
+}
+
+model Alert {
+  id          String         @id @default(cuid())
+  tipo        AlertTipo
+  severidad   AlertSeveridad
+  estado      AlertEstado    @default(ABIERTA)
+  storeId     String?
+  categoryId  String?
+  productId   String?
+  mensaje     String
+  datos       Json?
+  resueltoPor String?
+  resueltoEn  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([tipo, estado])
+  @@index([storeId])
+  @@map("alerts")
+}
+
+// ===========================
+// Auth minimo (Fase 0 placeholder)
+// ===========================
+
+enum UserRole {
+  ENCARGADO
+  DUENIA
+  ADMIN
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  role         UserRole
+  passwordHash String?
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("users")
+}
+
+// ===========================
+// Ingesta Zeus (staging)
+// ===========================
+
+enum IngestionKind {
+  CATALOGO
+  STOCK
+  VENTAS
+  INGRESOS
+  OTRO
+}
+
+enum IngestionStatus {
+  SUBIDO
+  PARSEADO
+  VALIDADO
+  APLICADO
+  ERROR
+}
+
+model IngestionUpload {
+  id          String          @id @default(cuid())
+  kind        IngestionKind
+  filename    String
+  sizeBytes   Int
+  status      IngestionStatus @default(SUBIDO)
+  rowsTotal   Int?
+  rowsOk      Int?
+  rowsError   Int?
+  errorLog    Json?
+  summary     Json?
+  uploadedBy  String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([kind, status])
+  @@map("ingestion_uploads")
+}
