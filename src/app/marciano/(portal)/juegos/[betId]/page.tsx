@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { clients, ovnisBets, ovnisGames } from "@/db/schema";
 import { requireMarcianoClient } from "@/lib/marciano-portal";
 import { formatOvnis } from "@/lib/ovnis";
+import { refundExpiredBet } from "@/lib/ovnis-bets";
 import ClaimResultPanel from "./_ClaimResultPanel";
 import AcceptButton from "./_AcceptButton";
 import RejectButton from "./_RejectButton";
@@ -75,31 +76,42 @@ export default async function BetDetailPage({
   const challengers = aliasedTable(clients, "challengers");
   const opponents = aliasedTable(clients, "opponents");
 
-  const [bet] = await db
-    .select({
-      id: ovnisBets.id,
-      amount: ovnisBets.amount,
-      status: ovnisBets.status,
-      challengerId: ovnisBets.challengerId,
-      opponentId: ovnisBets.opponentId,
-      challengerClaim: ovnisBets.challengerClaim,
-      opponentClaim: ovnisBets.opponentClaim,
-      claimAttempts: ovnisBets.claimAttempts,
-      createdAt: ovnisBets.createdAt,
-      acceptanceExpiresAt: ovnisBets.acceptanceExpiresAt,
-      challengerName: challengers.name,
-      opponentName: opponents.name,
-      gameName: ovnisGames.nombre,
-      externalUrl: ovnisGames.externalUrl,
-    })
-    .from(ovnisBets)
-    .innerJoin(challengers, eq(ovnisBets.challengerId, challengers.id))
-    .innerJoin(opponents, eq(ovnisBets.opponentId, opponents.id))
-    .innerJoin(ovnisGames, eq(ovnisBets.gameId, ovnisGames.id))
-    .where(eq(ovnisBets.id, betId))
-    .limit(1);
+  const betQuery = () =>
+    db
+      .select({
+        id: ovnisBets.id,
+        amount: ovnisBets.amount,
+        status: ovnisBets.status,
+        challengerId: ovnisBets.challengerId,
+        opponentId: ovnisBets.opponentId,
+        challengerClaim: ovnisBets.challengerClaim,
+        opponentClaim: ovnisBets.opponentClaim,
+        claimAttempts: ovnisBets.claimAttempts,
+        createdAt: ovnisBets.createdAt,
+        acceptanceExpiresAt: ovnisBets.acceptanceExpiresAt,
+        challengerName: challengers.name,
+        opponentName: opponents.name,
+        gameName: ovnisGames.nombre,
+        externalUrl: ovnisGames.externalUrl,
+      })
+      .from(ovnisBets)
+      .innerJoin(challengers, eq(ovnisBets.challengerId, challengers.id))
+      .innerJoin(opponents, eq(ovnisBets.opponentId, opponents.id))
+      .innerJoin(ovnisGames, eq(ovnisBets.gameId, ovnisGames.id))
+      .where(eq(ovnisBets.id, betId))
+      .limit(1);
+
+  let [bet] = await betQuery();
 
   if (!bet) notFound();
+
+  if (bet.status === "pending" && bet.acceptanceExpiresAt < new Date()) {
+    const { refunded } = await refundExpiredBet(bet.id);
+    if (refunded) {
+      [bet] = await betQuery();
+      if (!bet) notFound();
+    }
+  }
 
   const isChallenger = bet.challengerId === client.id;
   const isOpponent = bet.opponentId === client.id;

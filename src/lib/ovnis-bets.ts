@@ -370,49 +370,54 @@ export async function adminResolveDispute(input: {
 
 // ─── Cron jobs ────────────────────────────────────────────────────────────────
 
+export async function refundExpiredBet(betId: string): Promise<{ refunded: boolean }> {
+  let didRefund = false;
+
+  await db.transaction(async (tx) => {
+    const [bet] = await tx
+      .select()
+      .from(ovnisBets)
+      .where(
+        and(
+          eq(ovnisBets.id, betId),
+          eq(ovnisBets.status, "pending"),
+          lt(ovnisBets.acceptanceExpiresAt, new Date())
+        )
+      )
+      .limit(1)
+      .for("update");
+
+    if (!bet) return;
+
+    await unlockOvnisForBet(tx, {
+      clientId: bet.challengerId,
+      amount: bet.amount,
+      betId: bet.id,
+      type: "bet_refund",
+    });
+
+    await tx
+      .update(ovnisBets)
+      .set({ status: "refunded", resolvedAt: new Date() })
+      .where(eq(ovnisBets.id, bet.id));
+
+    didRefund = true;
+  });
+
+  return { refunded: didRefund };
+}
+
 export async function refundUnacceptedBets(): Promise<{ refunded: number }> {
   const expiredBets = await db
-    .select()
+    .select({ id: ovnisBets.id })
     .from(ovnisBets)
     .where(and(eq(ovnisBets.status, "pending"), lt(ovnisBets.acceptanceExpiresAt, new Date())));
 
   let refunded = 0;
 
   for (const expiredBet of expiredBets) {
-    let didRefund = false;
-
-    await db.transaction(async (tx) => {
-      const [bet] = await tx
-        .select()
-        .from(ovnisBets)
-        .where(
-          and(
-            eq(ovnisBets.id, expiredBet.id),
-            eq(ovnisBets.status, "pending"),
-            lt(ovnisBets.acceptanceExpiresAt, new Date())
-          )
-        )
-        .limit(1)
-        .for("update");
-
-      if (!bet) return;
-
-      await unlockOvnisForBet(tx, {
-        clientId: bet.challengerId,
-        amount: bet.amount,
-        betId: bet.id,
-        type: "bet_refund",
-      });
-
-      await tx
-        .update(ovnisBets)
-        .set({ status: "refunded", resolvedAt: new Date() })
-        .where(eq(ovnisBets.id, bet.id));
-
-      didRefund = true;
-    });
-
-    if (didRefund) refunded++;
+    const result = await refundExpiredBet(expiredBet.id);
+    if (result.refunded) refunded++;
   }
 
   return { refunded };

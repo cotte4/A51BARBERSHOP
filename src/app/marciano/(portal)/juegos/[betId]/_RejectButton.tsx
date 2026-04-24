@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { rechazarApuestaAction } from "../actions";
 
 export default function RejectButton({ betId }: { betId: string }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -13,8 +15,10 @@ export default function RejectButton({ betId }: { betId: string }) {
     const result = await rechazarApuestaAction(betId);
     if (!result.success) {
       setError(result.error);
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+    router.refresh();
   }
 
   return (
