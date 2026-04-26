@@ -111,7 +111,9 @@ export default async function HangarPage({
     };
   });
 
-  const filteredAssets = assetRows.filter((asset) => {
+  const activeAssetRows = assetRows.filter((asset) => asset.estado !== "dado_de_baja");
+
+  const filteredAssets = activeAssetRows.filter((asset) => {
     if (categoria && asset.categoria !== categoria) return false;
     if (estado && asset.financials.estadoCompra !== estado) return false;
     return true;
@@ -141,10 +143,10 @@ export default async function HangarPage({
     .reduce((sum, movement) => sum + Number(movement.monto ?? 0), 0);
   const capitalBase = totalAportado - totalRetirado;
   const capitalDisponible = capitalBase - totalInvertido;
-  const totalComprometido = assetRows.reduce((sum, asset) => sum + asset.financials.pending, 0);
-  const totalTarget = assetRows.reduce((sum, asset) => sum + asset.financials.target, 0);
-  const totalActivos = assetRows.filter((asset) => asset.estado === "activo").length;
-  const comprasRecientes = assetRows.slice(0, 4);
+  const totalComprometido = activeAssetRows.reduce((sum, asset) => sum + asset.financials.pending, 0);
+  const totalTarget = activeAssetRows.reduce((sum, asset) => sum + asset.financials.target, 0);
+  const totalActivos = activeAssetRows.length;
+  const comprasRecientes = activeAssetRows.slice(0, 4);
   const costosFijosMes = costosMes.reduce((sum, item) => sum + Number(item.monto ?? 0), 0);
 
   return (

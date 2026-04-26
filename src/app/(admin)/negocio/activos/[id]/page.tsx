@@ -10,11 +10,14 @@ import {
   getAssetFinancials,
   getEstadoCompraLabel,
   getPaymentTypeLabel,
+  HANGAR_ASSET_CATEGORIAS,
 } from "@/lib/hangar";
 import { formatARS } from "@/lib/format";
 import { formatFecha } from "@/lib/fecha";
 import DarDeBajaButton from "../_DarDeBajaButton";
+import EliminarAssetButton from "../_EliminarAssetButton";
 import RegistrarPagoForm from "./_RegistrarPagoForm";
+import { cambiarCategoriaAssetAction } from "../actions";
 
 function getEstadoTone(estado: string) {
   switch (estado) {
@@ -132,7 +135,10 @@ export default async function HangarAssetDetailPage({
               </div>
             </div>
 
-            {isActive ? <DarDeBajaButton assetId={asset.id} /> : null}
+            <div className="flex flex-wrap gap-2">
+              {isActive ? <DarDeBajaButton assetId={asset.id} /> : null}
+              {payments.length === 0 ? <EliminarAssetButton assetId={asset.id} /> : null}
+            </div>
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -177,6 +183,32 @@ export default async function HangarAssetDetailPage({
                   <p className="mt-2 text-sm leading-6 text-zinc-300">{asset.notas}</p>
                 </div>
               ) : null}
+
+              <form
+                action={cambiarCategoriaAssetAction.bind(null, asset.id)}
+                className="mt-4 flex items-end gap-3"
+              >
+                <div className="flex-1">
+                  <label className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                    Mover categoría
+                  </label>
+                  <select
+                    name="categoria"
+                    defaultValue={asset.categoria ?? ""}
+                    className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-[#8cff59]/60 focus:outline-none"
+                  >
+                    {HANGAR_ASSET_CATEGORIAS.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  className="ghost-button rounded-[16px] px-4 py-2 text-sm font-semibold"
+                >
+                  Mover
+                </button>
+              </form>
             </section>
 
             <section className="panel-card rounded-[28px] p-5">

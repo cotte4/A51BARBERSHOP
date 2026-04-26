@@ -87,11 +87,7 @@ export function getAssetFinancials(params: {
   );
   const fallbackState = (params.estadoCompra as HangarAssetEstadoCompra | null) ?? null;
   const paid = clampMoney(
-    params.paymentCount && params.paymentCount > 0
-      ? params.totalPaid ?? 0
-      : fallbackState === "planificado" || fallbackState === "cancelado"
-        ? 0
-        : target
+    params.paymentCount && params.paymentCount > 0 ? params.totalPaid ?? 0 : 0
   );
   const pending = clampMoney(Math.max(target - paid, 0));
   const progress = target > 0 ? Math.min(100, Math.round((paid / target) * 100)) : 0;

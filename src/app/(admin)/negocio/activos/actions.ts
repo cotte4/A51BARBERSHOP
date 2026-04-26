@@ -246,3 +246,40 @@ export async function darDeBajaAssetAction(assetId: string) {
 
   revalidateHangar(assetId);
 }
+
+export async function cambiarCategoriaAssetAction(
+  assetId: string,
+  formData: FormData
+): Promise<void> {
+  const isAdmin = await requireAdminSession();
+  if (!isAdmin) return;
+
+  const categoria = (formData.get("categoria") as string | null)?.trim();
+  if (!ASSET_CATEGORIAS.includes(categoria as AssetCategoria)) return;
+
+  await db
+    .update(barberShopAssets)
+    .set({ categoria: categoria as AssetCategoria })
+    .where(eq(barberShopAssets.id, assetId));
+
+  revalidateHangar(assetId);
+}
+
+export async function eliminarAssetAction(assetId: string): Promise<{ error?: string }> {
+  const isAdmin = await requireAdminSession();
+  if (!isAdmin) return { error: "No autorizado" };
+
+  const paymentCount = await db
+    .select()
+    .from(barberShopAssetPayments)
+    .where(eq(barberShopAssetPayments.assetId, assetId));
+
+  if (paymentCount.length > 0) {
+    return { error: "No se puede eliminar un activo con pagos registrados." };
+  }
+
+  await db.delete(barberShopAssets).where(eq(barberShopAssets.id, assetId));
+
+  revalidateHangar();
+  return {};
+}
