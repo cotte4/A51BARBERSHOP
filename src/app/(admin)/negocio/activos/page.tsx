@@ -18,6 +18,7 @@ import {
   getEstadoCompraLabel,
   HANGAR_ASSET_CATEGORIAS,
 } from "@/lib/hangar";
+import SimuladorHangar from "./_SimuladorHangar";
 
 function getMesActualArgentina() {
   return new Date().toLocaleDateString("en-CA", {
@@ -62,7 +63,7 @@ function getCategoryTone(category: string) {
 export default async function HangarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ categoria?: string; estado?: string }>;
+  searchParams: Promise<{ categoria?: string; estado?: string; sim?: string }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string } | undefined)?.role;
@@ -70,7 +71,7 @@ export default async function HangarPage({
     redirect("/caja");
   }
 
-  const { categoria, estado } = await searchParams;
+  const { categoria, estado, sim } = await searchParams;
   const mesActual = getMesActualArgentina();
 
   const [assets, payments, capitalRows, costosMes] = await Promise.all([
@@ -149,6 +150,18 @@ export default async function HangarPage({
   const comprasRecientes = activeAssetRows.slice(0, 4);
   const costosFijosMes = costosMes.reduce((sum, item) => sum + Number(item.monto ?? 0), 0);
 
+  if (sim === "1") {
+    const simAssets = activeAssetRows.map((a) => ({
+      id: a.id,
+      nombre: a.nombre,
+      categoria: a.categoria ?? "Otros",
+      financials: a.financials,
+    }));
+    return (
+      <SimuladorHangar assets={simAssets} capitalDisponible={capitalDisponible} />
+    );
+  }
+
   return (
     <div className="app-shell min-h-screen pb-24">
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -213,12 +226,20 @@ export default async function HangarPage({
                     <p className="eyebrow text-xs font-semibold">Pulso actual</p>
                     <h2 className="mt-2 text-xl font-semibold text-white">Compras recientes</h2>
                   </div>
-                  <Link
-                    href="/negocio/activos/nuevo"
-                    className="neon-button inline-flex min-h-[42px] items-center rounded-[16px] px-4 text-sm font-semibold"
-                  >
-                    + Nuevo activo
-                  </Link>
+                  <div className="flex gap-2">
+                    <Link
+                      href="/negocio/activos?sim=1"
+                      className="ghost-button inline-flex min-h-[42px] items-center rounded-[16px] px-4 text-sm font-semibold"
+                    >
+                      Simular
+                    </Link>
+                    <Link
+                      href="/negocio/activos/nuevo"
+                      className="neon-button inline-flex min-h-[42px] items-center rounded-[16px] px-4 text-sm font-semibold"
+                    >
+                      + Nuevo activo
+                    </Link>
+                  </div>
                 </div>
 
                 <div className="mt-4 space-y-3">
