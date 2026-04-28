@@ -19,6 +19,7 @@
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
+    "test:integration": "vitest run src/tests/integration",
     "db:seed": "tsx src/db/seed.ts",
     "db:seed:activity": "tsx src/db/seed-activity.ts",
     "db:seed:golive": "tsx src/db/seed-go-live.ts",
@@ -57,6 +58,7 @@
     "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.58.1",
     "@typescript-eslint/parser": "^8.58.1",
+    "@vitest/coverage-v8": "^4.1.5",
     "ajv": "^8.18.0",
     "drizzle-kit": "^0.31.10",
     "es-abstract": "^1.24.2",
@@ -68,6 +70,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",
-    "typescript-eslint": "^8.58.1"
+    "typescript-eslint": "^8.58.1",
+    "vitest": "^4.1.5"
   }
 }
