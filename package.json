@@ -20,6 +20,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "test:integration": "vitest run src/tests/integration",
+    "test:e2e": "playwright test --config src/tests/e2e/playwright.config.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:seed:activity": "tsx src/db/seed-activity.ts",
     "db:seed:golive": "tsx src/db/seed-go-live.ts",
@@ -50,6 +51,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
     "@next/eslint-plugin-next": "^16.2.2",
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
