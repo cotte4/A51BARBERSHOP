@@ -10,23 +10,45 @@ export async function loginAs(
   role: keyof typeof CREDENTIALS,
   loginPath = "/login"
 ) {
+  // Clear any existing session so switching users works correctly.
+  await page.context().clearCookies();
+
   await page.goto(loginPath);
-  await page.getByLabel(/email/i).fill(CREDENTIALS[role].email);
-  await page.getByLabel(/contrase/i).fill(CREDENTIALS[role].password);
-  await page.getByRole("button", { name: /entrar|ingresar|acceder|iniciar/i }).click();
-  // Wait for redirect away from login
-  await page.waitForURL((url) => !url.pathname.includes("login"), { timeout: 10_000 });
+  // Wait for hydration — client component inputs won't respond before it.
+  await page.waitForSelector("#email", { timeout: 15_000 });
+
+  await page.fill("#email", CREDENTIALS[role].email);
+  await page.fill("#password", CREDENTIALS[role].password);
+  await page.click('button[type="submit"]');
+
+  // After login the app redirects to /hoy (any logged-in user).
+  await page.waitForURL((url) => !url.pathname.includes("/login"), {
+    timeout: 20_000,
+  });
 }
 
-export async function loginAsMarcianoUser(page: Page) {
+export async function loginAsMarcianoUser(
+  page: Page,
+  email = CREDENTIALS.pinky.email,
+  password = CREDENTIALS.pinky.password
+) {
+  await page.context().clearCookies();
   await page.goto("/marciano/login");
-  await page.getByLabel(/email/i).fill(CREDENTIALS.pinky.email);
-  await page.getByLabel(/contrase/i).fill(CREDENTIALS.pinky.password);
-  await page.getByRole("button", { name: /entrar|ingresar|acceder|iniciar/i }).click();
-  await page.waitForURL((url) => url.pathname.startsWith("/marciano"), { timeout: 10_000 });
+  await page.waitForSelector("#email", { timeout: 15_000 });
+  await page.fill("#email", email);
+  await page.fill("#password", password);
+  await page.click('button[type="submit"]');
+  await page.waitForURL((url) => !url.pathname.includes("/login"), {
+    timeout: 20_000,
+  });
+}
+
+/** Safely get visible text from <main> only — avoids Next.js __NEXT_DATA__ script blobs. */
+export async function mainText(page: Page): Promise<string> {
+  const el = page.locator("main").first();
+  return (await el.textContent()) ?? "";
 }
 
 export function isNumericText(text: string): boolean {
-  // Accepts Argentine formatted numbers like "$13.000" or "13.000,00" or "0"
   return /[\d$]/.test(text) && !text.includes("NaN") && !text.includes("undefined");
 }

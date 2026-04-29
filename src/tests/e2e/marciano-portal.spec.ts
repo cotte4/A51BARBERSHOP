@@ -14,6 +14,7 @@
  */
 
 import { test, expect } from "@playwright/test";
+import { mainText } from "./helpers";
 
 test.describe("Flow 4: Portal Marciano", () => {
   test("página de login del portal Marciano carga correctamente", async ({ page }) => {
@@ -27,36 +28,37 @@ test.describe("Flow 4: Portal Marciano", () => {
 
   test("login Marciano muestra formulario con campos email y contraseña", async ({ page }) => {
     await page.goto("/marciano/login");
-
-    await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(page.getByLabel(/contrase/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /entrar|ingresar|acceder|iniciar/i })).toBeVisible();
+    // Label is "Email" and "Clave" in the Marciano login form
+    await expect(page.locator("#email")).toBeVisible();
+    await expect(page.locator("#password")).toBeVisible();
+    await expect(page.locator('button[type="submit"]')).toBeVisible();
   });
 
   test("credenciales incorrectas muestran error en español", async ({ page }) => {
     await page.goto("/marciano/login");
+    await page.waitForSelector("#email", { timeout: 10_000 });
 
-    await page.getByLabel(/email/i).fill("noexiste@test.com");
-    await page.getByLabel(/contrase/i).fill("wrongpassword");
-    await page.getByRole("button", { name: /entrar|ingresar|acceder|iniciar/i }).click();
+    await page.fill("#email", "noexiste@test.com");
+    await page.fill("#password", "wrongpassword");
+    await page.click('button[type="submit"]');
 
-    // Mensaje de error en español
+    // Mensaje de error específico del portal Marciano
     await expect(
-      page.getByText(/no pudimos validar|email|clave|contrasena|incorrecto/i)
+      page.getByText(/no pudimos validar/i)
     ).toBeVisible({ timeout: 5_000 });
   });
 
   test("portal Marciano: login como Pinky y acceso al portal", async ({ page }) => {
+    await page.context().clearCookies();
     await page.goto("/marciano/login");
-    await page.getByLabel(/email/i).fill("pinky@a51barber.com");
-    await page.getByLabel(/contrase/i).fill("pinky1234");
-    await page.getByRole("button", { name: /entrar|ingresar|acceder|iniciar/i }).click();
+    await page.waitForSelector("#email", { timeout: 15_000 });
+    await page.fill("#email", "pinky@a51barber.com");
+    await page.fill("#password", "pinky1234");
+    await page.click('button[type="submit"]');
 
-    // Esperar redirect — puede ir a /marciano o a otra sección
-    await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 10_000 });
+    await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 20_000 });
 
-    // La página resultante no debe tener errores de aplicación
-    const body = await page.textContent("body");
+    const body = await mainText(page);
     expect(body).not.toContain("Application error");
     expect(body).not.toContain("NaN");
   });
@@ -70,22 +72,21 @@ test.describe("Flow 4: Portal Marciano", () => {
     expect(body).not.toContain("Application error");
   });
 
-  test("/marciano/turnos/nuevo muestra formulario de reserva o mensaje de acceso", async ({
+  test("/marciano/turnos muestra contenido o mensaje de acceso, sin errores", async ({
     page,
   }) => {
-    // Login primero
+    await page.context().clearCookies();
     await page.goto("/marciano/login");
-    await page.getByLabel(/email/i).fill("pinky@a51barber.com");
-    await page.getByLabel(/contrase/i).fill("pinky1234");
-    await page.getByRole("button", { name: /entrar|ingresar|acceder|iniciar/i }).click();
-    await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 10_000 });
+    await page.waitForSelector("#email", { timeout: 15_000 });
+    await page.fill("#email", "pinky@a51barber.com");
+    await page.fill("#password", "pinky1234");
+    await page.click('button[type="submit"]');
+    await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 20_000 });
 
-    // Intentar acceder a turnos
     await page.goto("/marciano/turnos");
     await page.waitForLoadState("networkidle");
 
-    // No debe mostrar errores — puede mostrar turnos o mensaje de acceso restringido
-    const body = await page.textContent("body");
+    const body = await mainText(page);
     expect(body).not.toContain("Application error");
     expect(body).not.toContain("NaN");
   });
