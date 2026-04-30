@@ -298,7 +298,7 @@ export default function RoleBottomNav({
   if (isAsesor) {
     const asesorItems = getAsesorNavItems();
     return (
-      <nav className="fixed inset-x-0 bottom-4 z-30 px-3 sm:px-4">
+      <nav className="fixed inset-x-0 bottom-4 z-30 px-3 pb-[env(safe-area-inset-bottom,0px)] sm:px-4">
         <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
           <div className="grid grid-cols-4 gap-1">
             {asesorItems.map((item) => {
@@ -326,7 +326,7 @@ export default function RoleBottomNav({
 
   if (isAdmin) {
     return (
-      <nav className="fixed inset-x-0 bottom-4 z-30 px-3 sm:px-4">
+      <nav className="fixed inset-x-0 bottom-4 z-30 px-3 pb-[env(safe-area-inset-bottom,0px)] sm:px-4">
         <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
           <div className="flex items-center gap-1">
             {/* Grupo izquierdo — Operación del día */}
@@ -380,7 +380,7 @@ export default function RoleBottomNav({
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-4 z-30 px-3 sm:px-4">
+    <nav className="fixed inset-x-0 bottom-4 z-30 px-3 pb-[env(safe-area-inset-bottom,0px)] sm:px-4">
       <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
         <div className="grid grid-cols-5 gap-1">
           {BARBERO_NAV_ITEMS.map((item) => {

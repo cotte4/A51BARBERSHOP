@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Rajdhani, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast";
+import { RouterProgress } from "@/components/ui/RouterProgress";
 
 const bodyFont = Inter({
   variable: "--font-body",
@@ -22,6 +23,12 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   title: "A51 Barber Shop",
   description: "Base de control interna para la operacion diaria de A51 Barber Shop",
@@ -41,6 +48,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="min-h-full flex flex-col">
+        <RouterProgress />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

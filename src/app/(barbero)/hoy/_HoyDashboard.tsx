@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import FullScreenOverlay from "@/components/ui/FullScreenOverlay";
+import { PullToRefresh } from "@/components/ui/PullToRefresh";
 import QuickCheckoutPanel from "@/components/caja/QuickCheckoutPanel";
 import TurnosPendientesInbox, { type TurnoConAcciones } from "./_TurnosPendientesInbox";
 import { formatARS } from "@/lib/format";
@@ -197,6 +198,7 @@ export default function HoyDashboard({
 
   return (
     <>
+      <PullToRefresh />
       <div className="flex h-[calc(100svh-9rem)] min-h-[480px] flex-col overflow-hidden">
         {/* Top bar */}
         <div className="flex shrink-0 items-center justify-between border-b border-zinc-800/60 px-4 py-3">

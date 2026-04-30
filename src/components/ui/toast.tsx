@@ -140,6 +140,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       // Keep at most 3 visible — drop the oldest when a 4th arrives
       return next.length > 3 ? next.slice(next.length - 3) : next;
     });
+    navigator.vibrate?.(50); // 50ms haptic pulse on mobile
 
     // Auto-dismiss after 3500ms
     setTimeout(() => {
