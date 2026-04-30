@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import FullScreenOverlay from "@/components/ui/FullScreenOverlay";
 import QuickCheckoutPanel from "@/components/caja/QuickCheckoutPanel";
@@ -46,6 +47,14 @@ function getEstadoLabel(estado: string) {
   if (estado === "pendiente") return "Pendiente";
   if (estado === "completado") return "Completado";
   return estado;
+}
+
+function RefreshIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+  );
 }
 
 function BoltIcon() {
@@ -179,6 +188,7 @@ export default function HoyDashboard({
   registrarAction,
   marcianosTurnos,
 }: Props) {
+  const router = useRouter();
   const [showCobrar, setShowCobrar] = useState(false);
   const [showTurnos, setShowTurnos] = useState(false);
 
@@ -202,6 +212,14 @@ export default function HoyDashboard({
             <span className="rounded-full border border-zinc-800 bg-zinc-900/60 px-2.5 py-1 text-xs font-semibold text-zinc-300">
               {atencionesCount} {atencionesCount === 1 ? "atención" : "atenciones"}
             </span>
+            <button
+              type="button"
+              aria-label="Actualizar"
+              onClick={() => router.refresh()}
+              className="rounded-full p-2 text-zinc-400 hover:text-[#8cff59] hover:bg-white/5 transition-colors"
+            >
+              <RefreshIcon />
+            </button>
           </div>
         </div>
 

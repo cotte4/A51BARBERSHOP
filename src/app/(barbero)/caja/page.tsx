@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { and, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { Suspense } from "react";
+import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import AnularButton from "@/components/caja/AnularButton";
 import QuickCheckoutPanel from "@/components/caja/QuickCheckoutPanel";
 import GastoRapidoFAB from "@/components/gastos-rapidos/GastoRapidoFAB";
@@ -33,6 +34,7 @@ import {
   AtencionDisclosureCard,
   MovementDisclosureCard,
 } from "./_components/DisclosureCards";
+import { BarberMonthlyStats } from "./_components/_BarberMonthlyStats";
 import {
   anularAtencion,
   registrarAtencionExpressAction,
@@ -267,60 +269,6 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
   const [anio, mes] = hoyStr.split("-");
   const inicioDeMes = `${anio}-${mes}-01`;
   const finDeMes = hoyStr;
-
-  let cortesDelMes = 0;
-  let brutoDelMes = 0;
-  let comisionDelMes = 0;
-  let alquilerMensual = 0;
-  let netoProyectado = 0;
-  let posicionRanking = 0;
-  let totalBarberosRanking = 0;
-
-  if (!isAdmin && barberoDelUsuario) {
-    const atencionesDelMes = await db
-      .select()
-      .from(atenciones)
-      .where(
-        and(
-          eq(atenciones.barberoId, barberoDelUsuario.id),
-          eq(atenciones.anulado, false),
-          gte(atenciones.fecha, inicioDeMes),
-          lte(atenciones.fecha, finDeMes)
-        )
-      );
-
-    cortesDelMes = atencionesDelMes.length;
-    brutoDelMes = atencionesDelMes.reduce(
-      (sum, atencion) => sum + Number(atencion.precioCobrado ?? 0),
-      0
-    );
-    comisionDelMes = atencionesDelMes.reduce(
-      (sum, atencion) => sum + Number(atencion.comisionBarberoMonto ?? 0),
-      0
-    );
-    alquilerMensual = 0;
-    netoProyectado = comisionDelMes;
-
-    const cortesPorBarberoRaw = await db
-      .select({
-        barberoId: atenciones.barberoId,
-        cortes: count(atenciones.id),
-      })
-      .from(atenciones)
-      .where(
-        and(
-          eq(atenciones.anulado, false),
-          gte(atenciones.fecha, inicioDeMes),
-          lte(atenciones.fecha, finDeMes)
-        )
-      )
-      .groupBy(atenciones.barberoId);
-
-    cortesPorBarberoRaw.sort((a, b) => b.cortes - a.cortes);
-    posicionRanking =
-      cortesPorBarberoRaw.findIndex((item) => item.barberoId === barberoDelUsuario.id) + 1;
-    totalBarberosRanking = cortesPorBarberoRaw.length;
-  }
 
 
   const cardsResumen = [
@@ -795,47 +743,14 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
               </div>
             </section>
 
-            {!isAdmin && barberoDelUsuario ? (
-              <section className="panel-card rounded-[30px] p-5">
-                <p className="eyebrow text-xs font-semibold">Mi mes</p>
-                <h2 className="font-display mt-2 text-xl font-semibold text-white">
-                  Performance acumulada
-                </h2>
-                <p className="mt-1 text-sm text-zinc-400">
-                  {new Date(`${inicioDeMes}T12:00:00`).toLocaleDateString('es-AR', {
-                    month: 'long',
-                    year: 'numeric',
-                    timeZone: 'America/Argentina/Buenos_Aires',
-                  })}
-                </p>
-
-                <div className="mt-4 space-y-3">
-                  <MetricRow label="Cortes este mes" value={String(cortesDelMes)} />
-                  {posicionRanking > 0 ? (
-                    <MetricRow
-                      label="Ranking"
-                      value={`#${posicionRanking} de ${totalBarberosRanking}`}
-                    />
-                  ) : null}
-                  <MetricRow label="Bruto acumulado" value={formatARS(brutoDelMes)} />
-                  <MetricRow
-                    label={`Mi comision (${barberoDelUsuario.porcentajeComision ?? 0}%)`}
-                    value={formatARS(comisionDelMes)}
-                  />
-                  {alquilerMensual > 0 ? (
-                    <MetricRow
-                      label="Alquiler mensual"
-                      value={`-${formatARS(alquilerMensual)}`}
-                      valueClassName="text-red-300"
-                    />
-                  ) : null}
-                  <MetricRow
-                    label="Neto proyectado"
-                    value={formatARS(Math.max(0, netoProyectado))}
-                    strong
-                  />
-                </div>
-              </section>
+            {!isAdmin && actor?.barberoId ? (
+              <Suspense fallback={<BarberMonthlySkeleton />}>
+                <BarberMonthlyStats
+                  barberoId={actor.barberoId}
+                  inicioDeMes={inicioDeMes}
+                  finDeMes={finDeMes}
+                />
+              </Suspense>
             ) : null}
 
             <section
@@ -909,6 +824,28 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
         ) : null}
       </div>
     </main>
+  );
+}
+
+function BarberMonthlySkeleton() {
+  return (
+    <div className="panel-card animate-pulse rounded-[30px] p-5">
+      <div className="h-3 w-16 rounded-full bg-zinc-800/50" />
+      <div className="mt-3 h-5 w-48 rounded-full bg-zinc-800/50" />
+      <div className="mt-2 h-3 w-28 rounded-full bg-zinc-800/50" />
+      <div className="mt-4 space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-center justify-between rounded-[22px] bg-zinc-950/35 px-4 py-3">
+            <div className="h-3 w-32 rounded-full bg-zinc-800/50" />
+            <div className="h-4 w-20 rounded-full bg-zinc-800/50" />
+          </div>
+        ))}
+        <div className="flex items-center justify-between rounded-[22px] bg-zinc-800/30 px-4 py-3">
+          <div className="h-3 w-28 rounded-full bg-zinc-700/50" />
+          <div className="h-4 w-24 rounded-full bg-zinc-700/50" />
+        </div>
+      </div>
+    </div>
   );
 }
 

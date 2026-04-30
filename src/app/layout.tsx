@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Rajdhani, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ToastProvider } from "@/components/ui/toast";
 
 const bodyFont = Inter({
   variable: "--font-body",
@@ -36,7 +37,12 @@ export default function RootLayout({
       lang="en"
       className={`${bodyFont.variable} ${displayFont.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+      </head>
+      <body className="min-h-full flex flex-col">
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }
