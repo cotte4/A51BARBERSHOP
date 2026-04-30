@@ -148,6 +148,9 @@ export default function TurnoCard({
   const [shouldRenderDetails, setShouldRenderDetails] = useState(false);
   const [cobrarServicioId, setCobrarServicioId] = useState(turno.servicioNombre ? "" : "");
   const [cobrarPrecio, setCobrarPrecio] = useState(turno.precioEsperado ?? "");
+  const [localEstado, setLocalEstado] = useState<TurnoSummary["estado"]>(turno.estado);
+  const prevConfirmPendingRef = useRef(false);
+  const prevRejectPendingRef = useRef(false);
   const [confirmState, confirmFormAction, confirmPending] = useActionState(
     confirmarAction,
     initialState
@@ -165,6 +168,26 @@ export default function TurnoCard({
     initialState
   );
   const dispatchedSuccessRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    setLocalEstado(turno.estado);
+  }, [turno.estado]);
+
+  useEffect(() => {
+    if (prevConfirmPendingRef.current && !confirmPending && !confirmState.error) {
+      setLocalEstado("confirmado");
+      window.dispatchEvent(new CustomEvent("a51:toast", { detail: { tone: "success", message: "Turno confirmado." } }));
+    }
+    prevConfirmPendingRef.current = confirmPending;
+  }, [confirmPending, confirmState.error]);
+
+  useEffect(() => {
+    if (prevRejectPendingRef.current && !rejectPending && !rejectState.error) {
+      setLocalEstado("cancelado");
+      window.dispatchEvent(new CustomEvent("a51:toast", { detail: { tone: "info", message: "Turno cancelado." } }));
+    }
+    prevRejectPendingRef.current = rejectPending;
+  }, [rejectPending, rejectState.error]);
 
   const actionError =
     confirmState.error ?? cobrarState.error ?? rejectState.error ?? llegoState.error;
@@ -203,17 +226,18 @@ export default function TurnoCard({
   ]);
 
   useEffect(() => {
-    if (turno.estado !== "pendiente") {
+    if (localEstado !== "pendiente") {
       setShowReject(false);
     }
-    if (turno.estado === "completado") {
+    if (localEstado === "completado") {
       setShowCobrar(false);
     }
-  }, [turno.estado]);
+  }, [localEstado]);
 
   useEffect(() => {
     if (cobrarState.success) {
       setShowCobrar(false);
+      setLocalEstado("completado");
     }
   }, [cobrarState.success]);
 
@@ -247,7 +271,7 @@ export default function TurnoCard({
       aria-busy={actionPending}
       className={`transition ${
         compact
-          ? `overflow-hidden rounded-xl border border-zinc-800/60 border-l-4 ${statusBorderL(turno.estado)} ${isExpanded ? "ring-1 ring-[#8cff59]/12" : ""}`
+          ? `overflow-hidden rounded-xl border border-zinc-800/60 border-l-4 ${statusBorderL(localEstado)} ${isExpanded ? "ring-1 ring-[#8cff59]/12" : ""}`
           : `rounded-[22px] border px-4 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)] ${
               turno.prioridadAbsoluta
                 ? "border-amber-400/40 bg-gradient-to-br from-amber-500/10 via-fuchsia-500/5 to-zinc-950"
@@ -282,8 +306,8 @@ export default function TurnoCard({
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
-                <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusClasses(turno.estado)}`}>
-                  {statusLabel(turno.estado)}
+                <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusClasses(localEstado)}`}>
+                  {statusLabel(localEstado)}
                 </span>
                 <span className="rounded-full border border-white/10 bg-white/5 p-1 text-zinc-400">
                   <ChevronIcon expanded={isExpanded} />
@@ -321,11 +345,11 @@ export default function TurnoCard({
 
                 <div className="flex shrink-0 items-start gap-2">
                   <div className="flex flex-col items-end gap-2">
-                    <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusClasses(turno.estado)}`}>
-                      {statusLabel(turno.estado)}
+                    <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusClasses(localEstado)}`}>
+                      {statusLabel(localEstado)}
                     </span>
                     <p className="max-w-[10rem] text-right text-[11px] leading-4 text-zinc-500">
-                      {statusHint(turno.estado)}
+                      {statusHint(localEstado)}
                     </p>
                   </div>
                   <span className="mt-0.5 rounded-full border border-white/10 bg-white/5 p-2 text-zinc-400 transition group-hover:border-[#8cff59]/25 group-hover:text-[#8cff59]">
@@ -340,8 +364,8 @@ export default function TurnoCard({
                     {turno.clienteTelefonoRaw}
                   </span>
                 ) : null}
-                <span className={`rounded-full border px-3 py-1 text-xs font-medium ${actionToneClasses(turno.estado)}`}>
-                  {compactActionSummary(turno.estado)}
+                <span className={`rounded-full border px-3 py-1 text-xs font-medium ${actionToneClasses(localEstado)}`}>
+                  {compactActionSummary(localEstado)}
                 </span>
                 {turno.sugerenciaCancion ? (
                   <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-200">
@@ -474,9 +498,9 @@ export default function TurnoCard({
                         Acciones
                       </p>
                       <p className="mt-1 text-sm text-zinc-300">
-                        {turno.estado === "pendiente"
+                        {localEstado === "pendiente"
                           ? "Elegi una decision."
-                          : turno.estado === "confirmado"
+                          : localEstado === "confirmado"
                             ? "Cierra el flujo o avisale a pantalla."
                             : "Sin acciones disponibles."}
                       </p>
@@ -489,7 +513,7 @@ export default function TurnoCard({
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {turno.estado === "pendiente" ? (
+                    {localEstado === "pendiente" ? (
                       <>
                         <form action={confirmFormAction}>
                           <button
@@ -511,7 +535,7 @@ export default function TurnoCard({
                       </>
                     ) : null}
 
-                    {turno.estado === "confirmado" ? (
+                    {localEstado === "confirmado" ? (
                       <>
                         {turno.sugerenciaCancion && clienteLlegoAction ? (
                           <form action={llegoFormAction}>
