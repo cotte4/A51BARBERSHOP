@@ -398,7 +398,7 @@ export default function AtencionForm({
           ) : null}
         </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-5 grid grid-cols-2 gap-4 xl:grid-cols-3">
           {barberosVisibles.map((item) => (
             <BarberoAvatarButton
               key={item.id}
@@ -609,7 +609,7 @@ export default function AtencionForm({
           ) : null}
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-3">
           {serviciosOrdenados.map((servicio) => {
             const active = servicioId === servicio.id;
             return (
@@ -992,7 +992,7 @@ export default function AtencionForm({
           ) : null}
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
           {mediosPagoOrdenados.map((medio) => {
             const meta = getMedioPagoMeta(medio.nombre);
             const fee = Number(medio.comisionPorcentaje ?? 0);

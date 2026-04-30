@@ -12,6 +12,9 @@
   --public-glow: rgba(140, 255, 89, 0.22);
   --public-grid: rgba(255, 255, 255, 0.05);
   --public-halo: rgba(140, 255, 89, 0.08);
+  /* HoyDashboard full-height calc — update these if header or nav change */
+  --hoy-header-h: 4.5rem;
+  --hoy-nav-h: 4.5rem;
 }
 
 @theme inline {
@@ -302,4 +305,29 @@ input, select, textarea {
     transform: translate(2px, -1px) skewX(0.5deg);
     text-shadow: -2px 0 rgba(140, 255, 89, 0.4);
   }
+}
+
+/* ── Caja disclosure cards ─────────────────────────────────────────── */
+
+.caja-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  transition: grid-template-rows 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+details[open] .caja-panel {
+  grid-template-rows: 1fr;
+}
+
+.caja-panel-inner {
+  min-height: 0;
+}
+
+.caja-chevron {
+  transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+details[open] .caja-chevron {
+  transform: rotate(180deg);
 }

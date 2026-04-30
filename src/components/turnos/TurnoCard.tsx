@@ -146,7 +146,7 @@ export default function TurnoCard({
   const [showCobrar, setShowCobrar] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [shouldRenderDetails, setShouldRenderDetails] = useState(false);
-  const [cobrarServicioId, setCobrarServicioId] = useState(turno.servicioNombre ? "" : "");
+  const [cobrarServicioId, setCobrarServicioId] = useState("");
   const [cobrarPrecio, setCobrarPrecio] = useState(turno.precioEsperado ?? "");
   const [localEstado, setLocalEstado] = useState<TurnoSummary["estado"]>(turno.estado);
   const prevConfirmPendingRef = useRef(false);
@@ -590,7 +590,7 @@ export default function TurnoCard({
                       </p>
                     </div>
 
-                    <input type="hidden" name="servicioId" value={cobrarServicioId || (turno.servicioNombre ? "" : "")} />
+                    <input type="hidden" name="servicioId" value={cobrarServicioId} />
 
                     {!turno.servicioNombre && servicios.length > 0 ? (
                       <div className="space-y-1">

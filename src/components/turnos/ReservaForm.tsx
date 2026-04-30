@@ -393,7 +393,7 @@ export default function ReservaForm({
               </div>
             </div>
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-4 xl:grid-cols-7">
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
               {quickDateOptions.map((option) => {
                 const selected = option.value === fecha;
 

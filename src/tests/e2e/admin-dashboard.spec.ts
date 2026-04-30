@@ -8,12 +8,9 @@
  */
 
 import { test, expect } from "@playwright/test";
-import { loginAs, mainText } from "./helpers";
+import { mainText } from "./helpers";
 
 test.describe("Flow 3: Dashboard admin sin errores", () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAs(page, "pinky");
-  });
 
   test("dashboard carga sin errores de aplicación", async ({ page }) => {
     await page.goto("/dashboard");

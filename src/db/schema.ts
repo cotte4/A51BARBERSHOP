@@ -276,7 +276,7 @@ export const atencionesProductos = pgTable(
 // ————————————————————————————
 export const productos = pgTable("productos", {
   id: uuid("id").defaultRandom().primaryKey(),
-  nombre: text("nombre").notNull(),
+  nombre: text("nombre").notNull().unique(),
   descripcion: text("descripcion"),
   precioVenta: numeric("precio_venta", { precision: 12, scale: 2 }),
   costoCompra: numeric("costo_compra", { precision: 12, scale: 2 }),

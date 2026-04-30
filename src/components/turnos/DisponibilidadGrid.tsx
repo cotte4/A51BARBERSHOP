@@ -177,7 +177,7 @@ export default function DisponibilidadGrid({
           ))}
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-4">
           <label className="space-y-2">
             <span className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">Dia</span>
             <input

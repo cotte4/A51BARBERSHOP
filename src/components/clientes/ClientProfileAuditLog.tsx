@@ -40,8 +40,11 @@ export default function ClientProfileAuditLog({ events }: ClientProfileAuditLogP
             {events.length} {events.length === 1 ? "cambio reciente" : "cambios recientes"}
           </p>
         </div>
-        <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-medium text-zinc-300 transition group-open:border-zinc-700 group-open:text-white">
+        <span className="flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-medium text-zinc-300 transition group-open:border-zinc-700 group-open:text-white">
           Ver
+          <svg viewBox="0 0 24 24" className="h-3 w-3 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </span>
       </summary>
 

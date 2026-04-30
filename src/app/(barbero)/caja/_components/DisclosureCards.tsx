@@ -93,8 +93,8 @@ export function MovementDisclosureCard({
         </div>
       </summary>
 
-      <div className="caja-panel px-4 pb-4">
-        <div className="caja-panel-inner">
+      <div className="caja-panel px-4">
+        <div className="caja-panel-inner pb-4">
           <div className="rounded-[20px] border border-white/8 bg-black/20 px-4 py-3 text-sm leading-6 opacity-85">
             {detail}
           </div>
@@ -173,8 +173,8 @@ export function AtencionDisclosureCard({
         </div>
       </summary>
 
-      <div className="caja-panel ml-2 px-5 pb-5">
-        <div className="caja-panel-inner">
+      <div className="caja-panel ml-2 px-5">
+        <div className="caja-panel-inner pb-5">
           <div className="space-y-4 border-t border-white/8 pt-4">
             <div className="flex flex-wrap gap-2 text-sm text-zinc-300">
               <span className="rounded-full bg-zinc-900/70 px-3 py-1">Bruto {brutoLabel}</span>

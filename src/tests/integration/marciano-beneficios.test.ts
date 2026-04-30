@@ -54,15 +54,6 @@ describe("marciano-beneficios: límites mensuales", () => {
       expect(consumicionBeneficioDisponible(100)).toBe(true);
     });
 
-    it("si se fijara un límite de consumiciones, se respetaría correctamente", () => {
-      // Test defensivo: simula la lógica con un límite hipotético.
-      function checkConLimite(usadas: number, limite: number): boolean {
-        return usadas < limite;
-      }
-      expect(checkConLimite(0, 1)).toBe(true);
-      expect(checkConLimite(1, 1)).toBe(false);
-      expect(checkConLimite(2, 1)).toBe(false);
-    });
   });
 
   describe("combinaciones mes completo", () => {

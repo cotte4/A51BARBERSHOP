@@ -12,12 +12,9 @@
  */
 
 import { test, expect } from "@playwright/test";
-import { loginAs, mainText } from "./helpers";
+import { mainText } from "./helpers";
 
 test.describe("Flow 2: Admin cierre de caja", () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAs(page, "pinky");
-  });
 
   test("/caja/cierre es accesible solo para admin — redirige si no hay sesión", async ({ page }) => {
     // Verificar que la página cargó para Pinky (admin)

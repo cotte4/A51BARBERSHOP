@@ -31,21 +31,24 @@ export type AtencionFinancials = {
 
 export function calcAtencionFinancials(
   precioCobrado: number,
+  precioBase: number,
   medioPagoComisionPct: number,
   barberoComisionPct: number | null
 ): AtencionFinancials {
   const comisionMP = (precioCobrado * medioPagoComisionPct) / 100;
   const neto = precioCobrado - comisionMP;
+  // Commission is capped at precioBase to exclude tips — mirrors caja-atencion.ts:173
+  const baseParaComision = Math.min(precioCobrado, precioBase);
   const comisionBarbero =
     barberoComisionPct != null
-      ? (precioCobrado * barberoComisionPct) / 100
+      ? (baseParaComision * barberoComisionPct) / 100
       : null;
 
   return {
     comisionMedioPagoPct: medioPagoComisionPct.toFixed(2),
     comisionMedioPagoMonto: comisionMP.toFixed(2),
     montoNeto: neto.toFixed(2),
-    comisionBarberoPct: barberoComisionPct != null ? barberoComisionPct.toFixed(2) : null,
+    comisionBarberoPct: comisionBarbero != null ? barberoComisionPct!.toFixed(2) : null,
     comisionBarberoMonto: comisionBarbero != null ? comisionBarbero.toFixed(2) : null,
   };
 }

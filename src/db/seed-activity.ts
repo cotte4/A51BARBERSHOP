@@ -59,18 +59,16 @@ type Producto = typeof schema.productos.$inferSelect;
 async function cleanup(workingDays: string[]) {
   console.log("  Limpiando datos de seed previos...");
 
-  await db.delete(schema.turnos).where(eq(schema.turnos.notaCliente, SEED_MARKER));
-  await db.delete(schema.atenciones).where(eq(schema.atenciones.notas, SEED_MARKER));
-
-  if (workingDays.length > 0) {
-    await db
-      .delete(schema.cierresCaja)
-      .where(inArray(schema.cierresCaja.fecha, workingDays));
-  }
-
-  await db.delete(schema.gastos).where(eq(schema.gastos.notas, SEED_MARKER));
-  await db.delete(schema.clients).where(like(schema.clients.name, `${CLIENT_PREFIX}%`));
-  await db.delete(schema.productos).where(like(schema.productos.nombre, "%(Seed Test)"));
+  await Promise.all([
+    db.delete(schema.turnos).where(eq(schema.turnos.notaCliente, SEED_MARKER)),
+    db.delete(schema.atenciones).where(eq(schema.atenciones.notas, SEED_MARKER)),
+    workingDays.length > 0
+      ? db.delete(schema.cierresCaja).where(inArray(schema.cierresCaja.fecha, workingDays))
+      : Promise.resolve(),
+    db.delete(schema.gastos).where(eq(schema.gastos.notas, SEED_MARKER)),
+    db.delete(schema.clients).where(like(schema.clients.name, `${CLIENT_PREFIX}%`)),
+    db.delete(schema.productos).where(like(schema.productos.nombre, "%(Seed Test)")),
+  ]);
 
   console.log("  ✓ Limpieza completada");
 }
@@ -79,41 +77,34 @@ async function createOrFindProducto(
   nombre: string,
   values: Omit<typeof schema.productos.$inferInsert, "id">
 ): Promise<Producto> {
-  const existing = await db.query.productos.findFirst({
+  const [inserted] = await db
+    .insert(schema.productos)
+    .values(values)
+    .onConflictDoNothing()
+    .returning();
+  if (inserted) return inserted;
+  return (await db.query.productos.findFirst({
     where: (p, { eq: eqFn }) => eqFn(p.nombre, nombre),
-  });
-  if (existing) return existing;
-  const [created] = await db.insert(schema.productos).values(values).returning();
-  return created;
+  }))!;
 }
 
 async function main() {
   console.log("Iniciando seed de actividad A51 Barber...\n");
 
-  const pinkyBarbero = await db.query.barberos.findFirst({
-    where: (b, { eq: eqFn }) => eqFn(b.nombre, "Pinky"),
-  });
-  const gaboteBarbero = await db.query.barberos.findFirst({
-    where: (b, { eq: eqFn }) => eqFn(b.nombre, "Gabote"),
-  });
-  const pinkyUser = await db.query.user.findFirst({
-    where: (u, { eq: eqFn }) => eqFn(u.email, "pinky@a51barber.com"),
-  });
+  const [pinkyBarbero, gaboteBarbero, pinkyUser, allServicios, allMediosPago] =
+    await Promise.all([
+      db.query.barberos.findFirst({ where: (b, { eq: eqFn }) => eqFn(b.nombre, "Pinky") }),
+      db.query.barberos.findFirst({ where: (b, { eq: eqFn }) => eqFn(b.nombre, "Gabote") }),
+      db.query.user.findFirst({ where: (u, { eq: eqFn }) => eqFn(u.email, "pinky@a51barber.com") }),
+      db.select().from(schema.servicios).where(eq(schema.servicios.activo, true)),
+      db.select().from(schema.mediosPago).where(eq(schema.mediosPago.activo, true)),
+    ]);
 
   if (!pinkyBarbero || !gaboteBarbero || !pinkyUser) {
     throw new Error(
       "Barberos o usuario Pinky no encontrados. Corré npx tsx src/db/seed.ts primero."
     );
   }
-
-  const allServicios = await db
-    .select()
-    .from(schema.servicios)
-    .where(eq(schema.servicios.activo, true));
-  const allMediosPago = await db
-    .select()
-    .from(schema.mediosPago)
-    .where(eq(schema.mediosPago.activo, true));
 
   if (allServicios.length === 0 || allMediosPago.length === 0) {
     throw new Error("No hay servicios o medios de pago. Corré seed.ts primero.");
@@ -268,7 +259,7 @@ async function main() {
       const precio = isBarba ? precioBarba : precioCorte;
       const medioPago: MedioPago = pickRandom(allMediosPago);
       const client = Math.random() < 0.6 ? pickRandom(allClients) : null;
-      const financials = calcAtencionFinancials(precio, Number(medioPago.comisionPorcentaje), 100);
+      const financials = calcAtencionFinancials(precio, precio, Number(medioPago.comisionPorcentaje), 100);
 
       const [at] = await db
         .insert(schema.atenciones)
@@ -319,6 +310,7 @@ async function main() {
       if (makeNullComision) nullComisionCount++;
 
       const financials = calcAtencionFinancials(
+        precio,
         precio,
         Number(medioPago.comisionPorcentaje),
         makeNullComision ? null : 60

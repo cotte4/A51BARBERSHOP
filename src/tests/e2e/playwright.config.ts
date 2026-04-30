@@ -1,17 +1,19 @@
 import { defineConfig, devices } from "@playwright/test";
+import path from "path";
 
 export default defineConfig({
   testDir: ".",
   timeout: 30_000,
   retries: 1,
   reporter: "list",
+  globalSetup: "./global-setup.ts",
 
   use: {
     baseURL: "http://localhost:3000",
-    // Keep browser context across steps within a test.
     trace: "on-first-retry",
-    // Accept self-signed certs from dev server.
     ignoreHTTPSErrors: true,
+    // Default session: Pinky (admin). Tests that need Gabote call loginAs(page, "gabote") explicitly.
+    storageState: path.join(__dirname, ".auth/pinky.json"),
   },
 
   projects: [
@@ -21,7 +23,6 @@ export default defineConfig({
     },
   ],
 
-  // Start Next.js dev server if not already running.
   webServer: {
     command: "npm run dev",
     url: "http://localhost:3000",

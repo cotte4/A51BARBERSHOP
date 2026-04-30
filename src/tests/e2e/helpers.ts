@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { test } from "@playwright/test";
 
 export const CREDENTIALS = {
   pinky: { email: "pinky@a51barber.com", password: "pinky1234" },
@@ -10,37 +11,23 @@ export async function loginAs(
   role: keyof typeof CREDENTIALS,
   loginPath = "/login"
 ) {
-  // Clear any existing session so switching users works correctly.
   await page.context().clearCookies();
-
   await page.goto(loginPath);
   // Wait for hydration — client component inputs won't respond before it.
   await page.waitForSelector("#email", { timeout: 15_000 });
-
   await page.fill("#email", CREDENTIALS[role].email);
   await page.fill("#password", CREDENTIALS[role].password);
   await page.click('button[type="submit"]');
-
-  // After login the app redirects to /hoy (any logged-in user).
   await page.waitForURL((url) => !url.pathname.includes("/login"), {
     timeout: 20_000,
   });
 }
 
-export async function loginAsMarcianoUser(
-  page: Page,
-  email = CREDENTIALS.pinky.email,
-  password = CREDENTIALS.pinky.password
-) {
-  await page.context().clearCookies();
-  await page.goto("/marciano/login");
-  await page.waitForSelector("#email", { timeout: 15_000 });
-  await page.fill("#email", email);
-  await page.fill("#password", password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL((url) => !url.pathname.includes("/login"), {
-    timeout: 20_000,
-  });
+export async function cajaCerrada(page: Page): Promise<boolean> {
+  return page
+    .getByText(/ya fue cerrada|caja cerrada/i)
+    .isVisible({ timeout: 2_500 })
+    .catch(() => false);
 }
 
 /** Safely get visible text from <main> only — avoids Next.js __NEXT_DATA__ script blobs. */

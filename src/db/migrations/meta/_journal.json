@@ -134,6 +134,13 @@
       "when": 1776656006495,
       "tag": "0018_thin_iron_patriot",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1746057600000,
+      "tag": "0019_productos_nombre_unique",
+      "breakpoints": true
     }
   ]
 }

@@ -41,7 +41,7 @@ import {
 } from "./actions";
 
 type CajaPageProps = {
-  searchParams: Promise<{ vista?: string }>;
+  searchParams: Promise<{ vista?: string; page?: string }>;
 };
 
 type MovementItem = {
@@ -61,6 +61,8 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
   const isAdmin = actor?.isAdmin ?? false;
   const params = await searchParams;
   const vista = params.vista === "detalle" ? "detalle" : "simple";
+  const PAGE_SIZE = 20;
+  const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
 
   const fechaHoy = getFechaHoy();
   const quickActionBarberoId = actor
@@ -262,6 +264,11 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
       };
     }),
   ].sort((a, b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0));
+
+  const mixedPage = mixedMovement.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const mixedTotalPages = Math.ceil(mixedMovement.length / PAGE_SIZE) || 1;
+  const atencionesPage = atencionesOrdenadas.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const atencionesTotalPages = Math.ceil(atencionesOrdenadas.length / PAGE_SIZE) || 1;
 
   const hoyStr = new Date().toLocaleDateString("en-CA", {
     timeZone: "America/Argentina/Buenos_Aires",
@@ -522,7 +529,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                   </div>
                 ) : (
                   <div className="mt-5 space-y-3">
-                    {mixedMovement.map((item) => (
+                    {mixedPage.map((item) => (
                       <MovementDisclosureCard
                         key={item.id}
                         timeLabel={item.timeLabel}
@@ -536,6 +543,12 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                     ))}
                   </div>
                 )}
+                <CajaPaginationBar
+                  page={page}
+                  totalPages={mixedTotalPages}
+                  total={mixedMovement.length}
+                  vista="simple"
+                />
               </section>
             ) : (
               <section className="panel-card rounded-[30px] p-5">
@@ -560,7 +573,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                   </div>
                 ) : (
                   <div className="mt-5 space-y-4">
-                    {atencionesOrdenadas.map((atencion) => {
+                    {atencionesPage.map((atencion) => {
                       const barbero = barberosMap.get(atencion.barberoId ?? '');
                       const servicio = serviciosMap.get(atencion.servicioId ?? '');
                       const mp = mediosPagoMap.get(atencion.medioPagoId ?? '');
@@ -669,6 +682,12 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                     })}
                   </div>
                 )}
+                <CajaPaginationBar
+                  page={page}
+                  totalPages={atencionesTotalPages}
+                  total={atencionesOrdenadas.length}
+                  vista="detalle"
+                />
               </section>
             )}
           </div>
@@ -824,6 +843,49 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
         ) : null}
       </div>
     </main>
+  );
+}
+
+function CajaPaginationBar({
+  page,
+  totalPages,
+  total,
+  vista,
+}: {
+  page: number;
+  totalPages: number;
+  total: number;
+  vista: "simple" | "detalle";
+}) {
+  if (totalPages <= 1) return null;
+  const from = (page - 1) * 20 + 1;
+  const to = Math.min(page * 20, total);
+  const base = vista === "detalle" ? "/caja?vista=detalle" : "/caja";
+  const sep = vista === "detalle" ? "&" : "?";
+  return (
+    <div className="mt-4 flex items-center justify-between gap-3 border-t border-zinc-800 pt-4">
+      <span className="text-sm text-zinc-500">
+        {from}–{to} de {total}
+      </span>
+      <div className="flex gap-2">
+        {page > 1 && (
+          <Link
+            href={`${base}${sep}page=${page - 1}`}
+            className="inline-flex min-h-[40px] items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900 px-4 text-sm font-medium text-zinc-300 hover:border-zinc-600 hover:text-white"
+          >
+            ← Anterior
+          </Link>
+        )}
+        {page < totalPages && (
+          <Link
+            href={`${base}${sep}page=${page + 1}`}
+            className="inline-flex min-h-[40px] items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900 px-4 text-sm font-medium text-zinc-300 hover:border-zinc-600 hover:text-white"
+          >
+            Siguiente →
+          </Link>
+        )}
+      </div>
+    </div>
   );
 }
 

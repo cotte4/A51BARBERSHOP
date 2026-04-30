@@ -11,6 +11,10 @@ export function PullToRefresh() {
   const [refreshing, setRefreshing] = useState(false);
   const startYRef = useRef<number | null>(null);
   const pullingRef = useRef(false);
+  // Refs mirror state so handlers read current values without becoming deps
+  const pullYRef = useRef(0);
+  const refreshingRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     function onTouchStart(e: TouchEvent) {
@@ -28,9 +32,9 @@ export function PullToRefresh() {
       }
       pullingRef.current = true;
       // Resist: sqrt curve so it gets harder to pull further
-      const resistance = Math.sqrt(delta) * 5;
-      setPullY(Math.min(resistance, THRESHOLD + 20));
-      // Prevent default scroll/bounce when actively pulling
+      const next = Math.min(Math.sqrt(delta) * 5, THRESHOLD + 20);
+      pullYRef.current = next;
+      setPullY(next);
       if (delta > 8) {
         e.preventDefault();
       }
@@ -39,16 +43,21 @@ export function PullToRefresh() {
     function onTouchEnd() {
       if (!pullingRef.current) return;
       pullingRef.current = false;
-      if (pullY >= THRESHOLD && !refreshing) {
+      if (pullYRef.current >= THRESHOLD && !refreshingRef.current) {
+        refreshingRef.current = true;
         setRefreshing(true);
-        setPullY(THRESHOLD); // snap to threshold while refreshing
+        pullYRef.current = THRESHOLD;
+        setPullY(THRESHOLD);
         navigator.vibrate?.(40);
         router.refresh();
-        setTimeout(() => {
+        timerRef.current = setTimeout(() => {
+          refreshingRef.current = false;
           setRefreshing(false);
+          pullYRef.current = 0;
           setPullY(0);
         }, 900);
       } else {
+        pullYRef.current = 0;
         setPullY(0);
       }
       startYRef.current = null;
@@ -62,8 +71,9 @@ export function PullToRefresh() {
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [pullY, refreshing, router]);
+  }, [router]);
 
   const progress = Math.min(pullY / THRESHOLD, 1);
   const isReady = progress >= 1;
@@ -88,7 +98,6 @@ export function PullToRefresh() {
               : "border-zinc-700/60 bg-zinc-900/80 text-zinc-400"
         }`}
       >
-        {/* Spinner / arrow icon */}
         <svg
           viewBox="0 0 24 24"
           className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}

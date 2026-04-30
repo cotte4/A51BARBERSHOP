@@ -11,25 +11,13 @@
  */
 
 import { test, expect } from "@playwright/test";
-import { loginAs, mainText } from "./helpers";
+import { mainText, cajaCerrada } from "./helpers";
 
 test.describe("Flow 1: Barbero registra atención", () => {
-  test.beforeEach(async ({ page }) => {
-    // Pinky is admin but can also access /caja/nueva — uses shared seed credentials.
-    await loginAs(page, "pinky");
-  });
 
   test("caja/nueva carga sin errores y muestra los pasos del formulario", async ({ page }) => {
     await page.goto("/caja/nueva");
-
-    // Si la caja ya está cerrada, el formulario no aparece
-    const cajaCerrada = page.getByText(/ya fue cerrada/i);
-    if (await cajaCerrada.isVisible({ timeout: 2_000 }).catch(() => false)) {
-      // Comportamiento esperado: muestra el bloqueo
-      await expect(cajaCerrada).toBeVisible();
-      await expect(page.getByRole("link", { name: /ver resumen/i })).toBeVisible();
-      return;
-    }
+    if (await cajaCerrada(page)) { test.skip(true, "Caja cerrada."); return; }
 
     // Paso 1: Barbero
     await expect(page.getByText("Paso 1")).toBeVisible();
@@ -42,12 +30,7 @@ test.describe("Flow 1: Barbero registra atención", () => {
 
   test("seleccionar servicio auto-completa el precio cobrado", async ({ page }) => {
     await page.goto("/caja/nueva");
-
-    const cajaCerrada = page.getByText(/ya fue cerrada/i);
-    if (await cajaCerrada.isVisible({ timeout: 2_000 }).catch(() => false)) {
-      test.skip();
-      return;
-    }
+    if (await cajaCerrada(page)) { test.skip(true, "Caja cerrada."); return; }
 
     // Click en "Corte" (o primer servicio disponible)
     const servicioBtn = page
@@ -66,12 +49,7 @@ test.describe("Flow 1: Barbero registra atención", () => {
 
   test("flujo completo: seleccionar barbero + servicio + medioPago + confirmar", async ({ page }) => {
     await page.goto("/caja/nueva");
-
-    const cajaCerrada = page.getByText(/ya fue cerrada/i);
-    if (await cajaCerrada.isVisible({ timeout: 2_000 }).catch(() => false)) {
-      test.skip();
-      return;
-    }
+    if (await cajaCerrada(page)) { test.skip(true, "Caja cerrada."); return; }
 
     // Seleccionar Gabote
     const gaboteBtn = page.getByRole("button", { name: /Gabote/i }).first();

@@ -199,7 +199,7 @@ export default function HoyDashboard({
   return (
     <>
       <PullToRefresh />
-      <div className="flex h-[calc(100svh-9rem)] min-h-[480px] flex-col overflow-hidden">
+      <div className="flex h-[calc(100svh-var(--hoy-header-h)-var(--hoy-nav-h))] min-h-[480px] flex-col overflow-hidden">
         {/* Top bar */}
         <div className="flex shrink-0 items-center justify-between border-b border-zinc-800/60 px-4 py-3">
           <div className="flex items-center gap-2">

@@ -395,9 +395,12 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
         </section>
 
         {actor.isAdmin ? (
-          <details className="mt-2">
-            <summary className="cursor-pointer text-xs text-zinc-600 hover:text-zinc-400">
-              Ver log técnico
+          <details className="group mt-2">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 py-1 text-xs text-zinc-600 transition-colors hover:text-zinc-400">
+              <svg viewBox="0 0 24 24" className="h-3 w-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="m9 18 6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Log técnico
             </summary>
             <div className="mt-3">
               <ClientProfileAuditLog events={client.auditEvents} />
