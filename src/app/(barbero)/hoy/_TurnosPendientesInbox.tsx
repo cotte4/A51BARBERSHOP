@@ -111,7 +111,7 @@ function PendienteTurnoRow({
               <button
                 type="submit"
                 disabled={isPending}
-                className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl bg-[#8cff59] px-3.5 text-xs font-semibold text-[#07130a] hover:bg-[#a8ff80] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-[#8cff59] px-3.5 text-xs font-semibold text-[#07130a] hover:bg-[#a8ff80] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isPendingConfirm ? (
                   <>
@@ -127,7 +127,7 @@ function PendienteTurnoRow({
               type="button"
               onClick={() => setShowReject(true)}
               disabled={isPending}
-              className="inline-flex min-h-[36px] items-center rounded-xl border border-zinc-700 bg-zinc-800 px-3.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700 disabled:opacity-50"
+              className="inline-flex min-h-[44px] items-center rounded-xl border border-zinc-700 bg-zinc-800 px-3.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700 disabled:opacity-50"
             >
               Rechazar
             </button>
@@ -155,7 +155,7 @@ function PendienteTurnoRow({
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/15 px-3.5 text-xs font-semibold text-red-200 hover:bg-red-500/25 disabled:opacity-50"
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/15 px-3.5 text-xs font-semibold text-red-200 hover:bg-red-500/25 disabled:opacity-50"
             >
               {isPendingReject ? (
                 <>
@@ -169,7 +169,7 @@ function PendienteTurnoRow({
             <button
               type="button"
               onClick={() => setShowReject(false)}
-              className="inline-flex min-h-[36px] items-center rounded-xl border border-zinc-700 bg-zinc-800 px-3.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700"
+              className="inline-flex min-h-[44px] items-center rounded-xl border border-zinc-700 bg-zinc-800 px-3.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700"
             >
               Volver
             </button>

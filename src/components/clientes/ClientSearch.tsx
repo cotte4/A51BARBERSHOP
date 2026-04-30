@@ -56,6 +56,8 @@ export default function ClientSearch({
 }: ClientSearchProps) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"recent" | "all">("recent");
+  const [showAll, setShowAll] = useState(false);
+  const PAGE_SIZE = 20;
   const [clients, setClients] = useState(initialClients);
   const [isLoading, setIsLoading] = useState(false);
   const deferredQuery = useDeferredValue(query);
@@ -69,6 +71,10 @@ export default function ClientSearch({
   const isSearching = queryTerm.length > 0;
   const sourceLabel = view === "recent" ? "recientes" : "base completa";
   const visibleCount = clients.length;
+
+  useEffect(() => {
+    setShowAll(false);
+  }, [view, queryTerm]);
 
   useEffect(() => {
     if (queryTerm === "") {
@@ -190,7 +196,8 @@ export default function ClientSearch({
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            autoFocus
+            enterKeyHint="search"
+            inputMode="search"
             placeholder="Ej: Juan o 11 5555 1234"
             className="h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-950/70 py-3 pl-10 pr-24 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-[#8cff59] focus:ring-2 focus:ring-[#8cff59]/15"
           />
@@ -262,11 +269,22 @@ export default function ClientSearch({
             </div>
           </div>
         ) : (
-          <div className="grid gap-3 lg:grid-cols-2">
-            {clients.map((client) => (
-              <ClientCard key={client.id} client={client} />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-3 lg:grid-cols-2">
+              {(isSearching || showAll ? clients : clients.slice(0, PAGE_SIZE)).map((client) => (
+                <ClientCard key={client.id} client={client} />
+              ))}
+            </div>
+            {!isSearching && clients.length > PAGE_SIZE && !showAll ? (
+              <button
+                type="button"
+                onClick={() => setShowAll(true)}
+                className="ghost-button w-full rounded-[20px] py-3 text-sm font-medium"
+              >
+                Ver más ({clients.length - PAGE_SIZE} clientes)
+              </button>
+            ) : null}
+          </>
         )}
       </div>
     </section>

@@ -151,6 +151,7 @@ function DrumPicker({
           paddingBottom: padding,
           scrollbarWidth: "none",
           WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
         }}
       >
         {prices.map((price, i) => {

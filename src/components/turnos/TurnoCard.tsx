@@ -360,9 +360,12 @@ export default function TurnoCard({
 
               <div className="mt-3 flex flex-wrap gap-2">
                 {turno.clienteTelefonoRaw ? (
-                  <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1 text-xs font-medium text-zinc-300">
+                  <a
+                    href={`tel:${turno.clienteTelefonoRaw}`}
+                    className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1 text-xs font-medium text-zinc-300 hover:border-[#8cff59]/30 hover:text-[#8cff59] transition-colors"
+                  >
                     {turno.clienteTelefonoRaw}
-                  </span>
+                  </a>
                 ) : null}
                 <span className={`rounded-full border px-3 py-1 text-xs font-medium ${actionToneClasses(localEstado)}`}>
                   {compactActionSummary(localEstado)}

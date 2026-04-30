@@ -133,6 +133,8 @@ export default function ClientCreateForm({ isAdmin }: ClientCreateFormProps) {
               <input
                 id="phoneRaw"
                 name="phoneRaw"
+                type="tel"
+                inputMode="tel"
                 autoComplete="tel"
                 className={inputClass}
               />

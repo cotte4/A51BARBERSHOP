@@ -151,7 +151,7 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
           <div className="flex items-center gap-1.5">
             <Link
               href={buildTurnosHref(shiftDate(fecha, -1), estado, scope)}
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
             >
               &lsaquo;
             </Link>
@@ -161,7 +161,7 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
             </span>
             <Link
               href={buildTurnosHref(shiftDate(fecha, 1), estado, scope)}
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
             >
               &rsaquo;
             </Link>
@@ -348,7 +348,7 @@ function StatusLink({ href, label, active }: { href: string; label: string; acti
   return (
     <Link
       href={href}
-      className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+      className={`inline-flex min-h-[40px] items-center rounded-full px-2.5 text-xs font-semibold transition ${
         active ? "bg-zinc-100 text-zinc-900" : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
       }`}
     >

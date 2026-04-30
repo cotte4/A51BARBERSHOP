@@ -43,20 +43,20 @@ export default async function BarberoLayout({ children }: { children: React.Reac
                 <span className="eyebrow rounded-full border border-[#8cff59]/18 bg-[rgba(140,255,89,0.08)] px-3 py-2 text-[10px] font-semibold text-[#b9ff96]">
                   Hoy
                 </span>
-                <span className="panel-soft rounded-full px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-300">
+                <span className="hidden sm:inline-flex panel-soft rounded-full px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-300">
                   Turnos / caja / atenciones
                 </span>
-                <span className="panel-soft rounded-full px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-300">
+                <span className="hidden sm:inline-flex panel-soft rounded-full px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-300">
                   {operatingDate}
                 </span>
               </div>
 
-              <p className="max-w-3xl text-sm leading-5 text-zinc-500">
+              <p className="hidden sm:block max-w-3xl text-sm leading-5 text-zinc-500">
                 Estas en la sala de control del dia. Ves que hacer ahora y lo que merece atencion.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+            <div className="hidden sm:flex flex-wrap items-center gap-2 xl:justify-end">
               <div className="rounded-[20px] border border-white/10 bg-white/[0.04] px-4 py-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
                   Sesion

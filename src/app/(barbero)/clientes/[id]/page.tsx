@@ -184,6 +184,8 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
                     <input
                       id="phoneRaw"
                       name="phoneRaw"
+                      type="tel"
+                      inputMode="tel"
                       defaultValue={client.phoneRaw ?? ""}
                       className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 text-sm text-white outline-none transition focus:border-[#8cff59]"
                     />
@@ -321,6 +323,8 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
                     <input
                       id="phoneRaw"
                       name="phoneRaw"
+                      type="tel"
+                      inputMode="tel"
                       defaultValue={client.phoneRaw ?? ""}
                       className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-sm text-white outline-none transition focus:border-[#8cff59]"
                     />
