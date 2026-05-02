@@ -16,7 +16,7 @@ export default function FullScreenOverlay({
       role="dialog"
       aria-modal={isOpen}
       className={`fixed inset-0 z-50 flex flex-col bg-zinc-950 transition-transform duration-300 ease-out ${
-        isOpen ? "translate-y-0" : "translate-y-full"
+        isOpen ? "translate-y-0" : "translate-y-full pointer-events-none"
       }`}
     >
       <div className="flex shrink-0 items-center justify-between border-b border-zinc-800/60 px-5 py-4">
