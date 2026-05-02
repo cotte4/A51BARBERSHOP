@@ -2,6 +2,74 @@
 
 # A51 Barber Shop — Agent Instructions
 
+## Quick Start
+
+### Deploy
+Push to `master` → Vercel auto-deploys. Use `/a51-ship` skill for pre-flight (typecheck + lint + build) before pushing.
+
+```bash
+# Pre-flight before any push
+npm run typecheck
+npm run lint
+npm run build
+```
+
+### Was doesn't run this locally
+The app runs on Vercel. If you need to run locally anyway: `npm run dev` (port 3000). Requires `.env.local` — never committed, ask Was for values.
+
+### Required env variables (`.env.local`)
+- `DATABASE_URL` — Neon PostgreSQL pooled connection
+- `DATABASE_URL_UNPOOLED` — for Drizzle migrations only
+- `BETTER_AUTH_SECRET` + `BETTER_AUTH_URL` — auth
+- `SPOTIFY_CLIENT_ID` + `SPOTIFY_CLIENT_SECRET` — music engine
+- `CRON_SECRET` — Vercel cron jobs
+- `ANTHROPIC_API_KEY` — AI features
+
+### Database
+```bash
+npm run db:generate   # generate migration SQL after schema changes
+npm run db:migrate    # apply migrations (use this, not db:push, for production)
+npm run db:push       # local iteration / emergency only — bypasses reviewed SQL
+npm run db:studio     # Drizzle Studio data browser
+```
+
+### Tests
+```bash
+npm run test:dal           # DAL access ownership smoke test
+npm run test:ovnis         # OVNIS economy unit tests
+npm run test:ovnis:flows   # OVNIS flow-level DB smoke tests (hits live DB)
+npm run verify:refactor    # typecheck + lint (run before any refactor commit)
+```
+
+---
+
+## Current State (May 2026)
+
+The app is live on Vercel. Core is mature. Open issues before designer handoff:
+
+### Known bugs / debt
+- **Music automation not closed** — `clienteLlegoAction()` fires events to pantalla and `musicEvents` but does NOT trigger real Spotify playback. Treat music as manually supervised for now. See `planning/features/music-auto-jam-completion.md`.
+- **Encoding bug on reserva pública** — `src/app/reservar/[slug]/page.tsx` shows corrupted characters in visible text. Fix before designer review.
+- **Gastos rápidos migration dependency** — `src/app/(admin)/gastos-rapidos/actions.ts` errors if migration hasn't been applied. Run `db:push` if missing.
+
+### UX maturity by surface
+- Operación diaria (hoy, caja, turnos, clientes): **mature**
+- Negocio / admin reporting: **mature**
+- Configuración: **mature**
+- Portal Marciano: **mature**
+- Reserva pública: **functional but has encoding bug + needs UX pass**
+- Pantalla pública: **functional**
+- Música: **functional but automation incomplete**
+
+### Functional gaps (not blocking, but relevant for designer)
+- No dedicated reprogramación de turno flow
+- Marciano portal: unclear if client can cancel/reschedule from UI
+- Email notifications exist (`src/lib/email.ts`) but no outbound CRM surface
+- Retention candidates visible but no contact tracking flow
+
+### Designer handoff context
+The designer works in Figma + Claude Code. The full UX inventory is in `docs/feature-map-ux.md` — section 7 has the recommended epics for a UX pass. The 5 main surfaces and their maturity levels are documented there.
+
 ## Design System
 
 ### Visual Identity

@@ -61,13 +61,13 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
           <section className="public-panel public-glow rounded-[36px] border border-white/10 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-2xl space-y-4">
-                <p className="eyebrow text-[#8cff59]">Nave publica</p>
+                <p className="eyebrow text-[#8cff59]">Nave pública</p>
                 <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
                   Cae con {barbero.nombre}
                 </h1>
                 <p className="max-w-xl text-sm text-zinc-300 sm:text-base">
-                  Elegi servicio, marca horario y manda la solicitud. La base de A51 la toma desde
-                  adentro y te confirma el movimiento sin mezclar musica con reserva.
+                  Elegí servicio, marcá horario y mandá la solicitud. La base de A51 la toma desde
+                  adentro y te confirma el movimiento sin mezclar música con reserva.
                 </p>
               </div>
 
@@ -82,13 +82,13 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
                 </div>
                 <div className="rounded-[22px] border border-[#8cff59]/20 bg-[#8cff59]/8 px-4 py-3 sm:col-span-2 lg:col-span-1">
                   <p className="text-xs uppercase tracking-[0.18em] text-[#8cff59]">Agenda</p>
-                  <p className="mt-2 text-lg font-semibold text-white">Desde manana</p>
+                  <p className="mt-2 text-lg font-semibold text-white">Desde mañana</p>
                 </div>
               </div>
             </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              {["Elegi el servicio", "Marca tu slot", "Recibi la senal"].map((item, index) => (
+              {["Elegí el servicio", "Marcá tu slot", "Recibí la señal"].map((item, index) => (
                 <div key={item} className="rounded-[22px] border border-white/10 bg-black/20 px-4 py-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Paso {index + 1}</p>
                   <p className="mt-2 text-sm font-medium text-white">{item}</p>
@@ -131,9 +131,9 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
                   Flujo corto y sin rebote
                 </p>
                 <div className="mt-4 space-y-3 text-sm text-zinc-300">
-                  <p>Elegis un servicio y la grilla te muestra solo slots que cierran.</p>
-                  <p>La fecha sale desde manana y la musica queda separada del envio final.</p>
-                  <p>Cuando lo mandas, A51 baja la senal y confirma desde la base.</p>
+                  <p>Elegís un servicio y la grilla te muestra solo slots que cierran.</p>
+                  <p>La fecha sale desde mañana y la música queda separada del envío final.</p>
+                  <p>Cuando lo mandas, A51 baja la señal y confirma desde la base.</p>
                 </div>
               </div>
 
@@ -146,7 +146,7 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
                   exacta.
                 </p>
                 <p className="mt-3 text-sm text-zinc-300">
-                  Si ya tenes cuenta, te saltas la clave y el movimiento queda alineado con tu
+                  Si ya tenés cuenta, te saltás la clave y el movimiento queda alineado con tu
                   historial Marciano.
                 </p>
               </div>
