@@ -62,8 +62,8 @@ async function main() {
   if (medios.length === 0) throw new Error("No hay medios de pago activos en la DB");
 
   // Prefer efectivo (0% commission) for simplicity; fallback to first
-  const efectivo = medios.find((m) => /efectivo/i.test(m.nombre)) ?? medios[0];
-  const mpQR = medios.find((m) => /mp.qr/i.test(m.nombre)) ?? medios[0];
+  const efectivo = medios.find((m) => /efectivo/i.test(m.nombre ?? "")) ?? medios[0];
+  const mpQR = medios.find((m) => /mp.qr/i.test(m.nombre ?? "")) ?? medios[0];
 
   // Use first available barbero — prefer Pinky (owner), else whatever exists
   const pinky = barberos.find((b) => /pinky/i.test(b.nombre)) ?? barberos[0];
