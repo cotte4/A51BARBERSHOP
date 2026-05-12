@@ -2,6 +2,12 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { productos, servicios, turnos, turnosDisponibilidad, turnosExtras } from "@/db/schema";
 import { canReserveOnPublicFecha, isFechaCerrada } from "@/lib/turnos";
+import {
+  normalizeHora,
+  overlapsTurnoInterval,
+  timeToMinutes,
+  type TurnoInterval,
+} from "@/lib/turno-intervals";
 import type { TurnoExtraInput } from "@/lib/types";
 
 export type TurnoClientContext = {
@@ -104,29 +110,6 @@ export async function createTurnoReserva(
     return { ok: false, status: 409, message: "Ese dia ya esta cerrado y no acepta reservas." };
   }
 
-  // La disponibilidad ya filtra por slots consecutivos — aquí sólo bloqueamos si el slot
-  // único no alcanza Y no hay forma de que fuera válido (duracion del slot > duracion del servicio
-  // significa que podría caber, pero slots más chicos pueden encadenarse igual).
-  // Sólo rechazamos si el slot es estrictamente menor y no hay puente lógico posible.
-  // El caso multi-slot lo maneja el algoritmo de disponibilidad; aquí confiamos en él.
-
-  const [ocupado] = await db
-    .select({ id: turnos.id })
-    .from(turnos)
-    .where(
-      and(
-        eq(turnos.barberoId, input.barberoId),
-        eq(turnos.fecha, slot.fecha),
-        eq(turnos.horaInicio, slot.horaInicio),
-        inArray(turnos.estado, ["pendiente", "confirmado"])
-      )
-    )
-    .limit(1);
-
-  if (ocupado) {
-    return { ok: false, status: 409, message: "Ese horario acaba de ocuparse. Elegi otro." };
-  }
-
   const activeExtraIds = new Set(extrasActivos.map((extra) => extra.id));
   const invalidExtra = extras.find((extra) => !activeExtraIds.has(extra.productoId));
   if (invalidExtra) {
@@ -138,43 +121,115 @@ export async function createTurnoReserva(
   }
 
   try {
-    const [turno] = await db
-      .insert(turnos)
-      .values({
-        barberoId: input.barberoId,
-        clienteNombre: input.clienteNombre,
-        clienteTelefonoRaw: input.clienteTelefonoRaw,
-        clienteTelefonoNormalizado: input.clientContext?.phoneNormalized ?? null,
-        clientId: input.clientContext?.clientId ?? null,
-        fecha: slot.fecha,
-        horaInicio: slot.horaInicio,
-        duracionMinutos: servicio.duracionMinutos,
-        servicioId: servicio.id,
-        precioEsperado: servicio.precioBase,
-        estado: "pendiente",
-        notaCliente: input.notaCliente ?? null,
-        sugerenciaCancion: input.sugerenciaCancion ?? null,
-        spotifyTrackUri: input.spotifyTrackUri ?? null,
-        esMarcianoSnapshot: input.clientContext?.esMarciano ?? false,
-      })
-      .returning({ id: turnos.id });
+    return await db.transaction(async (tx): Promise<CreateTurnoReservaResult> => {
+      const lockedSlots = await tx
+        .select({
+          id: turnosDisponibilidad.id,
+          fecha: turnosDisponibilidad.fecha,
+          horaInicio: turnosDisponibilidad.horaInicio,
+          duracionMinutos: turnosDisponibilidad.duracionMinutos,
+        })
+        .from(turnosDisponibilidad)
+        .where(
+          and(
+            eq(turnosDisponibilidad.barberoId, input.barberoId),
+            eq(turnosDisponibilidad.fecha, slot.fecha)
+          )
+        )
+        .orderBy(turnosDisponibilidad.horaInicio)
+        .for("update");
 
-    if (extras.length > 0) {
-      await db.insert(turnosExtras).values(
-        extras.map((extra) => ({
-          turnoId: turno.id,
-          productoId: extra.productoId,
-          cantidad: extra.cantidad,
-        }))
-      );
-    }
+      const lockedSlot = lockedSlots.find((candidate) => candidate.id === slot.id);
+      if (!lockedSlot) {
+        return { ok: false, status: 409, message: "Ese horario ya no esta disponible." };
+      }
 
-    return {
-      ok: true,
-      turnoId: turno.id,
-      fecha: slot.fecha,
-      horaInicio: slot.horaInicio,
-    };
+      const ocupados = await tx
+        .select({
+          horaInicio: turnos.horaInicio,
+          duracionMinutos: turnos.duracionMinutos,
+        })
+        .from(turnos)
+        .where(
+          and(
+            eq(turnos.barberoId, input.barberoId),
+            eq(turnos.fecha, lockedSlot.fecha),
+            inArray(turnos.estado, ["pendiente", "confirmado"])
+          )
+        )
+        .for("update");
+
+      const ocupadosActivos: TurnoInterval[] = ocupados.map((turno) => ({
+        horaInicio: normalizeHora(turno.horaInicio),
+        duracionMinutos: turno.duracionMinutos,
+      }));
+
+      if (overlapsTurnoInterval(lockedSlot.horaInicio, servicio.duracionMinutos, ocupadosActivos)) {
+        return { ok: false, status: 409, message: "Ese horario acaba de ocuparse. Elegi otro." };
+      }
+
+      const slotsOrdenados = lockedSlots
+        .map((candidate) => ({ ...candidate, horaInicio: normalizeHora(candidate.horaInicio) }))
+        .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+      const startIndex = slotsOrdenados.findIndex((candidate) => candidate.id === lockedSlot.id);
+      const startMin = timeToMinutes(lockedSlot.horaInicio);
+      const requiredEnd = startMin + servicio.duracionMinutos;
+      let coveredUntil = startMin;
+
+      for (let i = startIndex; i >= 0 && i < slotsOrdenados.length; i++) {
+        const candidate = slotsOrdenados[i];
+        const candidateStart = timeToMinutes(candidate.horaInicio);
+        if (candidateStart > coveredUntil) break;
+
+        const usableDuration = Math.min(candidate.duracionMinutos, requiredEnd - candidateStart);
+        if (overlapsTurnoInterval(candidate.horaInicio, usableDuration, ocupadosActivos)) break;
+
+        coveredUntil = Math.max(coveredUntil, candidateStart + candidate.duracionMinutos);
+        if (coveredUntil >= requiredEnd) break;
+      }
+
+      if (coveredUntil < requiredEnd) {
+        return { ok: false, status: 409, message: "Ese horario ya no esta disponible." };
+      }
+
+      const [turno] = await tx
+        .insert(turnos)
+        .values({
+          barberoId: input.barberoId,
+          clienteNombre: input.clienteNombre,
+          clienteTelefonoRaw: input.clienteTelefonoRaw,
+          clienteTelefonoNormalizado: input.clientContext?.phoneNormalized ?? null,
+          clientId: input.clientContext?.clientId ?? null,
+          fecha: lockedSlot.fecha,
+          horaInicio: lockedSlot.horaInicio,
+          duracionMinutos: servicio.duracionMinutos,
+          servicioId: servicio.id,
+          precioEsperado: servicio.precioBase,
+          estado: "pendiente",
+          notaCliente: input.notaCliente ?? null,
+          sugerenciaCancion: input.sugerenciaCancion ?? null,
+          spotifyTrackUri: input.spotifyTrackUri ?? null,
+          esMarcianoSnapshot: input.clientContext?.esMarciano ?? false,
+        })
+        .returning({ id: turnos.id });
+
+      if (extras.length > 0) {
+        await tx.insert(turnosExtras).values(
+          extras.map((extra) => ({
+            turnoId: turno.id,
+            productoId: extra.productoId,
+            cantidad: extra.cantidad,
+          }))
+        );
+      }
+
+      return {
+        ok: true,
+        turnoId: turno.id,
+        fecha: lockedSlot.fecha,
+        horaInicio: lockedSlot.horaInicio,
+      };
+    });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     console.error("[createTurnoReserva] DB error:", detail);
