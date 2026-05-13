@@ -30,6 +30,7 @@ import {
   syncProductosAtencion,
   type ProductoSeleccionadoInput,
 } from "@/lib/caja-atencion";
+import { sanitizeLocalRedirectPath } from "@/lib/local-redirect";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -247,8 +248,7 @@ export async function registrarAtencionRapidaConMedioAction(
 }
 
 function sanitizeReturnTo(value: string | null): string {
-  if (value && value.startsWith("/")) return value;
-  return "/caja";
+  return sanitizeLocalRedirectPath(value, "/caja");
 }
 
 // Accion express: acepta servicioId + medioPagoId explicitos desde el panel de caja
