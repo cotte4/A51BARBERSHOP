@@ -14,20 +14,21 @@ export default function BrandMark({
 }: BrandMarkProps) {
   const content = (
     <div className="flex items-center gap-3">
-      <div className="relative overflow-hidden rounded-2xl ring-1 ring-[#8cff59]/25">
+      <div className="relative overflow-hidden rounded-2xl bg-transparent">
         <Image
           src="/a51barbershop.jpeg"
           alt="A51 Barber Shop"
           width={compact ? 44 : 52}
           height={compact ? 44 : 52}
-          className="h-11 w-11 object-cover sm:h-[52px] sm:w-[52px]"
+          className="h-11 w-11 object-contain sm:h-[52px] sm:w-[52px] invert"
           priority
         />
       </div>
-      <div>
-        <p className="eyebrow text-[11px] font-semibold">A51 Barber Shop</p>
-        <p className="font-display text-lg font-semibold text-white sm:text-xl">{subtitle}</p>
-      </div>
+      {subtitle && subtitle !== "A51 Barber Shop" && (
+        <div>
+          <p className="font-display text-lg font-semibold text-white sm:text-xl">{subtitle}</p>
+        </div>
+      )}
     </div>
   );
 
