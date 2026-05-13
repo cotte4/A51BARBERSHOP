@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { productos, servicios, turnos, turnosDisponibilidad, turnosExtras } from "@/db/schema";
+import { hasOverlappingTurno, isAvailabilityCovered } from "@/lib/turno-availability";
 import { canReserveOnPublicFecha, isFechaCerrada } from "@/lib/turnos";
 import type { TurnoExtraInput } from "@/lib/types";
 
@@ -104,26 +105,39 @@ export async function createTurnoReserva(
     return { ok: false, status: 409, message: "Ese dia ya esta cerrado y no acepta reservas." };
   }
 
-  // La disponibilidad ya filtra por slots consecutivos — aquí sólo bloqueamos si el slot
-  // único no alcanza Y no hay forma de que fuera válido (duracion del slot > duracion del servicio
-  // significa que podría caber, pero slots más chicos pueden encadenarse igual).
-  // Sólo rechazamos si el slot es estrictamente menor y no hay puente lógico posible.
-  // El caso multi-slot lo maneja el algoritmo de disponibilidad; aquí confiamos en él.
-
-  const [ocupado] = await db
-    .select({ id: turnos.id })
-    .from(turnos)
-    .where(
-      and(
-        eq(turnos.barberoId, input.barberoId),
-        eq(turnos.fecha, slot.fecha),
-        eq(turnos.horaInicio, slot.horaInicio),
-        inArray(turnos.estado, ["pendiente", "confirmado"])
+  const [daySlots, turnosOcupados] = await Promise.all([
+    db
+      .select({
+        horaInicio: turnosDisponibilidad.horaInicio,
+        duracionMinutos: turnosDisponibilidad.duracionMinutos,
+      })
+      .from(turnosDisponibilidad)
+      .where(
+        and(
+          eq(turnosDisponibilidad.barberoId, input.barberoId),
+          eq(turnosDisponibilidad.fecha, slot.fecha)
+        )
+      ),
+    db
+      .select({
+        horaInicio: turnos.horaInicio,
+        duracionMinutos: turnos.duracionMinutos,
+      })
+      .from(turnos)
+      .where(
+        and(
+          eq(turnos.barberoId, input.barberoId),
+          eq(turnos.fecha, slot.fecha),
+          inArray(turnos.estado, ["pendiente", "confirmado"])
+        )
       )
-    )
-    .limit(1);
+  ]);
 
-  if (ocupado) {
+  if (!isAvailabilityCovered(slot.horaInicio, servicio.duracionMinutos, daySlots)) {
+    return { ok: false, status: 409, message: "Ese horario no cubre la duracion del servicio." };
+  }
+
+  if (hasOverlappingTurno(slot.horaInicio, servicio.duracionMinutos, turnosOcupados)) {
     return { ok: false, status: 409, message: "Ese horario acaba de ocuparse. Elegi otro." };
   }
 

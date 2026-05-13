@@ -12,6 +12,12 @@ import {
   turnosExtras,
   turnosReservaIntentos,
 } from "@/db/schema";
+import {
+  filterAvailableSlotsForTurnos,
+  hasOverlappingTurno,
+  normalizeHora,
+} from "@/lib/turno-availability";
+export { normalizeHora };
 
 export const TURNO_DURACIONES = [45, 60] as const;
 
@@ -37,10 +43,6 @@ export function getFechaMananaArgentina(): string {
 
 export function canReserveOnPublicFecha(fecha: string): boolean {
   return fecha >= getFechaMananaArgentina();
-}
-
-export function normalizeHora(hora: string): string {
-  return hora.slice(0, 5);
 }
 
 export async function resolvePublicBarberoBySlug(slug: string) {
@@ -117,11 +119,6 @@ export async function isFechaCerrada(fecha: string): Promise<boolean> {
   return !!cierre;
 }
 
-function timeToMinutes(hora: string): number {
-  const [h, m] = hora.split(":").map(Number);
-  return (h ?? 0) * 60 + (m ?? 0);
-}
-
 export async function getTurnosDisponibles(
   barberoId: string,
   fecha: string,
@@ -144,6 +141,7 @@ export async function getTurnosDisponibles(
     db
       .select({
         horaInicio: turnos.horaInicio,
+        duracionMinutos: turnos.duracionMinutos,
       })
       .from(turnos)
       .where(
@@ -155,44 +153,7 @@ export async function getTurnosDisponibles(
       ),
   ]);
 
-  const ocupadas = new Set(ocupados.map((slot) => normalizeHora(slot.horaInicio)));
-
-  const todosOrdenados = slots
-    .map((slot) => ({ ...slot, horaInicio: normalizeHora(slot.horaInicio) }))
-    .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
-
-  if (!duracionMinutos) {
-    return todosOrdenados.filter((slot) => !ocupadas.has(slot.horaInicio));
-  }
-
-  // Para cada slot libre, verificar si slots consecutivos libres cubren la duración del servicio
-  const disponibles: typeof todosOrdenados = [];
-
-  for (let i = 0; i < todosOrdenados.length; i++) {
-    const startSlot = todosOrdenados[i];
-    if (ocupadas.has(startSlot.horaInicio)) continue;
-
-    const startMin = timeToMinutes(startSlot.horaInicio);
-    const requiredEnd = startMin + duracionMinutos;
-    let coveredUntil = startMin;
-
-    for (let j = i; j < todosOrdenados.length; j++) {
-      const slot = todosOrdenados[j];
-      const slotStart = timeToMinutes(slot.horaInicio);
-
-      if (slotStart > coveredUntil) break; // hay un hueco — no se puede encadenar
-      if (ocupadas.has(slot.horaInicio)) break; // slot tomado
-
-      coveredUntil = Math.max(coveredUntil, slotStart + slot.duracionMinutos);
-
-      if (coveredUntil >= requiredEnd) {
-        disponibles.push(startSlot);
-        break;
-      }
-    }
-  }
-
-  return disponibles;
+  return filterAvailableSlotsForTurnos(slots, ocupados, duracionMinutos);
 }
 
 export async function getServiciosPublicos() {
@@ -392,6 +353,7 @@ export async function getDisponibilidadLibrePorFecha(fecha: string, barberoId?: 
       .select({
         barberoId: turnos.barberoId,
         horaInicio: turnos.horaInicio,
+        duracionMinutos: turnos.duracionMinutos,
       })
       .from(turnos)
       .where(
@@ -403,12 +365,22 @@ export async function getDisponibilidadLibrePorFecha(fecha: string, barberoId?: 
       ),
   ]);
 
-  const ocupadas = new Set(
-    ocupados.map((slot) => `${slot.barberoId}:${normalizeHora(slot.horaInicio)}`)
-  );
+  const ocupadosByBarbero = new Map<string, Array<(typeof ocupados)[number]>>();
+  for (const ocupado of ocupados) {
+    const current = ocupadosByBarbero.get(ocupado.barberoId) ?? [];
+    current.push(ocupado);
+    ocupadosByBarbero.set(ocupado.barberoId, current);
+  }
 
   return slots
-    .filter((slot) => !ocupadas.has(`${slot.barberoId}:${normalizeHora(slot.horaInicio)}`))
+    .filter(
+      (slot) =>
+        !hasOverlappingTurno(
+          slot.horaInicio,
+          slot.duracionMinutos,
+          ocupadosByBarbero.get(slot.barberoId) ?? []
+        )
+    )
     .map((slot) => ({
       ...slot,
       horaInicio: normalizeHora(slot.horaInicio),
