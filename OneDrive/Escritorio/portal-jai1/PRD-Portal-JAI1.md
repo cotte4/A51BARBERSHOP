@@ -6,9 +6,9 @@
 
 ---
 
-| **Versión**                    | 1.7 - IRS Scheduler Control + Screenshot Hover |
+| **Versión**                    | 1.9 - IRS Persistent Context + Akamai Bypass |
 | ------------------------------ | ----------------------------------------- |
-| **Fecha Última Actualización** | 21 de Abril, 2026                         |
+| **Fecha Última Actualización** | 12 de Mayo, 2026                          |
 | **Fecha Creación**             | 27 de Diciembre, 2024                    |
 | **Deadline MVP**               | 10 de Enero, 2025                        |
 | **Inicio Temporada**           | 28 de Enero, 2025 (Temporada Fiscal USA) |
@@ -340,6 +340,36 @@ Portal JAI1 es una aplicación web full-stack diseñada para gestionar el servic
     - Queda cacheada en `mainScreenshotUrls` para hovers subsiguientes sin re-request
     - Indicador 📸 sutil en la celda cuando el check tiene captura disponible
     - Animación fade-in 120ms, se reposiciona automáticamente si está cerca del borde derecho
+
+### ✅ Sesión 12-May-2026 — IRS Monitor Python Agent Fix (v1.8):
+
+57. ✅ **IRS Python Agent — Rewrite (v1.8)** - COMPLETADO
+    - Problema: browser-use 0.12.6 usa CDP directo (no Playwright), su Page wrapper no tiene keyboard, wait_for_selector, locator, timeout en goto, etc. El agente crasheaba instantáneamente en cada check.
+    - Solución: reescrito `irs-agent/main.py` para usar Playwright directamente (`playwright.async_api`) con `launch_persistent_context` + `channel='chrome'` (mismo enfoque que Patchright). Elimina la dependencia del wrapper de browser-use.
+    - Fix adicional: `no_viewport=True` no es param válido de Playwright → cambiado a `viewport=None`. `context.pages[0]` puede ser stale → cambiado a `context.new_page()` siempre.
+    - Resultado: agente corre sin crashear. Akamai bypass sigue siendo el riesgo principal (no código).
+
+58. ✅ **IRS Scraper Service — Fallback fix crítico (v1.8)** - COMPLETADO
+    - Problema: cuando browser-use retornaba `result: 'error'`, NestJS lo tomaba como resultado válido y saltaba el fallback a Patchright. Todos los crashes del agente Python bloqueaban Patchright silenciosamente.
+    - Solución: `if (agentResult && agentResult.result !== 'error') return agentResult;` — errores del agente Python ahora caen al fallback Patchright automáticamente.
+    - También agregado: logging de `error_message` del agente Python en PM2, campo `source=browser-use|patchright` en `irs-checks.log`.
+
+### ✅ Sesión 12-May-2026 — IRS Persistent Context + Akamai Fix (v1.9):
+
+59. ✅ **IRS Python Agent — Persistent browser context (v1.9)** - COMPLETADO
+    - Problema: Chrome se abría y cerraba en cada check, tirando el `_abck` cookie de Akamai. Cada check empezaba desde cero sin reputación de sesión. Success rate ~10%.
+    - Solución: contexto persistente global (`_playwright`, `_context`, `_page` a nivel de módulo). Chrome abre una vez en el primer check y queda vivo toda la sesión. El `_abck` acumula confianza entre checks.
+    - Warmup extendido al crear el contexto: visita `irs.gov/` + `irs.gov/refunds` con scroll y mouse orgánico antes de tocar WMR.
+    - Entre checks: navega a `irs.gov/refunds` (estado idle neutral, no el resultado de WMR).
+    - `_check_lock` serializa checks para evitar condiciones de carrera en la página compartida.
+    - Endpoint `/reset` para forzar reinicio del browser si la sesión se degrada.
+    - `/health` ahora reporta `browser_alive: true/false`.
+    - Resultado: 10+ checks consecutivos sin errores en testing. Success rate estimado 90%+.
+
+60. ✅ **IRS Python Agent — Akamai block fallback fix (v1.9)** - COMPLETADO
+    - Problema: cuando Akamai bloqueaba, el agente Python retornaba `result='not_found'` con status "Not Available". NestJS lo aceptaba como respuesta válida y Patchright nunca tenía turno.
+    - Solución: Akamai "we are sorry" blocks ahora retornan `result='error'` (no `not_found`). NestJS cae a Patchright automáticamente en bloqueos de Akamai.
+    - `not_found` queda reservado para respuestas reales del IRS ("Cannot Provide Information").
 
 ### ⏳ Pendiente (Próximas prioridades):
 
