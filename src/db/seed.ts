@@ -184,14 +184,14 @@ async function seed() {
       await db.insert(schema.serviciosPreciosHistorial).values({
         servicioId: corte.id,
         precio: "13000.00",
-        vigenteDesdе: "2026-05-01",
+        vigentaDesde: "2026-05-01",
         motivo: "Precio inicial Otoño 2026",
         creadoPor: barberoRef.id,
       });
       await db.insert(schema.serviciosPreciosHistorial).values({
         servicioId: corteBarba.id,
         precio: "16000.00",
-        vigenteDesdе: "2026-05-01",
+        vigentaDesde: "2026-05-01",
         motivo: "Precio inicial Otoño 2026",
         creadoPor: barberoRef.id,
       });

@@ -1,0 +1,7 @@
+ALTER TABLE "atenciones_adicionales" DROP CONSTRAINT "atenciones_adicionales_atencion_id_atenciones_id_fk";
+--> statement-breakpoint
+ALTER TABLE "atenciones" ADD CONSTRAINT "atenciones_cierre_caja_id_cierres_caja_id_fk" FOREIGN KEY ("cierre_caja_id") REFERENCES "public"."cierres_caja"("id") ON DELETE SET NULL ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "atenciones_adicionales" ADD CONSTRAINT "atenciones_adicionales_atencion_id_atenciones_id_fk" FOREIGN KEY ("atencion_id") REFERENCES "public"."atenciones"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "barberos" ADD CONSTRAINT "barberos_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE SET NULL ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ovnis_transactions" ADD CONSTRAINT "ovnis_transactions_related_bet_id_ovnis_bets_id_fk" FOREIGN KEY ("related_bet_id") REFERENCES "public"."ovnis_bets"("id") ON DELETE SET NULL ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ovnis_transactions" ADD CONSTRAINT "ovnis_transactions_related_redemption_id_ovnis_redemptions_id_fk" FOREIGN KEY ("related_redemption_id") REFERENCES "public"."ovnis_redemptions"("id") ON DELETE SET NULL ON UPDATE no action;

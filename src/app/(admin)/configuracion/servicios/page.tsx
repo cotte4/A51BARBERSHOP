@@ -34,7 +34,7 @@ export default async function ServiciosPage() {
         .select()
         .from(serviciosPreciosHistorial)
         .where(eq(serviciosPreciosHistorial.servicioId, servicio.id))
-        .orderBy(desc(serviciosPreciosHistorial.vigenteDesdе))
+        .orderBy(desc(serviciosPreciosHistorial.vigentaDesde))
         .limit(1);
 
       return { ...servicio, adicionales, ultimoPrecio: historial[0] ?? null };

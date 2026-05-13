@@ -417,7 +417,7 @@ async function seedServicios(barberosByEmail: Map<string, typeof schema.barberos
         whereAnd(
           whereEq(table.servicioId, record.id),
           whereEq(table.precio, servicio.precioBase),
-          whereEq(table.vigenteDesdе, "2026-05-01")
+          whereEq(table.vigentaDesde, "2026-05-01")
         ),
     });
 
@@ -425,7 +425,7 @@ async function seedServicios(barberosByEmail: Map<string, typeof schema.barberos
       await db.insert(schema.serviciosPreciosHistorial).values({
         servicioId: record.id,
         precio: servicio.precioBase,
-        vigenteDesdе: "2026-05-01",
+        vigentaDesde: "2026-05-01",
         motivo: "Precio base go-live mayo 2026",
         creadoPor: pinky.id,
       });

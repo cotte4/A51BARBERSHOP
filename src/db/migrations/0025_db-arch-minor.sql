@@ -1,0 +1,2 @@
+ALTER TABLE "stock_movimientos" ADD COLUMN "referencia_type" text;--> statement-breakpoint
+ALTER TABLE "stock_movimientos" ADD CONSTRAINT "stock_movimientos_referencia_type_check" CHECK ("stock_movimientos"."referencia_type" IS NULL OR "stock_movimientos"."referencia_type" IN ('atencion', 'atenciones_producto'));

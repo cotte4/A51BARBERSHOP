@@ -141,6 +141,48 @@
       "when": 1746057600000,
       "tag": "0019_productos_nombre_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1778014824755,
+      "tag": "0020_smooth_peter_quill",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1778016902199,
+      "tag": "0021_big_sister_grimm",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1778700753389,
+      "tag": "0022_db-arch-fks",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1778700772691,
+      "tag": "0023_db-arch-checks",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1778700817178,
+      "tag": "0024_db-arch-unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1778700876385,
+      "tag": "0025_db-arch-minor",
+      "breakpoints": true
     }
   ]
 }

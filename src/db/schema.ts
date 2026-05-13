@@ -109,7 +109,7 @@ export const barberos = pgTable(
     medioPagoDefectoId: uuid("medio_pago_defecto_id").references(() => mediosPago.id),
     activo: boolean("activo").default(true),
     creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
-    userId: text("user_id"),
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
   },
   (table) => [
     check("barberos_rol_check", sql`${table.rol} IN ('admin', 'barbero')`),
@@ -128,7 +128,7 @@ export const servicios = pgTable(
   "servicios",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    nombre: text("nombre").notNull(),
+    nombre: text("nombre").notNull().unique(),
     precioBase: numeric("precio_base", { precision: 12, scale: 2 }),
     duracionMinutos: integer("duracion_minutos").notNull().default(60),
     activo: boolean("activo").default(true),
@@ -155,7 +155,7 @@ export const serviciosPreciosHistorial = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     servicioId: uuid("servicio_id").references(() => servicios.id),
     precio: numeric("precio", { precision: 12, scale: 2 }),
-    vigenteDesdе: date("vigente_desde").notNull(),
+    vigentaDesde: date("vigente_desde").notNull(),
     motivo: text("motivo"),
     creadoPor: uuid("creado_por").references(() => barberos.id),
   }
@@ -163,6 +163,8 @@ export const serviciosPreciosHistorial = pgTable(
 
 // ————————————————————————————
 // TEMPORADAS
+// Note: this table is not referenced by any FK. It stores projection parameters
+// used at query time (dashboard-queries.ts) but has no join enforcement.
 // ————————————————————————————
 export const temporadas = pgTable("temporadas", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -179,15 +181,21 @@ export const temporadas = pgTable("temporadas", {
 // ————————————————————————————
 // MEDIOS DE PAGO
 // ————————————————————————————
-export const mediosPago = pgTable("medios_pago", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  nombre: text("nombre"),
-  comisionPorcentaje: numeric("comision_porcentaje", {
-    precision: 5,
-    scale: 2,
-  }).default("0"),
-  activo: boolean("activo").default(true),
-});
+export const mediosPago = pgTable(
+  "medios_pago",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    nombre: text("nombre").notNull(),
+    comisionPorcentaje: numeric("comision_porcentaje", {
+      precision: 5,
+      scale: 2,
+    }).default("0"),
+    activo: boolean("activo").default(true),
+  },
+  (table) => [
+    uniqueIndex("medios_pago_nombre_idx").on(table.nombre),
+  ]
+);
 
 // ————————————————————————————
 // CAJA: ATENCIONES
@@ -198,7 +206,7 @@ export const atenciones = pgTable("atenciones", {
   clientId: uuid("client_id").references(() => clients.id),
   servicioId: uuid("servicio_id").references(() => servicios.id),
   fecha: date("fecha").notNull(),
-  hora: time("hora", { withTimezone: true }),
+  hora: time("hora"),
 
   // Precios
   precioBase: numeric("precio_base", { precision: 12, scale: 2 }),
@@ -230,7 +238,7 @@ export const atenciones = pgTable("atenciones", {
   anulado: boolean("anulado").default(false),
   motivoAnulacion: text("motivo_anulacion"),
   notas: text("notas"),
-  cierreCajaId: uuid("cierre_caja_id"), // FK se agrega después de cierres_caja
+  cierreCajaId: uuid("cierre_caja_id").references(() => cierresCaja.id, { onDelete: "set null" }),
   creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
 },
 (table) => [
@@ -241,7 +249,7 @@ export const atenciones = pgTable("atenciones", {
 
 export const atencionesAdicionales = pgTable("atenciones_adicionales", {
   id: uuid("id").defaultRandom().primaryKey(),
-  atencionId: uuid("atencion_id").references(() => atenciones.id),
+  atencionId: uuid("atencion_id").references(() => atenciones.id, { onDelete: "cascade" }),
   adicionalId: uuid("adicional_id").references(() => serviciosAdicionales.id),
   precioCobrado: numeric("precio_cobrado", { precision: 12, scale: 2 }),
 });
@@ -296,7 +304,9 @@ export const stockMovimientos = pgTable(
     cantidad: integer("cantidad"),
     precioUnitario: numeric("precio_unitario", { precision: 12, scale: 2 }),
     costoUnitarioSnapshot: numeric("costo_unitario_snapshot", { precision: 12, scale: 2 }),
+    // Polymorphic reference — referenciaType disambiguates the target ('atencion' | 'atenciones_producto' | null)
     referenciaId: uuid("referencia_id"),
+    referenciaType: text("referencia_type"),
     notas: text("notas"),
     fecha: timestamp("fecha", { withTimezone: true }).defaultNow(),
   },
@@ -305,6 +315,10 @@ export const stockMovimientos = pgTable(
       "stock_movimientos_tipo_check",
       sql`${table.tipo} IN ('entrada', 'venta', 'uso_interno', 'ajuste')`
     ),
+    check(
+      "stock_movimientos_referencia_type_check",
+      sql`${table.referenciaType} IS NULL OR ${table.referenciaType} IN ('atencion', 'atenciones_producto')`
+    ),
     index("stock_movimientos_tipo_idx").on(table.tipo),
   ]
 );
@@ -312,6 +326,10 @@ export const stockMovimientos = pgTable(
 // ————————————————————————————
 // CIERRE DE CAJA DIARIO
 // ————————————————————————————
+// Note: cierres_caja hardcodes the 4 current payment methods as columns instead of
+// a child table. This is intentional for simplicity — if payment methods change,
+// a schema migration will be needed to add columns. medios_pago remains the source
+// of truth for available methods; these totals are a snapshot per close.
 export const cierresCaja = pgTable("cierres_caja", {
   id: uuid("id").defaultRandom().primaryKey(),
   fecha: date("fecha").unique().notNull(),
@@ -359,6 +377,10 @@ export const categoriasGasto = pgTable("categorias_gasto", {
   color: text("color"),
 });
 
+// Note: gastos has two category fields. categoriaId (FK) is used for fixed expenses
+// via the form UI. categoriaVisual (free text) is used for gastos_rapidos entries
+// that may not map to a categoria. Always query both when displaying; treat
+// categoriaId as canonical when both are set.
 export const gastos = pgTable(
   "gastos",
   {
@@ -392,8 +414,8 @@ export const gastos = pgTable(
 export const liquidaciones = pgTable("liquidaciones", {
   id: uuid("id").defaultRandom().primaryKey(),
   barberoId: uuid("barbero_id").references(() => barberos.id),
-  periodoInicio: date("periodo_inicio"),
-  periodoFin: date("periodo_fin"),
+  periodoInicio: date("periodo_inicio").notNull(),
+  periodoFin: date("periodo_fin").notNull(),
 
   totalCortes: integer("total_cortes"),
   totalBrutoCortes: numeric("total_bruto_cortes", { precision: 12, scale: 2 }),
@@ -416,11 +438,15 @@ export const liquidaciones = pgTable("liquidaciones", {
 },
 (table) => [
   index("liquidaciones_barbero_id_idx").on(table.barberoId),
+  uniqueIndex("liquidaciones_barbero_periodo_idx").on(table.barberoId, table.periodoInicio, table.periodoFin),
 ]);
 
 // ————————————————————————————
 // REPAGO A MEMAS
 // ————————————————————————————
+// Note: cuotasPagadas and saldoPendiente are stored derived values. They can be
+// computed from repago_memas_cuotas but are cached here for read performance.
+// Keep in sync when inserting cuota rows or they will drift.
 export const repagoMemas = pgTable("repago_memas", {
   id: uuid("id").defaultRandom().primaryKey(),
   valorLlaveTotal: numeric("valor_llave_total", { precision: 12, scale: 2 }),
@@ -436,16 +462,19 @@ export const repagoMemas = pgTable("repago_memas", {
 
 export const repagoMemasCuotas = pgTable("repago_memas_cuotas", {
   id: uuid("id").defaultRandom().primaryKey(),
-  numeroCuota: integer("numero_cuota"),
+  numeroCuota: integer("numero_cuota").notNull(),
   fechaPago: date("fecha_pago"),
   montoPagado: numeric("monto_pagado", { precision: 12, scale: 2 }),
   comprobanteUrl: text("comprobante_url"),
-  repagoId: uuid("repago_id").references(() => repagoMemas.id),
+  repagoId: uuid("repago_id").notNull().references(() => repagoMemas.id),
   capitalPagado: numeric("capital_pagado", { precision: 12, scale: 2 }),
   interesPagado: numeric("interes_pagado", { precision: 12, scale: 2 }),
   tcDia: numeric("tc_dia", { precision: 10, scale: 2 }),
   notas: text("notas"),
-});
+},
+(table) => [
+  uniqueIndex("repago_memas_cuotas_repago_numero_idx").on(table.repagoId, table.numeroCuota),
+]);
 
 // ————————————————————————————
 // CONFIGURACIÓN DEL NEGOCIO
@@ -588,6 +617,33 @@ export const turnosExtras = pgTable(
   ]
 );
 
+export const turnoNotificationEvents = pgTable(
+  "turno_notification_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    turnoId: uuid("turno_id")
+      .notNull()
+      .references(() => turnos.id, { onDelete: "cascade" }),
+    eventType: text("event_type").notNull(),
+    targetEmail: text("target_email"),
+    providerStatus: text("provider_status").notNull().default("queued"),
+    providerMessage: text("provider_message"),
+    createdByUserId: text("created_by_user_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "turno_notification_events_event_type_check",
+      sql`${table.eventType} IN ('turno_confirmado','turno_cancelado')`
+    ),
+    check(
+      "turno_notification_events_provider_status_check",
+      sql`${table.providerStatus} IN ('queued','sent','skipped','failed')`
+    ),
+    index("turno_notification_events_turno_created_idx").on(table.turnoId, table.createdAt),
+  ]
+);
+
 export const turnosDisponibilidad = pgTable(
   "turnos_disponibilidad",
   {
@@ -603,7 +659,7 @@ export const turnosDisponibilidad = pgTable(
   (table) => [
     check(
       "turnos_disponibilidad_duracion_minutos_check",
-      sql`${table.duracionMinutos} IN (45, 60)`
+      sql`${table.duracionMinutos} IN (30, 45, 60)`
     ),
     uniqueIndex("turnos_disponibilidad_slot_unico_idx").on(
       table.barberoId,
@@ -711,6 +767,128 @@ export const marcianoBeneficiosUso = pgTable(
   (table) => [uniqueIndex("marciano_beneficios_uso_client_mes_idx").on(table.clientId, table.mes)]
 );
 
+export const internalBugReports = pgTable(
+  "internal_bug_reports",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    status: text("status").notNull().default("new"),
+    severity: text("severity").notNull().default("medium"),
+    summary: text("summary").notNull(),
+    expectedBehavior: text("expected_behavior").notNull(),
+    actualBehavior: text("actual_behavior").notNull(),
+    pathname: text("pathname").notNull(),
+    actionName: text("action_name"),
+    reporterRole: text("reporter_role").notNull(),
+    reporterUserId: text("reporter_user_id").notNull(),
+    clientVersion: text("client_version"),
+    sessionHash: text("session_hash"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "internal_bug_reports_status_check",
+      sql`${table.status} IN ('new','triaged','fixed','verified','closed')`
+    ),
+    check(
+      "internal_bug_reports_severity_check",
+      sql`${table.severity} IN ('low','medium','high','critical')`
+    ),
+    index("internal_bug_reports_status_idx").on(table.status, table.createdAt),
+    index("internal_bug_reports_path_idx").on(table.pathname),
+  ]
+);
+
+export const internalSupportIntakes = pgTable(
+  "internal_support_intakes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    intakeType: text("intake_type").notNull(),
+    title: text("title").notNull(),
+    problem: text("problem").notNull(),
+    proposal: text("proposal"),
+    impact: text("impact"),
+    urgency: text("urgency").notNull().default("media"),
+    pathname: text("pathname").notNull(),
+    reporterRole: text("reporter_role").notNull(),
+    reporterUserId: text("reporter_user_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "internal_support_intakes_type_check",
+      sql`${table.intakeType} IN ('feature_request','implementation_idea')`
+    ),
+    check(
+      "internal_support_intakes_urgency_check",
+      sql`${table.urgency} IN ('baja','media','alta','critica')`
+    ),
+    index("internal_support_intakes_type_created_idx").on(table.intakeType, table.createdAt),
+  ]
+);
+
+export const retentionFollowups = pgTable(
+  "retention_followups",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("pendiente"),
+    notes: text("notes"),
+    lastManagedAt: timestamp("last_managed_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "retention_followups_status_check",
+      sql`${table.status} IN ('pendiente','contactado','reagendado')`
+    ),
+    uniqueIndex("retention_followups_client_id_idx").on(table.clientId),
+    index("retention_followups_status_last_managed_idx").on(table.status, table.lastManagedAt),
+  ]
+);
+
+export const internalBugDeliveryEvents = pgTable(
+  "internal_bug_delivery_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    bugReportId: uuid("bug_report_id")
+      .notNull()
+      .references(() => internalBugReports.id, { onDelete: "cascade" }),
+    destination: text("destination").notNull(),
+    status: text("status").notNull().default("queued"),
+    responseCode: integer("response_code"),
+    responseBody: text("response_body"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "internal_bug_delivery_events_status_check",
+      sql`${table.status} IN ('queued','sent','failed','skipped')`
+    ),
+    index("internal_bug_delivery_events_bug_created_idx").on(table.bugReportId, table.createdAt),
+  ]
+);
+
+export const goLiveReadiness = pgTable(
+  "go_live_readiness",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    scope: text("scope").notNull().default("default"),
+    checklistSnapshot: jsonb("checklist_snapshot").notNull().default(sql`'[]'::jsonb`),
+    signedOffAt: timestamp("signed_off_at", { withTimezone: true }),
+    signedOffByUserId: text("signed_off_by_user_id"),
+    notes: text("notes"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("go_live_readiness_scope_idx").on(table.scope)]
+);
+
 export const clientBriefingCache = pgTable(
   "client_briefing_cache",
   {
@@ -729,7 +907,7 @@ export const clientBriefingCache = pgTable(
       "client_briefing_cache_scope_check",
       sql`${table.viewerScope} IN ('admin', 'barbero')`
     ),
-    index("client_briefing_cache_client_scope_idx").on(
+    uniqueIndex("client_briefing_cache_client_scope_idx").on(
       table.clientId,
       table.viewerScope,
       table.viewerBarberoId
@@ -941,7 +1119,7 @@ export const musicAutoResumeState = pgTable(
   (table) => [
     check(
       "music_auto_resume_state_resume_mode_check",
-      sql`${table.resumeMode} IN ('auto')`
+      sql`${table.resumeMode} IN ('auto','dj','jam')`
     ),
     index("music_auto_resume_state_pending_idx").on(table.resumePending, table.updatedAt),
   ]
@@ -1221,8 +1399,8 @@ export const ovnisTransactions = pgTable(
     description: text("description").notNull(),
     relatedClientId: uuid("related_client_id").references(() => clients.id, { onDelete: "set null" }),
     relatedAtencionId: uuid("related_atencion_id").references(() => atenciones.id, { onDelete: "set null" }),
-    relatedBetId: uuid("related_bet_id"),
-    relatedRedemptionId: uuid("related_redemption_id"),
+    relatedBetId: uuid("related_bet_id").references(() => ovnisBets.id, { onDelete: "set null" }),
+    relatedRedemptionId: uuid("related_redemption_id").references(() => ovnisRedemptions.id, { onDelete: "set null" }),
     idempotencyKey: text("idempotency_key"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1307,6 +1485,8 @@ export const ovnisRuletaPrizes = pgTable(
   ]
 );
 
+// One spin per client ever — this is the "bienvenida" welcome spin, not a monthly lottery.
+// sorteosParticipados in marciano_beneficios_uso tracks a separate monthly draw system.
 export const ovnisRuletaSpins = pgTable("ovnis_ruleta_spins", {
   clientId: uuid("client_id")
     .primaryKey()

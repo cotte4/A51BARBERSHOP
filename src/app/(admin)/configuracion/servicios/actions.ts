@@ -61,7 +61,7 @@ export async function crearServicio(
     await db.insert(serviciosPreciosHistorial).values({
       servicioId: nuevoServicio.id,
       precio: precioBaseStr,
-      vigenteDesdе: new Date().toISOString().split("T")[0],
+      vigentaDesde: new Date().toISOString().split("T")[0],
       motivo: "Precio inicial",
     });
   } catch {
@@ -131,7 +131,7 @@ export async function editarServicio(
       await db.insert(serviciosPreciosHistorial).values({
         servicioId: id,
         precio: precioBaseStr,
-        vigenteDesdе: new Date().toISOString().split("T")[0],
+        vigentaDesde: new Date().toISOString().split("T")[0],
         motivo: motivoCambioPrecio?.trim() || null,
       });
     }

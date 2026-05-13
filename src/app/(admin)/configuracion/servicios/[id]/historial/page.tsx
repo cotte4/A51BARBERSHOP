@@ -29,7 +29,7 @@ export default async function HistorialServicioPage({
     .select()
     .from(serviciosPreciosHistorial)
     .where(eq(serviciosPreciosHistorial.servicioId, id))
-    .orderBy(desc(serviciosPreciosHistorial.vigenteDesdе));
+    .orderBy(desc(serviciosPreciosHistorial.vigentaDesde));
 
   const ultimoCambio = historial[0] ?? null;
 
@@ -63,7 +63,7 @@ export default async function HistorialServicioPage({
             <SummaryCard label="Movimientos" value={`${historial.length}`} />
             <SummaryCard
               label="Ultimo cambio"
-              value={ultimoCambio ? formatFecha(ultimoCambio.vigenteDesdе) : "Sin cambios"}
+              value={ultimoCambio ? formatFecha(ultimoCambio.vigentaDesde) : "Sin cambios"}
             />
             <SummaryCard
               label="Estado"
@@ -122,11 +122,11 @@ export default async function HistorialServicioPage({
                         ) : null}
                       </div>
                       <p className="text-sm uppercase tracking-[0.18em] text-zinc-400">
-                        Vigente desde {formatFecha(h.vigenteDesdе)}
+                        Vigente desde {formatFecha(h.vigentaDesde)}
                       </p>
                     </div>
 
-                    <p className="text-sm text-zinc-400">{formatFecha(h.vigenteDesdе)}</p>
+                    <p className="text-sm text-zinc-400">{formatFecha(h.vigentaDesde)}</p>
                   </div>
 
                   {h.motivo ? (

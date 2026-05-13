@@ -120,7 +120,7 @@ async function run() {
     await db.insert(schema.serviciosPreciosHistorial).values({
       servicioId: corteId,
       precio: "14000.00",
-      vigenteDesdе: hoy,
+      vigentaDesde: hoy,
       motivo: "Precio inicial apertura",
       creadoPor: pinkyId,
     });
@@ -140,7 +140,7 @@ async function run() {
     await db.insert(schema.serviciosPreciosHistorial).values({
       servicioId: corteYBarbaId,
       precio: "16000.00",
-      vigenteDesdе: hoy,
+      vigentaDesde: hoy,
       motivo: "Precio inicial apertura",
       creadoPor: pinkyId,
     });
