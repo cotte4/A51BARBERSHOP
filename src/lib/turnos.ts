@@ -12,6 +12,12 @@ import {
   turnosExtras,
   turnosReservaIntentos,
 } from "@/db/schema";
+import {
+  normalizeHora as normalizeTurnoHora,
+  overlapsTurnoInterval,
+  timeToMinutes,
+  type TurnoInterval,
+} from "@/lib/turno-intervals";
 
 export const TURNO_DURACIONES = [45, 60] as const;
 
@@ -40,7 +46,7 @@ export function canReserveOnPublicFecha(fecha: string): boolean {
 }
 
 export function normalizeHora(hora: string): string {
-  return hora.slice(0, 5);
+  return normalizeTurnoHora(hora);
 }
 
 export async function resolvePublicBarberoBySlug(slug: string) {
@@ -117,11 +123,6 @@ export async function isFechaCerrada(fecha: string): Promise<boolean> {
   return !!cierre;
 }
 
-function timeToMinutes(hora: string): number {
-  const [h, m] = hora.split(":").map(Number);
-  return (h ?? 0) * 60 + (m ?? 0);
-}
-
 export async function getTurnosDisponibles(
   barberoId: string,
   fecha: string,
@@ -144,6 +145,7 @@ export async function getTurnosDisponibles(
     db
       .select({
         horaInicio: turnos.horaInicio,
+        duracionMinutos: turnos.duracionMinutos,
       })
       .from(turnos)
       .where(
@@ -155,14 +157,19 @@ export async function getTurnosDisponibles(
       ),
   ]);
 
-  const ocupadas = new Set(ocupados.map((slot) => normalizeHora(slot.horaInicio)));
+  const ocupadosActivos: TurnoInterval[] = ocupados.map((turno) => ({
+    horaInicio: normalizeHora(turno.horaInicio),
+    duracionMinutos: turno.duracionMinutos,
+  }));
 
   const todosOrdenados = slots
     .map((slot) => ({ ...slot, horaInicio: normalizeHora(slot.horaInicio) }))
     .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
 
   if (!duracionMinutos) {
-    return todosOrdenados.filter((slot) => !ocupadas.has(slot.horaInicio));
+    return todosOrdenados.filter(
+      (slot) => !overlapsTurnoInterval(slot.horaInicio, slot.duracionMinutos, ocupadosActivos)
+    );
   }
 
   // Para cada slot libre, verificar si slots consecutivos libres cubren la duración del servicio
@@ -170,7 +177,6 @@ export async function getTurnosDisponibles(
 
   for (let i = 0; i < todosOrdenados.length; i++) {
     const startSlot = todosOrdenados[i];
-    if (ocupadas.has(startSlot.horaInicio)) continue;
 
     const startMin = timeToMinutes(startSlot.horaInicio);
     const requiredEnd = startMin + duracionMinutos;
@@ -181,7 +187,8 @@ export async function getTurnosDisponibles(
       const slotStart = timeToMinutes(slot.horaInicio);
 
       if (slotStart > coveredUntil) break; // hay un hueco — no se puede encadenar
-      if (ocupadas.has(slot.horaInicio)) break; // slot tomado
+      const usableDuration = Math.min(slot.duracionMinutos, requiredEnd - slotStart);
+      if (overlapsTurnoInterval(slot.horaInicio, usableDuration, ocupadosActivos)) break;
 
       coveredUntil = Math.max(coveredUntil, slotStart + slot.duracionMinutos);
 
@@ -392,6 +399,7 @@ export async function getDisponibilidadLibrePorFecha(fecha: string, barberoId?: 
       .select({
         barberoId: turnos.barberoId,
         horaInicio: turnos.horaInicio,
+        duracionMinutos: turnos.duracionMinutos,
       })
       .from(turnos)
       .where(
@@ -403,12 +411,25 @@ export async function getDisponibilidadLibrePorFecha(fecha: string, barberoId?: 
       ),
   ]);
 
-  const ocupadas = new Set(
-    ocupados.map((slot) => `${slot.barberoId}:${normalizeHora(slot.horaInicio)}`)
-  );
+  const ocupadosPorBarbero = new Map<string, TurnoInterval[]>();
+  for (const turno of ocupados) {
+    const current = ocupadosPorBarbero.get(turno.barberoId) ?? [];
+    current.push({
+      horaInicio: normalizeHora(turno.horaInicio),
+      duracionMinutos: turno.duracionMinutos,
+    });
+    ocupadosPorBarbero.set(turno.barberoId, current);
+  }
 
   return slots
-    .filter((slot) => !ocupadas.has(`${slot.barberoId}:${normalizeHora(slot.horaInicio)}`))
+    .filter(
+      (slot) =>
+        !overlapsTurnoInterval(
+          slot.horaInicio,
+          slot.duracionMinutos,
+          ocupadosPorBarbero.get(slot.barberoId) ?? []
+        )
+    )
     .map((slot) => ({
       ...slot,
       horaInicio: normalizeHora(slot.horaInicio),

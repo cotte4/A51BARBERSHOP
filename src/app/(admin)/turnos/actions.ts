@@ -13,6 +13,7 @@ import {
   getFechaHoyArgentina,
   isFechaCerrada,
 } from "@/lib/turnos";
+import { overlapsTurnoInterval, type TurnoInterval } from "@/lib/turno-intervals";
 import { getHoraAhoraArgentina } from "@/lib/caja-atencion";
 
 export type TurnoActionState = {
@@ -387,7 +388,7 @@ export async function crearTurnoRapidoAction(
 
   const horaNormalizada = normalizeTimeInput(horaInicio);
 
-  const [slotDisponible, ocupado, clientMatch] = await Promise.all([
+  const [slotDisponible, turnosActivos, clientMatch] = await Promise.all([
     db
       .select({ id: turnosDisponibilidad.id })
       .from(turnosDisponibilidad)
@@ -401,17 +402,18 @@ export async function crearTurnoRapidoAction(
       )
       .limit(1),
     db
-      .select({ id: turnos.id })
+      .select({
+        horaInicio: turnos.horaInicio,
+        duracionMinutos: turnos.duracionMinutos,
+      })
       .from(turnos)
       .where(
         and(
           eq(turnos.barberoId, barberoId),
           eq(turnos.fecha, fecha),
-          eq(turnos.horaInicio, horaNormalizada),
           inArray(turnos.estado, ["pendiente", "confirmado"])
         )
-      )
-      .limit(1),
+      ),
     findClientByPhone(clienteTelefonoRaw || null),
   ]);
 
@@ -419,7 +421,12 @@ export async function crearTurnoRapidoAction(
     return { error: "Ese hueco libre ya no esta disponible." };
   }
 
-  if (ocupado[0]) {
+  const ocupadosActivos: TurnoInterval[] = turnosActivos.map((turno) => ({
+    horaInicio: turno.horaInicio,
+    duracionMinutos: turno.duracionMinutos,
+  }));
+
+  if (overlapsTurnoInterval(horaNormalizada, duracionMinutos, ocupadosActivos)) {
     return { error: "Ese horario acaba de ocuparse." };
   }
 
