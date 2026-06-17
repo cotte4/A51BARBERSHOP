@@ -62,15 +62,15 @@ async function main() {
   if (medios.length === 0) throw new Error("No hay medios de pago activos en la DB");
 
   // Prefer efectivo (0% commission) for simplicity; fallback to first
-  const efectivo = medios.find((m) => /efectivo/i.test(m.nombre)) ?? medios[0];
-  const mpQR = medios.find((m) => /mp.qr/i.test(m.nombre)) ?? medios[0];
+  const efectivo = medios.find((m) => /efectivo/i.test(m.nombre ?? "")) ?? medios[0];
+  const mpQR = medios.find((m) => /mp.qr/i.test(m.nombre ?? "")) ?? medios[0];
 
   // Use first available barbero — prefer Pinky (owner), else whatever exists
   const pinky = barberos.find((b) => /pinky/i.test(b.nombre)) ?? barberos[0];
   const gabote = barberos.find((b) => /gabote/i.test(b.nombre));
 
   const servicio = servicios[0]; // first active service
-  const precio = Number(servicio.precio ?? 15000);
+  const precio = Number(servicio.precioBase ?? 15000);
 
   const toInsert = [
     {
@@ -91,12 +91,17 @@ async function main() {
   ];
 
   for (const entry of toInsert) {
-    const mpComisionPct = Number(entry.medio.comisionPct ?? 0);
-    const barberoComisionPct = entry.barbero.comisionPct
-      ? Number(entry.barbero.comisionPct)
+    const mpComisionPct = Number(entry.medio.comisionPorcentaje ?? 0);
+    const barberoComisionPct = entry.barbero.porcentajeComision
+      ? Number(entry.barbero.porcentajeComision)
       : null;
 
-    const fin = calcAtencionFinancials(entry.precio, mpComisionPct, barberoComisionPct);
+    const fin = calcAtencionFinancials(
+      entry.precio,
+      entry.precio,
+      mpComisionPct,
+      barberoComisionPct
+    );
 
     await db.insert(schema.atenciones).values({
       barberoId: entry.barbero.id,
