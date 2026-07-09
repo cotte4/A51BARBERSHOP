@@ -65,8 +65,6 @@ async function run() {
         rol: "admin",
         tipoModelo: null,
         porcentajeComision: null,
-        alquilerBancoMensual: null,
-        sueldoMinimoGarantizado: null,
         activo: true,
         userId: pinkyUser.id,
       })
@@ -86,8 +84,6 @@ async function run() {
         rol: "barbero",
         tipoModelo: "variable",
         porcentajeComision: "60.00",
-        alquilerBancoMensual: null,
-        sueldoMinimoGarantizado: null,
         activo: true,
         userId: gaboteUser.id,
       })

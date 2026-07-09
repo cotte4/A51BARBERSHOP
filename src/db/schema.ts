@@ -97,18 +97,10 @@ export const barberos = pgTable(
       precision: 5,
       scale: 2,
     }),
-    alquilerBancoMensual: numeric("alquiler_banco_mensual", {
-      precision: 12,
-      scale: 2,
-    }),
-    sueldoMinimoGarantizado: numeric("sueldo_minimo_garantizado", {
-      precision: 12,
-      scale: 2,
-    }),
-    servicioDefectoId: uuid("servicio_defecto_id").references(() => servicios.id),
-    medioPagoDefectoId: uuid("medio_pago_defecto_id").references(() => mediosPago.id),
-    activo: boolean("activo").default(true),
-    creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
+    servicioDefectoId: uuid("servicio_defecto_id").references(() => servicios.id, { onDelete: "set null" }),
+    medioPagoDefectoId: uuid("medio_pago_defecto_id").references(() => mediosPago.id, { onDelete: "set null" }),
+    activo: boolean("activo").notNull().default(true),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
     userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
   },
   (table) => [
@@ -131,7 +123,7 @@ export const servicios = pgTable(
     nombre: text("nombre").notNull().unique(),
     precioBase: numeric("precio_base", { precision: 12, scale: 2 }),
     duracionMinutos: integer("duracion_minutos").notNull().default(60),
-    activo: boolean("activo").default(true),
+    activo: boolean("activo").notNull().default(true),
     ovnisValue: integer("ovnis_value").notNull().default(0),
   },
   (table) => [
@@ -147,7 +139,10 @@ export const serviciosAdicionales = pgTable("servicios_adicionales", {
   servicioId: uuid("servicio_id").references(() => servicios.id),
   nombre: text("nombre").notNull(),
   precioExtra: numeric("precio_extra", { precision: 12, scale: 2 }),
-});
+},
+(table) => [
+  index("servicios_adicionales_servicio_id_idx").on(table.servicioId),
+]);
 
 export const serviciosPreciosHistorial = pgTable(
   "servicios_precios_historial",
@@ -157,8 +152,11 @@ export const serviciosPreciosHistorial = pgTable(
     precio: numeric("precio", { precision: 12, scale: 2 }),
     vigentaDesde: date("vigente_desde").notNull(),
     motivo: text("motivo"),
-    creadoPor: uuid("creado_por").references(() => barberos.id),
-  }
+    creadoPor: uuid("creado_por").references(() => barberos.id, { onDelete: "set null" }),
+  },
+  (table) => [
+    index("servicios_precios_historial_servicio_id_idx").on(table.servicioId),
+  ]
 );
 
 // ————————————————————————————
@@ -189,8 +187,8 @@ export const mediosPago = pgTable(
     comisionPorcentaje: numeric("comision_porcentaje", {
       precision: 5,
       scale: 2,
-    }).default("0"),
-    activo: boolean("activo").default(true),
+    }).notNull().default("0"),
+    activo: boolean("activo").notNull().default(true),
   },
   (table) => [
     uniqueIndex("medios_pago_nombre_idx").on(table.nombre),
@@ -202,57 +200,73 @@ export const mediosPago = pgTable(
 // ————————————————————————————
 export const atenciones = pgTable("atenciones", {
   id: uuid("id").defaultRandom().primaryKey(),
-  barberoId: uuid("barbero_id").references(() => barberos.id),
+  barberoId: uuid("barbero_id").notNull().references(() => barberos.id),
   clientId: uuid("client_id").references(() => clients.id),
-  servicioId: uuid("servicio_id").references(() => servicios.id),
+  servicioId: uuid("servicio_id").notNull().references(() => servicios.id),
   fecha: date("fecha").notNull(),
   hora: time("hora"),
 
   // Precios
-  precioBase: numeric("precio_base", { precision: 12, scale: 2 }),
-  precioCobrado: numeric("precio_cobrado", { precision: 12, scale: 2 }),
+  precioBase: numeric("precio_base", { precision: 12, scale: 2 }).notNull(),
+  precioCobrado: numeric("precio_cobrado", { precision: 12, scale: 2 }).notNull(),
 
   // Medio de pago
-  medioPagoId: uuid("medio_pago_id").references(() => mediosPago.id),
+  medioPagoId: uuid("medio_pago_id").notNull().references(() => mediosPago.id),
   comisionMedioPagoPct: numeric("comision_medio_pago_pct", {
     precision: 5,
     scale: 2,
-  }),
+  }).notNull(),
   comisionMedioPagoMonto: numeric("comision_medio_pago_monto", {
     precision: 12,
     scale: 2,
-  }),
-  montoNeto: numeric("monto_neto", { precision: 12, scale: 2 }),
+  }).notNull(),
+  montoNeto: numeric("monto_neto", { precision: 12, scale: 2 }).notNull(),
 
   // Comisión del barbero
   comisionBarberoPct: numeric("comision_barbero_pct", {
     precision: 5,
     scale: 2,
-  }),
+  }).notNull(),
   comisionBarberoMonto: numeric("comision_barbero_monto", {
     precision: 12,
     scale: 2,
-  }),
+  }).notNull(),
 
   // Control
-  anulado: boolean("anulado").default(false),
+  anulado: boolean("anulado").notNull().default(false),
   motivoAnulacion: text("motivo_anulacion"),
   notas: text("notas"),
   cierreCajaId: uuid("cierre_caja_id").references(() => cierresCaja.id, { onDelete: "set null" }),
-  creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
+  creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
 },
 (table) => [
+  // Tier 1 + Tier 3 checks for atenciones
+  check("atenciones_precio_base_nonneg", sql`${table.precioBase} >= 0`),
+  check("atenciones_precio_cobrado_nonneg", sql`${table.precioCobrado} >= 0`),
+  check("atenciones_comision_medio_pago_monto_nonneg", sql`${table.comisionMedioPagoMonto} >= 0`),
+  check("atenciones_comision_barbero_monto_nonneg", sql`${table.comisionBarberoMonto} >= 0`),
+  check("atenciones_monto_neto_nonneg", sql`${table.montoNeto} >= 0`),
+  check("atenciones_comision_medio_pago_pct_range", sql`${table.comisionMedioPagoPct} BETWEEN 0 AND 100`),
+  check("atenciones_comision_barbero_pct_range", sql`${table.comisionBarberoPct} BETWEEN 0 AND 100`),
+  check("atenciones_monto_neto_coherente", sql`ABS(${table.montoNeto} - (${table.precioCobrado} - ${table.comisionMedioPagoMonto})) <= 0.01`),
   index("atenciones_fecha_idx").on(table.fecha),
   index("atenciones_barbero_id_idx").on(table.barberoId),
   index("atenciones_client_id_idx").on(table.clientId),
+  index("atenciones_cierre_caja_id_idx").on(table.cierreCajaId),
+  index("atenciones_servicio_id_idx").on(table.servicioId),
+  index("atenciones_medio_pago_id_idx").on(table.medioPagoId),
 ]);
 
 export const atencionesAdicionales = pgTable("atenciones_adicionales", {
   id: uuid("id").defaultRandom().primaryKey(),
-  atencionId: uuid("atencion_id").references(() => atenciones.id, { onDelete: "cascade" }),
-  adicionalId: uuid("adicional_id").references(() => serviciosAdicionales.id),
-  precioCobrado: numeric("precio_cobrado", { precision: 12, scale: 2 }),
-});
+  atencionId: uuid("atencion_id").notNull().references(() => atenciones.id, { onDelete: "cascade" }),
+  adicionalId: uuid("adicional_id").notNull().references(() => serviciosAdicionales.id),
+  precioCobrado: numeric("precio_cobrado", { precision: 12, scale: 2 }).notNull(),
+},
+(table) => [
+  index("atenciones_adicionales_atencion_id_idx").on(table.atencionId),
+  index("atenciones_adicionales_adicional_id_idx").on(table.adicionalId),
+]);
 
 export const atencionesProductos = pgTable(
   "atenciones_productos",
@@ -320,6 +334,7 @@ export const stockMovimientos = pgTable(
       sql`${table.referenciaType} IS NULL OR ${table.referenciaType} IN ('atencion', 'atenciones_producto')`
     ),
     index("stock_movimientos_tipo_idx").on(table.tipo),
+    index("stock_movimientos_producto_id_idx").on(table.productoId),
   ]
 );
 
@@ -348,12 +363,12 @@ export const cierresCaja = pgTable("cierres_caja", {
   ),
 
   // Totales generales
-  totalBruto: numeric("total_bruto", { precision: 12, scale: 2 }),
+  totalBruto: numeric("total_bruto", { precision: 12, scale: 2 }).notNull(),
   totalComisionesMedios: numeric("total_comisiones_medios", {
     precision: 12,
     scale: 2,
-  }),
-  totalNeto: numeric("total_neto", { precision: 12, scale: 2 }),
+  }).notNull(),
+  totalNeto: numeric("total_neto", { precision: 12, scale: 2 }).notNull(),
 
   // Desglose por origen
   totalCortesBruto: numeric("total_cortes_bruto", { precision: 12, scale: 2 }),
@@ -364,9 +379,17 @@ export const cierresCaja = pgTable("cierres_caja", {
 
   // Control
   cantidadAtenciones: integer("cantidad_atenciones"),
-  cerradoPor: uuid("cerrado_por").references(() => barberos.id),
-  cerradoEn: timestamp("cerrado_en", { withTimezone: true }),
-});
+  cerradoPor: uuid("cerrado_por").references(() => barberos.id, { onDelete: "set null" }),
+  cerradoEn: timestamp("cerrado_en", { withTimezone: true }).notNull(),
+},
+(table) => [
+  // Tier 1 + Tier 3 checks for cierres_caja
+  check("cierres_caja_total_bruto_nonneg", sql`${table.totalBruto} >= 0`),
+  check("cierres_caja_total_neto_nonneg", sql`${table.totalNeto} >= 0`),
+  check("cierres_caja_total_comisiones_medios_nonneg", sql`${table.totalComisionesMedios} >= 0`),
+  check("cierres_caja_total_neto_coherente", sql`${table.totalNeto} = ${table.totalBruto} - ${table.totalComisionesMedios}`),
+  check("cierres_caja_comisiones_lte_bruto", sql`${table.totalComisionesMedios} <= ${table.totalBruto}`),
+]);
 
 // ————————————————————————————
 // GASTOS FIJOS
@@ -375,6 +398,7 @@ export const categoriasGasto = pgTable("categorias_gasto", {
   id: uuid("id").defaultRandom().primaryKey(),
   nombre: text("nombre"),
   color: text("color"),
+  activo: boolean("activo").notNull().default(true),
 });
 
 // Note: gastos has two category fields. categoriaId (FK) is used for fixed expenses
@@ -387,9 +411,9 @@ export const gastos = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     categoriaId: uuid("categoria_id").references(() => categoriasGasto.id),
     descripcion: text("descripcion"),
-    monto: numeric("monto", { precision: 12, scale: 2 }),
-    fecha: date("fecha"),
-    tipo: text("tipo").default("fijo"),
+    monto: numeric("monto", { precision: 12, scale: 2 }).notNull(),
+    fecha: date("fecha").notNull(),
+    tipo: text("tipo").notNull().default("fijo"),
     categoriaVisual: text("categoria_visual"),
     esRecurrente: boolean("es_recurrente").default(false),
     frecuencia: text("frecuencia"),
@@ -413,7 +437,7 @@ export const gastos = pgTable(
 // ————————————————————————————
 export const liquidaciones = pgTable("liquidaciones", {
   id: uuid("id").defaultRandom().primaryKey(),
-  barberoId: uuid("barbero_id").references(() => barberos.id),
+  barberoId: uuid("barbero_id").notNull().references(() => barberos.id),
   periodoInicio: date("periodo_inicio").notNull(),
   periodoFin: date("periodo_fin").notNull(),
 
@@ -423,20 +447,21 @@ export const liquidaciones = pgTable("liquidaciones", {
     precision: 12,
     scale: 2,
   }),
-  sueldoMinimo: numeric("sueldo_minimo", { precision: 12, scale: 2 }),
-  alquilerBancoCobrado: numeric("alquiler_banco_cobrado", {
-    precision: 12,
-    scale: 2,
-  }),
 
   montoAPagar: numeric("monto_a_pagar", { precision: 12, scale: 2 }),
 
-  pagado: boolean("pagado").default(false),
+  pagado: boolean("pagado").notNull().default(false),
   fechaPago: date("fecha_pago"),
   notas: text("notas"),
   creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
 },
 (table) => [
+  // Tier 1 + Tier 3 checks for liquidaciones
+  check("liquidaciones_total_bruto_cortes_nonneg", sql`${table.totalBrutoCortes} >= 0`),
+  check("liquidaciones_total_comision_calculada_nonneg", sql`${table.totalComisionCalculada} >= 0`),
+  check("liquidaciones_monto_a_pagar_nonneg", sql`${table.montoAPagar} >= 0`),
+  check("liquidaciones_monto_a_pagar_lte_bruto", sql`${table.montoAPagar} <= ${table.totalBrutoCortes}`),
+  check("liquidaciones_pagado_fecha_coherente", sql`(${table.pagado} = true AND ${table.fechaPago} IS NOT NULL) OR (${table.pagado} = false AND ${table.fechaPago} IS NULL)`),
   index("liquidaciones_barbero_id_idx").on(table.barberoId),
   uniqueIndex("liquidaciones_barbero_periodo_idx").on(table.barberoId, table.periodoInicio, table.periodoFin),
 ]);
@@ -466,7 +491,7 @@ export const repagoMemasCuotas = pgTable("repago_memas_cuotas", {
   fechaPago: date("fecha_pago"),
   montoPagado: numeric("monto_pagado", { precision: 12, scale: 2 }),
   comprobanteUrl: text("comprobante_url"),
-  repagoId: uuid("repago_id").notNull().references(() => repagoMemas.id),
+  repagoId: uuid("repago_id").notNull().references(() => repagoMemas.id, { onDelete: "cascade" }),
   capitalPagado: numeric("capital_pagado", { precision: 12, scale: 2 }),
   interesPagado: numeric("interes_pagado", { precision: 12, scale: 2 }),
   tcDia: numeric("tc_dia", { precision: 10, scale: 2 }),
@@ -481,9 +506,9 @@ export const repagoMemasCuotas = pgTable("repago_memas_cuotas", {
 // ————————————————————————————
 export const configuracionNegocio = pgTable("configuracion_negocio", {
   id: uuid("id").primaryKey().defaultRandom(),
-  presupuestoMensualGastos: integer("presupuesto_mensual_gastos")
+  presupuestoMensualGastos: numeric("presupuesto_mensual_gastos", { precision: 12, scale: 2 })
     .notNull()
-    .default(1956686),
+    .default("1956686.00"),
   tcReferencia: numeric("tc_referencia", { precision: 10, scale: 2 }).default("1400.00"),
   actualizadoEn: timestamp("actualizado_en", { withTimezone: true }).defaultNow(),
   actualizadoPor: text("actualizado_por"),
@@ -510,12 +535,12 @@ export const clients = pgTable(
     notes: text("notes"),
     createdByUserId: text("created_by_user_id")
       .notNull()
-      .references(() => user.id),
-    createdByBarberoId: uuid("created_by_barbero_id").references(() => barberos.id),
-    userId: text("user_id").references(() => user.id),
+      .references(() => user.id, { onDelete: "set null" }),
+    createdByBarberoId: uuid("created_by_barbero_id").references(() => barberos.id, { onDelete: "set null" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
     totalVisits: integer("total_visits").notNull().default(0),
     lastVisitAt: timestamp("last_visit_at", { withTimezone: true }),
-    lastVisitBarberoId: uuid("last_visit_barbero_id").references(() => barberos.id),
+    lastVisitBarberoId: uuid("last_visit_barbero_id").references(() => barberos.id, { onDelete: "set null" }),
     avgDaysBetweenVisits: numeric("avg_days_between_visits", {
       precision: 8,
       scale: 2,
@@ -545,7 +570,6 @@ export const clients = pgTable(
       table.lastVisitAt
     ),
     index("clients_created_by_barbero_id_idx").on(table.createdByBarberoId),
-    uniqueIndex("clients_avatar_prediction_id_idx").on(table.avatarPredictionId),
     check("clients_face_shape_check",
       sql`${table.faceShape} IN ('oval', 'cuadrado', 'redondo', 'corazon', 'diamante', 'alien') OR ${table.faceShape} IS NULL`
     ),
@@ -593,6 +617,8 @@ export const turnos = pgTable(
     index("turnos_barbero_fecha_idx").on(table.barberoId, table.fecha),
     index("turnos_estado_fecha_idx").on(table.estado, table.fecha),
     index("turnos_cliente_telefono_normalizado_idx").on(table.clienteTelefonoNormalizado),
+    index("turnos_client_id_idx").on(table.clientId),
+    index("turnos_servicio_id_idx").on(table.servicioId),
     uniqueIndex("turnos_slot_activo_unico_idx")
       .on(table.barberoId, table.fecha, table.horaInicio)
       .where(sql`${table.estado} IN ('pendiente', 'confirmado')`),
@@ -707,11 +733,9 @@ export const visitLogs = pgTable(
       .references(() => clients.id, { onDelete: "cascade" }),
     visitedAt: timestamp("visited_at", { withTimezone: true }).notNull().defaultNow(),
     createdByBarberoId: uuid("created_by_barbero_id")
-      .notNull()
-      .references(() => barberos.id),
+      .references(() => barberos.id, { onDelete: "set null" }),
     createdByUserId: text("created_by_user_id")
-      .notNull()
-      .references(() => user.id),
+      .references(() => user.id, { onDelete: "set null" }),
     barberNotes: text("barber_notes"),
     tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
     photoUrls: text("photo_urls").array().notNull().default(sql`'{}'::text[]`),
@@ -742,9 +766,8 @@ export const clientProfileEvents = pgTable(
     oldValue: text("old_value"),
     newValue: text("new_value"),
     changedByUserId: text("changed_by_user_id")
-      .notNull()
-      .references(() => user.id),
-    changedByBarberoId: uuid("changed_by_barbero_id").references(() => barberos.id),
+      .references(() => user.id, { onDelete: "set null" }),
+    changedByBarberoId: uuid("changed_by_barbero_id").references(() => barberos.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("client_profile_events_client_created_at_idx").on(table.clientId, table.createdAt)]
@@ -764,7 +787,10 @@ export const marcianoBeneficiosUso = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("marciano_beneficios_uso_client_mes_idx").on(table.clientId, table.mes)]
+  (table) => [
+    uniqueIndex("marciano_beneficios_uso_client_mes_idx").on(table.clientId, table.mes),
+    check("marciano_beneficios_uso_mes_format", sql`${table.mes} ~ '^\\d{4}-\\d{2}$'`),
+  ]
 );
 
 export const internalBugReports = pgTable(
@@ -897,7 +923,7 @@ export const clientBriefingCache = pgTable(
       .notNull()
       .references(() => clients.id, { onDelete: "cascade" }),
     viewerScope: text("viewer_scope").notNull(),
-    viewerBarberoId: uuid("viewer_barbero_id").references(() => barberos.id),
+    viewerBarberoId: uuid("viewer_barbero_id").references(() => barberos.id, { onDelete: "set null" }),
     cacheKey: text("cache_key").notNull(),
     briefingText: text("briefing_text").notNull(),
     generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -975,15 +1001,15 @@ export const musicModeState = pgTable(
   {
     id: text("id").primaryKey(),
     activeMode: text("active_mode").notNull().default("auto"),
-    manualOwnerBarberoId: uuid("manual_owner_barbero_id").references(() => barberos.id),
-    manualOwnerUserId: text("manual_owner_user_id").references(() => user.id),
+    manualOwnerBarberoId: uuid("manual_owner_barbero_id").references(() => barberos.id, { onDelete: "set null" }),
+    manualOwnerUserId: text("manual_owner_user_id").references(() => user.id, { onDelete: "set null" }),
     pendingContextRef: text("pending_context_ref"),
     pendingContextLabel: text("pending_context_label"),
     jamEnabled: boolean("jam_enabled").notNull().default(false),
     autoEnabled: boolean("auto_enabled").notNull().default(true),
     runtimeState: text("runtime_state").notNull().default("offline"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedByUserId: text("updated_by_user_id").references(() => user.id),
+    updatedByUserId: text("updated_by_user_id").references(() => user.id, { onDelete: "set null" }),
   },
   (table) => [
     check(
@@ -994,6 +1020,7 @@ export const musicModeState = pgTable(
       "music_mode_state_runtime_state_check",
       sql`${table.runtimeState} IN ('ready', 'degraded', 'offline')`
     ),
+    check("music_mode_state_singleton", sql`${table.id} = 'singleton'`),
   ]
 );
 
@@ -1024,7 +1051,7 @@ export const musicQueueSessions = pgTable(
     status: text("status").notNull().default("active"),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     endedAt: timestamp("ended_at", { withTimezone: true }),
-    createdByUserId: text("created_by_user_id").references(() => user.id),
+    createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
   },
   (table) => [
     check(
@@ -1046,7 +1073,7 @@ export const musicQueueItems = pgTable(
       .notNull()
       .references(() => musicQueueSessions.id, { onDelete: "cascade" }),
     sourceType: text("source_type").notNull(),
-    ownerBarberoId: uuid("owner_barbero_id").references(() => barberos.id),
+    ownerBarberoId: uuid("owner_barbero_id").references(() => barberos.id, { onDelete: "set null" }),
     providerTrackRef: text("provider_track_ref").notNull(),
     displayTitle: text("display_title").notNull(),
     displayArtist: text("display_artist"),
@@ -1078,7 +1105,7 @@ export const musicRuntimeStatus = pgTable(
     id: text("id").primaryKey(),
     providerStatus: text("provider_status").notNull().default("disconnected"),
     playerStatus: text("player_status").notNull().default("missing"),
-    activePlayerId: uuid("active_player_id").references(() => musicPlayers.id),
+    activePlayerId: uuid("active_player_id").references(() => musicPlayers.id, { onDelete: "set null" }),
     lastPlayerSeenAt: timestamp("last_player_seen_at", { withTimezone: true }),
     lastPlaybackAttemptAt: timestamp("last_playback_attempt_at", { withTimezone: true }),
     lastPlaybackSuccessAt: timestamp("last_playback_success_at", { withTimezone: true }),
@@ -1096,6 +1123,7 @@ export const musicRuntimeStatus = pgTable(
       "music_runtime_status_player_status_check",
       sql`${table.playerStatus} IN ('ready', 'missing', 'error')`
     ),
+    check("music_runtime_status_singleton", sql`${table.id} = 'singleton'`),
   ]
 );
 
@@ -1121,6 +1149,7 @@ export const musicAutoResumeState = pgTable(
       "music_auto_resume_state_resume_mode_check",
       sql`${table.resumeMode} IN ('auto','dj','jam')`
     ),
+    check("music_auto_resume_state_singleton", sql`${table.id} = 'singleton'`),
     index("music_auto_resume_state_pending_idx").on(table.resumePending, table.updatedAt),
   ]
 );
@@ -1169,6 +1198,7 @@ export const costosFijosValores = pgTable(
   (table) => [
     uniqueIndex("costos_fijos_valores_costo_mes_idx").on(table.costoId, table.mes),
     index("costos_fijos_valores_mes_idx").on(table.mes),
+    check("costos_fijos_valores_mes_format", sql`${table.mes} ~ '^\\d{4}-\\d{2}$'`),
   ]
 );
 

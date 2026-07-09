@@ -70,7 +70,7 @@ async function main() {
   const gabote = barberos.find((b) => /gabote/i.test(b.nombre));
 
   const servicio = servicios[0]; // first active service
-  const precio = Number(servicio.precio ?? 15000);
+  const precio = Number(servicio.precioBase ?? 15000);
 
   const toInsert = [
     {
@@ -91,12 +91,12 @@ async function main() {
   ];
 
   for (const entry of toInsert) {
-    const mpComisionPct = Number(entry.medio.comisionPct ?? 0);
-    const barberoComisionPct = entry.barbero.comisionPct
-      ? Number(entry.barbero.comisionPct)
+    const mpComisionPct = Number(entry.medio.comisionPorcentaje ?? 0);
+    const barberoComisionPct = entry.barbero.porcentajeComision
+      ? Number(entry.barbero.porcentajeComision)
       : null;
 
-    const fin = calcAtencionFinancials(entry.precio, mpComisionPct, barberoComisionPct);
+    const fin = calcAtencionFinancials(entry.precio, entry.precio, mpComisionPct, barberoComisionPct);
 
     await db.insert(schema.atenciones).values({
       barberoId: entry.barbero.id,
@@ -109,8 +109,8 @@ async function main() {
       comisionMedioPagoPct: fin.comisionMedioPagoPct,
       comisionMedioPagoMonto: fin.comisionMedioPagoMonto,
       montoNeto: fin.montoNeto,
-      comisionBarberoPct: fin.comisionBarberoPct,
-      comisionBarberoMonto: fin.comisionBarberoMonto,
+      comisionBarberoPct: fin.comisionBarberoPct ?? "0.00",
+      comisionBarberoMonto: fin.comisionBarberoMonto ?? "0.00",
       notas: SEED_MARKER,
     });
 
