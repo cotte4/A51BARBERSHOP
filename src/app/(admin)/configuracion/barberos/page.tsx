@@ -130,18 +130,6 @@ export default async function BarberosPage() {
                         value={barbero.publicReservaActiva ? "Publica" : "Interna"}
                       />
                       <InfoChip label="Link" value={publicLink(barbero.publicSlug)} />
-                      {barbero.alquilerBancoMensual ? (
-                        <InfoChip
-                          label="Alquiler"
-                          value={`${formatARS(barbero.alquilerBancoMensual)}/mes`}
-                        />
-                      ) : null}
-                      {barbero.sueldoMinimoGarantizado ? (
-                        <InfoChip
-                          label="Minimo"
-                          value={formatARS(barbero.sueldoMinimoGarantizado)}
-                        />
-                      ) : null}
                     </div>
 
                     <p className="mt-3 text-xs text-zinc-400">

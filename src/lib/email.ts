@@ -11,6 +11,10 @@ export function isPasswordResetEmailConfigured() {
   return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL);
 }
 
+export function isTransactionalEmailConfigured() {
+  return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL);
+}
+
 export async function sendMarcianoPasswordResetEmail(input: {
   email: string;
   name: string;
@@ -58,6 +62,57 @@ export async function sendMarcianoPasswordResetEmail(input: {
           </div>
         </div>
       `,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => "");
+    throw new Error(`RESEND_REQUEST_FAILED:${response.status}:${errorBody}`);
+  }
+}
+
+export async function sendTurnoStatusEmail(input: {
+  email: string;
+  clienteNombre: string;
+  barberoNombre: string;
+  fecha: string;
+  horaInicio: string;
+  estado: "confirmado" | "cancelado";
+  motivoCancelacion?: string | null;
+}) {
+  if (!isTransactionalEmailConfigured()) {
+    throw new Error("TRANSACTIONAL_EMAIL_NOT_CONFIGURED");
+  }
+
+  const title = input.estado === "confirmado" ? "Tu turno fue confirmado" : "Tu turno fue cancelado";
+  const reasonLine =
+    input.estado === "cancelado" && input.motivoCancelacion
+      ? `Motivo: ${input.motivoCancelacion}`
+      : null;
+
+  const response = await fetch(RESEND_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: process.env.RESEND_FROM_EMAIL,
+      to: [input.email],
+      subject: `A51 Barber - ${title}`,
+      text: [
+        `Hola ${input.clienteNombre},`,
+        "",
+        title,
+        `Barbero: ${input.barberoNombre}`,
+        `Fecha: ${input.fecha}`,
+        `Hora: ${input.horaInicio}`,
+        reasonLine,
+        "",
+        "A51 Barber",
+      ]
+        .filter(Boolean)
+        .join("\n"),
     }),
   });
 

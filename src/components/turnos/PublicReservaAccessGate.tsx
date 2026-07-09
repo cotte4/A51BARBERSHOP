@@ -57,7 +57,7 @@ export default function PublicReservaAccessGate({
           Nave de {barberoNombre}
         </h1>
         <p className="text-sm text-zinc-300 sm:text-base">
-          Este link se mueve con clave para cuidar la agenda publica. Si ya entraste con tu cuenta,
+          Este link se mueve con clave para cuidar la agenda pública. Si ya entraste con tu cuenta,
           la puerta se abre sola.
         </p>
         <p className="text-sm text-zinc-400">
@@ -79,7 +79,7 @@ export default function PublicReservaAccessGate({
             autoComplete="one-time-code"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="Escribi la clave que te pasaron"
+            placeholder="Escribí la clave que te pasaron"
             className="mt-3 min-h-[52px] w-full rounded-2xl border border-zinc-700 bg-zinc-950/80 px-4 text-white placeholder:text-zinc-500 outline-none focus:border-[#8cff59]/60"
           />
           <p className="mt-3 text-sm text-zinc-400">
@@ -105,12 +105,12 @@ export default function PublicReservaAccessGate({
         <aside className="space-y-4">
           <div className="rounded-[30px] border border-white/10 bg-white/5 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-              Como funciona
+              Cómo funciona
             </p>
             <div className="mt-4 space-y-3 text-sm text-zinc-300">
-              <p>Si tenes link y clave, caes directo.</p>
-              <p>Si ya estas logueado, la puerta se abre sola.</p>
-              <p>Despues ves los horarios, elegis servicio y mandas la solicitud.</p>
+              <p>Si tenés link y clave, caes directo.</p>
+              <p>Si ya estás logueado, la puerta se abre sola.</p>
+              <p>Después ves los horarios, elegís servicio y mandás la solicitud.</p>
             </div>
           </div>
 
@@ -121,7 +121,7 @@ export default function PublicReservaAccessGate({
             <p className="mt-2 text-sm text-zinc-200">
               {allowAuthenticatedBypass
                 ? "Las cuentas autenticadas entran sin necesitar la clave."
-                : "Si no tenes cuenta, pedi la clave al local o a tu barbero."}
+                : "Si no tenés cuenta, pedí la clave al local o a tu barbero."}
             </p>
           </div>
         </aside>

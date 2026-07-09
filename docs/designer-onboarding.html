@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A51 — Empezá acá</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background:
+      radial-gradient(ellipse at top, rgba(140, 255, 89, 0.08) 0%, transparent 50%),
+      #0a0a0a;
+    color: #f5f7f5;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 40px 20px 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 720px; margin: 0 auto; }
+
+  .hero {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .logo {
+    width: 64px; height: 64px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #8cff59 0%, #b6ff84 100%);
+    display: grid; place-items: center;
+    margin: 0 auto 20px;
+    font-weight: 900; color: #07130a; font-size: 28px;
+    box-shadow: 0 0 40px rgba(140, 255, 89, 0.35);
+  }
+  h1 {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+  }
+  .hero p {
+    color: #a1a1aa;
+    font-size: 16px;
+  }
+  .hero strong { color: #8cff59; }
+
+  .step {
+    background: #18181b;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .step-num {
+    position: absolute;
+    top: -14px; left: 20px;
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    background: #8cff59;
+    color: #07130a;
+    display: grid; place-items: center;
+    font-weight: 800;
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(140, 255, 89, 0.3);
+  }
+  .step h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    padding-top: 4px;
+  }
+  .step .sub {
+    color: #71717a;
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+  .step p {
+    color: #a1a1aa;
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  .step strong { color: #f5f7f5; }
+  .step a {
+    color: #8cff59;
+    text-decoration: none;
+    border-bottom: 1px dashed rgba(140, 255, 89, 0.4);
+  }
+
+  pre {
+    background: #09090b;
+    border: 1px solid #27272a;
+    border-radius: 12px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: "SF Mono", Monaco, Consolas, monospace;
+    font-size: 13px;
+    color: #8cff59;
+    margin: 10px 0;
+    line-height: 1.7;
+  }
+  pre .c { color: #71717a; font-style: italic; }
+  pre .k { color: #b6ff84; }
+
+  code {
+    background: #09090b;
+    border: 1px solid #27272a;
+    border-radius: 6px;
+    padding: 2px 7px;
+    font-family: "SF Mono", Monaco, Consolas, monospace;
+    font-size: 12px;
+    color: #8cff59;
+  }
+
+  .callout {
+    background: rgba(140, 255, 89, 0.06);
+    border: 1px solid rgba(140, 255, 89, 0.25);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: #a1a1aa;
+  }
+  .callout strong { color: #8cff59; }
+
+  .warn {
+    background: rgba(251, 191, 36, 0.06);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: #a1a1aa;
+  }
+  .warn strong { color: #fcd34d; }
+
+  .need-list {
+    list-style: none;
+    padding: 0;
+  }
+  .need-list li {
+    padding: 10px 14px;
+    background: #09090b;
+    border: 1px solid #27272a;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #a1a1aa;
+  }
+  .need-list li strong { color: #f5f7f5; }
+  .need-list li .tag {
+    display: inline-block;
+    background: rgba(140, 255, 89, 0.15);
+    color: #8cff59;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-right: 8px;
+  }
+
+  .check {
+    color: #8cff59;
+    font-weight: 700;
+    margin-right: 6px;
+  }
+
+  hr.sep {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin: 32px 0;
+  }
+
+  .final {
+    text-align: center;
+    padding: 32px 24px;
+    background: linear-gradient(135deg, rgba(140, 255, 89, 0.08) 0%, rgba(140, 255, 89, 0.02) 100%);
+    border: 1px solid rgba(140, 255, 89, 0.2);
+    border-radius: 20px;
+  }
+  .final h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .final p { color: #a1a1aa; font-size: 14px; }
+
+  footer {
+    text-align: center;
+    color: #52525b;
+    font-size: 12px;
+    margin-top: 32px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="hero">
+    <div class="logo">A</div>
+    <h1>Bienvenido a A51</h1>
+    <p>Setup en <strong>15 minutos</strong>. Seguí los pasos en orden.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <h2>Mandame estos datos por WhatsApp</h2>
+    <div class="sub">Te invito a todo desde mi lado.</div>
+    <ul class="need-list">
+      <li><span class="tag">GitHub</span> tu <strong>usuario de GitHub</strong> (ej: <code>juanperez</code>)</li>
+      <li><span class="tag">Vercel</span> el <strong>email con el que vas a usar Vercel</strong> (creá cuenta gratis en <a href="https://vercel.com/signup">vercel.com</a> si no tenés)</li>
+    </ul>
+    <div class="callout">
+      <strong>De mi lado:</strong> te agrego como collaborator al repo de GitHub y al team de Vercel. Vas a recibir 2 mails de invitación. Aceptalos.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <h2>Instalá lo necesario</h2>
+    <div class="sub">Una sola vez en tu compu. ~5 min.</div>
+    <p><strong>Node.js 20+</strong> → <a href="https://nodejs.org">nodejs.org</a> (instalador, siguiente siguiente)</p>
+    <p><strong>Git</strong> → <a href="https://git-scm.com">git-scm.com</a> (si no lo tenés)</p>
+    <p><strong>VS Code o Cursor</strong> → tu editor</p>
+    <p><strong>Claude Code</strong> → <a href="https://claude.com/claude-code">claude.com/claude-code</a></p>
+    <p>Después abrís terminal y corrés:</p>
+<pre><span class="c"># Verificar que Node está OK</span>
+node --version  <span class="c"># tiene que decir v20 o más</span>
+
+<span class="c"># Instalar Vercel CLI global</span>
+npm i -g vercel</pre>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <h2>Clonar el proyecto</h2>
+    <div class="sub">Bajás el código a tu compu.</div>
+<pre><span class="c"># En la carpeta donde guardás tus proyectos</span>
+git clone https://github.com/cotte4/A51BARBERSHOP.git
+cd A51BARBERSHOP/a51-barber
+
+<span class="c"># Instalar dependencias</span>
+npm install</pre>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <h2>Bajar las claves (env vars)</h2>
+    <div class="sub">No te mando nada por chat. Las bajás solo desde Vercel.</div>
+<pre><span class="c"># Login a Vercel (te abre el navegador)</span>
+vercel login
+
+<span class="c"># Conectar esta carpeta al proyecto</span>
+vercel link
+<span class="c"># &gt; Seleccioná el team de Was</span>
+<span class="c"># &gt; Seleccioná el proyecto "a51-barber"</span>
+
+<span class="c"># Bajar todas las claves a .env.local</span>
+vercel env pull .env.local</pre>
+    <div class="warn">
+      <strong>Importante:</strong> <code>.env.local</code> tiene secretos. <strong>Nunca</strong> lo subas a GitHub, no lo compartas por chat, no lo mandes por mail. Solo vive en tu compu.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <h2>Levantar la app</h2>
+    <div class="sub">localhost en tu navegador.</div>
+<pre>npm run dev</pre>
+    <p>Abrí <a href="http://localhost:3000">http://localhost:3000</a> y ya tenés la app corriendo contra una base de datos de pruebas (no toca producción).</p>
+    <div class="callout">
+      <strong>Listo:</strong> ya podés tocar código y ver los cambios en vivo. La DB es una rama de Neon dedicada para vos — rompé lo que quieras, no afecta la app real.
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <div class="step">
+    <div class="step-num">6</div>
+    <h2>Tu primer cambio</h2>
+    <div class="sub">El flujo que vamos a usar siempre.</div>
+<pre><span class="c"># Crear branch propia (NUNCA tocar master directo)</span>
+git checkout -b ui/tu-primer-cambio
+
+<span class="c"># ... tocás código con Claude Code ...</span>
+
+<span class="c"># Subir cambios</span>
+git add .
+git commit -m "ui: descripción corta"
+git push -u origin ui/tu-primer-cambio</pre>
+    <div class="callout">
+      <strong>Magia:</strong> apenas pusheás, <strong>Vercel te genera un preview URL</strong> automático (algo como <code>a51-git-ui-xxx.vercel.app</code>). Me lo pasás, lo veo en el celular, te doy feedback. Cuando está OK, lo mergeo a producción.
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <div class="step">
+    <div class="step-num">7</div>
+    <h2>Antes de tocar cualquier cosa, leé</h2>
+    <div class="sub">3 archivos. Está todo ahí.</div>
+    <ul class="need-list">
+      <li><span class="check">→</span> <code>CLAUDE.md</code> <strong>(raíz)</strong> — design system completo: colores, clases CSS, do's and don'ts</li>
+      <li><span class="check">→</span> <code>a51-barber/docs/feature-map-ux.md</code> — inventario de las 22 pantallas que existen</li>
+      <li><span class="check">→</span> <code>a51-barber/docs/design-handoff-progress.md</code> — el tablero por dónde vamos</li>
+    </ul>
+    <div class="warn">
+      <strong>Reglas clave:</strong> tema dark con accent verde neón <code>#8cff59</code>. Nunca <code>bg-white</code> ni <code>text-gray-*</code>. Mobile-first. Una branch = una pantalla.
+    </div>
+  </div>
+
+  <div class="final">
+    <h3>¿Trabado en algún paso?</h3>
+    <p>Mandame WhatsApp con un screenshot del error y lo destrabamos en 5 min.</p>
+  </div>
+
+  <footer>
+    A51 Barbershop · Onboarding · 2026
+  </footer>
+
+</div>
+</body>
+</html>

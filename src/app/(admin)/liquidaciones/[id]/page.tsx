@@ -48,8 +48,6 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
     .limit(1);
 
   const comision = Number(liq.totalComisionCalculada ?? 0);
-  const sueldoMinimo = Number(liq.sueldoMinimo ?? 0);
-  const alquilerBanco = Number(liq.alquilerBancoCobrado ?? 0);
   const montoAPagar = Number(liq.montoAPagar ?? 0);
   const periodoNegativo = montoAPagar < 0;
 
@@ -157,12 +155,6 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
               <Row label="Cortes realizados" value={String(liq.totalCortes ?? 0)} plain />
               <Row label="Total bruto cortes" value={formatARS(liq.totalBrutoCortes)} positive />
               <Row label="Comision calculada" value={formatARS(comision)} positive />
-              {alquilerBanco > 0 ? (
-                <Row label="Alquiler banco del periodo" value={`-${formatARS(alquilerBanco)}`} negative />
-              ) : null}
-              {sueldoMinimo > 0 ? (
-                <Row label="Sueldo minimo garantizado" value={formatARS(sueldoMinimo)} positive />
-              ) : null}
               <div className="mt-1 border-t border-zinc-800 pt-3">
                 <Row
                   label="Resultado del periodo"

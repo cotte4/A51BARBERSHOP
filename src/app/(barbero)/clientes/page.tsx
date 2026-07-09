@@ -2,8 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import ClientSearch from "@/components/clientes/ClientSearch";
 import RetentionBanner from "@/components/clientes/RetentionBanner";
+import RetentionPipelineBoard from "@/components/clientes/RetentionPipelineBoard";
 import { getClientActorContext } from "@/lib/client-access";
-import { getRetentionCandidates, searchVisibleClients } from "@/lib/client-queries";
+import {
+  getRetentionCandidates,
+  getRetentionPipelineRows,
+  searchVisibleClients,
+} from "@/lib/client-queries";
 
 export default async function ClientesPage() {
   const actor = await getClientActorContext();
@@ -11,10 +16,11 @@ export default async function ClientesPage() {
     redirect("/login");
   }
 
-  const [initialClients, allClients, retentionCandidates] = await Promise.all([
+  const [initialClients, allClients, retentionCandidates, retentionPipelineRows] = await Promise.all([
     searchVisibleClients(actor, "", { limit: 12 }),
     searchVisibleClients(actor, "", { limit: 120 }),
     actor.isAdmin ? getRetentionCandidates() : Promise.resolve([]),
+    actor.isAdmin ? getRetentionPipelineRows() : Promise.resolve([]),
   ]);
 
   const recentCount = initialClients.length;
@@ -80,6 +86,10 @@ export default async function ClientesPage() {
 
       {actor.isAdmin && retentionCandidates.length > 0 ? (
         <RetentionBanner candidates={retentionCandidates} />
+      ) : null}
+
+      {actor.isAdmin && retentionPipelineRows.length > 0 ? (
+        <RetentionPipelineBoard rows={retentionPipelineRows} />
       ) : null}
 
       <ClientSearch

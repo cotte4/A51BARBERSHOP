@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { barberShopAssetPayments, barberShopAssets } from "@/db/schema";
-import { requireAdminSession } from "@/lib/admin-action";
+import { requireOwnerSession } from "@/lib/admin-action";
 import {
   createCapitalMovimientoFromHangarPayment,
   syncHangarAssetState,
@@ -58,7 +58,7 @@ export async function crearAssetAction(
   prevState: AssetFormState,
   formData: FormData
 ): Promise<AssetFormState> {
-  const isAdmin = await requireAdminSession();
+  const isAdmin = await requireOwnerSession();
   if (!isAdmin) {
     return { error: "No autorizado" };
   }
@@ -167,7 +167,7 @@ export async function registrarAssetPaymentAction(
   prevState: AssetPaymentFormState,
   formData: FormData
 ): Promise<AssetPaymentFormState> {
-  const isAdmin = await requireAdminSession();
+  const isAdmin = await requireOwnerSession();
   if (!isAdmin) {
     return { error: "No autorizado" };
   }
@@ -236,7 +236,7 @@ export async function registrarAssetPaymentAction(
 }
 
 export async function darDeBajaAssetAction(assetId: string) {
-  const isAdmin = await requireAdminSession();
+  const isAdmin = await requireOwnerSession();
   if (!isAdmin) throw new Error("No autorizado");
 
   await db
@@ -251,7 +251,7 @@ export async function cambiarCategoriaAssetAction(
   assetId: string,
   formData: FormData
 ): Promise<void> {
-  const isAdmin = await requireAdminSession();
+  const isAdmin = await requireOwnerSession();
   if (!isAdmin) return;
 
   const categoria = (formData.get("categoria") as string | null)?.trim();
@@ -266,7 +266,7 @@ export async function cambiarCategoriaAssetAction(
 }
 
 export async function eliminarAssetAction(assetId: string): Promise<{ error?: string }> {
-  const isAdmin = await requireAdminSession();
+  const isAdmin = await requireOwnerSession();
   if (!isAdmin) return { error: "No autorizado" };
 
   const paymentCount = await db

@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A51 — Design Handoff Progress</title>
+<style>
+  :root {
+    --background: #121212;
+    --surface: #18181b;
+    --surface-elevated: #27272a;
+    --border: #34343a;
+    --muted: #a1a1aa;
+    --brand: #8cff59;
+    --brand-strong: #b6ff84;
+    --foreground: #f5f7f5;
+    --zinc-400: #a1a1aa;
+    --zinc-500: #71717a;
+    --zinc-700: #3f3f46;
+    --zinc-800: #27272a;
+    --zinc-900: #18181b;
+    --zinc-950: #09090b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background:
+      radial-gradient(ellipse at top left, rgba(140, 255, 89, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(140, 255, 89, 0.04) 0%, transparent 60%),
+      var(--background);
+    color: var(--foreground);
+    line-height: 1.6;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px 96px;
+  }
+
+  /* Header */
+  header.page-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 24px;
+    margin-bottom: 32px;
+  }
+
+  .brand-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .brand-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-strong) 100%);
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    color: #07130a;
+    font-size: 18px;
+    box-shadow: 0 0 24px rgba(140, 255, 89, 0.3);
+  }
+
+  .brand-text h1 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .brand-text p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .meta-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+  }
+
+  .meta-chip {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .meta-chip strong {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+
+  /* TOC */
+  .toc {
+    background: var(--surface);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 22px;
+    padding: 20px;
+    margin-bottom: 32px;
+  }
+
+  .toc-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .toc ol {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px;
+    list-style: none;
+    counter-reset: toc;
+  }
+
+  .toc li {
+    counter-increment: toc;
+  }
+
+  .toc a {
+    display: block;
+    padding: 8px 12px;
+    border-radius: 10px;
+    color: var(--zinc-400);
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 160ms ease;
+  }
+
+  .toc a::before {
+    content: counter(toc) ". ";
+    color: var(--brand);
+    font-weight: 600;
+  }
+
+  .toc a:hover {
+    background: rgba(140, 255, 89, 0.08);
+    color: var(--brand);
+  }
+
+  /* Section */
+  section.panel {
+    background: var(--surface);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 28px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--foreground);
+    margin-bottom: 16px;
+    letter-spacing: -0.01em;
+  }
+
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--foreground);
+    margin: 20px 0 10px;
+  }
+
+  p {
+    color: var(--zinc-400);
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  p.intro {
+    color: var(--foreground);
+    font-size: 15px;
+  }
+
+  ul, ol {
+    color: var(--zinc-400);
+    font-size: 14px;
+    padding-left: 22px;
+    margin-bottom: 12px;
+  }
+
+  ul li, ol li {
+    margin-bottom: 6px;
+  }
+
+  ul li::marker {
+    color: var(--brand);
+  }
+
+  code {
+    background: var(--zinc-950);
+    border: 1px solid var(--zinc-800);
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-family: "SF Mono", "Monaco", "Consolas", monospace;
+    font-size: 12px;
+    color: var(--brand);
+  }
+
+  pre {
+    background: var(--zinc-950);
+    border: 1px solid var(--zinc-800);
+    border-radius: 12px;
+    padding: 16px;
+    overflow-x: auto;
+    margin: 12px 0;
+    font-size: 12px;
+    color: var(--zinc-400);
+  }
+
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+  }
+
+  strong { color: var(--foreground); font-weight: 600; }
+
+  /* Status legend */
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 8px;
+    margin: 12px 0;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--zinc-400);
+  }
+
+  /* Table */
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 18px;
+    margin-top: 16px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead {
+    background: var(--zinc-950);
+  }
+
+  th {
+    text-align: left;
+    padding: 12px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    color: var(--zinc-400);
+    vertical-align: top;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+  td.num {
+    color: var(--brand);
+    font-weight: 600;
+    width: 36px;
+  }
+
+  td.surface {
+    color: var(--foreground);
+    font-weight: 500;
+    min-width: 200px;
+  }
+
+  /* Status badges */
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .status-backlog {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--zinc-400);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .status-figma {
+    background: rgba(168, 85, 247, 0.1);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+  }
+
+  .status-progress {
+    background: rgba(140, 255, 89, 0.1);
+    color: var(--brand);
+    border: 1px solid rgba(140, 255, 89, 0.3);
+  }
+
+  .status-review {
+    background: rgba(251, 191, 36, 0.1);
+    color: #fcd34d;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+  }
+
+  .status-changes {
+    background: rgba(239, 68, 68, 0.1);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  .status-done {
+    background: rgba(140, 255, 89, 0.18);
+    color: var(--brand-strong);
+    border: 1px solid rgba(140, 255, 89, 0.5);
+  }
+
+  /* Warning callout */
+  .callout {
+    background: rgba(251, 191, 36, 0.06);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    border-left: 3px solid #fbbf24;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin: 16px 0;
+  }
+
+  .callout strong { color: #fcd34d; }
+  .callout p { color: var(--zinc-400); font-size: 13px; margin: 0; }
+
+  .callout-brand {
+    background: rgba(140, 255, 89, 0.05);
+    border: 1px solid rgba(140, 255, 89, 0.25);
+    border-left: 3px solid var(--brand);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin: 16px 0;
+  }
+
+  .callout-brand strong { color: var(--brand); }
+  .callout-brand p { color: var(--zinc-400); font-size: 13px; margin: 0; }
+
+  /* Weeks grid */
+  .week-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .week-card {
+    background: var(--zinc-950);
+    border: 1px solid var(--zinc-800);
+    border-radius: 18px;
+    padding: 18px;
+  }
+
+  .week-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .week-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(140, 255, 89, 0.15);
+    color: var(--brand);
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .week-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--foreground);
+  }
+
+  .week-card ul {
+    padding-left: 18px;
+    font-size: 13px;
+    margin: 0;
+  }
+
+  /* Flow timeline */
+  .flow {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .flow-step {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 16px;
+    padding: 14px;
+    background: var(--zinc-950);
+    border: 1px solid var(--zinc-800);
+    border-radius: 14px;
+  }
+
+  .flow-time {
+    color: var(--brand);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .flow-content h4 {
+    color: var(--foreground);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .flow-content p {
+    font-size: 13px;
+    margin: 0;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--zinc-500);
+    font-size: 12px;
+    padding-top: 32px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    margin-top: 32px;
+  }
+
+  @media (max-width: 640px) {
+    .container { padding: 20px 16px 80px; }
+    section.panel { padding: 20px; border-radius: 22px; }
+    h2 { font-size: 19px; }
+    .brand-text h1 { font-size: 20px; }
+    th, td { padding: 10px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="page-header">
+    <div class="brand-row">
+      <div class="brand">
+        <div class="brand-logo">A</div>
+        <div class="brand-text">
+          <h1>A51 — Design Handoff</h1>
+          <p>Tablero de avance del rediseño UX/UI</p>
+        </div>
+      </div>
+    </div>
+    <div class="meta-row">
+      <span class="meta-chip">Inicio: <strong>2026-05-23</strong></span>
+      <span class="meta-chip">Owner técnico: <strong>Was</strong></span>
+      <span class="meta-chip">Diseñador: <strong>[nombre]</strong></span>
+      <span class="meta-chip">Stack: <strong>Next.js · Drizzle · Vercel</strong></span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <div class="toc-title">Contenido</div>
+    <ol>
+      <li><a href="#uso">Cómo se usa este doc</a></li>
+      <li><a href="#tablero">Tablero por superficie</a></li>
+      <li><a href="#reglas">Reglas no negociables</a></li>
+      <li><a href="#fragiles">Zonas frágiles</a></li>
+      <li><a href="#flow">Flow de trabajo diario</a></li>
+      <li><a href="#plan">Plan de ataque (4 semanas)</a></li>
+      <li><a href="#log">Log de cambios</a></li>
+      <li><a href="#preguntas">Preguntas abiertas</a></li>
+    </ol>
+  </nav>
+
+  <section class="panel" id="uso">
+    <div class="eyebrow">01 · Workflow</div>
+    <h2>Cómo se usa este doc</h2>
+    <ul>
+      <li><strong>Él</strong> actualiza la fila correspondiente cada vez que abre/cierra un PR o cambia de superficie.</li>
+      <li><strong>Was</strong> mira este doc en el EOD review (6:30 PM) antes de abrir los PRs.</li>
+    </ul>
+
+    <h3>Estados válidos</h3>
+    <div class="legend">
+      <div class="legend-item"><span class="status status-backlog">📋 Backlog</span> sin arrancar</div>
+      <div class="legend-item"><span class="status status-figma">🎨 Figma</span> diseñando, sin código</div>
+      <div class="legend-item"><span class="status status-progress">🚧 In progress</span> branch con commits</div>
+      <div class="legend-item"><span class="status status-review">👀 In review</span> PR abierto</div>
+      <div class="legend-item"><span class="status status-changes">🔁 Changes req.</span> Was pidió cambios</div>
+      <div class="legend-item"><span class="status status-done">✅ Done</span> mergeado a master</div>
+    </div>
+
+    <div class="callout-brand">
+      <strong>Regla de WIP</strong>
+      <p>Una sola superficie en <code>🚧 In progress</code> por vez. Disciplina de WIP para no abrir 5 branches en paralelo.</p>
+    </div>
+  </section>
+
+  <section class="panel" id="tablero">
+    <div class="eyebrow">02 · Tablero</div>
+    <h2>Tablero por superficie</h2>
+    <p>Orden sugerido en la sección <a href="#plan" style="color: var(--brand);">Plan de ataque</a>.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Superficie</th>
+            <th>Estado</th>
+            <th>Branch</th>
+            <th>Preview URL</th>
+            <th>Notas</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="num">1</td><td class="surface">Reserva pública</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>Bug encoding + UX pass. Primera porque es contained y alto impacto.</td></tr>
+          <tr><td class="num">2</td><td class="surface">Pantalla pública del local</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>Funcional pero visual desactualizado. Importante porque la ve el cliente.</td></tr>
+          <tr><td class="num">3</td><td class="surface">Portal Marciano (público)</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>Login, registro, recuperar, reset. Cara visible al cliente VIP.</td></tr>
+          <tr><td class="num">4</td><td class="surface">Portal Marciano (autenticado)</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>Perfil, turnos, seguridad. Validar si cancela/reprograma desde UI.</td></tr>
+          <tr><td class="num">5</td><td class="surface">Landing pública</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td><code>src/app/page.tsx</code>. Primer touchpoint.</td></tr>
+          <tr><td class="num">6</td><td class="surface">Operación — Hoy</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>Mature. Solo pasada de coherencia visual.</td></tr>
+          <tr><td class="num">7</td><td class="surface">Operación — Caja</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>Mature. QuickCheckout, AtencionForm, cierre.</td></tr>
+          <tr><td class="num">8</td><td class="surface">Operación — Turnos</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>Mature. Agenda + disponibilidad. Falta flow de reprogramación.</td></tr>
+          <tr><td class="num">9</td><td class="surface">Operación — Clientes</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>Mature y profundo. Perfil, historial, briefing.</td></tr>
+          <tr><td class="num">10</td><td class="surface">Operación — Música</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>⚠️ Automation incompleta. NO rediseñar lógica, solo UI.</td></tr>
+          <tr><td class="num">11</td><td class="surface">Negocio — Portada</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>Hub del admin. Alto impacto visual.</td></tr>
+          <tr><td class="num">12</td><td class="surface">Negocio — Dashboard / Flujo / P&L</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>Reporting. KPI cards + tablas.</td></tr>
+          <tr><td class="num">13</td><td class="surface">Negocio — Liquidaciones</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>Pagos al equipo. PDF también.</td></tr>
+          <tr><td class="num">14</td><td class="surface">Negocio — Inventario</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>Lista, alta, detalle, rotación.</td></tr>
+          <tr><td class="num">15</td><td class="surface">Negocio — Gastos rápidos</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>⚠️ Requiere <code>db:push</code> aplicado. FAB + modal.</td></tr>
+          <tr><td class="num">16</td><td class="surface">Negocio — Repago Memas</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>Form simple. Bajo esfuerzo.</td></tr>
+          <tr><td class="num">17</td><td class="surface">Negocio — Mi resultado</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>Vista personal del barbero.</td></tr>
+          <tr><td class="num">18</td><td class="surface">Configuración — Barberos</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>CRUD maestro.</td></tr>
+          <tr><td class="num">19</td><td class="surface">Configuración — Servicios</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>CRUD + historial + adicionales.</td></tr>
+          <tr><td class="num">20</td><td class="surface">Configuración — Medios de pago</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>CRUD simple.</td></tr>
+          <tr><td class="num">21</td><td class="surface">Configuración — Temporadas</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>CRUD simple.</td></tr>
+          <tr><td class="num">22</td><td class="surface">Configuración — Música</td><td><span class="status status-backlog">📋 Backlog</span></td><td>—</td><td>—</td><td>Spotify connect + estado.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" id="reglas">
+    <div class="eyebrow">03 · Design System</div>
+    <h2>Reglas no negociables</h2>
+    <p>Resumen — la versión completa está en <code>CLAUDE.md</code> raíz del proyecto.</p>
+    <ul>
+      <li><strong>Tema:</strong> dark, premium. Background <code>#121212</code>, accent verde neón <code>#8cff59</code>.</li>
+      <li><strong>Nunca usar</strong> <code>bg-white</code>, <code>text-gray-*</code>, <code>border-gray-*</code>.</li>
+      <li><strong>Usar siempre</strong> las clases CSS existentes: <code>.panel-card</code>, <code>.panel-soft</code>, <code>.neon-button</code>, <code>.ghost-button</code>, <code>.eyebrow</code>, <code>.font-display</code>, <code>.app-shell</code>.</li>
+      <li><strong>Mobile-first.</strong> La app se usa en celular en la barbería.</li>
+      <li><strong>Bottom nav fija</strong> → siempre <code>pb-24</code> en <code>&lt;main&gt;</code>.</li>
+      <li><strong>Icons:</strong> SVG inline con <code>strokeWidth="1.9"</code>. Nunca librería.</li>
+      <li><strong>Plata:</strong> siempre <code>formatARS</code> (Intl <code>es-AR</code>, ARS).</li>
+      <li><strong>Timezone:</strong> <code>"America/Argentina/Buenos_Aires"</code>.</li>
+      <li><strong>Tono / copy:</strong> universo Pinky (Paul, Ted, Proyecto X, Marciano Pelufo).</li>
+    </ul>
+  </section>
+
+  <section class="panel" id="fragiles">
+    <div class="eyebrow">04 · No tocar</div>
+    <h2>Zonas frágiles</h2>
+    <div class="callout">
+      <strong>Aviso</strong>
+      <p>Estos archivos contienen lógica de negocio crítica. Si el rediseño los toca, avisar en el kickoff de la mañana <strong>ANTES</strong> de pushear.</p>
+    </div>
+    <ul>
+      <li><code>src/lib/caja-finance.ts</code> — fórmulas del cierre diario</li>
+      <li><code>src/lib/dashboard-queries.ts</code> — queries de KPIs financieros</li>
+      <li><code>src/lib/bep.ts</code> — break-even point</li>
+      <li><code>src/lib/caja-atencion.ts</code> — registro de atención + consumiciones Marciano</li>
+      <li><code>src/lib/marciano-config.ts</code> — config membresía Marciano</li>
+      <li><code>src/lib/turnos.ts</code> — visibility rules de turnos</li>
+      <li><code>src/lib/music-engine.ts</code> + <code>src/lib/music-*.ts</code> — motor de música (incompleto)</li>
+      <li><code>src/lib/admin-action.ts</code> + <code>src/lib/caja-access.ts</code> — validación de permisos</li>
+      <li><code>src/db/schema.ts</code> — schema de DB</li>
+      <li><code>src/proxy.ts</code> — middleware de permisos</li>
+      <li><code>src/components/navigation/RoleBottomNav.tsx</code> — única bottom nav</li>
+    </ul>
+  </section>
+
+  <section class="panel" id="flow">
+    <div class="eyebrow">05 · Ritmo diario</div>
+    <h2>Flow de trabajo</h2>
+    <div class="flow">
+      <div class="flow-step">
+        <div class="flow-time">9:30 AM</div>
+        <div class="flow-content">
+          <h4>Kickoff (audio WhatsApp)</h4>
+          <p>Él manda: <strong>AYER</strong> qué terminó / qué PR está abierto · <strong>HOY</strong> qué superficie ataca · <strong>BLOQUEOS</strong> dudas que lo frenan. Was responde con feedback + resolución.</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-time">10:00 – 18:00</div>
+        <div class="flow-content">
+          <h4>Trabajo paralelo</h4>
+          <p>Una branch = una superficie. Branch name: <code>ui/&lt;superficie&gt;-&lt;cambio&gt;</code>. Dudas no bloqueantes → canal <code>#a51-design-questions</code>. Sigue trabajando. Cada push genera preview URL automático en Vercel.</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-time">18:30</div>
+        <div class="flow-content">
+          <h4>EOD Review (Was, 15 min)</h4>
+          <p>Mira los PRs del día en GitHub. Abre preview URLs en celular y los prueba. Feedback inline en GitHub + audio de 1 min en WhatsApp. Mergea a master lo que esté OK.</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-time">Viernes</div>
+        <div class="flow-content">
+          <h4>Sync semanal (videollamada, 30 min)</h4>
+          <p>Revisar este tablero. Decidir prioridades de la semana siguiente. Mostrar prototipos de Figma todavía no codeados.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="plan">
+    <div class="eyebrow">06 · Roadmap</div>
+    <h2>Plan de ataque — primeras 4 semanas</h2>
+    <div class="week-grid">
+      <div class="week-card">
+        <div class="week-card-header">
+          <div class="week-num">S1</div>
+          <div class="week-title">Cara pública</div>
+        </div>
+        <p style="font-size:12px;color:var(--zinc-500);margin-bottom:8px;">Lo que ve el cliente sin login. Alto impacto, contained.</p>
+        <ul>
+          <li>Reserva pública (incluye fix encoding)</li>
+          <li>Landing pública</li>
+          <li>Pantalla pública del local</li>
+        </ul>
+      </div>
+      <div class="week-card">
+        <div class="week-card-header">
+          <div class="week-num">S2</div>
+          <div class="week-title">Portal Marciano completo</div>
+        </div>
+        <p style="font-size:12px;color:var(--zinc-500);margin-bottom:8px;">Experiencia del cliente VIP de punta a punta.</p>
+        <ul>
+          <li>Portal público (login, registro, recuperar, reset)</li>
+          <li>Portal autenticado (perfil, turnos, seguridad)</li>
+          <li>Validar flow de cancelar/reprogramar</li>
+        </ul>
+      </div>
+      <div class="week-card">
+        <div class="week-card-header">
+          <div class="week-num">S3</div>
+          <div class="week-title">Operación diaria</div>
+        </div>
+        <p style="font-size:12px;color:var(--zinc-500);margin-bottom:8px;">Pantallas que el barbero usa cada día.</p>
+        <ul>
+          <li>Hoy (coherencia visual)</li>
+          <li>Caja (QuickCheckout = más usada)</li>
+          <li>Turnos (agenda + disponibilidad)</li>
+          <li>Clientes (perfil profundo)</li>
+          <li>Música (solo UI, no lógica)</li>
+        </ul>
+      </div>
+      <div class="week-card">
+        <div class="week-card-header">
+          <div class="week-num">S4</div>
+          <div class="week-title">Admin / Negocio / Config</div>
+        </div>
+        <p style="font-size:12px;color:var(--zinc-500);margin-bottom:8px;">Lo que Was usa para mirar el negocio.</p>
+        <ul>
+          <li>Negocio portada (hub)</li>
+          <li>Dashboard / Flujo / P&L</li>
+          <li>Liquidaciones · Inventario · Gastos · Repago · Mi resultado</li>
+          <li>Configuración (5 sub-superficies)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="log">
+    <div class="eyebrow">07 · Histórico</div>
+    <h2>Log de cambios</h2>
+    <p>Cada superficie cerrada deja una línea acá. Formato: <code>YYYY-MM-DD — superficie — branch — nota corta</code>.</p>
+    <ul>
+      <li style="color: var(--zinc-500); font-style: italic; list-style: none; padding-left: 0;">(vacío por ahora)</li>
+    </ul>
+  </section>
+
+  <section class="panel" id="preguntas">
+    <div class="eyebrow">08 · Async</div>
+    <h2>Preguntas abiertas para el diseñador</h2>
+    <p>Lista viva. Él agrega, Was responde en el EOD review.</p>
+    <ul>
+      <li style="color: var(--zinc-500); font-style: italic; list-style: none; padding-left: 0;">(vacío por ahora)</li>
+    </ul>
+  </section>
+
+  <footer>
+    A51 Barbershop · Design Handoff Progress · Documento vivo · 2026
+  </footer>
+
+</div>
+</body>
+</html>

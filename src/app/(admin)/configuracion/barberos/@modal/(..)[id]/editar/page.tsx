@@ -47,8 +47,8 @@ export default async function EditarBarberoModal({ params }: Props) {
           rol: barbero.rol,
           tipoModelo: barbero.tipoModelo ?? undefined,
           porcentajeComision: barbero.porcentajeComision,
-          alquilerBancoMensual: barbero.alquilerBancoMensual,
-          sueldoMinimoGarantizado: barbero.sueldoMinimoGarantizado,
+          
+          
           servicioDefectoId: barbero.servicioDefectoId,
           medioPagoDefectoId: barbero.medioPagoDefectoId,
           publicSlug: barbero.publicSlug,

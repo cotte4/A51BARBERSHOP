@@ -7,7 +7,7 @@ import {
   costosFijosNegocio,
   costosFijosValores,
 } from "@/db/schema";
-import { requireAsesorSession } from "@/lib/asesor-action";
+import { requireOwnerSession } from "@/lib/admin-action";
 import { isCapitalMovimientoLinkedToHangar } from "@/lib/hangar-server";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -30,7 +30,7 @@ export async function crearCosto(
   prevState: CostoFormState,
   formData: FormData
 ): Promise<CostoFormState> {
-  if (!(await requireAsesorSession())) {
+  if (!(await requireOwnerSession())) {
     return { error: "Sin permisos para gestionar costos." };
   }
 
@@ -76,7 +76,7 @@ export async function editarCosto(
   prevState: CostoFormState,
   formData: FormData
 ): Promise<CostoFormState> {
-  if (!(await requireAsesorSession())) {
+  if (!(await requireOwnerSession())) {
     return { error: "Sin permisos para gestionar costos." };
   }
 
@@ -104,7 +104,7 @@ export async function editarCosto(
 }
 
 export async function eliminarCosto(id: string): Promise<void> {
-  if (!(await requireAsesorSession())) return;
+  if (!(await requireOwnerSession())) return;
   await db.delete(costosFijosNegocio).where(eq(costosFijosNegocio.id, id));
   revalidatePath("/finanzas");
   redirect("/finanzas");
@@ -124,7 +124,7 @@ export async function guardarValoresMes(
   prevState: ValoresMesFormState,
   formData: FormData
 ): Promise<ValoresMesFormState> {
-  if (!(await requireAsesorSession())) {
+  if (!(await requireOwnerSession())) {
     return { error: "Sin permisos para editar valores." };
   }
 
@@ -163,7 +163,7 @@ export async function guardarValoresMes(
 }
 
 export async function copiarMesAnterior(mesActual: string): Promise<void> {
-  if (!(await requireAsesorSession())) return;
+  if (!(await requireOwnerSession())) return;
 
   const [year, month] = mesActual.split("-").map(Number);
   const prevMonth = month === 1 ? 12 : month - 1;
@@ -211,7 +211,7 @@ export async function crearMovimiento(
   prevState: MovimientoFormState,
   formData: FormData
 ): Promise<MovimientoFormState> {
-  if (!(await requireAsesorSession())) {
+  if (!(await requireOwnerSession())) {
     return { error: "Sin permisos para registrar movimientos." };
   }
 
@@ -245,7 +245,7 @@ export async function editarMovimiento(
   prevState: MovimientoFormState,
   formData: FormData
 ): Promise<MovimientoFormState> {
-  if (!(await requireAsesorSession())) {
+  if (!(await requireOwnerSession())) {
     return { error: "Sin permisos para editar movimientos." };
   }
 
@@ -282,7 +282,7 @@ export async function editarMovimiento(
 }
 
 export async function eliminarMovimiento(id: string): Promise<void> {
-  if (!(await requireAsesorSession())) return;
+  if (!(await requireOwnerSession())) return;
   const linkedPayment = await db.query.barberShopAssetPayments.findFirst({
     where: eq(barberShopAssetPayments.capitalMovimientoId, id),
   });

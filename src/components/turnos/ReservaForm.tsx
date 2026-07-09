@@ -222,7 +222,7 @@ export default function ReservaForm({
         : null;
 
     if (!submitter || submitter.getAttribute("data-submit-intent") !== "reserve") {
-      setError("Para reservar, usa el boton final de enviar solicitud.");
+      setError("Para reservar, usá el botón final de enviar la solicitud.");
       return;
     }
 
@@ -381,15 +381,15 @@ export default function ReservaForm({
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-xl">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8cff59]">
-                  Desde manana
+                  Desde mañana
                 </p>
                 <p className="mt-2 text-sm text-zinc-300">
-                  La agenda publica empieza un dia despues para que el turno no salga apurado ni se
-                  pise con el movimiento del mismo dia.
+                  La agenda pública empieza un día después para que el turno no salga apurado ni se
+                  pise con el movimiento del mismo día.
                 </p>
               </div>
               <div className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/10 px-3 py-2 text-xs font-semibold text-[#d8ffc7]">
-                Primer dia: {formatDateLabel(initialFecha)}
+                Primer día: {formatDateLabel(initialFecha)}
               </div>
             </div>
 
@@ -585,10 +585,10 @@ export default function ReservaForm({
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-xl">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                  Musica opcional
+                  Música opcional
                 </p>
                 <p className="mt-2 text-sm text-zinc-300">
-                  Buscar una cancion no reserva nada. Solo deja una sugerencia para que el local la
+                  Buscar una canción no reserva nada. Solo deja una sugerencia para que el local la
                   tenga a mano.
                 </p>
               </div>
@@ -603,7 +603,7 @@ export default function ReservaForm({
                 value={cancion}
                 onChange={(event) => handleSongInputChange(event.target.value)}
                 onKeyDown={handleSongKeyDown}
-                placeholder="Tema, artista o cancion favorita"
+                placeholder="Tema, artista o canción favorita"
                 className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-base text-white placeholder:text-zinc-500 outline-none focus:border-[#8cff59]/60 focus:outline-none"
               />
               <button
@@ -622,7 +622,7 @@ export default function ReservaForm({
               </p>
             ) : (
               <p className="mt-3 text-xs text-zinc-400">
-                Si elegis un resultado de Spotify, la recomendacion queda mejor resuelta. Si no,
+                Si elegís un resultado de Spotify, la recomendación queda mejor resuelta. Si no,
                 queda como texto libre y listo.
               </p>
             )}
@@ -738,10 +738,10 @@ export default function ReservaForm({
             <SummaryRow
               label="Contacto"
               value={nombre.trim() || "Sin nombre"}
-              detail={contactReady ? telefono.trim() : "Completa nombre y telefono"}
+              detail={contactReady ? telefono.trim() : "Completá nombre y teléfono"}
             />
             <SummaryRow
-              label="Extras y musica"
+              label="Extras y música"
               value={`${selectedExtraCount} extras`}
               detail={hasLinkedTrack ? "Tema clavado a Spotify" : "Sin tema vinculado"}
             />
@@ -753,9 +753,9 @@ export default function ReservaForm({
             Antes de enviar
           </p>
           <div className="mt-4 space-y-2 text-sm text-zinc-200">
-            <p>Buscar musica no manda la reserva. Solo el boton final la envia.</p>
-            <p>El boton se habilita recien cuando hay servicio, horario y contacto.</p>
-            <p>La agenda publica no muestra turnos para hoy.</p>
+            <p>Buscar música no manda la reserva. Solo el botón final la envía.</p>
+            <p>El botón se habilita recién cuando hay servicio, horario y contacto.</p>
+            <p>La agenda pública no muestra turnos para hoy.</p>
           </div>
         </div>
 

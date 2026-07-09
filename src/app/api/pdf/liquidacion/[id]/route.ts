@@ -99,8 +99,6 @@ export async function GET(
   }));
 
   const comision = Number(liq.totalComisionCalculada ?? 0);
-  const sueldoMinimo = Number(liq.sueldoMinimo ?? 0);
-  const alquilerBancoCobrado = Number(liq.alquilerBancoCobrado ?? 0);
   const resultadoPeriodo = Number(liq.montoAPagar ?? 0);
   const montoAPagar = Number(liq.montoAPagar ?? 0);
 
@@ -113,8 +111,6 @@ export async function GET(
     fechaEmision: hoy,
     atenciones: atencionesData,
     totalComisionCalculada: comision,
-    sueldoMinimo,
-    alquilerBancoCobrado,
     resultadoPeriodo,
     montoAPagar,
   };

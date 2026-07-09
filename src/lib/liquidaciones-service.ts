@@ -87,8 +87,6 @@ export async function generarLiquidacionDesdeInput(
         totalCortes,
         totalBrutoCortes: String(totalBrutoCortes.toFixed(2)),
         totalComisionCalculada: String(totalComisionCalculada.toFixed(2)),
-        sueldoMinimo: null,
-        alquilerBancoCobrado: null,
         montoAPagar: String(totalComisionCalculada.toFixed(2)),
         pagado: false,
         notas: input.notas?.trim() || null,
@@ -127,4 +125,27 @@ export async function marcarLiquidacionPagada(id: string): Promise<MarcarPagadaR
 
     return { ok: false, error: "Esta liquidacion ya esta marcada como pagada." };
   });
+}
+
+export async function generarLiquidacionesDiariasParaFecha(input: {
+  fecha: string;
+  notas?: string | null;
+}) {
+  const barberosLiquidables = await db
+    .select({ id: barberos.id })
+    .from(barberos)
+    .where(and(eq(barberos.activo, true), eq(barberos.rol, "barbero")));
+
+  for (const barbero of barberosLiquidables) {
+    const result = await generarLiquidacionDesdeInput({
+      barberoId: barbero.id,
+      periodoInicio: input.fecha,
+      periodoFin: input.fecha,
+      notas: input.notas ?? "Generada automaticamente en cierre diario.",
+    });
+
+    if (!result.ok && !result.error.includes("Ya existe una liquidacion")) {
+      throw new Error(result.error);
+    }
+  }
 }

@@ -81,8 +81,6 @@ export default async function EditarBarberoPage({ params }: EditarBarberoPagePro
           rol: barbero.rol,
           tipoModelo: barbero.tipoModelo ?? undefined,
           porcentajeComision: barbero.porcentajeComision,
-          alquilerBancoMensual: barbero.alquilerBancoMensual,
-          sueldoMinimoGarantizado: barbero.sueldoMinimoGarantizado,
           servicioDefectoId: barbero.servicioDefectoId,
           medioPagoDefectoId: barbero.medioPagoDefectoId,
           publicSlug: barbero.publicSlug,

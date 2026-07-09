@@ -7,6 +7,7 @@ import {
   clientProfileEvents,
   clients,
   marcianoBeneficiosUso,
+  retentionFollowups,
   visitLogs,
 } from "@/db/schema";
 import { canAccessClient, getClientActorContext } from "@/lib/client-access";
@@ -533,4 +534,44 @@ export async function registrarUsoMarcianoAction(
   }
 
   revalidatePath(`/clientes/${clientId}`);
+}
+
+export async function upsertRetentionFollowupAction(
+  clientId: string,
+  formData: FormData
+): Promise<{ error?: string }> {
+  const actor = await getClientActorContext();
+  if (!actor?.isAdmin) {
+    return { error: "Solo admin puede actualizar retencion." };
+  }
+
+  const status = String(formData.get("status") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+
+  if (!["pendiente", "contactado", "reagendado"].includes(status)) {
+    return { error: "Estado invalido." };
+  }
+
+  await db
+    .insert(retentionFollowups)
+    .values({
+      clientId,
+      status,
+      notes,
+      lastManagedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: retentionFollowups.clientId,
+      set: {
+        status,
+        notes,
+        lastManagedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+  revalidatePath("/clientes");
+  revalidatePath(`/clientes/${clientId}`);
+  return {};
 }

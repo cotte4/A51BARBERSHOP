@@ -8,6 +8,7 @@ import {
   clients,
   marcianoBeneficiosUso,
   mediosPago,
+  ovnisPendingCredits,
   productos,
   servicios,
   serviciosAdicionales,
@@ -19,6 +20,12 @@ import {
   hasCajaCerradaHoy as hasCajaCerradaHoyInDal,
   resolveCajaActorBarberoIdByUser,
 } from "@/lib/dal/caja";
+import {
+  assertAnulacionReversionAllowed,
+  countMarcianoConsumicionesToRevert,
+} from "@/lib/finance/anulacion-reversal";
+import { calculateAtencionCommission } from "@/lib/finance/commission";
+import { resolveMarcianoCorteUsageDeltas } from "@/lib/finance/marciano-cortes";
 
 export type AtencionCreationInput = {
   barberoId: string;
@@ -126,6 +133,90 @@ async function applyMarcianoConsumicionesDelta(input: {
   });
 }
 
+async function isMarcianoClientInTx(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  clientId: string
+): Promise<boolean> {
+  const [client] = await tx
+    .select({ esMarciano: clients.esMarciano })
+    .from(clients)
+    .where(eq(clients.id, clientId))
+    .limit(1);
+  return Boolean(client?.esMarciano);
+}
+
+async function applyMarcianoCortesDelta(input: {
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0];
+  clientId: string;
+  delta: number;
+  fecha: string;
+}) {
+  if (input.delta === 0) {
+    return;
+  }
+
+  const mes = getCurrentMonthKey(input.fecha);
+  const [existing] = await input.tx
+    .select()
+    .from(marcianoBeneficiosUso)
+    .where(and(eq(marcianoBeneficiosUso.clientId, input.clientId), eq(marcianoBeneficiosUso.mes, mes)))
+    .limit(1);
+
+  const cortesActuales = existing?.cortesUsados ?? 0;
+  const cortesSiguientes = cortesActuales + input.delta;
+
+  if (cortesSiguientes < 0) {
+    throw new Error("No se pudo reconciliar el uso Marciano de cortes.");
+  }
+
+  if (existing) {
+    await input.tx
+      .update(marcianoBeneficiosUso)
+      .set({
+        cortesUsados: cortesSiguientes,
+        updatedAt: new Date(),
+      })
+      .where(eq(marcianoBeneficiosUso.id, existing.id));
+    return;
+  }
+
+  await input.tx.insert(marcianoBeneficiosUso).values({
+    clientId: input.clientId,
+    mes,
+    cortesUsados: cortesSiguientes,
+  });
+}
+
+export async function syncMarcianoCorteUsoForAtencionChange(input: {
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0];
+  fecha: string;
+  previousClientId?: string | null;
+  nextClientId?: string | null;
+}) {
+  const previousClientId = input.previousClientId ?? null;
+  const nextClientId = input.nextClientId ?? null;
+
+  const previousIsMarciano = previousClientId
+    ? await isMarcianoClientInTx(input.tx, previousClientId)
+    : false;
+  const nextIsMarciano = nextClientId ? await isMarcianoClientInTx(input.tx, nextClientId) : false;
+  const deltas = resolveMarcianoCorteUsageDeltas({
+    previousClientId,
+    nextClientId,
+    previousIsMarciano,
+    nextIsMarciano,
+  });
+
+  for (const delta of deltas) {
+    await applyMarcianoCortesDelta({
+      tx: input.tx,
+      clientId: delta.clientId,
+      delta: delta.delta,
+      fecha: input.fecha,
+    });
+  }
+}
+
 export async function hasCajaCerradaHoy() {
   return hasCajaCerradaHoyInDal();
 }
@@ -165,13 +256,13 @@ export async function crearAtencionDesdeInput(input: AtencionCreationInput) {
   }
 
   const precioCobrado = input.precioCobrado;
-  const comisionMpPct = Number(medioPago.comisionPorcentaje ?? 0);
-  const comisionMpMonto = (precioCobrado * comisionMpPct) / 100;
-  const montoNeto = precioCobrado - comisionMpMonto;
-  const comisionBarberoPct = Number(barbero.porcentajeComision ?? 0);
-  // Comisión del barbero se calcula SOLO sobre el precio base del servicio, no sobre la propina
-  const baseParaComision = Math.min(precioCobrado, Number(servicio.precioBase ?? precioCobrado));
-  const comisionBarberoMonto = (baseParaComision * comisionBarberoPct) / 100;
+  const servicePrecioBase = servicio.precioBase ?? String(precioCobrado);
+  const commission = calculateAtencionCommission({
+    precioCobrado,
+    comisionMedioPagoPct: Number(medioPago.comisionPorcentaje ?? 0),
+    comisionBarberoPct: Number(barbero.porcentajeComision ?? 0),
+    servicioPrecioBase: Number(servicePrecioBase),
+  });
 
   const adicionalesIds = input.adicionalesIds ?? [];
   const productosSeleccionados = input.productos ?? [];
@@ -194,14 +285,14 @@ export async function crearAtencionDesdeInput(input: AtencionCreationInput) {
         servicioId: input.servicioId,
         fecha: getFechaHoyArgentina(),
         hora: getHoraAhoraArgentina(),
-        precioBase: servicio.precioBase,
+        precioBase: servicePrecioBase,
         precioCobrado: String(precioCobrado),
         medioPagoId: input.medioPagoId,
-        comisionMedioPagoPct: String(comisionMpPct),
-        comisionMedioPagoMonto: String(comisionMpMonto.toFixed(2)),
-        montoNeto: String(montoNeto.toFixed(2)),
-        comisionBarberoPct: String(comisionBarberoPct),
-        comisionBarberoMonto: String(comisionBarberoMonto.toFixed(2)),
+        comisionMedioPagoPct: String(commission.comisionMedioPagoPct),
+        comisionMedioPagoMonto: String(commission.comisionMedioPagoMonto.toFixed(2)),
+        montoNeto: String(commission.montoNeto.toFixed(2)),
+        comisionBarberoPct: String(commission.comisionBarberoPct),
+        comisionBarberoMonto: String(commission.comisionBarberoMonto.toFixed(2)),
         notas: input.notas?.trim() || null,
         anulado: false,
       })
@@ -233,6 +324,13 @@ export async function crearAtencionDesdeInput(input: AtencionCreationInput) {
         productosSeleccionados,
       });
     }
+
+    await syncMarcianoCorteUsoForAtencionChange({
+      tx,
+      fecha: nuevaAtencion.fecha,
+      previousClientId: null,
+      nextClientId: input.clientId ?? null,
+    });
 
     // OVNIS: emit pending credit for Marciano clients
     if (input.clientId) {
@@ -273,6 +371,108 @@ type SyncProductosAtencionInput = {
   medioPagoId: string;
   productosSeleccionados: ProductoSeleccionadoInput[];
 };
+
+export async function anularAtencionConReversion(input: {
+  atencionId: string;
+  motivoAnulacion: string;
+}) {
+  return db.transaction(async (tx) => {
+    const [atencion] = await tx
+      .select({
+        id: atenciones.id,
+        fecha: atenciones.fecha,
+        clientId: atenciones.clientId,
+        anulado: atenciones.anulado,
+      })
+      .from(atenciones)
+      .where(eq(atenciones.id, input.atencionId))
+      .limit(1);
+
+    if (!atencion) {
+      throw new Error("Atencion no encontrada.");
+    }
+    if (atencion.anulado) {
+      throw new Error("Esta atencion ya esta anulada.");
+    }
+
+    const pendingCredits = await tx
+      .select({
+        id: ovnisPendingCredits.id,
+        redeemedAt: ovnisPendingCredits.redeemedAt,
+      })
+      .from(ovnisPendingCredits)
+      .where(eq(ovnisPendingCredits.atencionId, input.atencionId));
+
+    assertAnulacionReversionAllowed(pendingCredits);
+
+    const movimientosPrevios = await tx
+      .select({
+        productoId: stockMovimientos.productoId,
+        cantidad: stockMovimientos.cantidad,
+      })
+      .from(stockMovimientos)
+      .where(
+        and(
+          eq(stockMovimientos.referenciaId, input.atencionId),
+          eq(stockMovimientos.tipo, "venta")
+        )
+      );
+
+    for (const movimiento of movimientosPrevios) {
+      if (!movimiento.productoId || !movimiento.cantidad) continue;
+      await tx
+        .update(productos)
+        .set({ stockActual: sql`${productos.stockActual} + ${Math.abs(movimiento.cantidad)}` })
+        .where(eq(productos.id, movimiento.productoId));
+    }
+
+    const productosPrevios = await tx
+      .select({
+        cantidad: atencionesProductos.cantidad,
+        esMarcianoIncluido: atencionesProductos.esMarcianoIncluido,
+      })
+      .from(atencionesProductos)
+      .where(eq(atencionesProductos.atencionId, input.atencionId));
+
+    const consumicionesMarcianoPrevias = countMarcianoConsumicionesToRevert(productosPrevios);
+
+    if (consumicionesMarcianoPrevias > 0 && atencion.clientId) {
+      await applyMarcianoConsumicionesDelta({
+        tx,
+        clientId: atencion.clientId,
+        delta: -consumicionesMarcianoPrevias,
+        fecha: atencion.fecha,
+      });
+    }
+
+    await syncMarcianoCorteUsoForAtencionChange({
+      tx,
+      fecha: atencion.fecha,
+      previousClientId: atencion.clientId,
+      nextClientId: null,
+    });
+
+    await tx
+      .delete(stockMovimientos)
+      .where(
+        and(
+          eq(stockMovimientos.referenciaId, input.atencionId),
+          eq(stockMovimientos.tipo, "venta")
+        )
+      );
+
+    await tx.delete(atencionesProductos).where(eq(atencionesProductos.atencionId, input.atencionId));
+    await tx.delete(ovnisPendingCredits).where(eq(ovnisPendingCredits.atencionId, input.atencionId));
+
+    await tx
+      .update(atenciones)
+      .set({
+        anulado: true,
+        motivoAnulacion: input.motivoAnulacion.trim(),
+      })
+      .where(eq(atenciones.id, input.atencionId));
+  });
+}
 
 export async function syncProductosAtencion({
   tx,

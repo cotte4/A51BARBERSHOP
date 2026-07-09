@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A51 — Arrancá con Claude Code</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background:
+      radial-gradient(ellipse at top, rgba(140, 255, 89, 0.08) 0%, transparent 50%),
+      #0a0a0a;
+    color: #f5f7f5;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 40px 20px 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 760px; margin: 0 auto; }
+
+  .hero { text-align: center; margin-bottom: 40px; }
+  .logo {
+    width: 64px; height: 64px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #8cff59 0%, #b6ff84 100%);
+    display: grid; place-items: center;
+    margin: 0 auto 20px;
+    font-weight: 900; color: #07130a; font-size: 28px;
+    box-shadow: 0 0 40px rgba(140, 255, 89, 0.35);
+  }
+  h1 {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+  }
+  .hero p { color: #a1a1aa; font-size: 15px; }
+  .hero strong { color: #8cff59; }
+
+  .step {
+    background: #18181b;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 18px;
+    position: relative;
+  }
+  .step-num {
+    position: absolute;
+    top: -14px; left: 20px;
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    background: #8cff59;
+    color: #07130a;
+    display: grid; place-items: center;
+    font-weight: 800;
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(140, 255, 89, 0.3);
+  }
+  h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 4px 0 6px;
+    padding-top: 4px;
+  }
+  .sub { color: #71717a; font-size: 13px; margin-bottom: 14px; }
+  p { color: #a1a1aa; font-size: 14px; margin-bottom: 10px; }
+  strong { color: #f5f7f5; }
+
+  .prompt-box {
+    background: #09090b;
+    border: 2px solid #8cff59;
+    border-radius: 16px;
+    padding: 20px;
+    margin: 14px 0;
+    position: relative;
+  }
+  .prompt-box::before {
+    content: "PEGÁ ESTO EN CLAUDE CODE";
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    background: #8cff59;
+    color: #07130a;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+  }
+  .prompt-box pre {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: #f5f7f5;
+    font-family: "SF Mono", Monaco, Consolas, monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    line-height: 1.7;
+  }
+
+  pre {
+    background: #09090b;
+    border: 1px solid #27272a;
+    border-radius: 12px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: "SF Mono", Monaco, Consolas, monospace;
+    font-size: 13px;
+    color: #8cff59;
+    margin: 10px 0;
+    line-height: 1.7;
+  }
+  code {
+    background: #09090b;
+    border: 1px solid #27272a;
+    border-radius: 6px;
+    padding: 2px 7px;
+    font-family: "SF Mono", Monaco, Consolas, monospace;
+    font-size: 12px;
+    color: #8cff59;
+  }
+
+  .callout {
+    background: rgba(140, 255, 89, 0.06);
+    border: 1px solid rgba(140, 255, 89, 0.25);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: #a1a1aa;
+  }
+  .callout strong { color: #8cff59; }
+
+  .warn {
+    background: rgba(251, 191, 36, 0.06);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: #a1a1aa;
+  }
+  .warn strong { color: #fcd34d; }
+
+  .info {
+    background: rgba(96, 165, 250, 0.06);
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: #a1a1aa;
+  }
+  .info strong { color: #93c5fd; }
+
+  .final {
+    text-align: center;
+    padding: 32px 24px;
+    background: linear-gradient(135deg, rgba(140, 255, 89, 0.08) 0%, rgba(140, 255, 89, 0.02) 100%);
+    border: 1px solid rgba(140, 255, 89, 0.2);
+    border-radius: 20px;
+    margin-top: 24px;
+  }
+  .final h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .final p { color: #a1a1aa; font-size: 14px; margin-bottom: 0; }
+  .final .big { color: #8cff59; font-size: 16px; font-weight: 700; }
+
+  footer {
+    text-align: center;
+    color: #52525b;
+    font-size: 12px;
+    margin-top: 32px;
+  }
+
+  hr.sep {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin: 32px 0;
+  }
+
+  ol.checklist {
+    padding-left: 0;
+    list-style: none;
+  }
+  ol.checklist li {
+    padding: 8px 12px;
+    background: #09090b;
+    border: 1px solid #27272a;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: #a1a1aa;
+  }
+  ol.checklist li::before {
+    content: "☐ ";
+    color: #8cff59;
+    font-weight: 700;
+    margin-right: 6px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="hero">
+    <div class="logo">A</div>
+    <h1>Que Claude Code te lo arregle</h1>
+    <p>Tenés el repo clonado y el <strong>.env.local</strong> creado. Ahora dejá que Claude Code haga el resto.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <h2>Abrí Claude Code en la carpeta del proyecto</h2>
+    <div class="sub">Tiene que estar parado en <code>A51BARBERSHOP</code>.</div>
+    <p>Si ya lo abriste en otra carpeta, cerralo y volvelo a abrir desde la carpeta correcta. Verificá que ves los archivos del repo en el sidebar.</p>
+    <div class="info">
+      <strong>Tip:</strong> en VS Code / Cursor, podés abrir terminal con <code>Ctrl + ñ</code> y escribir <code>pwd</code> para confirmar que estás en la carpeta correcta.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <h2>Pegale ESTE prompt a Claude Code</h2>
+    <div class="sub">Copialo entero y pegalo en el chat de Claude Code. Él diagnostica y arregla todo.</div>
+
+    <div class="prompt-box">
+<pre>Soy el diseñador UX/UI del proyecto A51 Barbershop. Recién cloné el repo y creé el archivo .env.local con las claves que me pasó Was.
+
+Necesito que hagas lo siguiente, en este orden, y me vayas explicando QUÉ encontrás en cada paso:
+
+1. Confirmá que estamos parados en la carpeta correcta. Hacé `pwd` y mostrame el resultado. Si NO estamos en la carpeta `a51-barber`, movete ahí con `cd a51-barber`.
+
+2. Verificá que existen estos archivos: `package.json`, `next.config.ts` (o .js), `.env.local`, carpeta `src/`. Listame qué encontraste y qué falta.
+
+3. Si falta `.env.local`, avisame y paramos. Si está, abrilo (solo para verificar que tiene contenido, NO me lo muestres por seguridad) y confirmá que tiene al menos las variables `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`.
+
+4. Si no existe la carpeta `node_modules/`, corré `npm install`. Esto tarda 2-3 minutos. Avisame cuando termine y si dio algún error.
+
+5. Una vez instalado, corré `npm run dev` en background y dejame el log abierto para ver si arranca bien.
+
+6. Si arranca, decime la URL local (debería ser http://localhost:3000) y confirmamelo.
+
+7. Si tira algún error en cualquiera de los pasos, NO intentes arreglarlo solo: pegame el error exacto y esperame para que le avise a Was antes de tocar nada.
+
+Importante: NO modifiques `package.json`, NO toques `.env.local`, NO hagas `npm update`, NO hagas commits. Solo diagnosticá y corré los comandos que te pedí.
+
+Antes de empezar, leé el archivo `CLAUDE.md` (en la raíz del proyecto) para entender el contexto del proyecto.</pre>
+    </div>
+
+    <div class="callout">
+      <strong>Por qué este prompt:</strong> le dice a Claude Code exactamente qué chequear, en qué orden, y le pone límites para que no rompa nada. Va a ir mostrándote cada paso.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <h2>Confirmá que arrancó</h2>
+    <div class="sub">Cuando Claude Code termine el paso 6.</div>
+    <p>Abrí en tu navegador:</p>
+<pre>http://localhost:3000</pre>
+    <p>Deberías ver la app de A51. Si ves el dark theme con verde neón → <strong>ganaste</strong>.</p>
+    <div class="warn">
+      <strong>Si ves error en la pantalla:</strong> sacale screenshot y mandamela por WhatsApp. Probablemente sea un tema de variables de entorno o de base de datos.
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <h2>Decile a Claude Code que se entere del proyecto</h2>
+    <div class="sub">Antes de tocar cualquier cosa de diseño, hacele leer la documentación.</div>
+
+    <div class="prompt-box">
+<pre>Antes de empezar a trabajar, leé estos 3 archivos en orden y hacé un resumen corto de cada uno para confirmarme que los entendiste:
+
+1. CLAUDE.md (raíz del proyecto) — design system y reglas del proyecto
+2. a51-barber/docs/feature-map-ux.md — inventario de pantallas
+3. a51-barber/docs/design-handoff-progress.md — el tablero por dónde vamos
+
+Después decime: qué superficie deberíamos atacar primero según el plan de Was, y qué archivos del código corresponden a esa superficie.</pre>
+    </div>
+
+    <div class="callout">
+      <strong>Con esto:</strong> Claude Code ya tiene todo el contexto que necesita para trabajar bien. Cualquier cosa que le pidas después la va a hacer respetando el design system y las reglas.
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <h2>Cómo trabajar de ahora en más</h2>
+    <div class="sub">El flujo de cada tarea.</div>
+
+    <ol class="checklist">
+      <li>Antes de tocar código → <strong>crear branch</strong>: <code>git checkout -b ui/nombre-corto</code></li>
+      <li>Pedirle a Claude Code que haga el cambio (explicale qué pantalla, qué querés rediseñar)</li>
+      <li>Ver el cambio en localhost</li>
+      <li>Si te gusta → <strong>commit y push</strong>: Claude Code lo hace por vos si le decís</li>
+      <li>Avisale a Was que pusheaste, te dice si está OK o pide cambios</li>
+      <li>Cuando esté aprobado → Was lo mergea a producción</li>
+    </ol>
+
+    <div class="info">
+      <strong>Regla de oro:</strong> nunca trabajes en la rama <code>master</code>. Siempre en una branch propia con el prefijo <code>ui/</code>.
+    </div>
+  </div>
+
+  <div class="final">
+    <h3>¿Algo no funciona? ¿Tenés dudas?</h3>
+    <p class="big">Preguntame lo que sea por WhatsApp.</p>
+    <p>Soy Was — estoy disponible todo el día. No hay pregunta tonta. Si Claude Code te tira un error que no entendés, mandame screenshot y lo destrabamos en 2 minutos.</p>
+  </div>
+
+  <footer>
+    A51 Barbershop · Setup Guide · 2026
+  </footer>
+
+</div>
+</body>
+</html>

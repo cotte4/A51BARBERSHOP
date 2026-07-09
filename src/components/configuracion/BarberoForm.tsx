@@ -15,8 +15,6 @@ interface BarberoFormProps {
     rol?: string;
     tipoModelo?: string;
     porcentajeComision?: string | null;
-    alquilerBancoMensual?: string | null;
-    sueldoMinimoGarantizado?: string | null;
     servicioDefectoId?: string | null;
     medioPagoDefectoId?: string | null;
     publicSlug?: string | null;
@@ -44,8 +42,6 @@ export default function BarberoForm({
   const [rol, setRol] = useState(initialData?.rol ?? "barbero");
   const [tipoModelo, setTipoModelo] = useState(initialData?.tipoModelo ?? "variable");
   const [porcentajeComision, setPorcentajeComision] = useState(initialData?.porcentajeComision ?? "");
-  const [alquilerBancoMensual, setAlquilerBancoMensual] = useState(initialData?.alquilerBancoMensual ?? "");
-  const [sueldoMinimoGarantizado, setSueldoMinimoGarantizado] = useState(initialData?.sueldoMinimoGarantizado ?? "");
   const [servicioDefectoId, setServicioDefectoId] = useState(initialData?.servicioDefectoId ?? "");
   const [medioPagoDefectoId, setMedioPagoDefectoId] = useState(initialData?.medioPagoDefectoId ?? "");
   const [publicReservaActiva, setPublicReservaActiva] = useState(
@@ -202,61 +198,6 @@ export default function BarberoForm({
                 ) : null}
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label htmlFor="sueldoMinimoGarantizado" className="text-sm font-medium text-zinc-300">
-                  Sueldo minimo <span className="text-xs text-zinc-400">(opcional)</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-400">
-                    $
-                  </span>
-                  <input
-                    id="sueldoMinimoGarantizado"
-                    name="sueldoMinimoGarantizado"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={sueldoMinimoGarantizado}
-                    onChange={(event) => setSueldoMinimoGarantizado(event.target.value)}
-                    placeholder="Ej: 500000"
-                    className="min-h-[48px] w-full rounded-xl border border-zinc-700 bg-zinc-900 pl-8 pr-4 text-sm text-white placeholder:text-zinc-500 focus:border-[#8cff59]/60 focus:outline-none"
-                  />
-                </div>
-                <p className="text-xs text-zinc-500">
-                  Solo tiene sentido si este perfil trabaja con minimo garantizado.
-                </p>
-                {state.fieldErrors?.sueldoMinimoGarantizado ? (
-                  <p className="text-xs text-red-500">{state.fieldErrors.sueldoMinimoGarantizado}</p>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label htmlFor="alquilerBancoMensual" className="text-sm font-medium text-zinc-300">
-                Alquiler banco mensual <span className="text-xs text-zinc-400">(solo hibrido)</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-400">
-                  $
-                </span>
-                <input
-                  id="alquilerBancoMensual"
-                  name="alquilerBancoMensual"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={alquilerBancoMensual}
-                  onChange={(event) => setAlquilerBancoMensual(event.target.value)}
-                  placeholder="Ej: 300000"
-                  className="min-h-[48px] w-full rounded-xl border border-zinc-700 bg-zinc-900 pl-8 pr-4 text-sm text-white placeholder:text-zinc-500 focus:border-[#8cff59]/60 focus:outline-none"
-                />
-              </div>
-              <p className="text-xs text-zinc-500">
-                Solo aplica en el modelo hibrido y se muestra aparte en caja.
-              </p>
-              {state.fieldErrors?.alquilerBancoMensual ? (
-                <p className="text-xs text-red-500">{state.fieldErrors.alquilerBancoMensual}</p>
-              ) : null}
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -328,11 +269,6 @@ export default function BarberoForm({
                 value={`${Number(porcentajeComision || 0)}%`}
                 strong
                 detail="Impacta la lectura de resultados y la liquidacion."
-              />
-              <BarberStat
-                label="Alquiler"
-                value={formatARS(Number(alquilerBancoMensual) || 0)}
-                detail="Solo se cobra en el esquema hibrido."
               />
               <BarberStat
                 label="Accion rapida"

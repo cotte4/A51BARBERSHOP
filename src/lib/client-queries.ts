@@ -4,13 +4,14 @@ import {
   clientProfileEvents,
   clients,
   marcianoBeneficiosUso,
+  retentionFollowups,
   user,
   visitLogs,
 } from "@/db/schema";
 import type { ClientProfile, ClientSummary } from "@/lib/types";
 import { normalizePhone } from "@/lib/phone";
 import { getClientVisibilityFilter, type ClientVisibilityActor } from "@/lib/dal/clients";
-import { and, asc, desc, eq, ilike, isNotNull, isNull, like, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, like, lt, or, sql } from "drizzle-orm";
 
 export async function searchVisibleClients(
   actor: ClientVisibilityActor,
@@ -308,4 +309,34 @@ export async function getRetentionCandidates(): Promise<ClientSummary[]> {
     lastVisitBarberoNombre: row.lastVisitBarberoNombre,
     lastVisitNote: row.lastVisitNote,
   }));
+}
+
+export async function getRetentionPipelineRows() {
+  const candidates = await getRetentionCandidates();
+  if (candidates.length === 0) {
+    return [] as Array<{
+      client: ClientSummary;
+      status: "pendiente" | "contactado" | "reagendado";
+      notes: string | null;
+      lastManagedAt: Date | null;
+    }>;
+  }
+
+  const candidateIds = candidates.map((candidate) => candidate.id);
+  const followups = await db
+    .select()
+    .from(retentionFollowups)
+    .where(inArray(retentionFollowups.clientId, candidateIds));
+  const followupByClient = new Map(followups.map((followup) => [followup.clientId, followup]));
+
+  return candidates.map((client) => {
+    const followup = followupByClient.get(client.id);
+    return {
+      client,
+      status:
+        (followup?.status as "pendiente" | "contactado" | "reagendado" | undefined) ?? "pendiente",
+      notes: followup?.notes ?? null,
+      lastManagedAt: followup?.lastManagedAt ?? null,
+    };
+  });
 }

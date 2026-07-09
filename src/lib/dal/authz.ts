@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { barberos } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { isAdminOrAsesorRole, isOwnerRole } from "@/lib/authz/roles";
 
 export type CurrentActorContext = {
   session: Awaited<ReturnType<typeof auth.api.getSession>>;
@@ -15,6 +16,11 @@ export type CurrentActorContext = {
 export type AdminActorContext = {
   userId: string;
   role: "admin" | "asesor";
+};
+
+export type OwnerActorContext = {
+  userId: string;
+  role: "admin";
 };
 
 export type BarberoScopedActorContext = {
@@ -42,7 +48,7 @@ export async function getCurrentActorContext(): Promise<CurrentActorContext | nu
 export async function getAdminActorContext(): Promise<AdminActorContext | null> {
   const actor = await getCurrentActorContext();
 
-  if (!actor || (actor.role !== "admin" && actor.role !== "asesor")) {
+  if (!actor || !isAdminOrAsesorRole(actor.role)) {
     return null;
   }
 
@@ -54,6 +60,23 @@ export async function getAdminActorContext(): Promise<AdminActorContext | null> 
 
 export async function hasAdminAccess(): Promise<boolean> {
   return Boolean(await getAdminActorContext());
+}
+
+export async function getOwnerActorContext(): Promise<OwnerActorContext | null> {
+  const actor = await getCurrentActorContext();
+
+  if (!actor || !isOwnerRole(actor.role)) {
+    return null;
+  }
+
+  return {
+    userId: actor.userId,
+    role: "admin",
+  };
+}
+
+export async function hasOwnerAccess(): Promise<boolean> {
+  return Boolean(await getOwnerActorContext());
 }
 
 export async function getLinkedBarberoIdForUser(

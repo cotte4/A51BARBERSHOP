@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { atenciones, barberos, cierresCaja, mediosPago, pantallaEvents, servicios, turnos, turnosDisponibilidad } from "@/db/schema";
 import { handleClienteLlego } from "@/lib/music-engine";
+import { calculateAtencionCommission } from "@/lib/finance/commission";
+import { notifyTurnoStatusChange } from "@/lib/turno-notifications";
 import { canManageTurnoForBarbero, getTurnosActorContext } from "@/lib/turnos-access";
 import {
   TURNO_DURACIONES,
@@ -13,7 +15,7 @@ import {
   getFechaHoyArgentina,
   isFechaCerrada,
 } from "@/lib/turnos";
-import { getHoraAhoraArgentina } from "@/lib/caja-atencion";
+import { getHoraAhoraArgentina, syncMarcianoCorteUsoForAtencionChange } from "@/lib/caja-atencion";
 
 export type TurnoActionState = {
   error?: string;
@@ -72,7 +74,7 @@ export async function confirmarTurnoAction(
   turnoId: string,
   _prevState: TurnoActionState
 ): Promise<TurnoActionState> {
-  const { turno, allowed } = await getManagedTurno(turnoId);
+  const { actor, turno, allowed } = await getManagedTurno(turnoId);
   if (!turno) {
     return { error: "Turno no encontrado." };
   }
@@ -93,6 +95,14 @@ export async function confirmarTurnoAction(
     })
     .where(eq(turnos.id, turnoId));
 
+  if (actor?.userId) {
+    void notifyTurnoStatusChange({
+      turnoId,
+      eventType: "turno_confirmado",
+      createdByUserId: actor.userId,
+    });
+  }
+
   revalidatePath("/turnos");
   revalidatePath("/hoy");
   revalidatePath("/turnos/disponibilidad");
@@ -109,7 +119,7 @@ export async function rechazarTurnoAction(
     return { error: "El motivo de rechazo es obligatorio." };
   }
 
-  const { turno, allowed } = await getManagedTurno(turnoId);
+  const { actor, turno, allowed } = await getManagedTurno(turnoId);
   if (!turno) {
     return { error: "Turno no encontrado." };
   }
@@ -124,6 +134,15 @@ export async function rechazarTurnoAction(
     .update(turnos)
     .set({ estado: "cancelado", motivoCancelacion: motivo, updatedAt: new Date() })
     .where(eq(turnos.id, turnoId));
+
+  if (actor?.userId) {
+    void notifyTurnoStatusChange({
+      turnoId,
+      eventType: "turno_cancelado",
+      createdByUserId: actor.userId,
+      motivoCancelacion: motivo,
+    });
+  }
 
   revalidatePath("/turnos");
   revalidatePath("/hoy");
@@ -525,6 +544,9 @@ export async function cobrarYCompletarTurnoAction(
       if (!resolvedServicioId) {
         throw new Error("Este turno no tiene servicio asignado. Elegí un servicio antes de cobrar.");
       }
+      if (!turno.barberoId) {
+        throw new Error("Este turno no tiene barbero asignado.");
+      }
 
       const [barbero] = await tx
         .select({ porcentajeComision: barberos.porcentajeComision })
@@ -548,11 +570,13 @@ export async function cobrarYCompletarTurnoAction(
       if (!medioPago) throw new Error("Medio de pago no encontrado.");
       if (!servicio) throw new Error("Servicio no encontrado.");
 
-      const comisionMpPct = Number(medioPago.comisionPorcentaje ?? 0);
-      const comisionMpMonto = (precioCobrado * comisionMpPct) / 100;
-      const montoNeto = precioCobrado - comisionMpMonto;
-      const comisionBarberoPct = Number(barbero.porcentajeComision ?? 0);
-      const comisionBarberoMonto = (precioCobrado * comisionBarberoPct) / 100;
+      const servicePrecioBase = servicio.precioBase ?? String(precioCobrado);
+      const commission = calculateAtencionCommission({
+        precioCobrado,
+        comisionMedioPagoPct: Number(medioPago.comisionPorcentaje ?? 0),
+        comisionBarberoPct: Number(barbero.porcentajeComision ?? 0),
+        servicioPrecioBase: Number(servicePrecioBase),
+      });
 
       await tx.insert(atenciones).values({
         barberoId: turno.barberoId,
@@ -560,15 +584,22 @@ export async function cobrarYCompletarTurnoAction(
         servicioId: resolvedServicioId,
         fecha: turno.fecha,
         hora: getHoraAhoraArgentina(),
-        precioBase: servicio.precioBase,
+        precioBase: servicePrecioBase,
         precioCobrado: String(precioCobrado),
         medioPagoId,
-        comisionMedioPagoPct: String(comisionMpPct),
-        comisionMedioPagoMonto: String(comisionMpMonto.toFixed(2)),
-        montoNeto: String(montoNeto.toFixed(2)),
-        comisionBarberoPct: String(comisionBarberoPct),
-        comisionBarberoMonto: String(comisionBarberoMonto.toFixed(2)),
+        comisionMedioPagoPct: String(commission.comisionMedioPagoPct),
+        comisionMedioPagoMonto: String(commission.comisionMedioPagoMonto.toFixed(2)),
+        montoNeto: String(commission.montoNeto.toFixed(2)),
+        comisionBarberoPct: String(commission.comisionBarberoPct),
+        comisionBarberoMonto: String(commission.comisionBarberoMonto.toFixed(2)),
         anulado: false,
+      });
+
+      await syncMarcianoCorteUsoForAtencionChange({
+        tx,
+        fecha: turno.fecha,
+        previousClientId: null,
+        nextClientId: turno.clientId ?? null,
       });
 
       await tx

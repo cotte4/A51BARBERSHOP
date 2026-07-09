@@ -16,8 +16,6 @@ export type LiquidacionPDFData = {
   fechaEmision: string;
   atenciones: AtencionLiquidacionData[];
   totalComisionCalculada: number;
-  sueldoMinimo?: number;
-  alquilerBancoCobrado?: number;
   resultadoPeriodo: number;
   montoAPagar: number;
 };
@@ -68,8 +66,6 @@ export function LiquidacionPDF({ data }: { data: LiquidacionPDFData }) {
     fechaEmision,
     atenciones,
     totalComisionCalculada,
-    sueldoMinimo = 0,
-    alquilerBancoCobrado = 0,
     resultadoPeriodo,
     montoAPagar,
   } = data;
@@ -121,24 +117,6 @@ export function LiquidacionPDF({ data }: { data: LiquidacionPDFData }) {
             </Text>
             <Text style={pdfStyles.subtotalValue}>{ars(totalComisionCalculada)}</Text>
           </View>
-
-          {sueldoMinimo > 0 ? (
-            <View style={pdfStyles.subtotalRow}>
-              <Text style={pdfStyles.subtotalLabel}>Sueldo minimo garantizado</Text>
-              <Text style={pdfStyles.subtotalValue}>{ars(sueldoMinimo)}</Text>
-            </View>
-          ) : null}
-
-          {alquilerBancoCobrado > 0 ? (
-            <View style={pdfStyles.subtotalRow}>
-              <Text style={[pdfStyles.subtotalLabel, { color: colors.negative }]}>
-                (-) Alquiler banco
-              </Text>
-              <Text style={[pdfStyles.subtotalValue, { color: colors.negative }]}>
-                -{ars(alquilerBancoCobrado)}
-              </Text>
-            </View>
-          ) : null}
 
           <View style={pdfStyles.dividerRow} />
 
