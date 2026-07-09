@@ -104,19 +104,58 @@ export default function FaceCapture({ onCapture }: FaceCaptureProps) {
 
   async function startCamera() {
     setState("requesting");
+    setError(null);
+
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setError(
+        "Tu navegador no permite cámara acá. Probá Chrome o Safari actualizado, o abrí el sitio con https:// (o localhost)."
+      );
+      setState("error");
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      setError(
+        "La cámara solo funciona en HTTPS o en http://localhost. Si entrás por la IP del PC (http://192.168…) el navegador bloquea la cámara."
+      );
+      setState("error");
+      return;
+    }
+
+    const baseAudio = { audio: false } as const;
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+      // Mobile: prefer selfie cam. Desktop: "user" often throws OverconstrainedError — fall back to any camera.
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          ...baseAudio,
+          video: { facingMode: { ideal: "user" } },
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          ...baseAudio,
+          video: true,
+        });
+      }
+
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
       setState("streaming");
     } catch (err) {
+      const name = err instanceof DOMException ? err.name : "";
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("denied") || msg.includes("Permission") || msg.includes("NotAllowed")) {
-        setError("Permiso de cámara denegado");
+
+      if (name === "NotAllowedError" || msg.includes("denied") || msg.includes("Permission")) {
+        setError("Permiso de cámara denegado. Revisá el ícono de candado en la barra del navegador y permití cámara.");
+      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        setError("No encontramos ninguna cámara. ¿Está conectada o no la está usando otra app?");
+      } else if (name === "NotReadableError" || name === "TrackStartError") {
+        setError("La cámara está en uso por otra aplicación (Zoom, Teams, etc.). Cerrá la otra app y reintentá.");
       } else {
-        setError("No se pudo acceder a la cámara");
+        setError("No se pudo acceder a la cámara. Reintentá o probá otro navegador.");
       }
       setState("error");
     }
