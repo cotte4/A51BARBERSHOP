@@ -14,6 +14,9 @@ import {
 } from "@/db/schema";
 import { eq, inArray, and, gte, lte } from "drizzle-orm";
 import { buildCierreResumen } from "@/lib/caja-finance";
+import { calculateAtencionCommission } from "@/lib/finance/commission";
+import { assertCajaAbiertaOrThrow } from "@/lib/finance/closure-guard";
+import { generarLiquidacionesDiariasParaFecha } from "@/lib/liquidaciones-service";
 import {
   canManageCajaBarbero,
   getCajaActorContext,
@@ -23,17 +26,19 @@ import {
   resolveCajaActorBarberoIdForActor,
 } from "@/lib/dal/caja";
 import {
+  anularAtencionConReversion,
   crearAtencionDesdeInput,
   getFechaHoyArgentina,
   getQuickActionDefaultsForBarbero,
   registrarVentaProductoDesdeInput,
+  syncMarcianoCorteUsoForAtencionChange,
   syncProductosAtencion,
   type ProductoSeleccionadoInput,
 } from "@/lib/caja-atencion";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-// ������ Tipos ��������������������������������������������������������������������������������������
+// ———————————————————————————— Tipos ————————————————————————————
 
 export type CierreFormState = {
   error?: string;
@@ -51,10 +56,26 @@ export type AtencionFormState = {
   };
 };
 
-// ������ Helpers ����������������������������������������������������������������������������������
+// ———————————————————————————— Helpers ————————————————————————————
 
 function getFechaHoy(): string {
   return getFechaHoyArgentina();
+}
+
+function revalidateCajaViews(options?: {
+  includeInventario?: boolean;
+  includeDashboard?: boolean;
+}) {
+  revalidatePath("/caja");
+  revalidatePath("/hoy");
+
+  if (options?.includeInventario) {
+    revalidatePath("/inventario");
+  }
+
+  if (options?.includeDashboard) {
+    revalidatePath("/dashboard");
+  }
 }
 
 function parseProductosSeleccionados(formData: FormData): ProductoSeleccionadoInput[] {
@@ -96,7 +117,7 @@ function parseProductosSeleccionados(formData: FormData): ProductoSeleccionadoIn
   }
 }
 
-// ������ registrarAtencion ����������������������������������������������������������������
+// ———————————————————————————— registrarAtencion ————————————————————————————
 
 export async function registrarAtencion(
   prevState: AtencionFormState,
@@ -104,7 +125,7 @@ export async function registrarAtencion(
 ): Promise<AtencionFormState> {
   const actor = await getCajaActorContext();
   if (!actor) {
-    return { error: "Debes iniciar sesion para registrar atenciones." };
+    return { error: "Debes iniciar sesión para registrar atenciones." };
   }
 
   // Leer campos
@@ -135,7 +156,7 @@ export async function registrarAtencion(
       return { error: "Tu usuario no tiene un barbero activo vinculado." };
     }
     if (barberoId && !canManageCajaBarbero(actor, barberoId)) {
-      fieldErrors.barberoId = "Solo podes registrar atenciones para tu perfil.";
+      fieldErrors.barberoId = "Solo podés registrar atenciones para tu perfil.";
     }
   }
 
@@ -160,16 +181,13 @@ export async function registrarAtencion(
       notas,
     });
   } catch (e) {
-    console.error("Error registrando atencion:", e);
+    console.error("Error registrando atención:", e);
     return {
-      error: e instanceof Error ? e.message : "No se pudo registrar la atencion. Intenta de nuevo.",
+      error: e instanceof Error ? e.message : "No se pudo registrar la atención. Intenta de nuevo.",
     };
   }
 
-  revalidatePath("/caja");
-  revalidatePath("/hoy");
-  revalidatePath("/inventario");
-  revalidatePath("/dashboard");
+  revalidateCajaViews({ includeInventario: true, includeDashboard: true });
   if (clientId) {
     revalidatePath("/clientes");
     revalidatePath(`/clientes/${clientId}`);
@@ -177,7 +195,7 @@ export async function registrarAtencion(
   redirect("/caja");
 }
 
-// ������ editarAtencion ����������������������������������������������������������������������
+// ———————————————————————————— editarAtencion ————————————————————————————
 
 export type AtencionRapidaState = {
   error?: string;
@@ -189,16 +207,16 @@ async function registrarAtencionRapidaInterna(
   const actor = await getCajaActorContext();
 
   if (!actor) {
-    return { error: "Debes iniciar sesion para registrar una atencion." };
+    return { error: "Debes iniciar sesión para registrar una atención." };
   }
 
   if (await hasCajaCerradaHoy()) {
-    return { error: "La caja del dia ya fue cerrada. No se pueden registrar nuevas atenciones." };
+    return { error: "La caja del día ya fue cerrada. No se pueden registrar nuevas atenciones." };
   }
 
   const barberoId = await resolveCajaActorBarberoIdForActor(actor);
   if (!barberoId) {
-    return { error: "No encontre un barbero activo vinculado para usar la accion rapida." };
+    return { error: "No encontré un barbero activo vinculado para usar la acción rápida." };
   }
 
   const defaults = await getQuickActionDefaultsForBarbero(barberoId);
@@ -214,14 +232,11 @@ async function registrarAtencionRapidaInterna(
       precioCobrado: defaults.precioBase,
     });
   } catch (error) {
-    console.error("Error registrando atencion rapida:", error);
-    return { error: "No se pudo registrar la atencion rapida. Intenta de nuevo." };
+    console.error("Error registrando atención rápida:", error);
+    return { error: "No se pudo registrar la atención rápida. Intenta de nuevo." };
   }
 
-  revalidatePath("/caja");
-  revalidatePath("/hoy");
-  revalidatePath("/inventario");
-  revalidatePath("/dashboard");
+  revalidateCajaViews({ includeInventario: true, includeDashboard: true });
   redirect("/caja");
 }
 
@@ -258,11 +273,11 @@ export async function registrarAtencionExpressAction(
 ): Promise<AtencionRapidaState> {
   const actor = await getCajaActorContext();
 
-  if (!actor) return { error: "Debes iniciar sesion para registrar una atencion." };
-  if (await hasCajaCerradaHoy()) return { error: "La caja del dia ya fue cerrada." };
+  if (!actor) return { error: "Debes iniciar sesión para registrar una atención." };
+  if (await hasCajaCerradaHoy()) return { error: "La caja del día ya fue cerrada." };
 
   const barberoId = await resolveCajaActorBarberoIdForActor(actor);
-  if (!barberoId) return { error: "No encontre un barbero activo vinculado." };
+  if (!barberoId) return { error: "No encontré un barbero activo vinculado." };
 
   const servicioId = formData.get("servicioId") as string | null;
   const medioPagoId = formData.get("medioPagoId") as string | null;
@@ -274,20 +289,18 @@ export async function registrarAtencionExpressAction(
 
   const precioCobrado = Number(precioCobradoStr ?? 0);
   if (!precioCobradoStr || isNaN(precioCobrado) || precioCobrado <= 0) {
-    return { error: "El precio del servicio no es valido." };
+    return { error: "El precio del servicio no es válido." };
   }
 
   try {
     await crearAtencionDesdeInput({ barberoId, servicioId, medioPagoId, precioCobrado });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    console.error("Error registrando atencion express:", message);
-    return { error: "No se pudo registrar la atencion. Intenta de nuevo." };
+    console.error("Error registrando atención express:", message);
+    return { error: "No se pudo registrar la atención. Intenta de nuevo." };
   }
 
-  revalidatePath("/caja");
-  revalidatePath("/hoy");
-  revalidatePath("/dashboard");
+  revalidateCajaViews({ includeDashboard: true });
   redirect(sanitizeReturnTo(returnTo));
 }
 
@@ -298,7 +311,7 @@ export async function editarAtencion(
 ): Promise<AtencionFormState> {
   const actor = await getCajaActorContext();
   if (!actor) {
-    return { error: "Debes iniciar sesion para editar atenciones." };
+    return { error: "Debes iniciar sesión para editar atenciones." };
   }
 
   const barberoId = formData.get("barberoId") as string;
@@ -317,10 +330,10 @@ export async function editarAtencion(
     .where(eq(atenciones.id, id))
     .limit(1);
 
-  if (!atencionExistente) return { error: "Atencion no encontrada." };
-  if (atencionExistente.anulado) return { error: "No se puede editar una atencion anulada." };
+  if (!atencionExistente) return { error: "Atención no encontrada." };
+  if (atencionExistente.anulado) return { error: "No se puede editar una atención anulada." };
   if (atencionExistente.fecha !== getFechaHoy()) {
-    return { error: "Solo se pueden editar atenciones del dia de hoy." };
+    return { error: "Solo se pueden editar atenciones del día de hoy." };
   }
 
   const fieldErrors: AtencionFormState["fieldErrors"] = {};
@@ -337,10 +350,10 @@ export async function editarAtencion(
       return { error: "Tu usuario no tiene un barbero activo vinculado." };
     }
     if (!canManageCajaBarbero(actor, atencionExistente.barberoId)) {
-      return { error: "Solo podes editar atenciones de tu perfil." };
+      return { error: "Solo podés editar atenciones de tu perfil." };
     }
     if (barberoId && !canManageCajaBarbero(actor, barberoId)) {
-      fieldErrors.barberoId = "Solo podes editar atenciones de tu perfil.";
+      fieldErrors.barberoId = "Solo podés editar atenciones de tu perfil.";
     }
   }
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
@@ -360,24 +373,26 @@ export async function editarAtencion(
       .where(eq(atenciones.id, id))
       .limit(1);
 
-    if (!atencionExistente) return { error: "Atencion no encontrada." };
-    if (atencionExistente.anulado) return { error: "No se puede editar una atencion anulada." };
+    if (!atencionExistente) return { error: "Atención no encontrada." };
+    if (atencionExistente.anulado) return { error: "No se puede editar una atención anulada." };
     if (atencionExistente.fecha !== getFechaHoy()) {
-      return { error: "Solo se pueden editar atenciones del dia de hoy." };
+      return { error: "Solo se pueden editar atenciones del día de hoy." };
     }
 
     const [barbero] = await db.select().from(barberos).where(eq(barberos.id, barberoId)).limit(1);
     const [medioPago] = await db.select().from(mediosPago).where(eq(mediosPago.id, medioPagoId)).limit(1);
     const [servicio] = await db.select().from(servicios).where(eq(servicios.id, servicioId)).limit(1);
 
-    if (!barbero || !medioPago || !servicio) return { error: "Datos invalidos." };
+    if (!barbero || !medioPago || !servicio) return { error: "Datos inválidos." };
 
     const precioCobrado = Number(precioCobradoStr);
-    const comisionMpPct = Number(medioPago.comisionPorcentaje ?? 0);
-    const comisionMpMonto = precioCobrado * comisionMpPct / 100;
-    const montoNeto = precioCobrado - comisionMpMonto;
-    const comisionBarberoPct = Number(barbero.porcentajeComision ?? 0);
-    const comisionBarberoMonto = precioCobrado * comisionBarberoPct / 100;
+    const servicePrecioBase = servicio.precioBase ?? String(precioCobrado);
+    const commission = calculateAtencionCommission({
+      precioCobrado,
+      comisionMedioPagoPct: Number(medioPago.comisionPorcentaje ?? 0),
+      comisionBarberoPct: Number(barbero.porcentajeComision ?? 0),
+      servicioPrecioBase: Number(servicePrecioBase),
+    });
 
     await db.transaction(async (tx) => {
       await tx.update(atenciones).set({
@@ -385,15 +400,22 @@ export async function editarAtencion(
         clientId,
         servicioId,
         precioCobrado: String(precioCobrado),
-        precioBase: servicio.precioBase,
+        precioBase: servicePrecioBase,
         medioPagoId,
-        comisionMedioPagoPct: String(comisionMpPct),
-        comisionMedioPagoMonto: String(comisionMpMonto.toFixed(2)),
-        montoNeto: String(montoNeto.toFixed(2)),
-        comisionBarberoPct: String(comisionBarberoPct),
-        comisionBarberoMonto: String(comisionBarberoMonto.toFixed(2)),
+        comisionMedioPagoPct: String(commission.comisionMedioPagoPct),
+        comisionMedioPagoMonto: String(commission.comisionMedioPagoMonto.toFixed(2)),
+        montoNeto: String(commission.montoNeto.toFixed(2)),
+        comisionBarberoPct: String(commission.comisionBarberoPct),
+        comisionBarberoMonto: String(commission.comisionBarberoMonto.toFixed(2)),
         notas: notas?.trim() || null,
       }).where(eq(atenciones.id, id));
+
+      await syncMarcianoCorteUsoForAtencionChange({
+        tx,
+        fecha: atencionExistente.fecha,
+        previousClientId: atencionExistente.clientId,
+        nextClientId: clientId,
+      });
 
       await tx.delete(atencionesAdicionales).where(eq(atencionesAdicionales.atencionId, id));
 
@@ -427,10 +449,7 @@ export async function editarAtencion(
     };
   }
 
-  revalidatePath("/caja");
-  revalidatePath("/hoy");
-  revalidatePath("/inventario");
-  revalidatePath("/dashboard");
+  revalidateCajaViews({ includeInventario: true, includeDashboard: true });
   if (clientId) {
     revalidatePath("/clientes");
     revalidatePath(`/clientes/${clientId}`);
@@ -441,7 +460,7 @@ export async function editarAtencion(
   redirect("/caja");
 }
 
-// ������ anularAtencion ����������������������������������������������������������������������
+// ———————————————————————————— anularAtencion ————————————————————————————
 
 export async function anularAtencion(
   id: string,
@@ -466,27 +485,27 @@ export async function anularAtencion(
       .where(eq(atenciones.id, id))
       .limit(1);
 
-    if (!atencionExistente) return { error: "Atencion no encontrada." };
-    if (atencionExistente.anulado) return { error: "Esta atencion ya esta anulada." };
+    if (!atencionExistente) return { error: "Atención no encontrada." };
+    if (atencionExistente.anulado) return { error: "Esta atención ya está anulada." };
     if (atencionExistente.fecha !== getFechaHoy()) {
-      return { error: "Solo se pueden anular atenciones del dia de hoy." };
+      return { error: "Solo se pueden anular atenciones del día de hoy." };
     }
+    await assertCajaAbiertaOrThrow(atencionExistente.fecha);
 
-    await db.update(atenciones).set({
-      anulado: true,
-      motivoAnulacion: motivoAnulacion.trim(),
-    }).where(eq(atenciones.id, id));
+    await anularAtencionConReversion({
+      atencionId: id,
+      motivoAnulacion,
+    });
   } catch (e) {
     console.error("Error anulando atencion:", e);
-    return { error: "No se pudo anular la atencion. Intenta de nuevo." };
+    return { error: "No se pudo anular la atención. Intenta de nuevo." };
   }
 
-  revalidatePath("/caja");
-  revalidatePath("/hoy");
+  revalidateCajaViews();
   return {}; // No redirect: el usuario sigue en la pagina de caja
 }
 
-// ������ cerrarCaja ������������������������������������������������������������������������������
+// ———————————————————————————— cerrarCaja ————————————————————————————
 
 export async function cerrarCaja(
   prevState: CierreFormState,
@@ -580,6 +599,9 @@ export async function cerrarCaja(
 
     // 6. Obtener barbero del admin que cierra (para cerradoPor)
     const barberoAdminId = await getCajaClosingBarberoIdForActor(actor);
+    if (!barberoAdminId) {
+      return { error: "No se encontró un barbero asociado a tu cuenta. Contacta al administrador." };
+    }
 
     // 7. Insertar cierre
     const [nuevoCierre] = await db
@@ -609,17 +631,21 @@ export async function cerrarCaja(
         .set({ cierreCajaId: nuevoCierre.id })
         .where(and(eq(atenciones.fecha, fechaHoy), eq(atenciones.anulado, false)));
     }
+
+    await generarLiquidacionesDiariasParaFecha({
+      fecha: fechaHoy,
+      notas: `Auto-liquidacion diaria desde cierre ${fechaHoy}.`,
+    });
   } catch (e) {
     console.error("Error cerrando caja:", e);
     return { error: "No se pudo cerrar la caja. Intenta de nuevo." };
   }
 
-  revalidatePath("/caja");
-  revalidatePath("/hoy");
+  revalidateCajaViews();
   redirect(`/caja/cierre/${getFechaHoy()}`);
 }
 
-// ������ registrarVentaProducto ������������������������������������������������������
+// ———————————————————————————— registrarVentaProducto ————————————————————————————
 
 export type VentaProductoFormState = {
   error?: string;
@@ -656,10 +682,10 @@ export async function registrarVentaProducto(
 
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
-  // Verificar sesion
+  // Verificar sesión
   const actor = await getCajaActorContext();
   if (!actor) {
-    return { error: "Debes iniciar sesion para realizar esta operacion." };
+    return { error: "Debes iniciar sesión para realizar esta operación." };
   }
   if (!actor.isAdmin && !actor.barberoId) {
     return { error: "Tu usuario no tiene un barbero activo vinculado." };
@@ -693,9 +719,7 @@ export async function registrarVentaProducto(
     return { error: "No se pudo registrar la venta. Intenta de nuevo." };
   }
 
-  revalidatePath("/caja");
-  revalidatePath("/hoy");
-  revalidatePath("/inventario");
+  revalidateCajaViews({ includeInventario: true });
   revalidatePath(`/inventario/${productoId}`);
   revalidatePath("/inventario/rotacion");
   revalidatePath("/dashboard");

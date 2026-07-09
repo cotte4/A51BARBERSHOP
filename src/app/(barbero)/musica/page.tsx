@@ -24,11 +24,11 @@ export default async function MusicaPage() {
       <main className="public-shell min-h-screen pb-28 text-white">
         <div className="mx-auto flex min-h-screen max-w-5xl items-center px-4 py-10">
           <section className="public-panel rounded-[34px] border border-white/10 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
-            <p className="eyebrow text-[#8cff59]">Musica</p>
+            <p className="eyebrow text-[#8cff59]">Música</p>
             <p className="mt-3 text-2xl font-semibold text-white">Falta tu perfil de barbero</p>
             <p className="mt-3 max-w-xl text-sm text-zinc-300">
               Vincula este usuario con un barbero activo para poder usar Jam, Soy DJ y la cola
-              compartida desde Musica.
+              compartida desde Música.
             </p>
             <Link
               href="/hoy"

@@ -811,7 +811,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                 {cierreHoy ? (
                   <Link
                     href={`/caja/cierre/${fechaHoy}`}
-                    className="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-white px-4 text-sm font-semibold text-stone-950 hover:bg-stone-100"
+                    className="ghost-button inline-flex min-h-[48px] items-center justify-center rounded-2xl px-4 text-sm font-semibold"
                   >
                     Ver resumen final
                   </Link>

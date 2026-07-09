@@ -377,7 +377,7 @@ export default async function CierrePage() {
                 <div className="text-2xl font-bold">
                   {formatARS(cierreResumen.totales.aporteEconomicoCasaDia)}
                 </div>
-                <div className="mt-1 text-xs text-gray-400">
+                <div className="mt-1 text-xs text-zinc-400">
                   Servicios {formatARS(cierreResumen.totales.aporteCasaServicios)}
                   {" · "}
                   Productos {formatARS(cierreResumen.totales.margenProductos)}

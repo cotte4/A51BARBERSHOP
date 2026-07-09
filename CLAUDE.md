@@ -50,7 +50,6 @@ The app is live on Vercel. Core is mature. Open issues before designer handoff:
 ### Known bugs / debt
 - **Music automation not closed** — `clienteLlegoAction()` fires events to pantalla and `musicEvents` but does NOT trigger real Spotify playback. Treat music as manually supervised for now. See `planning/features/music-auto-jam-completion.md`.
 - **Encoding bug on reserva pública** — `src/app/reservar/[slug]/page.tsx` shows corrupted characters in visible text. Fix before designer review.
-- **Gastos rápidos migration dependency** — `src/app/(admin)/gastos-rapidos/actions.ts` errors if migration hasn't been applied. Run `db:push` if missing.
 
 ### UX maturity by surface
 - Operación diaria (hoy, caja, turnos, clientes): **mature**
@@ -230,7 +229,7 @@ import MyComponent from "@/components/feature/MyComponent";
 - Access validation for Server Actions: use `src/lib/admin-action.ts` (admin check) and `src/lib/caja-access.ts` (barber-owns-entry check) — never skip these
 
 ### Navigation
-- `src/components/navigation/RoleBottomNav.tsx` is the **only** bottom nav. It renders 5 tabs for barbero and 6 for admin.
+- `src/components/navigation/RoleBottomNav.tsx` is the **only** bottom nav. It renders 5 tabs para barbero and 7 para admin (4 operación + 3 gestión).
 - `AdminBottomNav` was deleted. Never recreate it.
 - `/negocio` is the admin hub — all owner-only tools live there, not in the bottom nav directly.
 

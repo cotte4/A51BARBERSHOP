@@ -72,7 +72,7 @@ export function MovementDisclosureCard({
             <span className="rounded-full bg-stone-950 px-3 py-1 text-xs font-semibold text-white">
               {timeLabel}
             </span>
-            <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-stone-800">
+            <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-semibold text-stone-200">
               {badge}
             </span>
           </div>
