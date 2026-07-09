@@ -10,6 +10,7 @@ interface RegistrarPagoFormProps {
     formData: FormData
   ) => Promise<RegistrarCuotaState>;
   cuotaTotalDefault: number;
+  tcReferencia: number;
 }
 
 function formatUSD(value: number) {
@@ -25,6 +26,7 @@ function formatUSD(value: number) {
 export default function RegistrarPagoForm({
   action,
   cuotaTotalDefault,
+  tcReferencia,
 }: RegistrarPagoFormProps) {
   const [state, formAction, isPending] = useActionState(action, {});
   const [montoPagadoUsd, setMontoPagadoUsd] = useState(cuotaTotalDefault.toFixed(2));
@@ -35,6 +37,8 @@ export default function RegistrarPagoForm({
   const tcNumber = Number(tcDia) || 0;
   const montoArs = montoNumber * tcNumber;
 
+  // Sin "media cuota": el pago mínimo es la cuota completa (los pagos
+  // parciales corrompen el plan de amortización — ver repago-service).
   const suggestedAmounts = useMemo(
     () => [
       {
@@ -47,15 +51,13 @@ export default function RegistrarPagoForm({
         label: "Cuota + 10%",
         value: Number((cuotaTotalDefault * 1.1).toFixed(2)),
       },
-      {
-        id: "half",
-        label: "Media cuota",
-        value: Number((cuotaTotalDefault / 2).toFixed(2)),
-      },
     ],
     [cuotaTotalDefault]
   );
-  const suggestedTcs = [1100, 1200, 1250];
+  const suggestedTcs = useMemo(() => {
+    const base = Math.round(tcReferencia / 50) * 50;
+    return [base - 100, base, base + 100].filter((value) => value > 0);
+  }, [tcReferencia]);
 
   return (
     <form action={formAction} className="space-y-5">
@@ -72,7 +74,7 @@ export default function RegistrarPagoForm({
 
       <div className="space-y-4">
         {/* opciones rápidas */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {suggestedAmounts.map((option) => {
             const selected = Number(montoPagadoUsd) === option.value;
             return (

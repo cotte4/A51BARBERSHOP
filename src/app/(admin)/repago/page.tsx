@@ -7,12 +7,13 @@ import {
   calcularCuotaSiguiente,
   calcularFechaCancelacion,
   calcularPorcentajeAvance,
+  calcularSaldoReal,
   formatUSD,
   generarCronograma,
 } from "@/lib/amortizacion";
 import { formatFecha } from "@/lib/fecha";
 import { db } from "@/db";
-import { repagoMemas, repagoMemasCuotas } from "@/db/schema";
+import { configuracionNegocio, repagoMemas, repagoMemasCuotas } from "@/db/schema";
 import { registrarCuota } from "./actions";
 import { formatARS } from "@/lib/format";
 import RegistrarPagoForm from "./_RegistrarPagoForm";
@@ -48,11 +49,15 @@ export default async function RepagoPage() {
     redirect("/caja");
   }
 
-  const [repago] = await db.select().from(repagoMemas).limit(1);
-  const cuotas = await db
-    .select()
-    .from(repagoMemasCuotas)
-    .orderBy(desc(repagoMemasCuotas.fechaPago));
+  const [[repago], cuotas, [config]] = await Promise.all([
+    db.select().from(repagoMemas).limit(1),
+    db.select().from(repagoMemasCuotas).orderBy(desc(repagoMemasCuotas.fechaPago)),
+    db
+      .select({ tcReferencia: configuracionNegocio.tcReferencia })
+      .from(configuracionNegocio)
+      .limit(1),
+  ]);
+  const tcReferencia = Number(config?.tcReferencia ?? 1400);
 
   if (!repago) {
     return (
@@ -109,13 +114,20 @@ export default async function RepagoPage() {
 
   const cronograma = generarCronograma(deudaUsd, tasaAnual, cantidadCuotas);
   const cuotaSiguiente = calcularCuotaSiguiente(cronograma, cuotasPagadas);
-  const fechaCancelacion = calcularFechaCancelacion(fechaInicio, cuotasPagadas, cantidadCuotas);
+  const cuotasOrdenadas = [...cuotas].sort((a, b) => (a.numeroCuota ?? 0) - (b.numeroCuota ?? 0));
+  const ultimaCuota = cuotas[0] ?? null;
+  const fechaCancelacion = repago.pagadoCompleto
+    ? formatMonthYear(ultimaCuota?.fechaPago ?? fechaInicio)
+    : calcularFechaCancelacion(ultimaCuota?.fechaPago ?? null, cuotasPagadas, cantidadCuotas);
 
   const capitalPagadoAcumulado = cuotas.reduce((sum, cuota) => sum + Number(cuota.capitalPagado ?? 0), 0);
   const porcentajeAvance = clampProgress(calcularPorcentajeAvance(capitalPagadoAcumulado, deudaUsd));
-  const cuotasOrdenadas = [...cuotas].sort((a, b) => (a.numeroCuota ?? 0) - (b.numeroCuota ?? 0));
-  const ultimaCuota = cuotas[0] ?? null;
-  const saldoRestante = cuotaSiguiente?.saldoInicial ?? 0;
+  // Saldo real (cache USD coherente, o teórico como fallback) — no el teórico del cronograma
+  const saldoRestante = calcularSaldoReal(
+    repago.saldoPendiente == null ? null : Number(repago.saldoPendiente),
+    deudaUsd,
+    cuotaSiguiente?.saldoInicial ?? 0
+  );
   const proximaCuotaTotal = cuotaSiguiente?.cuotaTotal ?? 0;
 
   return (
@@ -432,7 +444,11 @@ export default async function RepagoPage() {
                     ARS antes de confirmar.
                   </p>
                   <div className="mt-5">
-                    <RegistrarPagoForm action={registrarCuota} cuotaTotalDefault={cuotaSiguiente.cuotaTotal} />
+                    <RegistrarPagoForm
+                      action={registrarCuota}
+                      cuotaTotalDefault={cuotaSiguiente.cuotaTotal}
+                      tcReferencia={tcReferencia}
+                    />
                   </div>
                 </section>
               ) : (

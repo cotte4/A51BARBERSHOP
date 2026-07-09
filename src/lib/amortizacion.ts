@@ -65,31 +65,54 @@ export function calcularCuotaSiguiente(
 
 /**
  * Calcula la fecha proyectada de cancelación completa.
- * Devuelve string "Mes YYYY" (ej: "Abril 2027").
+ * Devuelve string "Mes YYYY" (ej: "abril de 2027").
  *
- * @param fechaInicio - fecha en formato "YYYY-MM-DD"
+ * Proyecta desde el último pago real (una cuota por mes hacia adelante);
+ * si todavía no hubo pagos, proyecta desde hoy. Así la fecha acompaña la
+ * realidad de los pagos en vez de asumir que arrancaron en `fechaInicio`.
+ *
+ * @param fechaUltimoPago - fecha "YYYY-MM-DD" del último pago registrado, o null
  * @param cuotasPagadas - cantidad de cuotas ya registradas
  * @param cantidadCuotas - total de cuotas pactadas
  */
 export function calcularFechaCancelacion(
-  fechaInicio: string,
+  fechaUltimoPago: string | null | undefined,
   cuotasPagadas: number,
   cantidadCuotas: number
 ): string {
-  const cuotasRestantes = cantidadCuotas - cuotasPagadas;
-  const [year, month, day] = fechaInicio.split("-").map(Number);
-  // Fecha de la última cuota = fechaInicio + (cantidadCuotas - 1) meses
-  // Equivalentemente: fecha del primer pago + (cuotasRestantes - 1) meses adelante
-  const fechaBase = new Date(year, month - 1, day);
-  // La fecha de cancelación es siempre la de la última cuota: fechaInicio + (cantidadCuotas - 1) meses
-  const mesesHastaFin = cantidadCuotas - 1;
-  fechaBase.setMonth(fechaBase.getMonth() + mesesHastaFin);
+  const cuotasRestantes = Math.max(0, cantidadCuotas - cuotasPagadas);
+  const base = fechaUltimoPago ?? new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+  });
+  const [year, month, day] = base.split("-").map(Number);
+  const fechaBase = new Date(Date.UTC(year, month - 1, day, 12));
+  fechaBase.setUTCMonth(fechaBase.getUTCMonth() + cuotasRestantes);
 
   return fechaBase.toLocaleDateString("es-AR", {
     month: "long",
     year: "numeric",
     timeZone: "UTC",
   });
+}
+
+/**
+ * Saldo real de la deuda en USD.
+ *
+ * Usa el cache `saldo_pendiente` cuando es coherente (0 < saldo ≤ deuda);
+ * si viene nulo o corrupto (p. ej. un valor legacy en ARS), cae al saldo
+ * teórico del cronograma para esa altura del plan.
+ */
+export function calcularSaldoReal(
+  saldoCache: number | null | undefined,
+  deudaUsd: number,
+  saldoTeorico: number
+): number {
+  if (saldoCache == null) return saldoTeorico;
+  const saldo = Number(saldoCache);
+  if (Number.isFinite(saldo) && saldo >= 0 && saldo <= deudaUsd) {
+    return saldo;
+  }
+  return saldoTeorico;
 }
 
 /**

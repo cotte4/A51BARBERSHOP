@@ -12,7 +12,12 @@ import {
   stockMovimientos,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { calcularCuotaSiguiente, formatUSD, generarCronograma } from "@/lib/amortizacion";
+import {
+  calcularCuotaSiguiente,
+  calcularSaldoReal,
+  formatUSD,
+  generarCronograma,
+} from "@/lib/amortizacion";
 import { getKpisDia } from "@/lib/dashboard-queries";
 import {
   SmartCard as NegocioSmartCard,
@@ -37,6 +42,8 @@ const utilityLinks = [
   { href: "/configuracion/medios-de-pago", label: "Cobros", detail: "Tarjeta, transferencia y comisiones" },
   { href: "/configuracion/gastos-fijos", label: "Gastos fijos", detail: "Alquiler, servicios y base del mes" },
   { href: "/negocio/estilo", label: "Cortes Marciano", detail: "Configurar cortes por forma de cara" },
+  { href: "/negocio/soporte", label: "Soporte", detail: "Revisar bugs internos y triage" },
+  { href: "/negocio/go-live", label: "Go-live", detail: "Checklist y firma de lanzamiento" },
   { href: "/negocio/activos", label: "Hangar", detail: "Activos, compras y flujo de inversion inicial" },
   { href: "/mi-resultado", label: "Mi resultado", detail: "Ver tu numero personal" },
   { href: "/dashboard/pl", label: "Reporte mensual", detail: "Abrir el detalle largo" },
@@ -153,7 +160,12 @@ export default async function NegocioPage() {
     const cronograma = generarCronograma(deudaUsd, tasaAnual, cantidadCuotas);
     const cuotaSiguiente = calcularCuotaSiguiente(cronograma, cuotasPagadas);
 
-    saldoPendienteUsd = toNumber(repago.saldoPendiente);
+    // Cache USD coherente o saldo teórico como fallback (filas legacy en ARS)
+    saldoPendienteUsd = calcularSaldoReal(
+      repago.saldoPendiente == null ? null : Number(repago.saldoPendiente),
+      deudaUsd,
+      cuotaSiguiente?.saldoInicial ?? 0
+    );
 
     if (cuotaSiguiente) {
       const dueDate = addMonthsToDate(repago.fechaInicio ?? fechaHoy, cuotasPagadas);

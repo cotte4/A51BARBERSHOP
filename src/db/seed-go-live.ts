@@ -36,8 +36,6 @@ const BARBEROS_DATA = [
     rol: "admin" as const,
     tipoModelo: "variable" as const,
     porcentajeComision: "100.00",
-    alquilerBancoMensual: null,
-    sueldoMinimoGarantizado: null,
   },
   {
     email: "gabote@a51barber.com",
@@ -45,8 +43,6 @@ const BARBEROS_DATA = [
     rol: "barbero" as const,
     tipoModelo: "variable" as const,
     porcentajeComision: "60.00",
-    alquilerBancoMensual: null,
-    sueldoMinimoGarantizado: null,
   },
 ] as const;
 
@@ -344,8 +340,6 @@ async function seedBarberos(usersByEmail: Map<string, UserRecord>) {
           rol: barber.rol,
           tipoModelo: barber.tipoModelo,
           porcentajeComision: barber.porcentajeComision,
-          alquilerBancoMensual: barber.alquilerBancoMensual,
-          sueldoMinimoGarantizado: barber.sueldoMinimoGarantizado,
           activo: true,
           userId: user.id,
         })
@@ -359,8 +353,6 @@ async function seedBarberos(usersByEmail: Map<string, UserRecord>) {
           rol: barber.rol,
           tipoModelo: barber.tipoModelo,
           porcentajeComision: barber.porcentajeComision,
-          alquilerBancoMensual: barber.alquilerBancoMensual,
-          sueldoMinimoGarantizado: barber.sueldoMinimoGarantizado,
           activo: true,
           userId: user.id,
         })
@@ -587,7 +579,8 @@ async function seedTemporada(barberosByEmail: Map<string, typeof schema.barberos
       valorLlaveTotal: "2384571.00",
       cuotaMensual: "400000.00",
       cuotasPagadas: 0,
-      saldoPendiente: "2384571.00",
+      // saldo_pendiente vive en USD (lo actualiza repago-service) — NO en ARS
+      saldoPendiente: "1500.00",
       fechaInicio: "2026-05-01",
       pagadoCompleto: false,
       deudaUsd: "1500.00",
@@ -665,7 +658,7 @@ async function seedCategoriasYGastos() {
 async function seedConfiguracionNegocio() {
   console.log("\n8. Configuracion de negocio...");
 
-  const presupuestoMensualGastos = 1956686;
+  const presupuestoMensualGastos = "1956686.00";
   const existing = await db.query.configuracionNegocio.findFirst();
 
   if (!existing) {

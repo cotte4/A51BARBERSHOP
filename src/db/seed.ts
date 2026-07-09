@@ -108,8 +108,6 @@ async function seed() {
       rol: "admin",
       tipoModelo: "variable",
       porcentajeComision: "100.00",
-      alquilerBancoMensual: null,
-      sueldoMinimoGarantizado: null,
       activo: true,
     })
     .onConflictDoNothing()
@@ -122,8 +120,6 @@ async function seed() {
       rol: "barbero",
       tipoModelo: "hibrido",
       porcentajeComision: "60.00",
-      alquilerBancoMensual: null,
-      sueldoMinimoGarantizado: null,
       activo: true,
     })
     .onConflictDoNothing()
@@ -254,7 +250,8 @@ async function seed() {
       valorLlaveTotal: "2384571.00",
       cuotaMensual: "400000.00",
       cuotasPagadas: 0,
-      saldoPendiente: "2384571.00",
+      // saldo_pendiente vive en USD (lo actualiza repago-service) — NO en ARS
+      saldoPendiente: "1500.00",
       fechaInicio: "2026-05-01",
       pagadoCompleto: false,
       deudaUsd: "1500.00",
@@ -272,7 +269,7 @@ async function seed() {
   console.log("\nInsertando configuracion_negocio...");
 
   await db.insert(schema.configuracionNegocio).values({
-    presupuestoMensualGastos: 1956686,
+    presupuestoMensualGastos: "1956686.00",
     actualizadoPor: "seed",
   }).onConflictDoNothing();
   console.log("  ✓ Presupuesto mensual: $1.956.686 (actualizado_por: seed)");

@@ -3,7 +3,7 @@ import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { repagoMemas, repagoMemasCuotas } from "@/db/schema";
-import { generarCronograma } from "@/lib/amortizacion";
+import { calcularSaldoReal, generarCronograma } from "@/lib/amortizacion";
 
 export type RegistrarCuotaRepagoInput = {
   montoPagadoUsd: number;
@@ -48,23 +48,36 @@ export async function registrarCuotaRepagoMemas(
     const cuotasPagadas = repago.cuotasPagadas ?? 0;
 
     if (cuotasPagadas >= cantidadCuotas) {
-      return { ok: false, error: "La deuda ya esta cancelada." };
+      return {
+        ok: false,
+        error: "Todas las cuotas pactadas ya fueron registradas. Si quedó saldo, hablalo con Memas.",
+      };
     }
 
     const cronograma = generarCronograma(deudaUsd, tasaAnual, cantidadCuotas);
     const cuotaActual = cronograma[cuotasPagadas];
-    const saldoPendienteActual = cuotaActual.saldoInicial;
+    // Saldo real (USD): cache coherente o teórico como fallback (ver calcularSaldoReal)
+    const saldoPendienteActual = calcularSaldoReal(
+      repago.saldoPendiente == null ? null : Number(repago.saldoPendiente),
+      deudaUsd,
+      cuotaActual.saldoInicial
+    );
     const interesCuota = saldoPendienteActual * (tasaAnual / 12);
+    // Pago mínimo = cuota completa (capital fijo + interés). Sin pagos parciales:
+    // un pago parcial marcaría la cuota como pagada y dejaría el plan inconsistente.
+    const capitalRequerido = Math.min(cuotaActual.capital, saldoPendienteActual);
+    const cuotaMinima = capitalRequerido + interesCuota;
 
-    if (input.montoPagadoUsd < interesCuota) {
+    if (input.montoPagadoUsd + 0.01 < cuotaMinima) {
       return {
         ok: false,
-        error: `El monto no cubre el interes de la cuota (minimo u$d ${interesCuota.toFixed(2)}).`,
+        error: `El pago mínimo es la cuota completa: u$d ${cuotaMinima.toFixed(2)}. No se aceptan pagos parciales.`,
       };
     }
 
     const interesPagado = interesCuota;
-    const capitalPagado = input.montoPagadoUsd - interesPagado;
+    // Sobrepago amortiza capital extra, con tope en el saldo real
+    const capitalPagado = Math.min(input.montoPagadoUsd - interesPagado, saldoPendienteActual);
     const montoPagadoArs = input.montoPagadoUsd * input.tcDia;
     const numeroCuota = cuotasPagadas + 1;
     const hoy = new Date().toLocaleDateString("en-CA", {
@@ -77,7 +90,7 @@ export async function registrarCuotaRepagoMemas(
       fechaPago: hoy,
       montoPagado: String(montoPagadoArs.toFixed(2)),
       capitalPagado: String(capitalPagado.toFixed(2)),
-      interesPagado: String(interesPagado.toFixed(4)),
+      interesPagado: String(interesPagado.toFixed(2)),
       tcDia: String(input.tcDia.toFixed(2)),
       notas: input.notas?.trim() || null,
     });

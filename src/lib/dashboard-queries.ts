@@ -13,7 +13,7 @@ import {
   costosFijosValores,
   costosFijosNegocio,
 } from "@/db/schema";
-import { generarCronograma, calcularCuotaSiguiente } from "./amortizacion";
+import { generarCronograma, calcularCuotaSiguiente, calcularSaldoReal } from "./amortizacion";
 import { and, eq, gte, lte, sum, count, avg, isNull, or } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { toNumber, getDaysInMonth } from "./caja-finance";
@@ -105,6 +105,90 @@ export async function getKpisDia(): Promise<{
     cajaNeta,
     aporteEconomicoCasa,
     cierreRealizado: !!cierre,
+  };
+}
+
+// ————————————————————————————
+// Cuota Memas del mes — ÚNICA fuente de verdad, la usan getKpisMes y getPL.
+// Si la cuota del mes ya se pagó usa el monto ARS real; si no, proyecta
+// cuota teórica × TC de referencia. Saldo pendiente siempre en USD.
+// ————————————————————————————
+
+type CuotaMemasDelMes = {
+  cuotaMemasMes: number; // ARS
+  cuotaMemasPagada: boolean;
+  saldoMemasPendienteUsd: number;
+  cuotasPagadas: number;
+  cantidadCuotasPactadas: number | null;
+  deudaUsd: number;
+};
+
+async function getCuotaMemasDelMes(
+  inicio: string,
+  fin: string,
+  tcReferencia: number
+): Promise<CuotaMemasDelMes> {
+  const [repago] = await db
+    .select({
+      pagadoCompleto: repagoMemas.pagadoCompleto,
+      cuotasPagadas: repagoMemas.cuotasPagadas,
+      cantidadCuotasPactadas: repagoMemas.cantidadCuotasPactadas,
+      saldoPendiente: repagoMemas.saldoPendiente,
+      deudaUsd: repagoMemas.deudaUsd,
+      tasaAnualUsd: repagoMemas.tasaAnualUsd,
+    })
+    .from(repagoMemas)
+    .limit(1);
+
+  if (!repago || repago.pagadoCompleto) {
+    return {
+      cuotaMemasMes: 0,
+      cuotaMemasPagada: false,
+      saldoMemasPendienteUsd: 0,
+      cuotasPagadas: repago?.cuotasPagadas ?? 0,
+      cantidadCuotasPactadas: repago?.cantidadCuotasPactadas ?? null,
+      deudaUsd: toNumber(repago?.deudaUsd),
+    };
+  }
+
+  const deudaUsd = toNumber(repago.deudaUsd);
+  const cronograma = generarCronograma(
+    deudaUsd,
+    toNumber(repago.tasaAnualUsd),
+    repago.cantidadCuotasPactadas ?? 12
+  );
+  const proximaCuota = calcularCuotaSiguiente(cronograma, repago.cuotasPagadas ?? 0);
+  const saldoMemasPendienteUsd = calcularSaldoReal(
+    repago.saldoPendiente == null ? null : Number(repago.saldoPendiente),
+    deudaUsd,
+    proximaCuota?.saldoInicial ?? 0
+  );
+
+  const cuotaDelMes = await db
+    .select({ montoPagado: repagoMemasCuotas.montoPagado })
+    .from(repagoMemasCuotas)
+    .where(and(gte(repagoMemasCuotas.fechaPago, inicio), lte(repagoMemasCuotas.fechaPago, fin)))
+    .limit(1);
+
+  const contexto = {
+    saldoMemasPendienteUsd,
+    cuotasPagadas: repago.cuotasPagadas ?? 0,
+    cantidadCuotasPactadas: repago.cantidadCuotasPactadas ?? null,
+    deudaUsd,
+  };
+
+  if (cuotaDelMes.length > 0 && cuotaDelMes[0].montoPagado) {
+    return {
+      cuotaMemasMes: toNumber(cuotaDelMes[0].montoPagado),
+      cuotaMemasPagada: true,
+      ...contexto,
+    };
+  }
+
+  return {
+    cuotaMemasMes: proximaCuota ? proximaCuota.cuotaTotal * tcReferencia : 0,
+    cuotaMemasPagada: false,
+    ...contexto,
   };
 }
 
@@ -212,15 +296,18 @@ export async function getKpisMes(
   const resultadoCasaMes =
     aporteCasaGabote + margenProductosMes - gastosFijosMes;
 
-  // Cuota Memas
-  const [repago] = await db
-    .select({ cuotaMensual: repagoMemas.cuotaMensual, pagadoCompleto: repagoMemas.pagadoCompleto, saldoPendiente: repagoMemas.saldoPendiente })
-    .from(repagoMemas)
+  // Cuota Memas — misma lógica que el P&L (getCuotaMemasDelMes), no el
+  // campo legacy cuotaMensual que el servicio de repago nunca actualiza.
+  const [config] = await db
+    .select({ tcReferencia: configuracionNegocio.tcReferencia })
+    .from(configuracionNegocio)
     .limit(1);
-
-  const cuotaMemasMes =
-    repago && !repago.pagadoCompleto ? toNumber(repago.cuotaMensual) : 0;
-  const saldoMemasPendiente = repago ? toNumber(repago.saldoPendiente) : 0;
+  const tcReferencia = toNumber(config?.tcReferencia) || 1400;
+  const { cuotaMemasMes, saldoMemasPendienteUsd } = await getCuotaMemasDelMes(
+    inicio,
+    fin,
+    tcReferencia
+  );
 
   const resultadoPinkyMes = ingresosNetosPinky + resultadoCasaMes - cuotaMemasMes;
 
@@ -228,7 +315,7 @@ export async function getKpisMes(
     atencionesTotales: atencionesMes.length,
     resultadoCasaMes,
     resultadoPinkyMes,
-    saldoMemasPendiente,
+    saldoMemasPendiente: saldoMemasPendienteUsd,
   };
 }
 
@@ -382,47 +469,18 @@ export async function getPL(mes: number, anio: number): Promise<PLData> {
     })
     .from(configuracionNegocio)
     .limit(1);
-  const presupuestoGastos = config?.presupuesto ?? 0;
+  const presupuestoGastos = config?.presupuesto ? parseFloat(config.presupuesto) : 0;
   const tcReferencia = toNumber(config?.tcReferencia) || 1400;
 
-  // Repago Memas con contexto completo
-  const [repago] = await db
-    .select({
-      pagadoCompleto: repagoMemas.pagadoCompleto,
-      cuotasPagadas: repagoMemas.cuotasPagadas,
-      cantidadCuotasPactadas: repagoMemas.cantidadCuotasPactadas,
-      saldoPendiente: repagoMemas.saldoPendiente,
-      deudaUsd: repagoMemas.deudaUsd,
-      tasaAnualUsd: repagoMemas.tasaAnualUsd,
-    })
-    .from(repagoMemas)
-    .limit(1);
-
-  // Cuota del mes: si ya fue pagada usamos montoPagado (ARS real),
-  // si no, proyectamos con el cronograma × TC de referencia
-  let cuotaMemasMes = 0;
-  let cuotaMemasPagada = false;
-
-  if (repago && !repago.pagadoCompleto) {
-    const cuotaDelMes = await db
-      .select({ montoPagado: repagoMemasCuotas.montoPagado })
-      .from(repagoMemasCuotas)
-      .where(and(gte(repagoMemasCuotas.fechaPago, inicio), lte(repagoMemasCuotas.fechaPago, fin)))
-      .limit(1);
-
-    if (cuotaDelMes.length > 0 && cuotaDelMes[0].montoPagado) {
-      cuotaMemasMes = toNumber(cuotaDelMes[0].montoPagado);
-      cuotaMemasPagada = true;
-    } else {
-      const cronograma = generarCronograma(
-        toNumber(repago.deudaUsd),
-        toNumber(repago.tasaAnualUsd),
-        repago.cantidadCuotasPactadas ?? 12,
-      );
-      const proximaCuota = calcularCuotaSiguiente(cronograma, repago.cuotasPagadas ?? 0);
-      cuotaMemasMes = proximaCuota ? proximaCuota.cuotaTotal * tcReferencia : 0;
-    }
-  }
+  // Cuota Memas del mes — helper compartido con getKpisMes
+  const {
+    cuotaMemasMes,
+    cuotaMemasPagada,
+    saldoMemasPendienteUsd,
+    cuotasPagadas,
+    cantidadCuotasPactadas,
+    deudaUsd,
+  } = await getCuotaMemasDelMes(inicio, fin, tcReferencia);
 
   // Cálculos finales
   const feesMedioPagoTotal = feesMedioPagoGabote + feesMedioPagoPinky;
@@ -454,10 +512,10 @@ export async function getPL(mes: number, anio: number): Promise<PLData> {
     cuotaMemasMes,
     cuotaMemasPagada,
     tcReferencia,
-    cuotasPagadas: repago?.cuotasPagadas ?? 0,
-    cantidadCuotasPactadas: repago?.cantidadCuotasPactadas ?? null,
-    saldoPendiente: toNumber(repago?.saldoPendiente),
-    deudaUsd: toNumber(repago?.deudaUsd),
+    cuotasPagadas,
+    cantidadCuotasPactadas,
+    saldoPendiente: saldoMemasPendienteUsd,
+    deudaUsd,
     resultadoNeto,
   };
 }
@@ -629,7 +687,10 @@ export async function getComparativaTemporadas(): Promise<
 
     // Días totales de la temporada
     const msInicio = new Date(fechaInicio + "T12:00:00").getTime();
-    const msFin = new Date(fechaFin + "T12:00:00").getTime();
+    const fechaFinValida = fechaFin && fechaFin.trim()
+      ? fechaFin
+      : new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
+    const msFin = new Date(fechaFinValida + "T12:00:00").getTime();
     const diasTemporada = Math.max(1, Math.round((msFin - msInicio) / (1000 * 60 * 60 * 24)) + 1);
 
     // Ingreso casa proyectado: cortes/día * precio * 25% * días
@@ -742,7 +803,7 @@ export async function getDatosBep(): Promise<{
 
   // Presupuesto de configuracion
   const [config] = await db.select().from(configuracionNegocio).limit(1);
-  const presupuestoMensual = config?.presupuestoMensualGastos ?? 0;
+  const presupuestoMensual = config?.presupuestoMensualGastos ? parseFloat(config.presupuestoMensualGastos) : 0;
 
   // Atenciones del mes para calcular promedios
   const atencionesMes = await db
