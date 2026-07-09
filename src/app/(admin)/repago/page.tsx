@@ -203,6 +203,63 @@ export default async function RepagoPage() {
             </div>
           </section>
 
+          {!repago.pagadoCompleto && cuotaSiguiente ? (
+            <section className="rounded-[30px] border border-zinc-800 bg-zinc-900 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="eyebrow text-xs font-semibold">Accion</p>
+                  <h2 className="font-display mt-2 text-2xl font-semibold text-white">
+                    Registrar pago
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-zinc-400">
+                    Cargá USD, tipo de cambio y notas. El formulario ya te deja ver el impacto en
+                    ARS antes de confirmar.
+                  </p>
+                </div>
+                <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-right">
+                  <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                    Cuota #{cuotaSiguiente.numeroCuota} de {cantidadCuotas}
+                  </p>
+                  <p className="mt-1 text-2xl font-bold text-white">
+                    {formatUSD(proximaCuotaTotal)}
+                  </p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Saldo pendiente {formatUSD(saldoRestante)}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-5">
+                <RegistrarPagoForm
+                  action={registrarCuota}
+                  cuotaTotalDefault={cuotaSiguiente.cuotaTotal}
+                  tcReferencia={tcReferencia}
+                />
+              </div>
+            </section>
+          ) : (
+            <section className="rounded-[30px] border border-emerald-500/25 bg-emerald-500/10 p-5">
+              <p className="eyebrow text-xs font-semibold text-emerald-200">Cierre</p>
+              <h2 className="font-display mt-2 text-2xl font-semibold text-white">
+                Deuda cancelada
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-emerald-100/80">
+                El repago ya quedo completo. El historial sigue disponible para auditoria y
+                consulta.
+              </p>
+              {ultimaCuota ? (
+                <div className="mt-5 rounded-[24px] border border-emerald-500/20 bg-zinc-950/60 p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Ultimo pago</p>
+                  <p className="mt-1 text-base font-semibold text-white">
+                    {formatFecha(ultimaCuota.fechaPago)}
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    {formatUSD(Number(ultimaCuota.montoPagado ?? 0))} registrado.
+                  </p>
+                </div>
+              ) : null}
+            </section>
+          )}
+
           <section className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
             <div className="space-y-5">
               <section className="rounded-[30px] border border-zinc-800 bg-zinc-900 p-5">
@@ -283,22 +340,25 @@ export default async function RepagoPage() {
                 )}
               </section>
 
-              <section className="rounded-[30px] border border-zinc-800 bg-zinc-900 p-5">
-                <div className="flex flex-wrap items-start justify-between gap-4">
+              <details className="group rounded-[30px] border border-zinc-800 bg-zinc-900 p-5">
+                <summary className="flex list-none flex-wrap items-start justify-between gap-4 [&::-webkit-details-marker]:hidden cursor-pointer">
                   <div>
                     <p className="eyebrow text-xs font-semibold">Cronograma</p>
                     <h2 className="font-display mt-2 text-2xl font-semibold text-white">
-                      Cuotas pactadas
+                      Ver cronograma completo
                     </h2>
                     <p className="mt-1 text-sm leading-6 text-zinc-400">
                       Toda la tabla completa para revisar el comportamiento de la deuda, con la
                       cuota siguiente resaltada.
                     </p>
                   </div>
-                  <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs text-zinc-400">
-                    {cronograma.length} cuotas
-                  </span>
-                </div>
+                  <div className="flex items-center gap-3">
+                    <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs text-zinc-400">
+                      {cronograma.length} cuotas
+                    </span>
+                    <ChevronIcon className="mt-1 h-5 w-5 shrink-0 text-zinc-500 transition-transform duration-200 group-open:rotate-180" />
+                  </div>
+                </summary>
 
                 <div className="mt-5 overflow-x-auto">
                   <table className="w-full min-w-[760px] text-sm">
@@ -367,21 +427,22 @@ export default async function RepagoPage() {
                     </tbody>
                   </table>
                 </div>
-              </section>
+              </details>
 
-              <section className="rounded-[30px] border border-zinc-800 bg-zinc-900 p-5">
-                <div className="flex flex-wrap items-start justify-between gap-4">
+              <details className="group rounded-[30px] border border-zinc-800 bg-zinc-900 p-5">
+                <summary className="flex list-none flex-wrap items-start justify-between gap-4 [&::-webkit-details-marker]:hidden cursor-pointer">
                   <div>
                     <p className="eyebrow text-xs font-semibold">Historial</p>
                     <h2 className="font-display mt-2 text-2xl font-semibold text-white">
-                      Pagos registrados
+                      Ver historial de pagos
                     </h2>
                     <p className="mt-1 text-sm leading-6 text-zinc-400">
                       Cronologia de cuotas pagadas, con fecha, capital, interes y equivalente en
                       pesos.
                     </p>
                   </div>
-                </div>
+                  <ChevronIcon className="mt-1 h-5 w-5 shrink-0 text-zinc-500 transition-transform duration-200 group-open:rotate-180" />
+                </summary>
 
                 {cuotas.length === 0 ? (
                   <div className="mt-5 rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/40 p-8 text-center text-sm text-zinc-400">
@@ -429,52 +490,10 @@ export default async function RepagoPage() {
                     </table>
                   </div>
                 )}
-              </section>
+              </details>
             </div>
 
             <aside className="space-y-5">
-              {!repago.pagadoCompleto && cuotaSiguiente ? (
-                <section className="rounded-[30px] border border-zinc-800 bg-zinc-900 p-5">
-                  <p className="eyebrow text-xs font-semibold">Accion</p>
-                  <h2 className="font-display mt-2 text-2xl font-semibold text-white">
-                    Registrar pago
-                  </h2>
-                  <p className="mt-1 text-sm leading-6 text-zinc-400">
-                    Cargá USD, tipo de cambio y notas. El formulario ya te deja ver el impacto en
-                    ARS antes de confirmar.
-                  </p>
-                  <div className="mt-5">
-                    <RegistrarPagoForm
-                      action={registrarCuota}
-                      cuotaTotalDefault={cuotaSiguiente.cuotaTotal}
-                      tcReferencia={tcReferencia}
-                    />
-                  </div>
-                </section>
-              ) : (
-                <section className="rounded-[30px] border border-emerald-500/25 bg-emerald-500/10 p-5">
-                  <p className="eyebrow text-xs font-semibold text-emerald-200">Cierre</p>
-                  <h2 className="font-display mt-2 text-2xl font-semibold text-white">
-                    Deuda cancelada
-                  </h2>
-                  <p className="mt-1 text-sm leading-6 text-emerald-100/80">
-                    El repago ya quedo completo. El historial sigue disponible para auditoria y
-                    consulta.
-                  </p>
-                  {ultimaCuota ? (
-                    <div className="mt-5 rounded-[24px] border border-emerald-500/20 bg-zinc-950/60 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Ultimo pago</p>
-                      <p className="mt-1 text-base font-semibold text-white">
-                        {formatFecha(ultimaCuota.fechaPago)}
-                      </p>
-                      <p className="mt-1 text-sm text-zinc-400">
-                        {formatUSD(Number(ultimaCuota.montoPagado ?? 0))} registrado.
-                      </p>
-                    </div>
-                  ) : null}
-                </section>
-              )}
-
               <section className="rounded-[30px] border border-zinc-800 bg-zinc-900 p-5">
                 <p className="eyebrow text-xs font-semibold">Acuerdo</p>
                 <h2 className="font-display mt-2 text-2xl font-semibold text-white">
@@ -566,6 +585,20 @@ function InfoCard({
       <p className="mt-2 text-lg font-semibold text-white">{value}</p>
       <p className="mt-1 text-xs text-zinc-500">{helper}</p>
     </div>
+  );
+}
+
+function ChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+    >
+      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

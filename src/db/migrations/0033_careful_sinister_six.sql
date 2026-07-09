@@ -1,0 +1,1 @@
+ALTER TABLE "cierres_caja" ADD COLUMN "efectivo_contado" numeric(12, 2);

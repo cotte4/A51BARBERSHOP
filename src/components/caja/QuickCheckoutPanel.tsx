@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useActionState, useState, useEffect, useRef } from "react";
 import type { AtencionRapidaState } from "@/app/(barbero)/caja/actions";
 import { formatARS } from "@/lib/format";
 
@@ -21,34 +21,11 @@ type Props = {
   mediosPago: MedioPago[];
   action: (prevState: AtencionRapidaState, formData: FormData) => Promise<AtencionRapidaState>;
   returnTo?: string;
+  defaultServicioId?: string;
+  defaultMedioPagoId?: string;
 };
 
-const STEP = 500;
-const ITEM_H = 58;
-const VISIBLE = 5; // number of visible rows in the drum
-
-function snapToStep(value: number): number {
-  return Math.max(STEP, Math.round(value / STEP) * STEP);
-}
-
-function buildPrices(base: number): number[] {
-  const snapped = snapToStep(base);
-  const prices: number[] = [];
-  for (let i = -24; i <= 24; i++) {
-    const v = snapped + i * STEP;
-    if (v >= STEP) prices.push(v);
-  }
-  return prices;
-}
-
-function getMedioPagoLabel(nombre: string | null): string {
-  const n = (nombre ?? "").toLowerCase();
-  if (n.includes("efectivo")) return "Efectivo";
-  if (n.includes("transf")) return "Transferencia";
-  if (n.includes("posnet") || n.includes("tarjeta")) return "Tarjeta";
-  if (n.includes("mp") || n.includes("mercado")) return "Mercado Pago";
-  return nombre ?? "Otro";
-}
+const TIP_CHIPS = [500, 1000] as const;
 
 function getMedioPagoShort(nombre: string | null): string {
   const n = (nombre ?? "").toLowerCase();
@@ -57,133 +34,6 @@ function getMedioPagoShort(nombre: string | null): string {
   if (n.includes("posnet") || n.includes("tarjeta")) return "Tarjeta";
   if (n.includes("mp") || n.includes("mercado")) return "MP";
   return nombre ?? "Otro";
-}
-
-// ─── Drum Picker ─────────────────────────────────────────────────────────────
-
-function DrumPicker({
-  prices,
-  value,
-  onChange,
-}: {
-  prices: number[];
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [liveIndex, setLiveIndex] = useState(() => {
-    const i = prices.indexOf(value);
-    return i >= 0 ? i : 0;
-  });
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const padding = ITEM_H * Math.floor(VISIBLE / 2);
-  const containerH = ITEM_H * VISIBLE;
-
-  // Scroll to value on mount
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const idx = prices.indexOf(value);
-    if (idx >= 0) {
-      el.scrollTop = idx * ITEM_H;
-      setLiveIndex(idx);
-    }
-  }, []);
-
-  // When parent changes the value (e.g. service changed), scroll there
-  const prevValue = useRef(value);
-  useEffect(() => {
-    if (prevValue.current === value) return;
-    prevValue.current = value;
-    const el = ref.current;
-    if (!el) return;
-    const idx = prices.indexOf(value);
-    if (idx >= 0) {
-      el.scrollTo({ top: idx * ITEM_H, behavior: "smooth" });
-      setLiveIndex(idx);
-    }
-  }, [value, prices]);
-
-  const handleScroll = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    const idx = Math.round(el.scrollTop / ITEM_H);
-    const clamped = Math.max(0, Math.min(prices.length - 1, idx));
-    setLiveIndex(clamped);
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      onChange(prices[clamped]);
-    }, 80);
-  }, [prices, onChange]);
-
-  return (
-    <div className="relative select-none" style={{ height: containerH }}>
-      {/* Center highlight */}
-      <div
-        className="pointer-events-none absolute inset-x-3 rounded-[18px] border border-[#8cff59]/25 bg-[#8cff59]/8"
-        style={{ top: padding, height: ITEM_H }}
-      />
-      {/* Top fade */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-10"
-        style={{
-          height: padding,
-          background: "linear-gradient(to bottom, #121212 0%, transparent 100%)",
-        }}
-      />
-      {/* Bottom fade */}
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-10"
-        style={{
-          height: padding,
-          background: "linear-gradient(to top, #121212 0%, transparent 100%)",
-        }}
-      />
-
-      <div
-        ref={ref}
-        onScroll={handleScroll}
-        style={{
-          height: containerH,
-          overflowY: "scroll",
-          scrollSnapType: "y mandatory",
-          paddingTop: padding,
-          paddingBottom: padding,
-          scrollbarWidth: "none",
-          WebkitOverflowScrolling: "touch",
-          overscrollBehavior: "contain",
-        }}
-      >
-        {prices.map((price, i) => {
-          const dist = Math.abs(i - liveIndex);
-          const isCenter = dist === 0;
-          return (
-            <div
-              key={price}
-              style={{
-                height: ITEM_H,
-                scrollSnapAlign: "center",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: isCenter ? 1 : dist === 1 ? 0.4 : 0.18,
-                transform: `scale(${isCenter ? 1 : dist === 1 ? 0.88 : 0.76})`,
-                transition: "opacity 0.12s ease, transform 0.12s ease",
-              }}
-            >
-              <span
-                className={`font-display text-3xl font-bold tracking-tight ${
-                  isCenter ? "text-[#8cff59]" : "text-zinc-300"
-                }`}
-              >
-                {formatARS(price)}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -195,24 +45,49 @@ export default function QuickCheckoutPanel({
   mediosPago,
   action,
   returnTo,
+  defaultServicioId,
+  defaultMedioPagoId,
 }: Props) {
   const [state, formAction, isPending] = useActionState(action, initialState);
-  const [selectedId, setSelectedId] = useState(servicios[0]?.id ?? "");
-  const [medioId, setMedioId] = useState(mediosPago[0]?.id ?? "");
+
+  const resolvedDefaultServicioId =
+    (defaultServicioId && servicios.some((s) => s.id === defaultServicioId)
+      ? defaultServicioId
+      : undefined) ?? servicios[0]?.id ?? "";
+  const resolvedDefaultMedioPagoId =
+    (defaultMedioPagoId && mediosPago.some((m) => m.id === defaultMedioPagoId)
+      ? defaultMedioPagoId
+      : undefined) ?? mediosPago[0]?.id ?? "";
+
+  const [selectedId, setSelectedId] = useState(resolvedDefaultServicioId);
+  const [medioId, setMedioId] = useState(resolvedDefaultMedioPagoId);
 
   const selected = servicios.find((s) => s.id === selectedId) ?? servicios[0];
-  const basePrice = snapToStep(Number(selected?.precioBase ?? 0));
-  const prices = useMemo(() => buildPrices(Number(selected?.precioBase ?? 0)), [selected?.precioBase]);
-  const [precio, setPrecio] = useState(basePrice);
+  const basePrice = Number(selected?.precioBase ?? 0);
 
-  // When service changes, reset price to its base
+  // Propina: 0, un chip fijo, o un monto "otro" ingresado a mano
+  const [tip, setTip] = useState(0);
+  const [tipMode, setTipMode] = useState<"none" | "chip" | "otro">("none");
+  const [otroValue, setOtroValue] = useState("");
+  const otroInputRef = useRef<HTMLInputElement>(null);
+
+  // Al cambiar de servicio, la propina vuelve a cero
   const prevServiceId = useRef(selectedId);
   useEffect(() => {
     if (prevServiceId.current === selectedId) return;
     prevServiceId.current = selectedId;
-    const newBase = snapToStep(Number(selected?.precioBase ?? 0));
-    setPrecio(newBase);
-  }, [selectedId, selected]);
+    setTip(0);
+    setTipMode("none");
+    setOtroValue("");
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (tipMode === "otro") {
+      otroInputRef.current?.focus();
+    }
+  }, [tipMode]);
+
+  const precio = basePrice + tip;
 
   const medio = mediosPago.find((m) => m.id === medioId) ?? mediosPago[0];
   const listo = !!selected?.id && !!medio?.id && precio > 0;
@@ -221,21 +96,109 @@ export default function QuickCheckoutPanel({
     setSelectedId(id);
   }
 
+  function selectTipChip(amount: number) {
+    setTip(amount);
+    setTipMode("chip");
+    setOtroValue("");
+  }
+
+  function selectNoTip() {
+    setTip(0);
+    setTipMode("none");
+    setOtroValue("");
+  }
+
+  function selectOtro() {
+    setTipMode("otro");
+  }
+
+  function handleOtroChange(value: string) {
+    setOtroValue(value);
+    const parsed = Number(value);
+    setTip(Number.isFinite(parsed) && parsed > 0 ? parsed : 0);
+  }
+
   return (
     <div className="flex flex-col gap-5 p-5">
-      {/* Drum price picker */}
+      {/* Precio del servicio + propina */}
       <div>
-        <p className="eyebrow mb-1 text-center text-xs">¿Cuánto cobra?</p>
-        <DrumPicker prices={prices} value={precio} onChange={setPrecio} />
-        {precio > basePrice ? (
-          <div className="mt-2 flex items-center justify-center gap-3 text-xs">
-            <span className="text-zinc-500">Corte {formatARS(basePrice)}</span>
-            <span className="text-zinc-700">+</span>
-            <span className="font-semibold text-amber-300">
-              Propina {formatARS(precio - basePrice)}
-            </span>
+        <p className="eyebrow mb-3 text-center text-xs">Precio</p>
+        <div className="rounded-[22px] border border-zinc-800 bg-zinc-900/60 p-5 text-center">
+          <p className="font-display text-4xl font-bold tracking-tight text-white">
+            {formatARS(precio)}
+          </p>
+          {tip > 0 ? (
+            <div className="mt-2 flex items-center justify-center gap-3 text-xs">
+              <span className="text-zinc-500">Servicio {formatARS(basePrice)}</span>
+              <span className="text-zinc-700">+</span>
+              <span className="font-semibold text-amber-300">Propina {formatARS(tip)}</span>
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-zinc-500">{selected?.nombre ?? "Seleccioná un servicio"}</p>
+          )}
+        </div>
+
+        {/* Chips de propina */}
+        <div className="mt-3">
+          <p className="eyebrow mb-2 text-xs">Propina</p>
+          <div className="grid grid-cols-4 gap-2">
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={selectNoTip}
+              className={`rounded-[16px] border px-2 py-3 text-xs font-semibold transition disabled:cursor-wait ${
+                tipMode === "none"
+                  ? "border-[#8cff59]/40 bg-[#8cff59]/10 text-[#8cff59]"
+                  : "border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:border-zinc-700"
+              }`}
+            >
+              Sin propina
+            </button>
+            {TIP_CHIPS.map((amount) => (
+              <button
+                key={amount}
+                type="button"
+                disabled={isPending}
+                onClick={() => selectTipChip(amount)}
+                className={`rounded-[16px] border px-2 py-3 text-xs font-semibold transition disabled:cursor-wait ${
+                  tipMode === "chip" && tip === amount
+                    ? "border-[#8cff59]/40 bg-[#8cff59]/10 text-[#8cff59]"
+                    : "border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:border-zinc-700"
+                }`}
+              >
+                +{formatARS(amount)}
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={selectOtro}
+              className={`rounded-[16px] border px-2 py-3 text-xs font-semibold transition disabled:cursor-wait ${
+                tipMode === "otro"
+                  ? "border-[#8cff59]/40 bg-[#8cff59]/10 text-[#8cff59]"
+                  : "border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:border-zinc-700"
+              }`}
+            >
+              Otro
+            </button>
           </div>
-        ) : null}
+          {tipMode === "otro" ? (
+            <div className="relative mt-2">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-500">$</span>
+              <input
+                ref={otroInputRef}
+                type="number"
+                min="0"
+                step="1"
+                inputMode="numeric"
+                value={otroValue}
+                onChange={(event) => handleOtroChange(event.target.value)}
+                placeholder="Monto de propina"
+                className="h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-950 pl-8 pr-4 text-base text-white outline-none transition focus:border-[#8cff59]"
+              />
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {/* Service selector */}

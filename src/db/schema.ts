@@ -381,6 +381,10 @@ export const cierresCaja = pgTable("cierres_caja", {
   cantidadAtenciones: integer("cantidad_atenciones"),
   cerradoPor: uuid("cerrado_por").references(() => barberos.id, { onDelete: "set null" }),
   cerradoEn: timestamp("cerrado_en", { withTimezone: true }).notNull(),
+
+  // Efectivo contado fisicamente por el barbero al momento del cierre (paso 1 del wizard).
+  // Nullable: los cierres historicos previos a este campo no tienen conteo registrado.
+  efectivoContado: numeric("efectivo_contado", { precision: 12, scale: 2 }),
 },
 (table) => [
   // Tier 1 + Tier 3 checks for cierres_caja

@@ -12,6 +12,7 @@ import {
   serviciosAdicionales,
 } from "@/db/schema";
 import { getCajaActorContext } from "@/lib/caja-access";
+import { getDefaultsCobroRecientes } from "@/lib/dashboard-queries";
 import { registrarAtencion } from "../actions";
 
 type NuevaAtencionPageProps = {
@@ -66,6 +67,7 @@ export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionP
     mediosPagoActivos,
     productosActivos,
     clientePreseleccionado,
+    defaults,
   ] = await Promise.all([
     db.select().from(barberos).where(eq(barberos.activo, true)),
     db.select().from(servicios).where(eq(servicios.activo, true)),
@@ -88,6 +90,7 @@ export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionP
           .limit(1)
           .then((rows) => rows[0] ?? null)
       : Promise.resolve(null),
+    getDefaultsCobroRecientes(),
   ]);
 
   const preselectedBarberoId = actor?.barberoId;
@@ -171,8 +174,10 @@ export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionP
           isAdmin={isAdmin}
           initialData={{
             barberoId: params.barberoId,
-            servicioId: params.servicioId,
-            medioPagoId: params.medioPagoId,
+            servicioId:
+              params.servicioId ?? defaults.servicioId ?? serviciosActivos[0]?.id ?? undefined,
+            medioPagoId:
+              params.medioPagoId ?? defaults.medioPagoId ?? mediosPagoActivos[0]?.id ?? undefined,
             precioCobrado: params.precioCobrado,
             client: clientePreseleccionado,
           }}

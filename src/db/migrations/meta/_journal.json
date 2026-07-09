@@ -232,6 +232,13 @@
       "when": 1783641600000,
       "tag": "0032_repago_saldo_usd",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1783641112973,
+      "tag": "0033_careful_sinister_six",
+      "breakpoints": true
     }
   ]
 }

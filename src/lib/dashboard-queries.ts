@@ -14,7 +14,7 @@ import {
   costosFijosNegocio,
 } from "@/db/schema";
 import { generarCronograma, calcularCuotaSiguiente, calcularSaldoReal } from "./amortizacion";
-import { and, eq, gte, lte, sum, count, avg, isNull, or } from "drizzle-orm";
+import { and, desc, eq, gte, lte, sum, count, avg, isNull, or } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { toNumber, getDaysInMonth } from "./caja-finance";
 
@@ -862,5 +862,50 @@ export async function getDatosBep(): Promise<{
     feePromedioMedioPago,
     diasMes,
     cortesDiaMes,
+  };
+}
+
+// ————————————————————————————
+// J2 — Defaults determinísticos de cobro (servicio y medio de pago
+// más usados en los últimos 30 días, sobre atenciones no anuladas)
+// ————————————————————————————
+
+export type DefaultsCobroRecientes = {
+  servicioId: string | null;
+  medioPagoId: string | null;
+};
+
+function getFechaHace30Dias(): string {
+  const hoy = new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+  });
+  const [anio, mes, dia] = hoy.split("-").map(Number);
+  const fecha = new Date(Date.UTC(anio, mes - 1, dia));
+  fecha.setUTCDate(fecha.getUTCDate() - 30);
+  return fecha.toISOString().slice(0, 10);
+}
+
+export async function getDefaultsCobroRecientes(): Promise<DefaultsCobroRecientes> {
+  const desde = getFechaHace30Dias();
+
+  const [servicioTop] = await db
+    .select({ servicioId: atenciones.servicioId, total: count() })
+    .from(atenciones)
+    .where(and(gte(atenciones.fecha, desde), eq(atenciones.anulado, false)))
+    .groupBy(atenciones.servicioId)
+    .orderBy(desc(count()))
+    .limit(1);
+
+  const [medioPagoTop] = await db
+    .select({ medioPagoId: atenciones.medioPagoId, total: count() })
+    .from(atenciones)
+    .where(and(gte(atenciones.fecha, desde), eq(atenciones.anulado, false)))
+    .groupBy(atenciones.medioPagoId)
+    .orderBy(desc(count()))
+    .limit(1);
+
+  return {
+    servicioId: servicioTop?.servicioId ?? null,
+    medioPagoId: medioPagoTop?.medioPagoId ?? null,
   };
 }

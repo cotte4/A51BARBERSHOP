@@ -314,6 +314,110 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
     },
   ];
 
+  // J3 — modo barbero: hero de 2 numeros + Cobrar/Vender + lista propia. Nada mas.
+  if (!isAdmin) {
+    const cobradoHoy = totalBruto + totalProductos;
+
+    return (
+      <main className="app-shell min-h-screen px-4 py-6 pb-28">
+        <div className="mx-auto max-w-3xl space-y-6">
+          <section className="panel-card rounded-[28px] p-6">
+            <p className="eyebrow text-xs font-semibold">{formatFechaLarga(fechaHoy)}</p>
+            <h1 className="font-display mt-2 text-3xl font-semibold tracking-tight text-white">
+              Cobraste hoy {formatARS(cobradoHoy)}
+            </h1>
+            <p className="mt-2 text-sm text-zinc-400">
+              {totalAtenciones} atencion{totalAtenciones === 1 ? "" : "es"}
+            </p>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              {!cierreHoy ? (
+                <>
+                  <Link
+                    href="/caja/nueva"
+                    className="neon-button inline-flex min-h-[52px] flex-1 items-center justify-center rounded-[20px] px-6 text-base font-semibold"
+                  >
+                    Cobrar
+                  </Link>
+                  <Link
+                    href="/caja/vender"
+                    className="ghost-button inline-flex min-h-[52px] flex-1 items-center justify-center rounded-[20px] px-6 text-base font-semibold"
+                  >
+                    Vender
+                  </Link>
+                </>
+              ) : (
+                <Link
+                  href={`/caja/cierre/${fechaHoy}`}
+                  className="ghost-button inline-flex min-h-[52px] w-full items-center justify-center rounded-[20px] px-6 text-base font-semibold"
+                >
+                  La caja de hoy ya esta cerrada — ver resumen
+                </Link>
+              )}
+            </div>
+          </section>
+
+          <section className="panel-card rounded-[30px] p-5">
+            <p className="eyebrow text-xs font-semibold">Tus atenciones de hoy</p>
+            {atencionesOrdenadas.length === 0 ? (
+              <div className="mt-4 rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/25 p-10 text-center text-sm text-zinc-400">
+                Todavia no registraste atenciones hoy.
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {atencionesPage.map((atencion) => {
+                  const servicio = serviciosMap.get(atencion.servicioId ?? "");
+                  const mp = mediosPagoMap.get(atencion.medioPagoId ?? "");
+                  const tone = getAtencionTone(Boolean(atencion.anulado));
+                  const paymentAccent = getPaymentAccent(mp?.nombre);
+                  const productosAtencion = productosPorAtencionMap.get(atencion.id) ?? [];
+
+                  return (
+                    <AtencionDisclosureCard
+                      key={atencion.id}
+                      atencionId={atencion.id}
+                      timeLabel={formatHora(atencion.hora)}
+                      statusLabel={atencion.anulado ? "Anulada" : "Activa"}
+                      paymentLabel={paymentAccent.label}
+                      paymentClassName={paymentAccent.className}
+                      serviceName={servicio?.nombre ?? "Servicio"}
+                      barberName="Vos"
+                      brutoLabel={formatARS(atencion.precioCobrado)}
+                      netoLabel={!atencion.anulado ? formatARS(atencion.montoNeto) : null}
+                      productosLabel={productosAtencion.length > 0 ? `+ ${productosAtencion.join(", ")}` : null}
+                      motivoAnulacion={atencion.anulado ? atencion.motivoAnulacion : null}
+                      notas={!atencion.anulado ? atencion.notas : null}
+                      impactLabel={formatARS(
+                        atencion.anulado ? atencion.precioCobrado : atencion.montoNeto
+                      )}
+                      impactHint={atencion.anulado ? "fuera de caja" : "entra en el neto del dia"}
+                      toneWrapperClassName={tone.wrapper}
+                      railClassName={tone.rail}
+                      statusClassName={tone.badge}
+                      titleClassName={tone.meta}
+                      noteClassName={tone.note}
+                      amountClassName={tone.amount}
+                      canEdit={!atencion.anulado}
+                      editHref={`/caja/${atencion.id}/editar`}
+                      isAdmin={false}
+                      anularAction={anularAtencion}
+                    />
+                  );
+                })}
+              </div>
+            )}
+            <CajaPaginationBar
+              page={page}
+              totalPages={atencionesTotalPages}
+              total={atencionesOrdenadas.length}
+              vista="detalle"
+            />
+          </section>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="app-shell min-h-screen px-4 py-6 pb-28">
       <div className="mx-auto max-w-6xl space-y-6">

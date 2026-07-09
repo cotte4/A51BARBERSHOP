@@ -11,8 +11,6 @@ import {
   stockMovimientos,
 } from "@/db/schema";
 import { buildCierreResumen } from "@/lib/caja-finance";
-import CerrarCajaButton from "@/components/caja/CerrarCajaButton";
-import EfectivoChecker from "@/components/caja/EfectivoChecker";
 import { formatARS } from "@/lib/format";
 import {
   getCajaActorContext,
@@ -20,6 +18,7 @@ import {
   hasCajaCerrada,
 } from "@/lib/dal/caja";
 import { cerrarCaja } from "../actions";
+import CierreWizard from "./_CierreWizard";
 
 type SummaryCard = {
   eyebrow: string;
@@ -263,144 +262,132 @@ export default async function CierrePage() {
           </div>
         </section>
 
-        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {summaryCards.map((card) => (
-            <div key={card.label} className="panel-card rounded-[26px] p-5">
-              <p className="eyebrow text-xs font-semibold">{card.eyebrow}</p>
-              <p className="mt-3 text-sm text-zinc-400">{card.label}</p>
-              <p className="font-display mt-2 text-2xl font-semibold tracking-tight text-white">
-                {card.value}
-              </p>
-              <p className="mt-2 text-sm text-zinc-400">{card.helper}</p>
-            </div>
-          ))}
-        </section>
-
         <section className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
           <div className="space-y-5">
-            <section className="panel-card rounded-[30px] p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+            <details className="panel-card group rounded-[30px] p-5">
+              <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="eyebrow text-xs font-semibold">Medios</p>
-                  <h3 className="font-display mt-2 text-2xl font-semibold text-white">
-                    Por donde entro la plata
+                  <p className="eyebrow text-xs font-semibold">Resumen del dia</p>
+                  <h3 className="font-display mt-2 text-xl font-semibold text-white">
+                    Ver los numeros completos
                   </h3>
                   <p className="mt-1 text-sm text-zinc-400">
-                    Servicios y productos juntos, como realmente impactan en la caja.
+                    {summaryCards[0].value} atenciones · Neto {formatARS(totalNeto + totalProductos)}
                   </p>
                 </div>
-                <div className="panel-soft rounded-2xl px-4 py-3 text-sm text-zinc-300">
-                  {paymentBreakdown.length} medios activos hoy
-                </div>
+                <span className="panel-soft rounded-2xl px-4 py-2 text-sm text-zinc-300 transition group-open:hidden">
+                  Expandir
+                </span>
+                <span className="panel-soft hidden rounded-2xl px-4 py-2 text-sm text-zinc-300 transition group-open:inline-block">
+                  Colapsar
+                </span>
+              </summary>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {summaryCards.map((card) => (
+                  <div key={card.label} className="rounded-[22px] border border-zinc-800 bg-zinc-950/25 p-4">
+                    <p className="eyebrow text-xs font-semibold">{card.eyebrow}</p>
+                    <p className="mt-2 text-sm text-zinc-400">{card.label}</p>
+                    <p className="font-display mt-2 text-xl font-semibold tracking-tight text-white">
+                      {card.value}
+                    </p>
+                    <p className="mt-2 text-sm text-zinc-400">{card.helper}</p>
+                  </div>
+                ))}
               </div>
 
-              {paymentBreakdown.length === 0 ? (
-                <div className="mt-5 rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/25 p-8 text-center text-sm text-zinc-400">
-                  Todavia no hay cobros registrados hoy.
-                </div>
-              ) : (
-                <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  {paymentBreakdown.map((item) => (
-                    <div
-                      key={item.nombre}
-                      className="rounded-[24px] border border-zinc-800 bg-zinc-950/25 p-4"
-                    >
-                      <span className="inline-flex rounded-full px-3 py-1 text-xs font-semibold bg-zinc-800 text-zinc-200 ring-1 ring-zinc-700">
-                        {item.nombre}
-                      </span>
-                      <p className="mt-4 text-2xl font-semibold text-white">{formatARS(item.bruto)}</p>
-                      <p className="mt-2 text-sm text-zinc-400">Bruto del dia por este medio</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="panel-card rounded-[30px] p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="eyebrow text-xs font-semibold">Barberos</p>
-                  <h3 className="font-display mt-2 text-2xl font-semibold text-white">
-                    Que dejo cada puesto
-                  </h3>
-                  <p className="mt-1 text-sm text-zinc-400">
-                    Cortes y bruto para entender rapido la distribucion del dia.
-                  </p>
-                </div>
-              </div>
-
-              {Object.values(resumenPorBarbero).length === 0 ? (
-                <div className="mt-5 rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/25 p-10 text-center text-sm text-zinc-400">
-                  Sin atenciones.
-                </div>
-              ) : (
-                <div className="mt-5 grid gap-3 lg:grid-cols-2">
-                  {Object.values(resumenPorBarbero).map((barbero) => (
-                    <div
-                      key={barbero.nombre}
-                      className="rounded-[24px] border border-zinc-800 bg-zinc-950/25 p-4 text-sm"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-base font-semibold text-white">{barbero.nombre}</p>
-                          <p className="mt-1 text-zinc-400">
-                            {barbero.cortes} {barbero.cortes === 1 ? "corte" : "cortes"} hoy
-                          </p>
-                        </div>
-                        <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs font-semibold text-zinc-300">
-                          {formatARS(barbero.bruto)}
+              <div className="mt-5">
+                <p className="eyebrow text-xs font-semibold">Medios</p>
+                <h4 className="font-display mt-2 text-lg font-semibold text-white">
+                  Por donde entro la plata
+                </h4>
+                {paymentBreakdown.length === 0 ? (
+                  <div className="mt-3 rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/25 p-8 text-center text-sm text-zinc-400">
+                    Todavia no hay cobros registrados hoy.
+                  </div>
+                ) : (
+                  <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    {paymentBreakdown.map((item) => (
+                      <div
+                        key={item.nombre}
+                        className="rounded-[24px] border border-zinc-800 bg-zinc-950/25 p-4"
+                      >
+                        <span className="inline-flex rounded-full px-3 py-1 text-xs font-semibold bg-zinc-800 text-zinc-200 ring-1 ring-zinc-700">
+                          {item.nombre}
                         </span>
+                        <p className="mt-4 text-2xl font-semibold text-white">{formatARS(item.bruto)}</p>
+                        <p className="mt-2 text-sm text-zinc-400">Bruto del dia por este medio</p>
                       </div>
-                      <div className="mt-4 grid gap-2 text-xs text-zinc-400">
-                        <p>Comision: {formatARS(barbero.comision)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-            <section className="grid gap-3 md:grid-cols-2">
-              <div className="bg-zinc-900 rounded-[28px] border border-zinc-800 p-4">
-                <div className="mb-1 text-sm text-zinc-400">Caja neta del dia</div>
-                <div className="text-2xl font-bold text-white">
-                  {formatARS(cierreResumen.totales.cajaNetaDia)}
+              <div className="mt-5">
+                <p className="eyebrow text-xs font-semibold">Barberos</p>
+                <h4 className="font-display mt-2 text-lg font-semibold text-white">
+                  Que dejo cada puesto
+                </h4>
+                {Object.values(resumenPorBarbero).length === 0 ? (
+                  <div className="mt-3 rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/25 p-10 text-center text-sm text-zinc-400">
+                    Sin atenciones.
+                  </div>
+                ) : (
+                  <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                    {Object.values(resumenPorBarbero).map((barbero) => (
+                      <div
+                        key={barbero.nombre}
+                        className="rounded-[24px] border border-zinc-800 bg-zinc-950/25 p-4 text-sm"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-base font-semibold text-white">{barbero.nombre}</p>
+                            <p className="mt-1 text-zinc-400">
+                              {barbero.cortes} {barbero.cortes === 1 ? "corte" : "cortes"} hoy
+                            </p>
+                          </div>
+                          <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs font-semibold text-zinc-300">
+                            {formatARS(barbero.bruto)}
+                          </span>
+                        </div>
+                        <div className="mt-4 grid gap-2 text-xs text-zinc-400">
+                          <p>Comision: {formatARS(barbero.comision)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/25 p-4">
+                  <div className="mb-1 text-sm text-zinc-400">Caja neta del dia</div>
+                  <div className="text-xl font-bold text-white">
+                    {formatARS(cierreResumen.totales.cajaNetaDia)}
+                  </div>
+                  <div className="mt-1 text-xs text-zinc-400">
+                    Servicios {formatARS(cierreResumen.totales.cajaNetaServicios)}
+                    {" · "}
+                    Productos {formatARS(cierreResumen.totales.cajaNetaProductos)}
+                  </div>
                 </div>
-                <div className="mt-1 text-xs text-zinc-400">
-                  Servicios {formatARS(cierreResumen.totales.cajaNetaServicios)}
-                  {" · "}
-                  Productos {formatARS(cierreResumen.totales.cajaNetaProductos)}
+                <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/25 p-4">
+                  <div className="mb-1 text-sm text-zinc-400">Aporte economico casa hoy</div>
+                  <div className="text-xl font-bold text-white">
+                    {formatARS(cierreResumen.totales.aporteEconomicoCasaDia)}
+                  </div>
+                  <div className="mt-1 text-xs text-zinc-400">
+                    Servicios {formatARS(cierreResumen.totales.aporteCasaServicios)}
+                    {" · "}
+                    Productos {formatARS(cierreResumen.totales.margenProductos)}
+                  </div>
                 </div>
               </div>
-              <div className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-4 text-white">
-                <div className="mb-1 text-sm text-zinc-400">Aporte economico casa hoy</div>
-                <div className="text-2xl font-bold">
-                  {formatARS(cierreResumen.totales.aporteEconomicoCasaDia)}
-                </div>
-                <div className="mt-1 text-xs text-zinc-400">
-                  Servicios {formatARS(cierreResumen.totales.aporteCasaServicios)}
-                  {" · "}
-                  Productos {formatARS(cierreResumen.totales.margenProductos)}
-                </div>
-              </div>
-            </section>
+            </details>
           </div>
 
           <aside className="space-y-4">
-            {totalEfectivo > 0 ? (
-              <EfectivoChecker totalEfectivoSistema={totalEfectivo} />
-            ) : (
-              <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
-                  Control de efectivo
-                </p>
-                <h3 className="mt-2 text-lg font-semibold text-white">Sin efectivo marcado</h3>
-                <p className="mt-1 text-sm text-zinc-400">
-                  Hoy no hay efectivo estimado por el sistema. Si aparece algun movimiento,
-                  revisa esta tarjeta antes de cerrar.
-                </p>
-              </section>
-            )}
+            <CierreWizard cerrarAction={cerrarCaja} totalEfectivoSistema={totalEfectivo} />
 
             {gaboteEntry ? (
               <div className="rounded-[28px] border border-amber-500/30 bg-amber-500/10 p-5">
@@ -432,27 +419,12 @@ export default async function CierrePage() {
               </div>
             ) : null}
 
-            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
-                Accion final
-              </p>
-              <h3 className="mt-2 text-lg font-semibold text-white">Cuando todo cuadra, cerras</h3>
-              <p className="mt-1 text-sm leading-6 text-zinc-400">
-                Primero comparas efectivo, luego cerras. Si algo no cierra, corregilo antes de
-                tocar el boton final.
-              </p>
-
-              <div className="mt-4">
-                <CerrarCajaButton cerrarAction={cerrarCaja} />
-              </div>
-
-              <Link
-                href="/caja"
-                className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 px-4 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
-              >
-                Cancelar
-              </Link>
-            </section>
+            <Link
+              href="/caja"
+              className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 px-4 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+            >
+              Cancelar
+            </Link>
           </aside>
         </section>
       </div>

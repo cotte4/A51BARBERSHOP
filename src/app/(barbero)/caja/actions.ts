@@ -42,6 +42,9 @@ import { redirect } from "next/navigation";
 
 export type CierreFormState = {
   error?: string;
+  fieldErrors?: {
+    efectivoContado?: string;
+  };
 };
 
 export type AtencionFormState = {
@@ -517,6 +520,23 @@ export async function cerrarCaja(
     return { error: "Solo el administrador puede cerrar la caja." };
   }
 
+  // 1b. El conteo de efectivo es el paso 1 obligatorio del wizard: sin el, no se cierra.
+  const efectivoContadoRaw = formData.get("efectivoContado");
+  const efectivoContadoStr = typeof efectivoContadoRaw === "string" ? efectivoContadoRaw.trim() : "";
+  if (efectivoContadoStr === "" || isNaN(Number(efectivoContadoStr))) {
+    return {
+      error: "Contá el efectivo físico antes de cerrar.",
+      fieldErrors: { efectivoContado: "Ingresá el efectivo contado." },
+    };
+  }
+  const efectivoContadoNum = Number(efectivoContadoStr);
+  if (efectivoContadoNum < 0) {
+    return {
+      error: "El efectivo contado no puede ser negativo.",
+      fieldErrors: { efectivoContado: "El monto no puede ser negativo." },
+    };
+  }
+
   const fechaHoy = getFechaHoy();
 
   // 2. Verificar que no existe cierre para hoy
@@ -621,6 +641,7 @@ export async function cerrarCaja(
         cantidadAtenciones,
         cerradoPor: barberoAdminId,
         cerradoEn: new Date(),
+        efectivoContado: String(efectivoContadoNum.toFixed(2)),
       })
       .returning();
 
