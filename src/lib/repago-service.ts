@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { repagoMemas, repagoMemasCuotas } from "@/db/schema";
 import { calcularSaldoReal, generarCronograma } from "@/lib/amortizacion";
@@ -12,12 +12,22 @@ export type RegistrarCuotaRepagoInput = {
 };
 
 export type RegistrarCuotaRepagoResult =
-  | { ok: true }
+  | { ok: true; cuotaCompletada: boolean; nuevoSaldoUsd: number }
   | {
       ok: false;
       error: string;
     };
 
+/**
+ * Registra un pago flexible sobre el plan Memas.
+ *
+ * Modelo: se puede pagar cualquier monto > 0 ("de a cuanto puedan").
+ * Cada pago cubre primero el interés pendiente de la cuota corriente
+ * (calculado sobre el saldo al inicio de esa cuota) y el resto amortiza
+ * capital. La cuota se marca como pagada cuando su capital objetivo
+ * (cronograma alemán) queda cubierto; el excedente amortiza saldo extra.
+ * Varias filas en repago_memas_cuotas pueden compartir numeroCuota.
+ */
 export async function registrarCuotaRepagoMemas(
   input: RegistrarCuotaRepagoInput
 ): Promise<RegistrarCuotaRepagoResult> {
@@ -55,31 +65,47 @@ export async function registrarCuotaRepagoMemas(
     }
 
     const cronograma = generarCronograma(deudaUsd, tasaAnual, cantidadCuotas);
+    const numeroCuota = cuotasPagadas + 1;
     const cuotaActual = cronograma[cuotasPagadas];
-    // Saldo real (USD): cache coherente o teórico como fallback (ver calcularSaldoReal)
+
+    // Saldo real (USD): cache coherente o teórico como fallback
     const saldoPendienteActual = calcularSaldoReal(
       repago.saldoPendiente == null ? null : Number(repago.saldoPendiente),
       deudaUsd,
       cuotaActual.saldoInicial
     );
-    const interesCuota = saldoPendienteActual * (tasaAnual / 12);
-    // Pago mínimo = cuota completa (capital fijo + interés). Sin pagos parciales:
-    // un pago parcial marcaría la cuota como pagada y dejaría el plan inconsistente.
-    const capitalRequerido = Math.min(cuotaActual.capital, saldoPendienteActual);
-    const cuotaMinima = capitalRequerido + interesCuota;
 
-    if (input.montoPagadoUsd + 0.01 < cuotaMinima) {
-      return {
-        ok: false,
-        error: `El pago mínimo es la cuota completa: u$d ${cuotaMinima.toFixed(2)}. No se aceptan pagos parciales.`,
-      };
-    }
+    // Progreso previo dentro de la cuota corriente (pagos parciales anteriores)
+    const [progreso] = await tx
+      .select({
+        interesAcum: sql<string>`coalesce(sum(${repagoMemasCuotas.interesPagado}), 0)`,
+        capitalAcum: sql<string>`coalesce(sum(${repagoMemasCuotas.capitalPagado}), 0)`,
+      })
+      .from(repagoMemasCuotas)
+      .where(
+        and(
+          eq(repagoMemasCuotas.repagoId, repago.id),
+          eq(repagoMemasCuotas.numeroCuota, numeroCuota)
+        )
+      );
 
-    const interesPagado = interesCuota;
-    // Sobrepago amortiza capital extra, con tope en el saldo real
-    const capitalPagado = Math.min(input.montoPagadoUsd - interesPagado, saldoPendienteActual);
+    const interesYaPagado = Number(progreso?.interesAcum ?? 0);
+    const capitalYaPagado = Number(progreso?.capitalAcum ?? 0);
+
+    // El interés de la cuota se calcula UNA vez, sobre el saldo al inicio
+    // de la cuota (el saldo actual más el capital ya amortizado dentro de ella).
+    const saldoInicioCuota = saldoPendienteActual + capitalYaPagado;
+    const interesCuotaTotal = saldoInicioCuota * (tasaAnual / 12);
+    const interesPendiente = Math.max(0, interesCuotaTotal - interesYaPagado);
+
+    // Pago flexible: primero interés pendiente, el resto amortiza capital.
+    const interesPagado = Math.min(input.montoPagadoUsd, interesPendiente);
+    const capitalPagado = Math.min(
+      input.montoPagadoUsd - interesPagado,
+      saldoPendienteActual
+    );
+
     const montoPagadoArs = input.montoPagadoUsd * input.tcDia;
-    const numeroCuota = cuotasPagadas + 1;
     const hoy = new Date().toLocaleDateString("en-CA", {
       timeZone: "America/Argentina/Buenos_Aires",
     });
@@ -96,18 +122,24 @@ export async function registrarCuotaRepagoMemas(
     });
 
     const nuevoSaldo = Math.max(0, saldoPendienteActual - capitalPagado);
-    const nuevasCuotas = cuotasPagadas + 1;
     const pagadoCompleto = nuevoSaldo <= 0.01;
+
+    // La cuota queda completada cuando su capital objetivo está cubierto
+    // (o la deuda entera quedó saldada). El capital objetivo se ajusta al
+    // saldo real por si hubo sobrepagos previos que adelantaron capital.
+    const capitalObjetivo = Math.min(cuotaActual.capital, saldoInicioCuota);
+    const cuotaCompletada =
+      pagadoCompleto || capitalYaPagado + capitalPagado + 0.01 >= capitalObjetivo;
 
     await tx
       .update(repagoMemas)
       .set({
-        cuotasPagadas: nuevasCuotas,
+        cuotasPagadas: cuotaCompletada ? cuotasPagadas + 1 : cuotasPagadas,
         saldoPendiente: String(nuevoSaldo.toFixed(2)),
         pagadoCompleto,
       })
       .where(eq(repagoMemas.id, repago.id));
 
-    return { ok: true };
+    return { ok: true, cuotaCompletada, nuevoSaldoUsd: nuevoSaldo };
   });
 }

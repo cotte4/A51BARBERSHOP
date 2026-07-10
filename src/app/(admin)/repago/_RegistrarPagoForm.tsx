@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import type { RegistrarCuotaState } from "./actions";
 import { formatARS } from "@/lib/format";
 
@@ -32,24 +32,31 @@ export default function RegistrarPagoForm({
   const [montoPagadoUsd, setMontoPagadoUsd] = useState(cuotaTotalDefault.toFixed(2));
   const [tcDia, setTcDia] = useState("");
   const [notas, setNotas] = useState("");
+  const montoInputRef = useRef<HTMLInputElement>(null);
 
   const montoNumber = Number(montoPagadoUsd) || 0;
   const tcNumber = Number(tcDia) || 0;
   const montoArs = montoNumber * tcNumber;
 
-  // Sin "media cuota": el pago mínimo es la cuota completa (los pagos
-  // parciales corrompen el plan de amortización — ver repago-service).
+  // Pagos flexibles: cualquier monto > 0 es válido (ver repago-service).
+  // Los chips son solo sugerencias rápidas — "Otro monto" deja el campo
+  // libre para que el barbero cargue lo que pueda pagar ese mes.
   const suggestedAmounts = useMemo(
     () => [
       {
         id: "full",
-        label: "Cuota completa",
+        label: `Cuota completa (${formatUSD(cuotaTotalDefault)})`,
         value: cuotaTotalDefault,
       },
       {
-        id: "round-up",
-        label: "Cuota + 10%",
-        value: Number((cuotaTotalDefault * 1.1).toFixed(2)),
+        id: "half",
+        label: `La mitad (${formatUSD(cuotaTotalDefault / 2)})`,
+        value: Number((cuotaTotalDefault / 2).toFixed(2)),
+      },
+      {
+        id: "other",
+        label: "Otro monto",
+        value: null,
       },
     ],
     [cuotaTotalDefault]
@@ -68,20 +75,31 @@ export default function RegistrarPagoForm({
       ) : null}
       {state.success ? (
         <div className="rounded-[24px] border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-          Pago registrado correctamente.
+          ¡Listo! Pago registrado.
         </div>
       ) : null}
 
       <div className="space-y-4">
+        <p className="text-sm leading-6 text-zinc-300">
+          Pagá lo que puedas este mes: primero cubre el interés y el resto baja la deuda.
+        </p>
+
         {/* opciones rápidas */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {suggestedAmounts.map((option) => {
-            const selected = Number(montoPagadoUsd) === option.value;
+            const selected = option.value !== null && Number(montoPagadoUsd) === option.value;
             return (
               <button
                 key={option.id}
                 type="button"
-                onClick={() => setMontoPagadoUsd(option.value.toFixed(2))}
+                onClick={() => {
+                  if (option.value !== null) {
+                    setMontoPagadoUsd(option.value.toFixed(2));
+                  } else {
+                    setMontoPagadoUsd("");
+                    montoInputRef.current?.focus();
+                  }
+                }}
                 className={[
                   "rounded-[20px] border px-3 py-3 text-left transition",
                   selected
@@ -89,9 +107,8 @@ export default function RegistrarPagoForm({
                     : "border-zinc-700 bg-zinc-900 hover:border-zinc-600 hover:bg-zinc-800",
                 ].join(" ")}
               >
-                <span className="block text-xs text-zinc-400">{option.label}</span>
-                <span className={`mt-1 block text-sm font-semibold ${selected ? "text-white" : "text-zinc-100"}`}>
-                  {formatUSD(option.value)}
+                <span className={`block text-sm font-semibold ${selected ? "text-white" : "text-zinc-100"}`}>
+                  {option.label}
                 </span>
               </button>
             );
@@ -106,6 +123,7 @@ export default function RegistrarPagoForm({
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-500">u$d</span>
             <input
+              ref={montoInputRef}
               id="montoPagadoUsd"
               name="montoPagadoUsd"
               type="number"
@@ -117,13 +135,19 @@ export default function RegistrarPagoForm({
               className="min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-800 px-4 pl-14 text-base text-white outline-none transition focus:border-[#8cff59]/60"
             />
           </div>
+          <p className="mt-2 text-xs text-zinc-500">
+            Si este mes no llegan a la cuota, no pasa nada: lo que pongas descuenta igual.
+          </p>
         </div>
 
         {/* TC */}
         <div className="rounded-[22px] border border-zinc-800 bg-zinc-900/60 p-4">
           <label htmlFor="tcDia" className="mb-3 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
-            TC del dia
+            TC del día
           </label>
+          <p className="mb-2 text-xs text-zinc-500">
+            El dólar de hoy — fijate en cualquier cotización online.
+          </p>
           <input
             id="tcDia"
             name="tcDia"

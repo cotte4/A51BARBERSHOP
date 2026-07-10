@@ -179,13 +179,13 @@ export default async function CierrePage() {
       helper: `${formatARS(totalBruto)} en servicios y ${formatARS(totalProductos)} en productos`,
     },
     {
-      eyebrow: "Neto",
-      label: "Caja neta estimada",
-      value: formatARS(totalNeto + totalProductos),
+      eyebrow: "Comisiones",
+      label: "Comisiones de medios",
+      value: totalComisionesMp > 0 ? formatARS(totalComisionesMp) : "$0",
       helper:
         totalComisionesMp > 0
-          ? `${formatARS(totalComisionesMp)} en comisiones de medios`
-          : "Sin descuentos de medios por ahora",
+          ? "Se descuentan del bruto para llegar al neto"
+          : "Ningún medio te cobró comisión hoy",
     },
     {
       eyebrow: "Estado",
@@ -231,9 +231,6 @@ export default async function CierrePage() {
                 <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-semibold text-zinc-300">
                   {atencionesAnuladas.length} anuladas
                 </span>
-                <span className="rounded-full border border-[#8cff59]/25 bg-[#8cff59]/10 px-3 py-1 text-xs font-semibold text-[#8cff59]">
-                  Neto estimado {formatARS(totalNeto + totalProductos)}
-                </span>
               </div>
             </div>
 
@@ -250,7 +247,7 @@ export default async function CierrePage() {
 
               <div className="rounded-[24px] border border-zinc-800 bg-zinc-950/70 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                  Ritmo del dia
+                  Ritmo del día
                 </p>
                 <div className="mt-3 grid gap-2 text-sm text-zinc-300">
                   <p>Bruto combinado: {formatARS(totalBruto + totalProductos)}</p>
@@ -267,9 +264,9 @@ export default async function CierrePage() {
             <details className="panel-card group rounded-[30px] p-5">
               <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="eyebrow text-xs font-semibold">Resumen del dia</p>
+                  <p className="eyebrow text-xs font-semibold">Resumen del día</p>
                   <h3 className="font-display mt-2 text-xl font-semibold text-white">
-                    Ver los numeros completos
+                    Ver los números completos
                   </h3>
                   <p className="mt-1 text-sm text-zinc-400">
                     {summaryCards[0].value} atenciones · Neto {formatARS(totalNeto + totalProductos)}
@@ -303,7 +300,7 @@ export default async function CierrePage() {
                 </h4>
                 {paymentBreakdown.length === 0 ? (
                   <div className="mt-3 rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/25 p-8 text-center text-sm text-zinc-400">
-                    Todavia no hay cobros registrados hoy.
+                    Todavía no hay cobros registrados hoy.
                   </div>
                 ) : (
                   <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -316,7 +313,7 @@ export default async function CierrePage() {
                           {item.nombre}
                         </span>
                         <p className="mt-4 text-2xl font-semibold text-white">{formatARS(item.bruto)}</p>
-                        <p className="mt-2 text-sm text-zinc-400">Bruto del dia por este medio</p>
+                        <p className="mt-2 text-sm text-zinc-400">Bruto del día por este medio</p>
                       </div>
                     ))}
                   </div>
@@ -326,7 +323,7 @@ export default async function CierrePage() {
               <div className="mt-5">
                 <p className="eyebrow text-xs font-semibold">Barberos</p>
                 <h4 className="font-display mt-2 text-lg font-semibold text-white">
-                  Que dejo cada puesto
+                  Qué dejó cada puesto
                 </h4>
                 {Object.values(resumenPorBarbero).length === 0 ? (
                   <div className="mt-3 rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/25 p-10 text-center text-sm text-zinc-400">
@@ -361,7 +358,7 @@ export default async function CierrePage() {
 
               <div className="mt-5 grid gap-3 md:grid-cols-2">
                 <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/25 p-4">
-                  <div className="mb-1 text-sm text-zinc-400">Caja neta del dia</div>
+                  <div className="mb-1 text-sm text-zinc-400">Caja neta del día</div>
                   <div className="text-xl font-bold text-white">
                     {formatARS(cierreResumen.totales.cajaNetaDia)}
                   </div>
@@ -372,7 +369,7 @@ export default async function CierrePage() {
                   </div>
                 </div>
                 <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/25 p-4">
-                  <div className="mb-1 text-sm text-zinc-400">Aporte economico casa hoy</div>
+                  <div className="mb-1 text-sm text-zinc-400">Aporte económico casa hoy</div>
                   <div className="text-xl font-bold text-white">
                     {formatARS(cierreResumen.totales.aporteEconomicoCasaDia)}
                   </div>
@@ -398,7 +395,7 @@ export default async function CierrePage() {
                   {gaboteEntry[1].nombre}
                 </h3>
                 <p className="mt-1 text-sm text-zinc-400">
-                  {gaboteEntry[1].cortes} corte{gaboteEntry[1].cortes !== 1 ? "s" : ""} del dia
+                  {gaboteEntry[1].cortes} corte{gaboteEntry[1].cortes !== 1 ? "s" : ""} del día
                   {" · "}Comision {formatARS(gaboteEntry[1].comision)}
                 </p>
                 {gaboteLiquidacionExistente.length > 0 ? (

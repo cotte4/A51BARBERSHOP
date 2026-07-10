@@ -193,7 +193,7 @@ export default function QuickCheckoutPanel({
                 inputMode="numeric"
                 value={otroValue}
                 onChange={(event) => handleOtroChange(event.target.value)}
-                placeholder="Monto de propina"
+                placeholder="$ monto"
                 className="h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-950 pl-8 pr-4 text-base text-white outline-none transition focus:border-[#8cff59]"
               />
             </div>
@@ -256,7 +256,7 @@ export default function QuickCheckoutPanel({
                   {getMedioPagoShort(m.nombre)}
                 </p>
                 {comision > 0 ? (
-                  <p className="mt-0.5 text-[10px] text-zinc-500">{m.comisionPorcentaje}%</p>
+                  <p className="mt-0.5 text-xs text-zinc-500">{m.comisionPorcentaje}%</p>
                 ) : null}
               </button>
             );
@@ -281,13 +281,29 @@ export default function QuickCheckoutPanel({
           type="submit"
           disabled={!listo || isPending}
           aria-busy={isPending}
-          className={`flex min-h-[60px] w-full items-center justify-center rounded-[22px] px-6 text-base font-bold transition-all duration-150 ${
+          className={`flex min-h-[60px] w-full items-center justify-center gap-2 rounded-[22px] px-6 text-base font-bold transition-all duration-150 ${
             listo
               ? "neon-button shadow-[0_4px_24px_rgba(140,255,89,0.3)] active:scale-[0.98]"
               : "cursor-not-allowed bg-zinc-800 text-zinc-600"
           }`}
         >
-          {isPending ? "Registrando..." : listo ? `Cobrar ${formatARS(precio)}` : "Seleccioná servicio"}
+          {isPending && (
+            <svg
+              style={{ animation: "a51-spin 0.65s linear infinite" }}
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              aria-hidden="true"
+              className="shrink-0"
+            >
+              <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeOpacity="0.28" strokeWidth="1.8" />
+              <path d="M 7 1.5 A 5.5 5.5 0 0 1 12.5 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          )}
+          <span>
+            {isPending ? "Registrando..." : listo ? `Cobrar ${formatARS(precio)}` : "Seleccioná servicio"}
+          </span>
         </button>
       </form>
     </div>

@@ -281,18 +281,18 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
   const cardsResumen = [
     {
       eyebrow: "Caja viva",
-      label: "Ingresos del dia",
+      label: "Ingresos del día",
       value: formatARS(totalBruto + totalProductos),
       helper: `${totalAtenciones} atenciones activas`,
     },
     {
-      eyebrow: "Operacion",
-      label: "Neto en caja",
-      value: formatARS(totalNeto + totalProductos),
+      eyebrow: "Operación",
+      label: "Comisiones de medios",
+      value: totalComisionesMp > 0 ? formatARS(totalComisionesMp) : "$0",
       helper:
         totalComisionesMp > 0
-          ? `${formatARS(totalComisionesMp)} en comisiones de medios`
-          : "Sin descuentos de medios por ahora",
+          ? `Neto en caja: ${formatARS(totalNeto + totalProductos)}`
+          : "Ningún medio te cobró comisión hoy",
     },
     {
       eyebrow: "Ritmo",
@@ -301,11 +301,11 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
       helper:
         ventasProductosDia.length > 0
           ? `${ventasProductosDia.length} movimientos de productos hoy`
-          : "Todavia no hubo ventas de productos",
+          : "Todavía no vendiste productos hoy",
     },
     {
       eyebrow: "Control",
-      label: cierreHoy ? "Dia cerrado" : "Caja abierta",
+      label: cierreHoy ? "Día cerrado" : "Caja abierta",
       value: cierreHoy ? "Cerrada" : "Operando",
       helper:
         atencionesAnuladas > 0
@@ -324,8 +324,9 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
           <section className="panel-card rounded-[28px] p-6">
             <p className="eyebrow text-xs font-semibold">{formatFechaLarga(fechaHoy)}</p>
             <h1 className="font-display mt-2 text-3xl font-semibold tracking-tight text-white">
-              Cobraste hoy {formatARS(cobradoHoy)}
+              Facturaste hoy {formatARS(cobradoHoy)}
             </h1>
+            <p className="mt-1 text-xs text-zinc-500">(bruto, antes de descuentos)</p>
             <p className="mt-2 text-sm text-zinc-400">
               {totalAtenciones} atencion{totalAtenciones === 1 ? "" : "es"}
             </p>
@@ -351,7 +352,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                   href={`/caja/cierre/${fechaHoy}`}
                   className="ghost-button inline-flex min-h-[52px] w-full items-center justify-center rounded-[20px] px-6 text-base font-semibold"
                 >
-                  La caja de hoy ya esta cerrada — ver resumen
+                  La caja de hoy ya está cerrada — ver resumen
                 </Link>
               )}
             </div>
@@ -361,7 +362,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
             <p className="eyebrow text-xs font-semibold">Tus atenciones de hoy</p>
             {atencionesOrdenadas.length === 0 ? (
               <div className="mt-4 rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/25 p-10 text-center text-sm text-zinc-400">
-                Todavia no registraste atenciones hoy.
+                Todavía no registraste atenciones hoy.
               </div>
             ) : (
               <div className="mt-4 space-y-3">
@@ -390,7 +391,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                       impactLabel={formatARS(
                         atencion.anulado ? atencion.precioCobrado : atencion.montoNeto
                       )}
-                      impactHint={atencion.anulado ? "fuera de caja" : "entra en el neto del dia"}
+                      impactHint={atencion.anulado ? "fuera de caja" : "entra en el neto del día"}
                       toneWrapperClassName={tone.wrapper}
                       railClassName={tone.rail}
                       statusClassName={tone.badge}
@@ -434,10 +435,10 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
 
                 <div className="space-y-3">
                   <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                    Resumen del dia
+                    Resumen del día
                   </h1>
                   <p className="max-w-2xl text-sm leading-6 text-stone-300 sm:text-base">
-                    Caja, ritmo y control del dia en la misma cabina.
+                    Todo lo que entró y salió hoy, en un solo lugar.
                   </p>
                 </div>
 
@@ -454,14 +455,11 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                   <span className="inline-flex min-h-[36px] items-center rounded-full bg-white/10 px-3 text-sm text-stone-200 ring-1 ring-white/10">
                     {totalAtenciones} servicios
                   </span>
-                  <span className="inline-flex min-h-[36px] items-center rounded-full bg-white/10 px-3 text-sm text-stone-200 ring-1 ring-white/10">
-                    Neto {formatARS(cierreHoy ? cierreHoy.totalNeto : totalNeto + totalProductos)}
-                  </span>
                 </div>
 
                 <p className="max-w-2xl text-sm leading-6 text-stone-300">
                   {cierreHoy
-                    ? `La cerro ${cierreHoy.cerradoPorNombre ?? 'el responsable'} a las ${formatHoraDate(cierreHoy.cerradoEn)}.`
+                    ? `La cerró ${cierreHoy.cerradoPorNombre ?? 'el responsable'} a las ${formatHoraDate(cierreHoy.cerradoEn)}.`
                     : atencionesAnuladas > 0
                       ? `${atencionesAnuladas} anuladas para revisar antes de seguir.`
                       : 'Sin anulaciones registradas hasta ahora.'}
@@ -501,8 +499,8 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                 </div>
                 <p className="mt-3 text-sm leading-6 text-stone-300">
                   {cierreHoy
-                    ? 'El resumen final queda listo para imprimir o revisar despues.'
-                    : 'Usa el cobro rapido para no salirte del flujo del dia.'}
+                    ? 'El resumen final queda listo para imprimir o revisar después.'
+                    : 'Usá el cobro rápido para no salirte del flujo del día.'}
                 </p>
               </div>
             </div>
@@ -519,7 +517,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                   {isAdmin ? (
                     <Link
                       href="/caja/cierre"
-                      className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-amber-300/15 px-4 text-sm font-semibold text-amber-200 ring-1 ring-amber-300/20 transition hover:bg-amber-300/22"
+                      className="ghost-button inline-flex min-h-[44px] items-center justify-center rounded-full px-4 text-sm font-semibold"
                     >
                       Cerrar caja
                     </Link>
@@ -537,26 +535,32 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                   Ver resumen del cierre
                 </Link>
               )}
-              <Link
-                href="/caja"
-                className={`inline-flex min-h-[44px] items-center justify-center rounded-full px-4 text-sm font-semibold ${
-                  vista === 'simple'
-                    ? 'bg-[#8cff59] text-[#07130a]'
-                    : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
-                }`}
-              >
-                Vista simple
-              </Link>
-              <Link
-                href="/caja?vista=detalle"
-                className={`inline-flex min-h-[44px] items-center justify-center rounded-full px-4 text-sm font-semibold ${
-                  vista === 'detalle'
-                    ? 'bg-[#8cff59] text-[#07130a]'
-                    : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
-                }`}
-              >
-                Vista separada
-              </Link>
+              <div className="flex flex-col gap-1">
+                <Link
+                  href="/caja"
+                  className={`inline-flex min-h-[44px] items-center justify-center rounded-full px-4 text-sm font-semibold ${
+                    vista === 'simple'
+                      ? 'bg-[#8cff59] text-[#07130a]'
+                      : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
+                  }`}
+                >
+                  Vista simple
+                </Link>
+                <p className="text-xs text-stone-400">Servicios y productos mezclados en una sola lista.</p>
+              </div>
+              <div className="flex flex-col gap-1">
+                <Link
+                  href="/caja?vista=detalle"
+                  className={`inline-flex min-h-[44px] items-center justify-center rounded-full px-4 text-sm font-semibold ${
+                    vista === 'detalle'
+                      ? 'bg-[#8cff59] text-[#07130a]'
+                      : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
+                  }`}
+                >
+                  Vista separada
+                </Link>
+                <p className="text-xs text-stone-400">Cada atención con su detalle completo, una por una.</p>
+              </div>
             </div>
           </div>
         </section>
@@ -565,9 +569,9 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
           <section className="rounded-[30px] border border-[#8cff59]/15 bg-zinc-950/55 p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="eyebrow text-xs font-semibold">Cobro rapido</p>
+                <p className="eyebrow text-xs font-semibold">Cobro rápido</p>
                 <h2 className="font-display mt-2 text-2xl font-semibold text-white">
-                  Registrar una atencion express
+                  Registrar una atención express
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-zinc-400">
                   Con servicio, medio de pago y neto listos para guardar.
@@ -616,10 +620,10 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                   <div>
                     <p className="eyebrow text-xs font-semibold">Movimiento mezclado</p>
                     <h2 className="font-display mt-2 text-2xl font-semibold text-white">
-                      Servicios y productos, en una sola linea
+                      Servicios y productos, en una sola línea
                     </h2>
                     <p className="mt-1 text-sm leading-6 text-zinc-400">
-                      La lectura mas rapida para ver el dia sin cambiar de contexto.
+                      La lectura más rápida para ver el día sin cambiar de contexto.
                     </p>
                   </div>
                   <div className="panel-soft rounded-2xl px-4 py-3 text-sm text-zinc-300">
@@ -658,7 +662,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
               <section className="panel-card rounded-[30px] p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="eyebrow text-xs font-semibold">Flujo del dia</p>
+                    <p className="eyebrow text-xs font-semibold">Flujo del día</p>
                     <h2 className="font-display mt-2 text-2xl font-semibold text-white">
                       Atenciones listas para escanear
                     </h2>
@@ -667,7 +671,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                     </p>
                   </div>
                   <div className="panel-soft rounded-2xl px-4 py-3 text-sm text-zinc-300">
-                    {atencionesOrdenadas.length > 0 ? `${atencionesOrdenadas.length} registros totales hoy` : 'Todavia no hay movimiento'}
+                    {atencionesOrdenadas.length > 0 ? `${atencionesOrdenadas.length} registros totales hoy` : 'Todavía no hay movimiento'}
                   </div>
                 </div>
 
@@ -726,7 +730,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                                 ) : null}
                                 {Number(mp?.comisionPorcentaje ?? 0) > 0 ? (
                                   <span className="rounded-full bg-zinc-900/70 px-3 py-1">
-                                    Comision {mp?.comisionPorcentaje}%
+                                    Comisión {mp?.comisionPorcentaje}%
                                   </span>
                                 ) : null}
                               </div>
@@ -762,7 +766,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                                   {formatARS(atencion.anulado ? atencion.precioCobrado : atencion.montoNeto)}
                                 </p>
                                 <p className="mt-1 text-sm text-zinc-400">
-                                  {atencion.anulado ? 'fuera de caja' : 'entra en el neto del dia'}
+                                  {atencion.anulado ? 'fuera de caja' : 'entra en el neto del día'}
                                 </p>
                               </div>
 
@@ -804,7 +808,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                   Pulso por barbero
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-zinc-400">
-                  Te da una foto rapida de quien movio mas volumen en el dia.
+                  Te da una foto rápida de quién movió más volumen en el día.
                 </p>
                 <div className="mt-4 space-y-3">
                   {desglosePorBarbero.map(([barberoId, datos]) => {
@@ -832,7 +836,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                 <div>
                   <p className="eyebrow text-xs font-semibold">Caja neta</p>
                   <h2 className="font-display mt-2 text-xl font-semibold text-white">
-                    Resumen economico
+                    Resumen económico
                   </h2>
                   <p className="mt-1 text-sm leading-6 text-zinc-400">
                     Servicios, productos y comisiones separados para no mezclar lectura.
@@ -843,7 +847,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
               <div className="mt-4 space-y-2">
                 {paymentBreakdown.length === 0 ? (
                   <div className="rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/25 p-6 text-center text-sm text-zinc-400">
-                    Todavia no hay cobros registrados hoy.
+                    Todavía no hay cobros registrados hoy.
                   </div>
                 ) : (
                   paymentBreakdown.map((item) => (
@@ -857,7 +861,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                         >
                           {item.label}
                         </span>
-                        <p className="mt-2 text-sm text-zinc-400">Neto del dia por este medio</p>
+                        <p className="mt-2 text-sm text-zinc-400">Neto del día por este medio</p>
                       </div>
                       <p className="text-lg font-semibold text-white">{formatARS(item.amount)}</p>
                     </div>
@@ -891,25 +895,18 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                 Cierre
               </p>
               <h2 className="font-display mt-2 text-xl font-semibold text-white">
-                {cierreHoy ? 'Caja cerrada y logueada' : 'Ultimo paso de la jornada'}
+                {cierreHoy ? 'Caja cerrada y logueada' : 'Último paso de la jornada'}
               </h2>
               <p className="mt-2 text-sm text-zinc-300">
                 {cierreHoy
-                  ? `La cerro ${cierreHoy.cerradoPorNombre ?? 'el responsable'} a las ${formatHoraDate(cierreHoy.cerradoEn)}.`
-                  : 'Cerrala solo cuando el dia este realmente terminado y ya no vayan a entrar mas servicios ni ventas.'}
+                  ? `La cerró ${cierreHoy.cerradoPorNombre ?? 'el responsable'} a las ${formatHoraDate(cierreHoy.cerradoEn)}.`
+                  : 'Cerrala solo cuando el día esté realmente terminado y ya no vayan a entrar más servicios ni ventas.'}
               </p>
-
-              <div className="mt-4 space-y-3">
-                <MetricRow
-                  label={cierreHoy ? 'Neto cerrado' : 'Neto actual'}
-                  value={formatARS(cierreHoy ? cierreHoy.totalNeto : totalNeto + totalProductos)}
-                  strong={Boolean(cierreHoy)}
-                />
-                <MetricRow
-                  label={cierreHoy ? 'Bruto cerrado' : 'Estado'}
-                  value={cierreHoy ? formatARS(cierreHoy.totalBruto) : 'Esperando cierre'}
-                />
-              </div>
+              <p className="mt-2 text-sm text-zinc-400">
+                {cierreHoy
+                  ? `Neto cerrado: ${formatARS(cierreHoy.totalNeto)} · Bruto cerrado: ${formatARS(cierreHoy.totalBruto)}`
+                  : 'El neto en vivo lo ves en el panel de arriba.'}
+              </p>
 
               <div className="mt-4 flex flex-wrap gap-2">
                 {cierreHoy ? (
@@ -1011,35 +1008,6 @@ function BarberMonthlySkeleton() {
           <div className="h-4 w-24 rounded-full bg-zinc-700/50" />
         </div>
       </div>
-    </div>
-  );
-}
-
-function MetricRow({
-  label,
-  value,
-  strong,
-  valueClassName,
-}: {
-  label: string;
-  value: string;
-  strong?: boolean;
-  valueClassName?: string;
-}) {
-  return (
-    <div
-      className={`flex items-center justify-between gap-3 rounded-[22px] px-4 py-3 ${
-        strong ? "bg-[#8cff59] text-[#07130a]" : "bg-zinc-950/35"
-      }`}
-    >
-      <span className={strong ? "text-[#07130a]/80" : "text-zinc-400"}>{label}</span>
-      <span
-        className={`font-semibold ${
-          strong ? "text-[#07130a]" : valueClassName ?? "text-white"
-        }`}
-      >
-        {value}
-      </span>
     </div>
   );
 }

@@ -502,7 +502,8 @@ export const repagoMemasCuotas = pgTable("repago_memas_cuotas", {
   notas: text("notas"),
 },
 (table) => [
-  uniqueIndex("repago_memas_cuotas_repago_numero_idx").on(table.repagoId, table.numeroCuota),
+  // Índice NO único: los pagos parciales generan varias filas por cuota
+  index("repago_memas_cuotas_repago_numero_idx").on(table.repagoId, table.numeroCuota),
 ]);
 
 // ————————————————————————————

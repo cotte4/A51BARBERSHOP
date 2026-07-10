@@ -126,47 +126,55 @@ export default function CierreWizard({ cerrarAction, totalEfectivoSistema }: Cie
             </div>
           ) : null}
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <StatCard label="Sistema" value={formatARS(totalEfectivoSistema)} />
-            <StatCard label="Contado" value={formatARS(contadoNum)} />
-            <StatCard
-              label="Diferencia"
-              value={`${diferencia > 0 ? "+" : ""}${formatARS(diferencia)}`}
-              className={tone.className}
-            />
-          </div>
-
-          {diferencia !== 0 ? (
-            <div className={`rounded-2xl border px-4 py-3 text-sm ${tone.className}`}>
-              <p className="font-semibold">
-                Estás cerrando con diferencia de {formatARS(Math.abs(diferencia))} ({tone.label}).
-              </p>
-              <p className="mt-1 opacity-90">
-                Podés cerrar igual: la diferencia queda registrada en el cierre para revisarla
-                después.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/12 px-4 py-3 text-sm text-emerald-200">
-              El efectivo contado coincide con el sistema.
-            </div>
-          )}
-
-          <div className="rounded-[24px] border border-amber-500/20 bg-amber-500/10 p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="rounded-[24px] border border-zinc-800 bg-zinc-950/70 p-4">
+            <div className="grid grid-cols-3 gap-2 text-center">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-200">
-                  Cierre final
-                </p>
-                <h3 className="mt-2 text-base font-semibold text-white">
-                  Este paso deja la caja sellada
-                </h3>
-                <p className="mt-1 text-sm leading-6 text-amber-100/80">
-                  Guarda quien cerró, fija la hora y bloquea nuevos movimientos del día.
+                <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Sistema</p>
+                <p className="mt-1 text-base font-semibold text-white">{formatARS(totalEfectivoSistema)}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Contado</p>
+                <p className="mt-1 text-base font-semibold text-white">{formatARS(contadoNum)}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Diferencia</p>
+                <p className="mt-1 text-base font-semibold text-white">
+                  {`${diferencia > 0 ? "+" : ""}${formatARS(diferencia)}`}
                 </p>
               </div>
-              <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-xs font-semibold text-amber-100">
-                Irreversible
+            </div>
+
+            <div
+              className={`mt-4 flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm ${tone.className}`}
+            >
+              {diferencia === 0 ? (
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.5l4.5 4.5 10.5-11" />
+                </svg>
+              ) : (
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4.5M12 17h.01" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.6 4.2 2.9 18a1.8 1.8 0 0 0 1.6 2.7h15a1.8 1.8 0 0 0 1.6-2.7L13.4 4.2a1.8 1.8 0 0 0-2.8 0Z" />
+                </svg>
+              )}
+              <span className="font-semibold">
+                {diferencia === 0
+                  ? "Cuadra: el efectivo coincide con el sistema."
+                  : `${tone.label} ${formatARS(Math.abs(diferencia))} — se registra en el cierre para revisar después.`}
               </span>
             </div>
           </div>
@@ -198,7 +206,7 @@ export default function CierreWizard({ cerrarAction, totalEfectivoSistema }: Cie
           <p className="text-xs leading-5 text-zinc-500">
             {armed
               ? "Ahora ya podés confirmar sin perder el contexto."
-              : "Si querés volver atrás, tocá otro lugar antes de confirmar."}
+              : "Tocá una vez más para confirmar el cierre."}
           </p>
 
           <button
@@ -214,22 +222,5 @@ export default function CierreWizard({ cerrarAction, totalEfectivoSistema }: Cie
         </form>
       )}
     </section>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  className,
-}: {
-  label: string;
-  value: string;
-  className?: string;
-}) {
-  return (
-    <div className={`rounded-[22px] border px-4 py-4 ${className ?? "border-zinc-800 bg-zinc-950/70"}`}>
-      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{label}</p>
-      <p className="mt-2 text-lg font-semibold text-white">{value}</p>
-    </div>
   );
 }

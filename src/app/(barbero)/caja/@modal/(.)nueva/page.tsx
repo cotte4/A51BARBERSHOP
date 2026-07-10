@@ -19,9 +19,9 @@ type Props = {
 };
 
 export default async function NuevaAtencionModal({ searchParams }: Props) {
+  await searchParams;
   const actor = await getCajaActorContext();
   const isAdmin = actor?.isAdmin ?? false;
-  const params = await searchParams;
 
   const fechaHoy = new Date().toLocaleDateString("en-CA", {
     timeZone: "America/Argentina/Buenos_Aires",
@@ -37,8 +37,7 @@ export default async function NuevaAtencionModal({ searchParams }: Props) {
     return (
       <Modal>
         <div className="py-4 text-center">
-          <p className="font-medium text-white">La caja del dia ya fue cerrada.</p>
-          <p className="mt-1 text-sm text-zinc-400">No se pueden registrar nuevas atenciones.</p>
+          <p className="font-medium text-white">Ya cerraste la caja de hoy — para cargar algo más, hablá con el owner.</p>
         </div>
       </Modal>
     );
@@ -48,9 +47,9 @@ export default async function NuevaAtencionModal({ searchParams }: Props) {
     return (
       <Modal>
         <div className="py-4 text-center">
-          <p className="font-medium text-white">Tu usuario no tiene un barbero activo vinculado.</p>
+          <p className="font-medium text-white">Todavía no te asociamos a un perfil de barbero.</p>
           <p className="mt-1 text-sm text-zinc-400">
-            Vincula el usuario desde configuracion antes de registrar atenciones.
+            Pedile al owner que te vincule desde Configuración.
           </p>
         </div>
       </Modal>
@@ -68,18 +67,11 @@ export default async function NuevaAtencionModal({ searchParams }: Props) {
       <div className="mb-4">
         <p className="eyebrow text-xs font-semibold text-zinc-500">Caja</p>
         <h2 className="font-display mt-1 text-2xl font-semibold tracking-tight text-white">
-          Nueva atencion
+          Nueva atención
         </h2>
       </div>
 
       <div className="space-y-4">
-        {params.fromQuickAction ? (
-          <div className="rounded-[18px] border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-zinc-200">
-            Configura el servicio y medio de pago por defecto del barbero para usar la accion
-            rapida sin pasar por este formulario.
-          </div>
-        ) : null}
-
         <QuickCheckoutPanel
           servicios={serviciosActivos.map((s) => ({ id: s.id, nombre: s.nombre, precioBase: s.precioBase }))}
           mediosPago={mediosPagoActivos.map((m) => ({ id: m.id, nombre: m.nombre, comisionPorcentaje: m.comisionPorcentaje }))}
@@ -93,7 +85,7 @@ export default async function NuevaAtencionModal({ searchParams }: Props) {
             href="/caja/nueva"
             className="text-sm text-zinc-500 transition-colors hover:text-[#8cff59]"
           >
-            Carga completa (cliente, productos, extras)
+            ¿Necesitás sumar cliente o productos? Cargalo completo
           </Link>
         </div>
       </div>
