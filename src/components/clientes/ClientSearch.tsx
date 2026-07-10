@@ -121,9 +121,9 @@ export default function ClientSearch({
       <div className="panel-card rounded-[28px] p-4 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <p className="eyebrow text-[11px] font-semibold">Buscador</p>
+            <p className="eyebrow text-[11px] font-semibold">Gestion de clientes</p>
             <h2 className="font-display mt-2 text-2xl font-semibold text-white sm:text-[2rem]">
-              Busqueda rapida para leer al cliente y saltar a la accion.
+              Clientes
             </h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
               {queryTerm
@@ -166,29 +166,6 @@ export default function ClientSearch({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-[22px] border border-white/6 bg-white/[0.03] p-3 text-sm text-zinc-400">
-            <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Modo
-            </span>
-            <span className="mt-1 block text-white">{sourceLabel}</span>
-          </div>
-          <div className="rounded-[22px] border border-white/6 bg-white/[0.03] p-3 text-sm text-zinc-400">
-            <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Resultado
-            </span>
-            <span className="mt-1 block text-white">
-              {visibleCount} cliente{visibleCount === 1 ? "" : "s"}
-            </span>
-          </div>
-          <div className="rounded-[22px] border border-white/6 bg-white/[0.03] p-3 text-sm text-zinc-400">
-            <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Accion
-            </span>
-            <span className="mt-1 block text-white">Perfil, turno y cobro en un toque</span>
-          </div>
-        </div>
-
         <div className="relative mt-5">
           <SearchIcon />
           <input
@@ -212,21 +189,6 @@ export default function ClientSearch({
           ) : null}
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-          <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1">
-            Buscar por nombre o telefono
-          </span>
-          {isSearching ? (
-            <span className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/8 px-3 py-1 text-[#b6ff84]">
-              Filtro activo
-            </span>
-          ) : null}
-          {isLoading ? (
-            <span className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/8 px-3 py-1 text-[#b6ff84]">
-              Buscando...
-            </span>
-          ) : null}
-        </div>
       </div>
 
       <div aria-live="polite" aria-busy={isLoading} className="space-y-3">

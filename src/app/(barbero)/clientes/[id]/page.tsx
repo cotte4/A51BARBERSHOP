@@ -512,24 +512,6 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
 
   return (
     <div className="space-y-6 pb-10">
-      <section className="rounded-[32px] border border-zinc-800/80 bg-[radial-gradient(circle_at_top_left,_rgba(140,255,89,0.12),_transparent_30%),linear-gradient(180deg,_rgba(24,24,27,0.96),_rgba(9,9,11,0.98))] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.35)] sm:p-6">
-        <div className="space-y-2">
-          <Link
-            href="/clientes"
-            className="inline-flex items-center text-sm font-medium text-zinc-500 transition hover:text-zinc-200"
-          >
-            &larr; Clientes
-          </Link>
-
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">
-              Ficha operativa
-            </p>
-            <p className="text-sm text-zinc-400">Comando central del cliente.</p>
-          </div>
-        </div>
-      </section>
-
       <ClienteDetalleClient
         perfilContent={perfilContent}
         historialContent={historialContent}

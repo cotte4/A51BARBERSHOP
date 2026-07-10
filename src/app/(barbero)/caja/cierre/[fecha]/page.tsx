@@ -102,35 +102,9 @@ export default async function CierreDetallePage({
                   dia. Ideal para imprimir o revisar rapido sin leer toda la planilla.
                 </p>
               </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-semibold text-zinc-300">
-                  {cierre.cantidadAtenciones ?? 0} atenciones
-                </span>
-                {Number(cierre.totalProductos ?? 0) > 0 ? (
-                  <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-semibold text-zinc-300">
-                    {formatARS(cierre.totalProductos)} en productos
-                  </span>
-                ) : null}
-                <span className="rounded-full border border-[#8cff59]/25 bg-[#8cff59]/10 px-3 py-1 text-xs font-semibold text-[#8cff59]">
-                  Neto {formatARS(cierre.totalNeto)}
-                </span>
-              </div>
             </div>
 
             <aside className="space-y-3">
-              <div className="rounded-[24px] border border-zinc-800 bg-zinc-950/70 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                  Caja cerrada
-                </p>
-                <p className="mt-2 text-3xl font-bold text-white">
-                  {horaCierre ? `A las ${horaCierre}` : "Registrada"}
-                </p>
-                <p className="mt-1 text-sm text-zinc-400">
-                  {isAdmin ? "Incluye vista completa y PDF." : "Vista filtrada por tu cuenta."}
-                </p>
-              </div>
-
               <div className="rounded-[24px] border border-zinc-800 bg-zinc-950/70 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
                   Acciones
@@ -165,7 +139,7 @@ export default async function CierreDetallePage({
           ))}
         </section>
 
-        <section className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+        <section>
           <div className="space-y-5">
             <section className="panel-card rounded-[30px] p-5">
               <h2 className="font-display text-2xl font-semibold text-white">Totales del dia</h2>
@@ -186,6 +160,19 @@ export default async function CierreDetallePage({
                 />
                 {Number(cierre.totalProductos ?? 0) > 0 ? (
                   <Row label="Productos brutos" value={formatARS(cierre.totalProductos)} />
+                ) : null}
+                {Number(resumen.totales.cajaNetaProductos ?? 0) > 0 ? (
+                  <Row
+                    label="Productos netos"
+                    value={formatARS(resumen.totales.cajaNetaProductos)}
+                  />
+                ) : null}
+                {isAdmin ? (
+                  <Row
+                    label="Aporte economico casa"
+                    value={formatARS(resumen.totales.aporteEconomicoCasaDia)}
+                    tone="text-white"
+                  />
                 ) : null}
               </div>
             </section>
@@ -237,36 +224,7 @@ export default async function CierreDetallePage({
               </section>
             ) : null}
           </div>
-
-          <aside className="space-y-4">
-            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
-                Resumen ejecutivo
-              </p>
-              <div className="mt-4 grid gap-3">
-                <ExecRow label="Caja neta del dia" value={formatARS(resumen.totales.cajaNetaDia)} />
-                <ExecRow
-                  label="Servicios netos"
-                  value={formatARS(resumen.totales.cajaNetaServicios)}
-                />
-                <ExecRow
-                  label="Productos netos"
-                  value={formatARS(resumen.totales.cajaNetaProductos)}
-                />
-                {isAdmin ? (
-                  <ExecRow
-                    label="Aporte economico casa"
-                    value={formatARS(resumen.totales.aporteEconomicoCasaDia)}
-                  />
-                ) : null}
-              </div>
-            </section>
-          </aside>
         </section>
-
-        <div className="text-sm text-zinc-400">
-          Atenciones: <strong className="text-white">{cierre.cantidadAtenciones ?? 0}</strong>
-        </div>
       </div>
 
       <style>{`
@@ -294,15 +252,6 @@ function Row({
     <div className="flex justify-between text-sm">
       <span className="text-zinc-400">{label}</span>
       <span className={strong ? "font-bold text-white" : `font-medium ${tone}`}>{value}</span>
-    </div>
-  );
-}
-
-function ExecRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-[22px] border border-zinc-800 bg-zinc-950/70 px-4 py-3">
-      <span className="text-sm text-zinc-400">{label}</span>
-      <span className="text-sm font-semibold text-white">{value}</span>
     </div>
   );
 }

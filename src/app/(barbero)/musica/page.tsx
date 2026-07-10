@@ -7,12 +7,6 @@ import { isAutoApproveEnabled, listPendingProposals, listQueue } from "@/lib/juk
 
 export const dynamic = "force-dynamic";
 
-function modeLabel(mode: "auto" | "dj" | "jam") {
-  if (mode === "dj") return "Soy DJ";
-  if (mode === "jam") return "Jam";
-  return "Auto";
-}
-
 export default async function MusicaPage() {
   const actor = await getTurnosActorContext();
   if (!actor) {
@@ -58,12 +52,6 @@ export default async function MusicaPage() {
               <div className="max-w-2xl space-y-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <MusicStateBadge state={state.runtime.state} />
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-zinc-300">
-                    Modo {modeLabel(state.mode.activeMode)}
-                  </span>
-                  <span className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/10 px-3 py-1 text-xs font-semibold text-[#d8ffc7]">
-                    {state.queue.items.length} en cola
-                  </span>
                 </div>
                 <div>
                   <p className="eyebrow text-[#8cff59]">Operacion</p>
@@ -77,19 +65,11 @@ export default async function MusicaPage() {
                 </div>
               </div>
 
-              <div className="grid min-w-[230px] gap-2 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="grid min-w-[230px] gap-2">
                 <div className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-3">
                   <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Provider</p>
                   <p className="mt-2 text-lg font-semibold text-white">
                     {state.provider.connected ? "Spotify conectado" : "Spotify desconectado"}
-                  </p>
-                </div>
-                <div className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-3">
-                  <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Player</p>
-                  <p className="mt-2 text-lg font-semibold text-white">
-                    {state.players.find((player) => player.isExpectedLocalPlayer)?.name ??
-                      state.players.find((player) => player.isDefault)?.name ??
-                      "Sin player definido"}
                   </p>
                 </div>
               </div>
