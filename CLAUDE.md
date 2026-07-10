@@ -58,8 +58,7 @@ The app is live on Vercel. Core is mature. **Barber-side launch readiness comple
 
 ### Known bugs / debt
 - **Music automation not closed** — `clienteLlegoAction()` fires events to pantalla and `musicEvents` but does NOT trigger real Spotify playback. Treat music as manually supervised for now. See `planning/features/music-auto-jam-completion.md`.
-- **Encoding bug on reserva pública** — `src/app/reservar/[slug]/page.tsx` shows corrupted characters in visible text. Fix before designer review.
-- Dead code: `src/components/caja/EfectivoChecker.tsx` and `CerrarCajaButton.tsx` are orphaned (replaced by `_CierreWizard.tsx`) — delete in next cleanup pass.
+- Stock ledger is append-only since 2026-07: anulaciones/ediciones insert compensating movements (never DELETE); sales aggregates must sum `-cantidad`, never `Math.abs`. Standalone product sales are anulable by admin from /caja (reversión with `referencia_type = 'stock_movimiento'`).
 
 ### UX maturity by surface
 - Operación diaria (hoy, caja, turnos, clientes): **mature**
@@ -67,7 +66,7 @@ The app is live on Vercel. Core is mature. **Barber-side launch readiness comple
 - Configuración: **mature**
 - Portal Marciano: **mature**
 - Repago Memas: **mature** (flexible payments, empathetic copy, tested)
-- Reserva pública: **functional but has encoding bug + needs UX pass**
+- Reserva pública: **functional, needs UX pass** (encoding bug fixed in 425ecc2)
 - Pantalla pública: **functional**
 - Música: **functional but automation incomplete**
 
