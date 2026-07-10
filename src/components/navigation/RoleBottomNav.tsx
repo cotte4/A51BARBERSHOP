@@ -222,6 +222,12 @@ const ADMIN_NAV_LEFT: NavItem[] = [
       (pathname.startsWith("/caja/") && !pathname.startsWith("/caja/cierre")),
   },
   {
+    href: "/clientes",
+    label: "Clientes",
+    icon: <UsersIcon />,
+    isActive: (pathname) => pathname.startsWith("/clientes"),
+  },
+  {
     href: "/caja/cierre",
     label: "Cierre",
     icon: <ClipboardCheckIcon />,
