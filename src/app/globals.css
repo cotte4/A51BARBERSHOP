@@ -207,6 +207,21 @@ input, select, textarea {
   }
 }
 
+@keyframes a51-nav-mode-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nav-mode-enter {
+  animation: a51-nav-mode-in 180ms ease both;
+}
+
 /* Landing animation utilities */
 .animate-fade-up {
   animation: a51-fade-up 0.7s ease both;

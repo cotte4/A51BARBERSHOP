@@ -317,23 +317,26 @@ function AdminModalNav({ pathname }: { pathname: string }) {
     <nav className="fixed inset-x-0 bottom-4 z-30 px-3 pb-[env(safe-area-inset-bottom,0px)] sm:px-4">
       <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
         <div className="flex items-stretch gap-1">
-          {items.map((item) => {
-            const active = item.isActive(pathname);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex min-h-[58px] min-w-0 flex-1 flex-col items-center justify-center rounded-[20px] px-1 py-2 text-center text-[11px] font-semibold transition ${
-                  active
-                    ? "bg-[#8cff59] text-[#07130a] shadow-[0_12px_24px_rgba(140,255,89,0.18)]"
-                    : "text-zinc-400 hover:bg-white/5 hover:text-white"
-                }`}
-              >
-                <span>{item.icon}</span>
-                <span className="mt-1 truncate leading-none">{item.label}</span>
-              </Link>
-            );
-          })}
+          {/* key={mode} remonta el grupo al alternar para disparar la animación */}
+          <div key={mode} className="nav-mode-enter flex min-w-0 flex-[4] items-stretch gap-1">
+            {items.map((item) => {
+              const active = item.isActive(pathname);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex min-h-[58px] min-w-0 flex-1 flex-col items-center justify-center rounded-[20px] px-1 py-2 text-center text-[11px] font-semibold transition ${
+                    active
+                      ? "bg-[#8cff59] text-[#07130a] shadow-[0_12px_24px_rgba(140,255,89,0.18)]"
+                      : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <span>{item.icon}</span>
+                  <span className="mt-1 truncate leading-none">{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
 
           <div className="h-10 w-px shrink-0 self-center rounded-full bg-zinc-700/60" />
 
