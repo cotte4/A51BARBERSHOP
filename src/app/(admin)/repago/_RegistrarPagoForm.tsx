@@ -11,6 +11,7 @@ interface RegistrarPagoFormProps {
   ) => Promise<RegistrarCuotaState>;
   cuotaTotalDefault: number;
   tcReferencia: number;
+  tcOnline: { oficial: number | null; blue: number | null };
 }
 
 function formatUSD(value: number) {
@@ -27,6 +28,7 @@ export default function RegistrarPagoForm({
   action,
   cuotaTotalDefault,
   tcReferencia,
+  tcOnline,
 }: RegistrarPagoFormProps) {
   const [state, formAction, isPending] = useActionState(action, {});
   const [montoPagadoUsd, setMontoPagadoUsd] = useState(cuotaTotalDefault.toFixed(2));
@@ -61,10 +63,21 @@ export default function RegistrarPagoForm({
     ],
     [cuotaTotalDefault]
   );
+  // Cotización online (DolarAPI, cacheada 15 min en el server). Si la API
+  // falla, caemos a chips alrededor del TC de referencia configurado.
   const suggestedTcs = useMemo(() => {
+    const online = [
+      tcOnline.oficial ? { label: "Oficial", value: tcOnline.oficial } : null,
+      tcOnline.blue ? { label: "Blue", value: tcOnline.blue } : null,
+    ].filter((item): item is { label: string; value: number } => item !== null);
+
+    if (online.length > 0) return online;
+
     const base = Math.round(tcReferencia / 50) * 50;
-    return [base - 100, base, base + 100].filter((value) => value > 0);
-  }, [tcReferencia]);
+    return [base - 100, base, base + 100]
+      .filter((value) => value > 0)
+      .map((value) => ({ label: null, value }));
+  }, [tcOnline, tcReferencia]);
 
   return (
     <form action={formAction} className="space-y-5">
@@ -146,7 +159,16 @@ export default function RegistrarPagoForm({
             TC del día
           </label>
           <p className="mb-2 text-xs text-zinc-500">
-            El dólar de hoy — fijate en cualquier cotización online.
+            El dólar de hoy — tocá una cotización o{" "}
+            <a
+              href="https://dolarhoy.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-400 underline hover:text-[#8cff59]"
+            >
+              mirala online
+            </a>
+            .
           </p>
           <input
             id="tcDia"
@@ -161,13 +183,13 @@ export default function RegistrarPagoForm({
             className="min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-800 px-4 text-base text-white outline-none transition focus:border-[#8cff59]/60"
           />
           <div className="mt-3 flex flex-wrap gap-2">
-            {suggestedTcs.map((value) => {
-              const selected = tcDia === String(value);
+            {suggestedTcs.map((option) => {
+              const selected = tcDia === String(option.value);
               return (
                 <button
-                  key={value}
+                  key={`${option.label ?? "tc"}-${option.value}`}
                   type="button"
-                  onClick={() => setTcDia(String(value))}
+                  onClick={() => setTcDia(String(option.value))}
                   className={[
                     "rounded-full px-3 py-1.5 text-xs font-medium transition",
                     selected
@@ -175,7 +197,7 @@ export default function RegistrarPagoForm({
                       : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700",
                   ].join(" ")}
                 >
-                  ${value.toLocaleString("es-AR")}
+                  {option.label ? `${option.label} ` : ""}${option.value.toLocaleString("es-AR")}
                 </button>
               );
             })}

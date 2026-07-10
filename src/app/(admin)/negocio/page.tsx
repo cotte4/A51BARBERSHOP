@@ -41,6 +41,7 @@ const utilityLinks = [
   { href: "/configuracion/musica", label: "Musica", detail: "Controlar el player" },
   { href: "/configuracion/medios-de-pago", label: "Cobros", detail: "Tarjeta, transferencia y comisiones" },
   { href: "/configuracion/gastos-fijos", label: "Gastos fijos", detail: "Alquiler, servicios y base del mes" },
+  { href: "/repago", label: "Repago Memas", detail: "Deuda, cronograma y registrar pagos" },
   { href: "/negocio/estilo", label: "Cortes Marciano", detail: "Configurar cortes por forma de cara" },
   { href: "/negocio/soporte", label: "Soporte", detail: "Revisar bugs internos y triage" },
   { href: "/negocio/go-live", label: "Go-live", detail: "Checklist y firma de lanzamiento" },
@@ -442,12 +443,12 @@ export default async function NegocioPage() {
           </NegocioSmartCard>
 
           <NegocioSmartCard
-            href="/gastos-rapidos"
-            eyebrow="Gastos"
+            href="/repago"
+            eyebrow="Deuda"
             kicker={saldoPendienteUsd > 0 ? "Ojo" : "Tranquilo"}
             title="Gastos y cuotas"
             detail="Lo que ya salio hoy y lo proximo grande por pagar."
-            footer="Ver gastos y deuda"
+            footer="Ver repago y registrar pago"
             className="min-h-[340px]"
             accentClassName="border-[#8cff59]/16 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.10),_transparent_34%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
           >

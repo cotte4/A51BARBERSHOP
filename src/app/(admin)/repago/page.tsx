@@ -41,6 +41,25 @@ function clampProgress(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
+type TcOnline = { oficial: number | null; blue: number | null };
+
+async function getTcOnline(): Promise<TcOnline> {
+  try {
+    const res = await fetch("https://dolarapi.com/v1/dolares", {
+      next: { revalidate: 900 },
+    });
+    if (!res.ok) return { oficial: null, blue: null };
+    const data = (await res.json()) as Array<{ casa?: string; venta?: number }>;
+    const venta = (casa: string) => {
+      const value = data.find((item) => item.casa === casa)?.venta;
+      return typeof value === "number" && value > 0 ? Math.round(value) : null;
+    };
+    return { oficial: venta("oficial"), blue: venta("blue") };
+  } catch {
+    return { oficial: null, blue: null };
+  }
+}
+
 export default async function RepagoPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
@@ -49,13 +68,14 @@ export default async function RepagoPage() {
     redirect("/caja");
   }
 
-  const [[repago], cuotas, [config]] = await Promise.all([
+  const [[repago], cuotas, [config], tcOnline] = await Promise.all([
     db.select().from(repagoMemas).limit(1),
     db.select().from(repagoMemasCuotas).orderBy(desc(repagoMemasCuotas.fechaPago)),
     db
       .select({ tcReferencia: configuracionNegocio.tcReferencia })
       .from(configuracionNegocio)
       .limit(1),
+    getTcOnline(),
   ]);
   const tcReferencia = Number(config?.tcReferencia ?? 1400);
 
@@ -261,6 +281,7 @@ export default async function RepagoPage() {
                   action={registrarCuota}
                   cuotaTotalDefault={faltanteCuotaActual > 0 ? faltanteCuotaActual : proximaCuotaTotal}
                   tcReferencia={tcReferencia}
+                  tcOnline={tcOnline}
                 />
               </div>
             </section>
