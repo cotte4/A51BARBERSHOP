@@ -76,7 +76,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/repago") ||
     pathname.startsWith("/mi-resultado") ||
     pathname.startsWith("/gastos-rapidos") ||
-    pathname.startsWith("/finanzas")
+    pathname.startsWith("/finanzas") ||
+    pathname.startsWith("/ovnis")
   ) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
