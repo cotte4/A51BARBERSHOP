@@ -1,6 +1,6 @@
 import Link from "next/link";
 import AnularButton from "@/components/caja/AnularButton";
-import type { anularAtencion } from "../actions";
+import type { anularAtencion, anularVentaProducto } from "../actions";
 
 type MovementDisclosureCardProps = {
   timeLabel: string;
@@ -10,6 +10,9 @@ type MovementDisclosureCardProps = {
   detail: string;
   amountLabel: string;
   toneClassName: string;
+  canAnular?: boolean;
+  stockMovimientoId?: string;
+  anularVentaAction?: typeof anularVentaProducto;
 };
 
 type AtencionDisclosureCardProps = {
@@ -63,6 +66,9 @@ export function MovementDisclosureCard({
   detail,
   amountLabel,
   toneClassName,
+  canAnular,
+  stockMovimientoId,
+  anularVentaAction,
 }: MovementDisclosureCardProps) {
   return (
     <details className={`caja-disclosure rounded-[24px] border ${toneClassName}`}>
@@ -98,6 +104,11 @@ export function MovementDisclosureCard({
           <div className="rounded-[20px] border border-white/8 bg-black/20 px-4 py-3 text-sm leading-6 opacity-85">
             {detail}
           </div>
+          {canAnular && stockMovimientoId && anularVentaAction ? (
+            <div className="mt-3 flex justify-end">
+              <AnularButton atencionId={stockMovimientoId} anularAction={anularVentaAction} />
+            </div>
+          ) : null}
         </div>
       </div>
     </details>

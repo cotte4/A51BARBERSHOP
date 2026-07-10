@@ -318,7 +318,10 @@ export const stockMovimientos = pgTable(
     cantidad: integer("cantidad"),
     precioUnitario: numeric("precio_unitario", { precision: 12, scale: 2 }),
     costoUnitarioSnapshot: numeric("costo_unitario_snapshot", { precision: 12, scale: 2 }),
-    // Polymorphic reference — referenciaType disambiguates the target ('atencion' | 'atenciones_producto' | null)
+    // Polymorphic reference — referenciaType disambiguates the target
+    // ('atencion' | 'atenciones_producto' | 'stock_movimiento' | null).
+    // 'stock_movimiento' es usado por las reversiones de ventas sueltas de
+    // producto: referenciaId apunta al id del movimiento de venta original.
     referenciaId: uuid("referencia_id"),
     referenciaType: text("referencia_type"),
     notas: text("notas"),
@@ -333,7 +336,7 @@ export const stockMovimientos = pgTable(
     ),
     check(
       "stock_movimientos_referencia_type_check",
-      sql`${table.referenciaType} IS NULL OR ${table.referenciaType} IN ('atencion', 'atenciones_producto')`
+      sql`${table.referenciaType} IS NULL OR ${table.referenciaType} IN ('atencion', 'atenciones_producto', 'stock_movimiento')`
     ),
     index("stock_movimientos_tipo_idx").on(table.tipo),
     index("stock_movimientos_producto_id_idx").on(table.productoId),

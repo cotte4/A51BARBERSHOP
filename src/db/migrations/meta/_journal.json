@@ -253,6 +253,13 @@
       "when": 1783647285197,
       "tag": "0035_minor_leech",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1783649983830,
+      "tag": "0036_worthless_brother_voodoo",
+      "breakpoints": true
     }
   ]
 }

@@ -27,6 +27,10 @@ import {
 import { calculateAtencionCommission } from "@/lib/finance/commission";
 import { resolveMarcianoCorteUsageDeltas } from "@/lib/finance/marciano-cortes";
 import { calcularNetoPorProducto } from "@/lib/finance/stock-ledger-neteo";
+import {
+  assertVentaProductoSueltaAnulable,
+  isFechaDentroDelDiaArgentino,
+} from "@/lib/finance/venta-producto-anulacion";
 
 export type AtencionCreationInput = {
   barberoId: string;
@@ -801,6 +805,98 @@ export async function registrarVentaProductoDesdeInput(
       medioPagoId: input.medioPagoId,
       notas: null,
     });
+
+    return { ok: true };
+  });
+}
+
+export type AnularVentaProductoResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+/**
+ * Anula una venta suelta de producto (sin atencion asociada) insertando un
+ * movimiento compensatorio en el ledger append-only (mismo patron que
+ * `anularAtencionConReversion`) y restaurando el stock. No borra la fila
+ * original — queda como rastro auditable.
+ *
+ * Los checks de "es de hoy" y "caja abierta" quedan a cargo del caller
+ * (server action), que ya conoce el actor y el guard de cierre. Acá se
+ * validan: existencia, elegibilidad del movimiento, y anti-doble-anulacion.
+ */
+export async function anularVentaProductoConReversion(input: {
+  stockMovimientoId: string;
+  motivoAnulacion: string;
+  fechaHoy: string;
+}): Promise<AnularVentaProductoResult> {
+  return db.transaction(async (tx) => {
+    const [movimiento] = await tx
+      .select({
+        id: stockMovimientos.id,
+        productoId: stockMovimientos.productoId,
+        tipo: stockMovimientos.tipo,
+        cantidad: stockMovimientos.cantidad,
+        precioUnitario: stockMovimientos.precioUnitario,
+        costoUnitarioSnapshot: stockMovimientos.costoUnitarioSnapshot,
+        referenciaId: stockMovimientos.referenciaId,
+        medioPagoId: stockMovimientos.medioPagoId,
+        fecha: stockMovimientos.fecha,
+      })
+      .from(stockMovimientos)
+      .where(eq(stockMovimientos.id, input.stockMovimientoId))
+      .limit(1);
+
+    if (!movimiento) {
+      return { ok: false, error: "El movimiento no existe." };
+    }
+
+    try {
+      assertVentaProductoSueltaAnulable(movimiento);
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : "Movimiento no anulable." };
+    }
+
+    if (!isFechaDentroDelDiaArgentino(movimiento.fecha, input.fechaHoy)) {
+      return { ok: false, error: "Solo se pueden anular ventas de producto del día de hoy." };
+    }
+
+    if (!movimiento.productoId) {
+      return { ok: false, error: "El movimiento no tiene un producto asociado." };
+    }
+
+    const [reversionExistente] = await tx
+      .select({ id: stockMovimientos.id })
+      .from(stockMovimientos)
+      .where(
+        and(
+          eq(stockMovimientos.referenciaId, movimiento.id),
+          eq(stockMovimientos.referenciaType, "stock_movimiento")
+        )
+      )
+      .limit(1);
+
+    if (reversionExistente) {
+      return { ok: false, error: "Esta venta ya fue anulada." };
+    }
+
+    const cantidadOriginal = movimiento.cantidad ?? 0;
+
+    await tx.insert(stockMovimientos).values({
+      productoId: movimiento.productoId,
+      tipo: "venta",
+      cantidad: -cantidadOriginal,
+      precioUnitario: movimiento.precioUnitario,
+      costoUnitarioSnapshot: movimiento.costoUnitarioSnapshot,
+      referenciaId: movimiento.id,
+      referenciaType: "stock_movimiento",
+      medioPagoId: movimiento.medioPagoId,
+      notas: `Anulación: ${input.motivoAnulacion.trim()}`,
+    });
+
+    await tx
+      .update(productos)
+      .set({ stockActual: sql`${productos.stockActual} + ${-cantidadOriginal}` })
+      .where(eq(productos.id, movimiento.productoId));
 
     return { ok: true };
   });

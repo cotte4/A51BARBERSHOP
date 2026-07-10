@@ -27,6 +27,7 @@ import {
 } from "@/lib/dal/caja";
 import {
   anularAtencionConReversion,
+  anularVentaProductoConReversion,
   crearAtencionDesdeInput,
   getFechaHoyArgentina,
   getQuickActionDefaultsForBarbero,
@@ -492,6 +493,49 @@ export async function anularAtencion(
   }
 
   revalidateCajaViews();
+  return {}; // No redirect: el usuario sigue en la pagina de caja
+}
+
+// ———————————————————————————— anularVentaProducto ————————————————————————————
+
+export async function anularVentaProducto(
+  stockMovimientoId: string,
+  prevState: AtencionFormState,
+  formData: FormData
+): Promise<AtencionFormState> {
+  // Verificar que el usuario es admin
+  const actor = await getCajaActorContext();
+  if (!actor?.isAdmin) {
+    return { error: "Solo el administrador puede anular ventas de producto." };
+  }
+
+  const motivoAnulacion = formData.get("motivoAnulacion") as string;
+  if (!motivoAnulacion || motivoAnulacion.trim() === "") {
+    return { fieldErrors: { motivoAnulacion: "El motivo de anulacion es requerido" } };
+  }
+
+  const fechaHoy = getFechaHoy();
+
+  try {
+    await assertCajaAbiertaOrThrow(fechaHoy);
+
+    const result = await anularVentaProductoConReversion({
+      stockMovimientoId,
+      motivoAnulacion,
+      fechaHoy,
+    });
+
+    if (!result.ok) {
+      return { error: result.error };
+    }
+  } catch (e) {
+    console.error("Error anulando venta de producto:", e);
+    return {
+      error: e instanceof Error ? e.message : "No se pudo anular la venta. Intenta de nuevo.",
+    };
+  }
+
+  revalidateCajaViews({ includeInventario: true, includeDashboard: true });
   return {}; // No redirect: el usuario sigue en la pagina de caja
 }
 

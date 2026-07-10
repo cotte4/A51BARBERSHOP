@@ -37,6 +37,7 @@ import {
 import { BarberMonthlyStats } from "./_components/_BarberMonthlyStats";
 import {
   anularAtencion,
+  anularVentaProducto,
   registrarAtencionExpressAction,
 } from "./actions";
 
@@ -54,6 +55,8 @@ type MovementItem = {
   tone: string;
   badge: string;
   detail: string;
+  canAnular?: boolean;
+  stockMovimientoId?: string;
 };
 
 export default async function CajaPage({ searchParams }: CajaPageProps) {
@@ -149,6 +152,8 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
       fecha: stockMovimientos.fecha,
       medioPagoId: stockMovimientos.medioPagoId,
       notas: stockMovimientos.notas,
+      referenciaId: stockMovimientos.referenciaId,
+      referenciaType: stockMovimientos.referenciaType,
     })
     .from(stockMovimientos)
     .where(
@@ -159,6 +164,18 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
       )
     )
     .orderBy(desc(stockMovimientos.fecha));
+
+  // Reversiones de ventas sueltas de producto (anulación admin) — se usan
+  // para marcar la venta original como "Anulada" y no listar la reversión
+  // como un movimiento aparte.
+  const reversionesVentaSueltaMap = new Map(
+    ventasProductosDia
+      .filter((venta) => venta.referenciaType === "stock_movimiento" && venta.referenciaId)
+      .map((venta) => [venta.referenciaId as string, venta])
+  );
+  const ventasProductosParaListar = ventasProductosDia.filter(
+    (venta) => venta.referenciaType !== "stock_movimiento"
+  );
 
   const productosMap = new Map(
     (await db.select().from(productos)).map((producto) => [producto.id, producto])
@@ -247,12 +264,15 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
         detail: `${accent.label} - ${atencion.anulado ? "fuera de caja" : "entra al neto"}`,
       };
     }),
-    ...ventasProductosDia.map((venta) => {
+    ...ventasProductosParaListar.map((venta) => {
       const producto = productosMap.get(venta.productoId ?? "");
       // fallback: movimientos previos a la migración 0035 guardaban el medio de pago en notas
-    const medio = mediosPagoMap.get(venta.medioPagoId ?? venta.notas ?? "");
+      const medio = mediosPagoMap.get(venta.medioPagoId ?? venta.notas ?? "");
       const accent = getPaymentAccent(medio?.nombre);
       const cantidadAbs = Math.abs(Number(venta.cantidad ?? 0));
+      const esVentaSuelta = venta.referenciaId === null;
+      const anulada = esVentaSuelta && reversionesVentaSueltaMap.has(venta.id);
+      const puedeAnular = isAdmin && esVentaSuelta && !anulada && !cierreHoy;
 
       return {
         id: `producto-${venta.id}`,
@@ -261,9 +281,13 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
         title: producto?.nombre ?? "Producto",
         subtitle: `${cantidadAbs} x ${formatARS(Number(venta.precioUnitario ?? 0))}`,
         amount: cantidadAbs * Number(venta.precioUnitario ?? 0),
-        tone: "border-sky-500/30 bg-sky-500/10 text-sky-300",
-        badge: "Producto",
-        detail: accent.label,
+        tone: anulada
+          ? "border-red-500/30 bg-red-500/10 text-red-300"
+          : "border-sky-500/30 bg-sky-500/10 text-sky-300",
+        badge: anulada ? "Producto anulado" : "Producto",
+        detail: anulada ? `${accent.label} - fuera de caja` : accent.label,
+        canAnular: puedeAnular,
+        stockMovimientoId: venta.id,
       };
     }),
   ].sort((a, b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0));
@@ -650,6 +674,9 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
                         detail={item.detail}
                         amountLabel={formatARS(item.amount)}
                         toneClassName={item.tone}
+                        canAnular={item.canAnular}
+                        stockMovimientoId={item.stockMovimientoId}
+                        anularVentaAction={anularVentaProducto}
                       />
                     ))}
                   </div>
