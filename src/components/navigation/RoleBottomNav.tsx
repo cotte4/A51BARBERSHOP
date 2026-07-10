@@ -276,7 +276,7 @@ function getAsesorNavItems(): NavItem[] {
   return [
     {
       href: "/dashboard",
-      label: "Hoy",
+      label: "Números",
       icon: <ChartIcon />,
       isActive: (pathname) => pathname.startsWith("/dashboard"),
     },
@@ -293,13 +293,21 @@ function getAsesorNavItems(): NavItem[] {
       isActive: (pathname) => pathname.startsWith("/finanzas"),
     },
     {
-      href: "/configuracion",
-      label: "Ajustes",
-      icon: <SettingsIcon />,
+      href: "/negocio",
+      label: "Negocio",
+      icon: <BuildingIcon />,
       isActive: (pathname) =>
-        pathname.startsWith("/configuracion") ||
         pathname.startsWith("/negocio") ||
-        pathname.startsWith("/inventario"),
+        pathname.startsWith("/liquidaciones") ||
+        pathname.startsWith("/inventario") ||
+        pathname.startsWith("/repago") ||
+        pathname.startsWith("/ovnis"),
+    },
+    {
+      href: "/configuracion",
+      label: "Config",
+      icon: <SettingsIcon />,
+      isActive: (pathname) => pathname.startsWith("/configuracion"),
     },
   ];
 }
@@ -381,7 +389,7 @@ export default function RoleBottomNav({
     return (
       <nav className="fixed inset-x-0 bottom-4 z-30 px-3 pb-[env(safe-area-inset-bottom,0px)] sm:px-4">
         <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
-          <div className="grid grid-cols-4 gap-1">
+          <div className="grid grid-cols-5 gap-1">
             {asesorItems.map((item) => {
               const active = item.isActive(pathname);
               return (

@@ -38,6 +38,7 @@ const utilityLinks = [
   { href: "/negocio/estilo", label: "Cortes Marciano", detail: "Configurar cortes por forma de cara" },
   { href: "/negocio/soporte", label: "Soporte", detail: "Revisar bugs internos y triage" },
   { href: "/negocio/activos", label: "Hangar", detail: "Activos, compras y flujo de inversion inicial" },
+  { href: "/finanzas", label: "Costos fijos", detail: "Items mensuales y capital del negocio" },
   { href: "/mi-resultado", label: "Mi resultado", detail: "Ver tu numero personal" },
   { href: "/dashboard/pl", label: "Reporte mensual", detail: "Abrir el detalle largo" },
   { href: "/ovnis", label: "OVNIS", detail: "Dashboard de la economía de OVNIS" },
