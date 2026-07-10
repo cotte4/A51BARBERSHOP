@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 type NavItem = {
   href: string;
@@ -148,6 +148,15 @@ function SettingsIcon() {
   );
 }
 
+function SwapIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M7 16V5m0 0L3.5 8.5M7 5l3.5 3.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M17 8v11m0 0 3.5-3.5M17 19l-3.5-3.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function BuildingIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
@@ -229,22 +238,25 @@ const ADMIN_NAV_LEFT: NavItem[] = [
 const ADMIN_NAV_RIGHT: NavItem[] = [
   {
     href: "/dashboard",
-    label: "Gestión",
+    label: "Números",
     icon: <ChartIcon />,
     isActive: (pathname) =>
       pathname.startsWith("/dashboard") ||
       pathname.startsWith("/liquidaciones") ||
       pathname.startsWith("/inventario") ||
-      pathname.startsWith("/repago") ||
-      pathname.startsWith("/mi-resultado") ||
-      pathname.startsWith("/turnos") ||
-      pathname.startsWith("/clientes"),
+      pathname.startsWith("/mi-resultado"),
   },
   {
     href: "/negocio",
     label: "Negocio",
     icon: <BuildingIcon />,
     isActive: (pathname) => pathname.startsWith("/negocio"),
+  },
+  {
+    href: "/repago",
+    label: "Repago",
+    icon: <FinanzasIcon />,
+    isActive: (pathname) => pathname.startsWith("/repago"),
   },
   {
     href: "/configuracion",
@@ -286,6 +298,59 @@ function getAsesorNavItems(): NavItem[] {
   ];
 }
 
+// Nav admin con dos modos: "Laboral" (operación del día) y "Gestión" (números,
+// negocio, repago, config). El modo se deduce de la ruta activa; el botón de la
+// derecha lo alterna a mano hasta la próxima navegación.
+function AdminModalNav({ pathname }: { pathname: string }) {
+  const gestionActive = ADMIN_NAV_RIGHT.some((item) => item.isActive(pathname));
+  const [override, setOverride] = useState<"laboral" | "gestion" | null>(null);
+
+  useEffect(() => {
+    setOverride(null);
+  }, [pathname]);
+
+  const mode = override ?? (gestionActive ? "gestion" : "laboral");
+  const items = mode === "gestion" ? ADMIN_NAV_RIGHT : ADMIN_NAV_LEFT;
+  const targetLabel = mode === "gestion" ? "Laboral" : "Gestión";
+
+  return (
+    <nav className="fixed inset-x-0 bottom-4 z-30 px-3 pb-[env(safe-area-inset-bottom,0px)] sm:px-4">
+      <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
+        <div className="flex items-stretch gap-1">
+          {items.map((item) => {
+            const active = item.isActive(pathname);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex min-h-[58px] min-w-0 flex-1 flex-col items-center justify-center rounded-[20px] px-1 py-2 text-center text-[11px] font-semibold transition ${
+                  active
+                    ? "bg-[#8cff59] text-[#07130a] shadow-[0_12px_24px_rgba(140,255,89,0.18)]"
+                    : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <span>{item.icon}</span>
+                <span className="mt-1 truncate leading-none">{item.label}</span>
+              </Link>
+            );
+          })}
+
+          <div className="h-10 w-px shrink-0 self-center rounded-full bg-zinc-700/60" />
+
+          <button
+            type="button"
+            onClick={() => setOverride(mode === "gestion" ? "laboral" : "gestion")}
+            className="flex min-h-[58px] min-w-0 flex-1 flex-col items-center justify-center rounded-[20px] border border-[#8cff59]/25 bg-[#8cff59]/8 px-1 py-2 text-center text-[11px] font-semibold text-[#8cff59] transition hover:bg-[#8cff59]/15"
+          >
+            <span><SwapIcon /></span>
+            <span className="mt-1 truncate leading-none">{targetLabel}</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
 export default function RoleBottomNav({
   isAdmin,
   isAsesor = false,
@@ -325,54 +390,7 @@ export default function RoleBottomNav({
   }
 
   if (isAdmin) {
-    return (
-      <nav className="fixed inset-x-0 bottom-4 z-30 px-3 pb-[env(safe-area-inset-bottom,0px)] sm:px-4">
-        <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
-          <div className="flex items-stretch gap-1">
-            {/* Los 7 tabs comparten el mismo ancho (flex-1); el divisor solo separa
-                operación de gestión sin robar espacio */}
-            {ADMIN_NAV_LEFT.map((item) => {
-              const active = item.isActive(pathname);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center rounded-[20px] px-0.5 py-2 text-center text-[10.5px] font-semibold transition ${
-                    active
-                      ? "bg-[#8cff59] text-[#07130a] shadow-[0_12px_24px_rgba(140,255,89,0.18)]"
-                      : "text-zinc-400 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  <span>{item.icon}</span>
-                  <span className="mt-1 truncate leading-none">{item.label}</span>
-                </Link>
-              );
-            })}
-
-            {/* Divisor vertical entre operación y gestión */}
-            <div className="w-px shrink-0 self-center rounded-full bg-zinc-700/60 py-0 h-10" />
-
-            {ADMIN_NAV_RIGHT.map((item) => {
-              const active = item.isActive(pathname);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center rounded-[20px] px-0.5 py-2 text-center text-[10.5px] font-semibold transition ${
-                    active
-                      ? "bg-[#8cff59] text-[#07130a] shadow-[0_12px_24px_rgba(140,255,89,0.18)]"
-                      : "text-zinc-400 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  <span>{item.icon}</span>
-                  <span className="mt-1 truncate leading-none">{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </nav>
-    );
+    return <AdminModalNav pathname={pathname} />;
   }
 
   return (
