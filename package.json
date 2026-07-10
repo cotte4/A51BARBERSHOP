@@ -20,6 +20,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "test:integration": "vitest run src/tests/integration",
+    "test:flows": "vitest run src/tests/integration",
     "test:e2e": "playwright test --config src/tests/e2e/playwright.config.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:seed:activity": "tsx src/db/seed-activity.ts",

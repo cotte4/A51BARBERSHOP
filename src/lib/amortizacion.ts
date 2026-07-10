@@ -115,6 +115,58 @@ export function calcularSaldoReal(
   return saldoTeorico;
 }
 
+export interface PagoFlexibleInput {
+  /** Saldo real de la deuda hoy (USD) */
+  saldoPendiente: number;
+  /** Capital ya amortizado dentro de la cuota corriente (pagos parciales previos) */
+  capitalYaPagado: number;
+  /** Interés ya pagado dentro de la cuota corriente */
+  interesYaPagado: number;
+  /** Capital objetivo de la cuota corriente según cronograma */
+  capitalCuota: number;
+  /** Tasa anual (ej. 0.10) */
+  tasaAnual: number;
+  /** Monto del pago (USD) */
+  montoPagadoUsd: number;
+}
+
+export interface PagoFlexibleResult {
+  interesPagado: number;
+  capitalPagado: number;
+  nuevoSaldo: number;
+  cuotaCompletada: boolean;
+  pagadoCompleto: boolean;
+}
+
+/**
+ * Aplica un pago flexible ("pagá lo que puedas") sobre la cuota corriente.
+ *
+ * El interés de la cuota se calcula UNA vez sobre el saldo al inicio de la
+ * cuota (saldo actual + capital ya amortizado dentro de ella). Cada pago
+ * cubre primero el interés pendiente y el resto amortiza capital. La cuota
+ * queda completada cuando su capital objetivo está cubierto o la deuda
+ * entera quedó saldada.
+ */
+export function aplicarPagoFlexible(input: PagoFlexibleInput): PagoFlexibleResult {
+  const saldoInicioCuota = input.saldoPendiente + input.capitalYaPagado;
+  const interesCuotaTotal = saldoInicioCuota * (input.tasaAnual / 12);
+  const interesPendiente = Math.max(0, interesCuotaTotal - input.interesYaPagado);
+
+  const interesPagado = Math.min(input.montoPagadoUsd, interesPendiente);
+  const capitalPagado = Math.min(
+    input.montoPagadoUsd - interesPagado,
+    input.saldoPendiente
+  );
+
+  const nuevoSaldo = Math.max(0, input.saldoPendiente - capitalPagado);
+  const pagadoCompleto = nuevoSaldo <= 0.01;
+  const capitalObjetivo = Math.min(input.capitalCuota, saldoInicioCuota);
+  const cuotaCompletada =
+    pagadoCompleto || input.capitalYaPagado + capitalPagado + 0.01 >= capitalObjetivo;
+
+  return { interesPagado, capitalPagado, nuevoSaldo, cuotaCompletada, pagadoCompleto };
+}
+
 /**
  * Calcula el porcentaje de avance de pago (0–100).
  *

@@ -3,7 +3,7 @@ import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { repagoMemas, repagoMemasCuotas } from "@/db/schema";
-import { calcularSaldoReal, generarCronograma } from "@/lib/amortizacion";
+import { aplicarPagoFlexible, calcularSaldoReal, generarCronograma } from "@/lib/amortizacion";
 
 export type RegistrarCuotaRepagoInput = {
   montoPagadoUsd: number;
@@ -92,18 +92,15 @@ export async function registrarCuotaRepagoMemas(
     const interesYaPagado = Number(progreso?.interesAcum ?? 0);
     const capitalYaPagado = Number(progreso?.capitalAcum ?? 0);
 
-    // El interés de la cuota se calcula UNA vez, sobre el saldo al inicio
-    // de la cuota (el saldo actual más el capital ya amortizado dentro de ella).
-    const saldoInicioCuota = saldoPendienteActual + capitalYaPagado;
-    const interesCuotaTotal = saldoInicioCuota * (tasaAnual / 12);
-    const interesPendiente = Math.max(0, interesCuotaTotal - interesYaPagado);
-
-    // Pago flexible: primero interés pendiente, el resto amortiza capital.
-    const interesPagado = Math.min(input.montoPagadoUsd, interesPendiente);
-    const capitalPagado = Math.min(
-      input.montoPagadoUsd - interesPagado,
-      saldoPendienteActual
-    );
+    const { interesPagado, capitalPagado, nuevoSaldo, cuotaCompletada, pagadoCompleto } =
+      aplicarPagoFlexible({
+        saldoPendiente: saldoPendienteActual,
+        capitalYaPagado,
+        interesYaPagado,
+        capitalCuota: cuotaActual.capital,
+        tasaAnual,
+        montoPagadoUsd: input.montoPagadoUsd,
+      });
 
     const montoPagadoArs = input.montoPagadoUsd * input.tcDia;
     const hoy = new Date().toLocaleDateString("en-CA", {
@@ -120,16 +117,6 @@ export async function registrarCuotaRepagoMemas(
       tcDia: String(input.tcDia.toFixed(2)),
       notas: input.notas?.trim() || null,
     });
-
-    const nuevoSaldo = Math.max(0, saldoPendienteActual - capitalPagado);
-    const pagadoCompleto = nuevoSaldo <= 0.01;
-
-    // La cuota queda completada cuando su capital objetivo está cubierto
-    // (o la deuda entera quedó saldada). El capital objetivo se ajusta al
-    // saldo real por si hubo sobrepagos previos que adelantaron capital.
-    const capitalObjetivo = Math.min(cuotaActual.capital, saldoInicioCuota);
-    const cuotaCompletada =
-      pagadoCompleto || capitalYaPagado + capitalPagado + 0.01 >= capitalObjetivo;
 
     await tx
       .update(repagoMemas)
