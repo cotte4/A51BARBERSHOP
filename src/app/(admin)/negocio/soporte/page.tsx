@@ -2,15 +2,15 @@ import { desc, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/db";
 import { internalBugDeliveryEvents, internalBugReports, internalSupportIntakes } from "@/db/schema";
-import { getOwnerSessionContext } from "@/lib/admin-action";
+import { getAdminSessionContext } from "@/lib/admin-action";
 import { updateBugReportStatusAction } from "./actions";
 
 export default async function SoportePage() {
-  const owner = await getOwnerSessionContext();
-  if (!owner) {
+  const actor = await getAdminSessionContext();
+  if (!actor) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-6 text-sm text-zinc-400">
-        Solo el owner puede ver soporte interno.
+        Solo admin o asesor pueden ver soporte interno.
       </div>
     );
   }

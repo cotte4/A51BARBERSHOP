@@ -36,6 +36,15 @@ export default async function ConfiguracionMusicaPage({
   searchParams,
 }: ConfiguracionMusicaPageProps) {
   const params = await searchParams;
-  const state = await getMusicDashboardState({ sync: true });
+
+  // El sync con Spotify puede fallar (token vencido, API caida). Si pasa,
+  // caemos al estado local sin sync antes que romper la pagina entera.
+  let state;
+  try {
+    state = await getMusicDashboardState({ sync: true });
+  } catch {
+    state = await getMusicDashboardState();
+  }
+
   return <MusicConfigPanel state={state} callbackMessage={getCallbackMessage(params)} />;
 }

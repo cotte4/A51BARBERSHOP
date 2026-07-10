@@ -41,10 +41,8 @@ const utilityLinks = [
   { href: "/configuracion/musica", label: "Musica", detail: "Controlar el player" },
   { href: "/configuracion/medios-de-pago", label: "Cobros", detail: "Tarjeta, transferencia y comisiones" },
   { href: "/configuracion/gastos-fijos", label: "Gastos fijos", detail: "Alquiler, servicios y base del mes" },
-  { href: "/repago", label: "Repago Memas", detail: "Deuda, cronograma y registrar pagos" },
   { href: "/negocio/estilo", label: "Cortes Marciano", detail: "Configurar cortes por forma de cara" },
   { href: "/negocio/soporte", label: "Soporte", detail: "Revisar bugs internos y triage" },
-  { href: "/negocio/go-live", label: "Go-live", detail: "Checklist y firma de lanzamiento" },
   { href: "/negocio/activos", label: "Hangar", detail: "Activos, compras y flujo de inversion inicial" },
   { href: "/mi-resultado", label: "Mi resultado", detail: "Ver tu numero personal" },
   { href: "/dashboard/pl", label: "Reporte mensual", detail: "Abrir el detalle largo" },
@@ -368,7 +366,7 @@ export default async function NegocioPage() {
           </NegocioSmartCard>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-2">
+        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
           <NegocioSmartCard
             href="/inventario"
             eyebrow="Stock"
@@ -443,41 +441,50 @@ export default async function NegocioPage() {
           </NegocioSmartCard>
 
           <NegocioSmartCard
-            href="/repago"
-            eyebrow="Deuda"
-            kicker={saldoPendienteUsd > 0 ? "Ojo" : "Tranquilo"}
-            title="Gastos y cuotas"
-            detail="Lo que ya salio hoy y lo proximo grande por pagar."
-            footer="Ver repago y registrar pago"
+            href="/gastos-rapidos"
+            eyebrow="Gastos"
+            kicker={gastosHoy > 0 ? "Hoy" : "Sin gastos"}
+            title="Gastos del dia"
+            detail="Lo que ya salio hoy, cargado desde gastos rapidos."
+            footer="Ver gastos rapidos"
             className="min-h-[340px]"
             accentClassName="border-[#8cff59]/16 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.10),_transparent_34%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
           >
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="panel-soft rounded-[24px] p-4">
-                <p className="text-xs font-medium text-zinc-400">Gastos de hoy</p>
-                <p className="font-display mt-2 text-3xl font-bold text-white">
-                  {formatARS(gastosHoy)}
-                </p>
-                <p className="mt-1 text-sm text-zinc-400">Movimientos cargados con fecha de hoy.</p>
-              </div>
+            <div className="panel-soft rounded-[24px] p-4">
+              <p className="text-xs font-medium text-zinc-400">Gastos de hoy</p>
+              <p className="font-display mt-2 text-3xl font-bold text-white">
+                {formatARS(gastosHoy)}
+              </p>
+              <p className="mt-1 text-sm text-zinc-400">Movimientos cargados con fecha de hoy.</p>
+            </div>
+          </NegocioSmartCard>
 
-              <div
-                className={`rounded-[24px] border p-4 ${
-                  proximaCuotaUsd > 0
-                    ? "border-sky-400/20 bg-sky-400/8"
-                    : "border-emerald-400/20 bg-emerald-400/8"
-                }`}
-              >
-                <p className="text-xs font-medium text-zinc-400">Proxima cuota</p>
-                <p className="font-display mt-2 text-3xl font-bold text-white">
-                  {proximaCuotaUsd > 0 ? formatUSD(proximaCuotaUsd) : "Sin cuota"}
-                </p>
-                <p className="mt-1 text-sm text-zinc-300">
-                  {proximaCuotaUsd > 0
-                    ? `${proximaCuotaEstado} - ${proximaCuotaFecha}`
-                    : "No hay una cuota pendiente ahora."}
-                </p>
-              </div>
+          <NegocioSmartCard
+            href="/repago"
+            eyebrow="Deuda"
+            kicker={saldoPendienteUsd > 0 ? "Ojo" : "Tranquilo"}
+            title="Repago Memas"
+            detail="La proxima cuota y lo que queda por saldar."
+            footer="Ver repago y registrar pago"
+            className="min-h-[340px]"
+            accentClassName="border-[#8cff59]/16 bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.10),_transparent_34%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
+          >
+            <div
+              className={`rounded-[24px] border p-4 ${
+                proximaCuotaUsd > 0
+                  ? "border-sky-400/20 bg-sky-400/8"
+                  : "border-emerald-400/20 bg-emerald-400/8"
+              }`}
+            >
+              <p className="text-xs font-medium text-zinc-400">Proxima cuota</p>
+              <p className="font-display mt-2 text-3xl font-bold text-white">
+                {proximaCuotaUsd > 0 ? formatUSD(proximaCuotaUsd) : "Sin cuota"}
+              </p>
+              <p className="mt-1 text-sm text-zinc-300">
+                {proximaCuotaUsd > 0
+                  ? `${proximaCuotaEstado} - ${proximaCuotaFecha}`
+                  : "No hay una cuota pendiente ahora."}
+              </p>
             </div>
 
             <div className="mt-4 rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.18))] p-4">
