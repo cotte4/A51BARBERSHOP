@@ -87,13 +87,6 @@ export default async function InventarioPage() {
         <section className="rounded-[32px] border border-zinc-800/80 bg-[radial-gradient(circle_at_top_left,_rgba(140,255,89,0.16),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.1),_transparent_28%),linear-gradient(180deg,_rgba(24,24,27,0.96),_rgba(9,9,11,0.98))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-7">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-4">
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center text-sm font-medium text-zinc-500 transition hover:text-zinc-200"
-              >
-                &larr; Dashboard
-              </Link>
-
               <div className="space-y-3">
                 <p className="eyebrow text-[11px] font-semibold">Centro de stock</p>
                 <h1 className="font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">

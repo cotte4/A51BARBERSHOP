@@ -97,21 +97,8 @@ export default async function ProductoDetallePage({ params }: Props) {
                   ) : null}
                 </div>
                 <p className="max-w-2xl text-sm leading-6 text-zinc-400 sm:text-base">
-                  Todo lo que necesita el equipo para leer el producto, tocar stock y registrar
-                  movimientos sin perder contexto.
+                  {producto.descripcion?.trim() || "Ficha del producto: stock, precios y movimientos."}
                 </p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-semibold text-zinc-300">
-                  {stockActual} en stock
-                </span>
-                <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-semibold text-zinc-300">
-                  Min {stockMinimo}
-                </span>
-                <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-semibold text-zinc-300">
-                  Margen {margenUnitario !== null ? formatARS(margenUnitario) : "N/A"}
-                </span>
               </div>
             </div>
 
@@ -135,7 +122,7 @@ export default async function ProductoDetallePage({ params }: Props) {
             <StatCard
               label="Stock actual"
               value={stockActual}
-              helper={stockBajo ? "Reponer pronto" : "Saludable por ahora"}
+              helper={stockBajo ? `Reponer pronto (minimo ${stockMinimo})` : `Minimo ${stockMinimo}`}
               tone={
                 stockBajo
                   ? "border-amber-500/20 bg-amber-500/10 text-white"
@@ -153,46 +140,15 @@ export default async function ProductoDetallePage({ params }: Props) {
               helper={`Valor a costo del stock: ${formatARS(valorStockCosto)}`}
             />
             <StatCard
-              label="Tipo"
-              value={producto.esConsumicion ? "Consumicion" : "Producto"}
-              helper="Clasificacion operativa del item."
+              label="Margen unitario"
+              value={margenUnitario !== null ? formatARS(margenUnitario) : "N/A"}
+              helper="Precio de venta menos costo."
             />
           </div>
 
         </section>
 
-        <section className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-          <div className="space-y-5">
-            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="eyebrow text-xs font-semibold">Informacion</p>
-                  <h2 className="font-display mt-2 text-2xl font-semibold text-white">
-                    Datos clave del producto
-                  </h2>
-                  <p className="mt-1 text-sm leading-6 text-zinc-400">
-                    La ficha se usa como referencia rapida para compras, caja y reposicion.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <InfoCard label="Descripcion" value={producto.descripcion ?? "Sin descripcion"} />
-                <InfoCard
-                  label="Stock minimo"
-                  value={String(producto.stockMinimo ?? 5)}
-                />
-                <InfoCard
-                  label="Precio de venta"
-                  value={producto.precioVenta ? formatARS(producto.precioVenta) : "Sin precio"}
-                />
-                <InfoCard
-                  label="Costo de compra"
-                  value={producto.costoCompra ? formatARS(producto.costoCompra) : "Sin costo"}
-                />
-              </div>
-            </section>
-
+        <section className="mt-5 space-y-5">
             <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -293,52 +249,6 @@ export default async function ProductoDetallePage({ params }: Props) {
                 )}
               </div>
             </section>
-          </div>
-
-          <aside className="space-y-5">
-            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
-              <p className="eyebrow text-xs font-semibold">Lectura rapida</p>
-              <h2 className="font-display mt-2 text-xl font-semibold text-white">
-                Estado del item
-              </h2>
-              <div className="mt-4 grid gap-3">
-                <MiniStat label="Actual" value={String(stockActual)} />
-                <MiniStat label="Minimo" value={String(stockMinimo)} />
-                <MiniStat
-                  label="Valor a costo"
-                  value={formatARS(valorStockCosto)}
-                />
-                <MiniStat
-                  label="Margen unitario"
-                  value={margenUnitario !== null ? formatARS(margenUnitario) : "N/A"}
-                />
-              </div>
-            </section>
-
-            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
-              <p className="eyebrow text-xs font-semibold">Atajos</p>
-              <h2 className="font-display mt-2 text-xl font-semibold text-white">
-                Acciones seguras
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-zinc-400">
-                Volve al inventario general, ajusta la ficha o revisa la rotacion historica.
-              </p>
-              <div className="mt-4 flex flex-col gap-3">
-                <Link
-                  href={`/inventario/${id}/editar`}
-                  className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-[#8cff59] px-4 text-sm font-semibold text-[#07130a] transition hover:bg-[#b6ff84]"
-                >
-                  Editar ficha
-                </Link>
-                <Link
-                  href="/inventario/rotacion"
-                  className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-sm font-medium text-zinc-200 transition hover:bg-zinc-800"
-                >
-                  Ver rotacion
-                </Link>
-              </div>
-            </section>
-          </aside>
         </section>
       </main>
     </div>
@@ -361,24 +271,6 @@ function StatCard({
       <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{label}</p>
       <p className="mt-2 text-2xl font-bold text-white">{value}</p>
       <p className="mt-1 text-xs leading-5 text-zinc-400">{helper}</p>
-    </div>
-  );
-}
-
-function InfoCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/70 px-4 py-4">
-      <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{label}</p>
-      <p className="mt-2 text-sm leading-6 text-zinc-200">{value}</p>
-    </div>
-  );
-}
-
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/70 px-4 py-4">
-      <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{label}</p>
-      <p className="mt-2 text-lg font-semibold text-white">{value}</p>
     </div>
   );
 }

@@ -147,7 +147,6 @@ export default async function HangarPage({
   const totalComprometido = activeAssetRows.reduce((sum, asset) => sum + asset.financials.pending, 0);
   const totalTarget = activeAssetRows.reduce((sum, asset) => sum + asset.financials.target, 0);
   const totalActivos = activeAssetRows.length;
-  const comprasRecientes = activeAssetRows.slice(0, 4);
   const costosFijosMes = costosMes.reduce((sum, item) => sum + Number(item.monto ?? 0), 0);
 
   if (sim === "1") {
@@ -220,64 +219,20 @@ export default async function HangarPage({
                 </div>
               </section>
 
-              <section className="panel-soft rounded-[28px] p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="eyebrow text-xs font-semibold">Pulso actual</p>
-                    <h2 className="mt-2 text-xl font-semibold text-white">Compras recientes</h2>
-                  </div>
-                  <div className="flex gap-2">
-                    <Link
-                      href="/negocio/activos?sim=1"
-                      className="ghost-button inline-flex min-h-[42px] items-center rounded-[16px] px-4 text-sm font-semibold"
-                    >
-                      Simular
-                    </Link>
-                    <Link
-                      href="/negocio/activos/nuevo"
-                      className="neon-button inline-flex min-h-[42px] items-center rounded-[16px] px-4 text-sm font-semibold"
-                    >
-                      + Nuevo activo
-                    </Link>
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  {comprasRecientes.length > 0 ? (
-                    comprasRecientes.map((asset) => (
-                      <Link
-                        key={asset.id}
-                        href={`/negocio/activos/${asset.id}`}
-                        className="flex items-center gap-3 rounded-[22px] border border-zinc-800 bg-zinc-950/70 px-4 py-3 hover:border-[#8cff59]/25 hover:bg-zinc-900"
-                      >
-                        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
-                          {asset.fotoUrl ? (
-                            <Image src={asset.fotoUrl} alt={asset.nombre} fill sizes="48px" className="object-cover" />
-                          ) : (
-                            <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                              HGR
-                            </div>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-white">{asset.nombre}</p>
-                          <p className="mt-1 text-xs text-zinc-500">
-                            {asset.categoria} · {getEstadoCompraLabel(asset.financials.estadoCompra)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-white">{formatARS(asset.financials.target)}</p>
-                          <p className="text-xs text-zinc-500">{asset.financials.progress}% cubierto</p>
-                        </div>
-                      </Link>
-                    ))
-                  ) : (
-                    <div className="rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/60 p-5 text-sm text-zinc-400">
-                      Todavia no hay activos cargados. El primer item abre el Hangar.
-                    </div>
-                  )}
-                </div>
-              </section>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Link
+                  href="/negocio/activos?sim=1"
+                  className="ghost-button inline-flex min-h-[42px] items-center rounded-[16px] px-4 text-sm font-semibold"
+                >
+                  Simular
+                </Link>
+                <Link
+                  href="/negocio/activos/nuevo"
+                  className="neon-button inline-flex min-h-[42px] items-center rounded-[16px] px-4 text-sm font-semibold"
+                >
+                  + Nuevo activo
+                </Link>
+              </div>
             </div>
           </div>
         </section>

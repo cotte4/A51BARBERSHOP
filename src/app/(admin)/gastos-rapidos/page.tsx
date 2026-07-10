@@ -101,7 +101,6 @@ export default async function GastosRapidosPage({
     count: countsByCategory[categoria.key] ?? 0,
   }));
 
-  const topCategory = [...categoryMetrics].sort((a, b) => b.total - a.total).find((c) => c.total > 0) ?? null;
   const topCategories = [...categoryMetrics]
     .sort((a, b) => b.total - a.total)
     .filter((item) => item.total > 0)
@@ -147,11 +146,6 @@ export default async function GastosRapidosPage({
                       : "Chequea ticket promedio del mes"
                   }
                 />
-                <StatCard
-                  label="Categoria lider"
-                  value={topCategory?.label ?? "Sin datos"}
-                  helper={topCategory ? formatARS(topCategory.total) : "Todavia no hay gastos"}
-                />
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -185,17 +179,6 @@ export default async function GastosRapidosPage({
                 <p className="mt-2 text-sm leading-6 text-zinc-400">
                   Captura el movimiento y vuelve enseguida a la lectura mensual.
                 </p>
-                <div className="mt-4 rounded-[22px] border border-zinc-800 bg-zinc-950/60 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Filtro actual</p>
-                  <p className="mt-2 text-sm font-semibold text-white">
-                    {categoriaActiva?.label ?? "Todos los gastos"}
-                  </p>
-                  <p className="mt-1 text-xs text-zinc-500">
-                    {categoriaSeleccionada
-                      ? "El alta y los borrados vuelven a este filtro."
-                      : "Todo el historial mensual se mantiene visible."}
-                  </p>
-                </div>
               </section>
 
               <GastoRapidoFAB
@@ -219,11 +202,6 @@ export default async function GastosRapidosPage({
                 <h2 className="mt-2 text-2xl font-semibold text-white">
                   {categoriaSeleccionada ? categoriaActiva?.label ?? "Filtro activo" : "Todos los movimientos"}
                 </h2>
-                <p className="mt-1 text-sm text-zinc-400">
-                  {categoriaSeleccionada
-                    ? `Mostrando ${gastosFiltrados.length} movimiento(s) de ${categoriaActiva?.label ?? "esta categoria"}.`
-                    : `${gastosFiltrados.length} movimiento(s) registrados en ${monthLabel}.`}
-                </p>
               </div>
 
               {categoriaSeleccionada ? (

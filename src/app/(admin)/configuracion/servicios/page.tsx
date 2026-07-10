@@ -42,11 +42,6 @@ export default async function ServiciosPage() {
   );
 
   const activos = serviciosConDetalle.filter((servicio) => servicio.activo ?? true).length;
-  const inactivos = serviciosConDetalle.length - activos;
-  const totalAdicionales = serviciosConDetalle.reduce(
-    (total, servicio) => total + servicio.adicionales.length,
-    0
-  );
   const precioPromedio =
     serviciosConDetalle.length > 0
       ? serviciosConDetalle.reduce(
@@ -74,41 +69,19 @@ export default async function ServiciosPage() {
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <Metric label="Servicios" value={`${serviciosConDetalle.length}`} />
+            <div className="grid gap-3 sm:grid-cols-2">
               <Metric label="Activos" value={`${activos}`} tone="accent" />
-              <Metric label="Inactivos" value={`${inactivos}`} />
               <Metric label="Precio promedio" value={formatARS(precioPromedio.toFixed(2))} />
             </div>
           </div>
 
-          <div className="rounded-[28px] bg-zinc-950/80 p-5 ring-1 ring-zinc-800">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-              Atajo operativo
-            </p>
-            <div className="mt-4 space-y-3">
-              <div className="rounded-[22px] bg-white/5 p-4 ring-1 ring-white/10">
-                <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Estado</p>
-                <p className="mt-2 text-lg font-semibold text-white">
-                  {activos > 0 ? "Oferta disponible para caja" : "Todavia no hay servicios activos"}
-                </p>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Cada cambio de precio deja rastro en historial y alimenta liquidaciones.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href="/configuracion/servicios/nuevo"
-                  className="neon-button inline-flex min-h-[48px] items-center justify-center rounded-2xl px-4 text-sm font-semibold"
-                >
-                  + Nuevo servicio
-                </Link>
-                <span className="inline-flex min-h-[48px] items-center rounded-2xl bg-zinc-900 px-4 text-sm text-zinc-300 ring-1 ring-zinc-800">
-                  {totalAdicionales} adicionales cargados
-                </span>
-              </div>
-            </div>
+          <div className="flex items-start justify-end">
+            <Link
+              href="/configuracion/servicios/nuevo"
+              className="neon-button inline-flex min-h-[48px] items-center justify-center rounded-2xl px-4 text-sm font-semibold"
+            >
+              + Nuevo servicio
+            </Link>
           </div>
         </div>
       </section>
@@ -169,9 +142,6 @@ export default async function ServiciosPage() {
                               {isActive ? "Activo" : "Inactivo"}
                             </span>
                           </div>
-                          <p className="mt-1 text-sm text-zinc-400">
-                            Tocá la card para editar precio, duración, adicionales e historial.
-                          </p>
                         </div>
                       </div>
                     </div>
@@ -211,14 +181,6 @@ export default async function ServiciosPage() {
                         Editar servicio
                       </Link>
                     </div>
-                  </div>
-
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <InfoBlock label="Lectura operativa" value="Base de caja y liquidaciones" />
-                    <InfoBlock
-                      label="Historial"
-                      value={servicio.ultimoPrecio ? "Con trazabilidad" : "Precio inicial activo"}
-                    />
                   </div>
 
                   {servicio.ultimoPrecio?.motivo ? (
@@ -281,11 +243,3 @@ function Metric({
   );
 }
 
-function InfoBlock({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[20px] bg-zinc-950/70 px-4 py-3 ring-1 ring-zinc-800">
-      <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">{label}</p>
-      <p className="mt-2 text-sm font-medium text-white">{value}</p>
-    </div>
-  );
-}

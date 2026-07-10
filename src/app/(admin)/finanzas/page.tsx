@@ -255,38 +255,6 @@ export default async function FinanzasPage({
           )}
         </section>
 
-        <details className="group overflow-hidden rounded-[28px] border border-zinc-800 bg-zinc-950">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4">
-            <div>
-              <p className="eyebrow text-xs font-semibold">Configuracion</p>
-              <p className="mt-1 text-sm font-semibold text-white">Gestionar items de costo</p>
-            </div>
-            <svg viewBox="0 0 24 24" className="h-4 w-4 text-zinc-500 transition group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </summary>
-          <div className="divide-y divide-zinc-800/60 border-t border-zinc-800/60">
-            {costos.map((costo) => (
-              <div key={costo.id} className="flex items-center gap-3 px-5 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-white">{costo.nombre}</p>
-                  {costo.notas ? <p className="text-xs text-zinc-500">{costo.notas}</p> : null}
-                </div>
-                <span className="rounded-full border border-zinc-800 px-2 py-0.5 text-[10px] font-semibold text-zinc-500">
-                  {categoriaLabel(costo.categoria)}
-                </span>
-                <Link
-                  href={`/finanzas/${costo.id}/editar`}
-                  className="inline-flex min-h-[36px] items-center rounded-xl bg-zinc-800 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-700"
-                >
-                  Editar
-                </Link>
-                <DeleteCostoButton id={costo.id} />
-              </div>
-            ))}
-          </div>
-        </details>
-
         <section className="overflow-hidden rounded-[28px] border border-zinc-800 bg-zinc-950">
           <div className="bg-[radial-gradient(circle_at_top_left,_rgba(140,255,89,0.07),_transparent_40%)] p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">

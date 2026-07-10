@@ -55,10 +55,6 @@ export default async function LiquidacionesPage() {
   return (
     <div className="min-h-screen app-shell px-4 py-6 pb-24">
       <div className="mx-auto flex max-w-5xl flex-col gap-5">
-        <Link href="/dashboard" className="eyebrow text-xs text-zinc-500 hover:text-zinc-300">
-          ← Dashboard
-        </Link>
-
         <section className="panel-card overflow-hidden rounded-[32px]">
           <div className="bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.14),_transparent_36%),radial-gradient(circle_at_bottom_left,_rgba(140,255,89,0.06),_transparent_30%)] p-6 sm:p-7">
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -113,9 +109,6 @@ export default async function LiquidacionesPage() {
                 Lo que pide accion ahora
               </h2>
             </div>
-            <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300">
-              {pendientes.length} abiertas
-            </span>
           </div>
 
           {pendientes.length === 0 ? (
@@ -138,9 +131,6 @@ export default async function LiquidacionesPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="truncate font-semibold text-white">
                             {barbero?.nombre ?? "Sin barbero"}
-                          </span>
-                          <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300">
-                            Pendiente
                           </span>
                         </div>
                         <p className="mt-1 text-xs text-zinc-400">
@@ -181,9 +171,6 @@ export default async function LiquidacionesPage() {
                 Liquidaciones cerradas
               </h2>
             </div>
-            <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-              {historial.length} pagadas
-            </span>
           </div>
 
           {historial.length === 0 ? (
@@ -205,9 +192,6 @@ export default async function LiquidacionesPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="truncate font-semibold text-white">
                             {barbero?.nombre ?? "Sin barbero"}
-                          </span>
-                          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300">
-                            Pagada
                           </span>
                         </div>
                         <p className="mt-1 text-xs text-zinc-400">

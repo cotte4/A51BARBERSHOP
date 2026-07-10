@@ -112,9 +112,6 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
                 <p className={`mt-3 font-display text-5xl font-semibold tracking-tight ${periodoNegativo ? "text-amber-300" : "text-[#8cff59]"}`}>
                   {formatARS(montoAPagar)}
                 </p>
-                <p className="mt-3 text-sm text-zinc-400">
-                  {liq.totalCortes ?? 0} cortes liquidados en {periodoLabel}.
-                </p>
                 {periodoNegativo ? (
                   <p className="mt-4 rounded-[20px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-xs leading-5 text-amber-200">
                     El periodo dio negativo. Se registra igual, pero conviene revisar el ajuste

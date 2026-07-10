@@ -108,17 +108,6 @@ export default async function RepagoPage() {
                 Sin deuda configurada
               </span>
             </div>
-
-            <div className="mt-6 rounded-[28px] border border-zinc-800 bg-zinc-950/70 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
-                Estado
-              </p>
-              <h2 className="mt-2 text-xl font-semibold text-white">No hay repago activo</h2>
-              <p className="mt-2 text-sm leading-6 text-zinc-400">
-                Cuando se cargue la deuda, vas a ver el avance, la próxima cuota y el cronograma
-                completo en esta misma pantalla.
-              </p>
-            </div>
           </section>
         </main>
       </div>
@@ -199,14 +188,6 @@ export default async function RepagoPage() {
                     pantalla para que el control financiero sea rápido de leer.
                   </p>
                 </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <Pill label="Cuotas pagadas" value={`${cuotasPagadas}/${cantidadCuotas}`} />
-                  <Pill label="Capital pagado" value={formatUSD(capitalPagadoAcumulado)} />
-                  <Pill label="Inicio" value={formatMonthYear(fechaInicio)} />
-                  <Pill label="Cancelación" value={fechaCancelacion} accent />
-                </div>
-
               </div>
 
               <aside className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
@@ -572,28 +553,6 @@ export default async function RepagoPage() {
           </section>
         </div>
       </main>
-    </div>
-  );
-}
-
-function Pill({
-  label,
-  value,
-  accent = false,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-        accent
-          ? "border-[#8cff59]/25 bg-[#8cff59]/10 text-[#b9ff96]"
-          : "border-zinc-800 bg-zinc-950 text-zinc-300"
-      }`}
-    >
-      <span className="text-zinc-500">{label}:</span> {value}
     </div>
   );
 }

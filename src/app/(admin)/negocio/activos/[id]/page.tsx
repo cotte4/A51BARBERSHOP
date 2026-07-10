@@ -120,18 +120,6 @@ export default async function HangarAssetDetailPage({
                     ? [asset.marca, asset.modelo].filter(Boolean).join(" · ")
                     : "Activo cargado en Hangar para seguir su compra y su impacto en inversion inicial."}
                 </p>
-
-                <div className="mt-4 flex flex-wrap gap-3 text-sm text-zinc-300">
-                  <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1">
-                    Objetivo {formatARS(financials.target)}
-                  </span>
-                  <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1">
-                    Pagado {formatARS(financials.paid)}
-                  </span>
-                  <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1">
-                    Pendiente {formatARS(financials.pending)}
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -217,9 +205,6 @@ export default async function HangarAssetDetailPage({
                   <p className="eyebrow text-xs font-semibold">Linea de pagos</p>
                   <h2 className="mt-2 text-xl font-semibold text-white">Movimiento del activo</h2>
                 </div>
-                <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-semibold text-zinc-400">
-                  {payments.length} registro{payments.length === 1 ? "" : "s"}
-                </span>
               </div>
 
               {payments.length === 0 ? (

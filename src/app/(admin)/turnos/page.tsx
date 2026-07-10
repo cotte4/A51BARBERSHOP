@@ -128,17 +128,6 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300">
-              {pendientes} pendientes
-            </span>
-            <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-              {confirmados} confirmados
-            </span>
-            <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-semibold text-zinc-300">
-              {slotsLibres.length} libres
-            </span>
-          </div>
         </div>
       </section>
 

@@ -80,8 +80,6 @@ export default async function RotacionPage() {
       (Number(producto.precioVenta ?? 0) - Number(producto.costoCompra ?? 0)) * item.unidades
     );
   }, 0);
-  const topProducto = rotacion[0];
-  const criticos = rotacion.filter((item) => (item.producto?.stockActual ?? 0) <= (item.producto?.stockMinimo ?? 5)).slice(0, 4);
 
   return (
     <div className="min-h-screen bg-zinc-950">
@@ -120,12 +118,7 @@ export default async function RotacionPage() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[520px]">
-              <StatCard
-                label="Top producto"
-                value={topProducto?.producto?.nombre ?? "Sin datos"}
-                helper={topProducto ? `${topProducto.unidades} unidades vendidas` : "Todavia sin ventas."}
-              />
+            <div className="grid gap-3 lg:min-w-[280px]">
               <StatCard
                 label="Margen estimado"
                 value={formatARS(totalMargen)}
@@ -135,7 +128,7 @@ export default async function RotacionPage() {
           </div>
         </section>
 
-        <section className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+        <section className="mt-5">
           <div className="space-y-4">
             {rotacion.length === 0 ? (
               <div className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-8 text-center">
@@ -218,57 +211,6 @@ export default async function RotacionPage() {
               })
             )}
           </div>
-
-          <aside className="space-y-4">
-            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-5">
-              <p className="eyebrow text-xs font-semibold">Prioridad</p>
-              <h2 className="font-display mt-2 text-xl font-semibold text-white">
-                Lo que conviene reponer
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-zinc-400">
-                Estas son las referencias con mayor riesgo de quedarse cortas segun su stock actual.
-              </p>
-
-              <div className="mt-4 space-y-3">
-                {criticos.length === 0 ? (
-                  <div className="rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/30 p-6 text-center text-sm text-zinc-400">
-                    No hay productos en zona critica.
-                  </div>
-                ) : (
-                  criticos.map((item) => {
-                    const p = item.producto!;
-                    const stockActual = Number(p.stockActual ?? 0);
-                    return (
-                      <div
-                        key={p.id}
-                        className="rounded-[24px] border border-zinc-800 bg-zinc-950/60 p-4"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-medium text-white">{p.nombre}</p>
-                            <p className="mt-1 text-xs text-zinc-500">
-                              Stock {stockActual} | Min {p.stockMinimo ?? 5}
-                            </p>
-                          </div>
-                          <span className="rounded-full border border-amber-500/25 bg-amber-500/12 px-2.5 py-1 text-xs font-semibold text-amber-200">
-                            {stockActual <= 0 ? "Sin stock" : "Bajo"}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </section>
-
-            <section className="rounded-[28px] border border-[#8cff59]/20 bg-[#8cff59]/10 p-5">
-              <p className="eyebrow text-xs font-semibold text-[#8cff59]">Lectura</p>
-              <p className="mt-2 text-sm leading-6 text-zinc-200">
-                La rotacion te ayuda a comprar mejor: primero lo que mas sale, despues lo que da
-                margen y por ultimo lo que no puede faltar.
-              </p>
-            </section>
-          </aside>
         </section>
       </main>
     </div>
