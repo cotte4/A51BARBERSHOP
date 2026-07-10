@@ -71,7 +71,8 @@ export default async function CierrePage() {
       productoId: venta.productoId,
       cantidad: venta.cantidad,
       precioUnitario: venta.precioUnitario,
-      medioPagoId: venta.notas,
+      // fallback: movimientos previos a la migración 0035 guardaban el medio de pago en notas
+      medioPagoId: venta.medioPagoId ?? venta.notas,
     })),
     productos: productosList,
     mediosPago: mediosPagoList,
@@ -109,8 +110,10 @@ export default async function CierrePage() {
   }
 
   for (const venta of ventasProductosDelDia) {
-    if (!venta.notas) continue;
-    const medioPago = mediosPagoMap.get(venta.notas);
+    // fallback: movimientos previos a la migración 0035 guardaban el medio de pago en notas
+    const ventaMedioPagoId = venta.medioPagoId ?? venta.notas;
+    if (!ventaMedioPagoId) continue;
+    const medioPago = mediosPagoMap.get(ventaMedioPagoId);
     if (!medioPago) continue;
     const nombre = medioPago.nombre ?? "Otro";
     const bruto = Math.abs(Number(venta.cantidad ?? 0)) * Number(venta.precioUnitario ?? 0);

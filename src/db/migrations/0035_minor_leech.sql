@@ -1,0 +1,4 @@
+ALTER TABLE "stock_movimientos" ADD COLUMN "medio_pago_id" uuid;--> statement-breakpoint
+ALTER TABLE "stock_movimientos" ADD CONSTRAINT "stock_movimientos_medio_pago_id_medios_pago_id_fk" FOREIGN KEY ("medio_pago_id") REFERENCES "public"."medios_pago"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "stock_movimientos_medio_pago_id_idx" ON "stock_movimientos" USING btree ("medio_pago_id");--> statement-breakpoint
+UPDATE "stock_movimientos" SET "medio_pago_id" = "notas"::uuid, "notas" = NULL WHERE "tipo" = 'venta' AND "notas" ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' AND "medio_pago_id" IS NULL;

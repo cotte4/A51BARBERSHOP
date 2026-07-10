@@ -12,8 +12,8 @@ import {
   stockMovimientos,
   productos,
 } from "@/db/schema";
-import { eq, inArray, and, gte, lte } from "drizzle-orm";
-import { buildCierreResumen } from "@/lib/caja-finance";
+import { eq, inArray, and, gte, lte, sql } from "drizzle-orm";
+import { buildCierreResumen, clasificarTotalesPorMedio } from "@/lib/caja-finance";
 import { calculateAtencionCommission } from "@/lib/finance/commission";
 import { assertCajaAbiertaOrThrow } from "@/lib/finance/closure-guard";
 import { generarLiquidacionesDiariasParaFecha } from "@/lib/liquidaciones-service";
@@ -546,120 +546,152 @@ export async function cerrarCaja(
     return { error: `La caja del ${fechaFormateada} ya fue cerrada.` };
   }
 
+  // 6. Obtener barbero del admin que cierra (para cerradoPor). No depende de
+  // datos leídos dentro de la transacción, así que se resuelve antes.
+  const barberoAdminId = await getCajaClosingBarberoIdForActor(actor);
+  if (!barberoAdminId) {
+    return { error: "No se encontró un barbero asociado a tu cuenta. Contacta al administrador." };
+  }
+
   try {
-    // 3. Traer todas las atenciones no anuladas del dia
-    const atencionesDelDia = await db
-      .select()
-      .from(atenciones)
-      .where(and(eq(atenciones.fecha, fechaHoy), eq(atenciones.anulado, false)));
+    await db.transaction(async (tx) => {
+      // Advisory lock: serializa cierres concurrentes (y contra registros de
+      // atenciones que puedan estar completándose al mismo tiempo).
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cierre-caja'))`);
 
-    const barberosList = await db.select().from(barberos);
-    const mediosPagoList = await db.select().from(mediosPago);
-    const cantidadAtenciones = atencionesDelDia.length;
+      // Re-chequeo dentro de la transacción: otro cierre pudo haberse colado
+      // entre el check inicial (fuera de tx) y la adquisición del lock.
+      const [cierreExistente] = await tx
+        .select({ id: cierresCaja.id })
+        .from(cierresCaja)
+        .where(eq(cierresCaja.fecha, fechaHoy))
+        .limit(1);
+      if (cierreExistente) {
+        throw new Error("La caja de hoy ya fue cerrada.");
+      }
 
-    // 4. Calcular totales generales y caja neta real del dia
-    const fechaHoyDate = new Date(fechaHoy + "T00:00:00-03:00");
-    const finDia = new Date(fechaHoy + "T23:59:59-03:00");
-    const ventasProductos = await db.select().from(stockMovimientos)
-      .where(and(
-        eq(stockMovimientos.tipo, "venta"),
-        gte(stockMovimientos.fecha, fechaHoyDate),
-        lte(stockMovimientos.fecha, finDia)
-      ));
-    const productosList = ventasProductos.length > 0 ? await db.select().from(productos) : [];
-
-    const cierreResumen = buildCierreResumen({
-      fecha: fechaHoy,
-      atenciones: atencionesDelDia,
-      barberos: barberosList,
-      ventasProductos: ventasProductos.map((venta) => ({
-        productoId: venta.productoId,
-        cantidad: venta.cantidad,
-        precioUnitario: venta.precioUnitario,
-        medioPagoId: venta.notas,
-      })),
-      productos: productosList,
-      mediosPago: mediosPagoList,
-    });
-
-    const totalBruto = cierreResumen.totales.totalBrutoDia;
-    const totalComisionesMedios = cierreResumen.totales.totalComisionesMediosDia;
-    const totalNeto = cierreResumen.totales.cajaNetaDia;
-
-    // 5. Totales por medio de pago: servicios + productos
-    const mediosPagoMap = new Map(mediosPagoList.map(m => [m.id, m]));
-
-    // Acumular por nombre de medio de pago
-    const totalesPorMedio: Record<string, number> = {};
-    for (const a of atencionesDelDia) {
-      if (!a.medioPagoId) continue;
-      const mp = mediosPagoMap.get(a.medioPagoId);
-      const nombre = (mp?.nombre ?? "otro").toLowerCase();
-      totalesPorMedio[nombre] = (totalesPorMedio[nombre] ?? 0) + Number(a.precioCobrado ?? 0);
-    }
-    for (const venta of ventasProductos) {
-      if (!venta.notas) continue;
-      const mp = mediosPagoMap.get(venta.notas);
-      const nombre = (mp?.nombre ?? "otro").toLowerCase();
-      const totalVenta = Math.abs(Number(venta.cantidad ?? 0)) * Number(venta.precioUnitario ?? 0);
-      totalesPorMedio[nombre] = (totalesPorMedio[nombre] ?? 0) + totalVenta;
-    }
-
-    // Mapear a campos del schema
-    const totalEfectivo = totalesPorMedio["efectivo"] ?? 0;
-    const totalTransferencia = totalesPorMedio["transferencia"] ?? 0;
-    // MP: cualquier medio que contenga "mercado" o "mp" o "link"
-    const totalMp = Object.entries(totalesPorMedio)
-      .filter(([k]) => k.includes("mercado") || k.includes(" mp") || k === "mp" || k.includes("link"))
-      .reduce((sum, [, v]) => sum + v, 0);
-    // Posnet: cualquier medio que contenga "posnet"
-    const totalPosnet = Object.entries(totalesPorMedio)
-      .filter(([k]) => k.includes("posnet"))
-      .reduce((sum, [, v]) => sum + v, 0);
-
-    // 6. Obtener barbero del admin que cierra (para cerradoPor)
-    const barberoAdminId = await getCajaClosingBarberoIdForActor(actor);
-    if (!barberoAdminId) {
-      return { error: "No se encontró un barbero asociado a tu cuenta. Contacta al administrador." };
-    }
-
-    // 7. Insertar cierre
-    const [nuevoCierre] = await db
-      .insert(cierresCaja)
-      .values({
-        fecha: fechaHoy,
-        totalEfectivo: String(totalEfectivo.toFixed(2)),
-        totalMp: String(totalMp.toFixed(2)),
-        totalTransferencia: String(totalTransferencia.toFixed(2)),
-        totalPosnet: String(totalPosnet.toFixed(2)),
-        totalBruto: String(totalBruto.toFixed(2)),
-        totalComisionesMedios: String(totalComisionesMedios.toFixed(2)),
-        totalNeto: String(totalNeto.toFixed(2)),
-        totalCortesBruto: String(cierreResumen.totales.totalServiciosBruto.toFixed(2)),
-        totalProductos: String(cierreResumen.totales.totalProductosBruto.toFixed(2)),
-        resumenBarberos: cierreResumen,
-        cantidadAtenciones,
-        cerradoPor: barberoAdminId,
-        cerradoEn: new Date(),
-        efectivoContado: String(efectivoContadoNum.toFixed(2)),
-      })
-      .returning();
-
-    // 8. Vincular atenciones al cierre
-    if (atencionesDelDia.length > 0) {
-      await db
-        .update(atenciones)
-        .set({ cierreCajaId: nuevoCierre.id })
+      // 3. Traer todas las atenciones no anuladas del dia
+      const atencionesDelDia = await tx
+        .select()
+        .from(atenciones)
         .where(and(eq(atenciones.fecha, fechaHoy), eq(atenciones.anulado, false)));
-    }
 
-    await generarLiquidacionesDiariasParaFecha({
-      fecha: fechaHoy,
-      notas: `Auto-liquidacion diaria desde cierre ${fechaHoy}.`,
+      const barberosList = await tx.select().from(barberos);
+      const mediosPagoList = await tx.select().from(mediosPago);
+      const cantidadAtenciones = atencionesDelDia.length;
+
+      // 4. Calcular totales generales y caja neta real del dia
+      const fechaHoyDate = new Date(fechaHoy + "T00:00:00-03:00");
+      const finDia = new Date(fechaHoy + "T23:59:59-03:00");
+      const ventasProductos = await tx.select().from(stockMovimientos)
+        .where(and(
+          eq(stockMovimientos.tipo, "venta"),
+          gte(stockMovimientos.fecha, fechaHoyDate),
+          lte(stockMovimientos.fecha, finDia)
+        ));
+      const productosList = ventasProductos.length > 0 ? await tx.select().from(productos) : [];
+
+      const cierreResumen = buildCierreResumen({
+        fecha: fechaHoy,
+        atenciones: atencionesDelDia,
+        barberos: barberosList,
+        ventasProductos: ventasProductos.map((venta) => ({
+          productoId: venta.productoId,
+          cantidad: venta.cantidad,
+          precioUnitario: venta.precioUnitario,
+          // fallback: movimientos previos a la migración 0035 guardaban el medio de pago en notas
+          medioPagoId: venta.medioPagoId ?? venta.notas,
+        })),
+        productos: productosList,
+        mediosPago: mediosPagoList,
+      });
+
+      const totalBruto = cierreResumen.totales.totalBrutoDia;
+      const totalComisionesMedios = cierreResumen.totales.totalComisionesMediosDia;
+      const totalNeto = cierreResumen.totales.cajaNetaDia;
+
+      // 5. Totales por medio de pago: servicios + productos
+      const mediosPagoMap = new Map(mediosPagoList.map(m => [m.id, m]));
+
+      // Acumular por nombre de medio de pago
+      const totalesPorMedio: Record<string, number> = {};
+      for (const a of atencionesDelDia) {
+        if (!a.medioPagoId) continue;
+        const mp = mediosPagoMap.get(a.medioPagoId);
+        const nombre = (mp?.nombre ?? "otro").toLowerCase();
+        totalesPorMedio[nombre] = (totalesPorMedio[nombre] ?? 0) + Number(a.precioCobrado ?? 0);
+      }
+      for (const venta of ventasProductos) {
+        // fallback: movimientos previos a la migración 0035 guardaban el medio de pago en notas
+        const ventaMedioPagoId = venta.medioPagoId ?? venta.notas;
+        if (!ventaMedioPagoId) continue;
+        const mp = mediosPagoMap.get(ventaMedioPagoId);
+        const nombre = (mp?.nombre ?? "otro").toLowerCase();
+        const totalVenta = Math.abs(Number(venta.cantidad ?? 0)) * Number(venta.precioUnitario ?? 0);
+        totalesPorMedio[nombre] = (totalesPorMedio[nombre] ?? 0) + totalVenta;
+      }
+
+      // Clasificación determinística por nombre exacto (case-insensitive).
+      // Cualquier medio no reconocido cae en transferencia como bucket
+      // residual (ver comentario en clasificarTotalesPorMedio).
+      const { totalEfectivo, totalMp, totalTransferencia, totalPosnet } =
+        clasificarTotalesPorMedio(totalesPorMedio);
+
+      // Invariante: los buckets por medio de pago deben cuadrar contra el
+      // bruto del día. Si no cuadran, algo se está perdiendo o duplicando —
+      // abortamos el cierre en vez de persistir un desglose roto.
+      const sumaBuckets = totalEfectivo + totalMp + totalTransferencia + totalPosnet;
+      if (Math.abs(sumaBuckets - totalBruto) > 0.01) {
+        throw new Error("Los totales por medio de pago no cierran contra el bruto del día.");
+      }
+
+      // 7. Insertar cierre
+      const [nuevoCierre] = await tx
+        .insert(cierresCaja)
+        .values({
+          fecha: fechaHoy,
+          totalEfectivo: String(totalEfectivo.toFixed(2)),
+          totalMp: String(totalMp.toFixed(2)),
+          totalTransferencia: String(totalTransferencia.toFixed(2)),
+          totalPosnet: String(totalPosnet.toFixed(2)),
+          totalBruto: String(totalBruto.toFixed(2)),
+          totalComisionesMedios: String(totalComisionesMedios.toFixed(2)),
+          totalNeto: String(totalNeto.toFixed(2)),
+          totalCortesBruto: String(cierreResumen.totales.totalServiciosBruto.toFixed(2)),
+          totalProductos: String(cierreResumen.totales.totalProductosBruto.toFixed(2)),
+          resumenBarberos: cierreResumen,
+          cantidadAtenciones,
+          cerradoPor: barberoAdminId,
+          cerradoEn: new Date(),
+          efectivoContado: String(efectivoContadoNum.toFixed(2)),
+        })
+        .returning();
+
+      // 8. Vincular atenciones al cierre
+      if (atencionesDelDia.length > 0) {
+        await tx
+          .update(atenciones)
+          .set({ cierreCajaId: nuevoCierre.id })
+          .where(and(eq(atenciones.fecha, fechaHoy), eq(atenciones.anulado, false)));
+      }
+
+      await generarLiquidacionesDiariasParaFecha(
+        {
+          fecha: fechaHoy,
+          notas: `Auto-liquidacion diaria desde cierre ${fechaHoy}.`,
+        },
+        tx
+      );
     });
   } catch (e) {
     console.error("Error cerrando caja:", e);
-    return { error: "No se pudo cerrar la caja. Intenta de nuevo." };
+    return {
+      error: e instanceof Error && e.message === "La caja de hoy ya fue cerrada."
+        ? e.message
+        : e instanceof Error && e.message.includes("no cierran contra el bruto")
+          ? e.message
+          : "No se pudo cerrar la caja. Intenta de nuevo.",
+    };
   }
 
   revalidateCajaViews();

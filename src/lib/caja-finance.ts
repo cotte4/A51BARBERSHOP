@@ -72,6 +72,49 @@ type NormalizeInput = {
   totalProductos: NumericLike;
 };
 
+// ———————————————————————————— clasificarTotalesPorMedio ————————————————————————————
+
+const NOMBRES_EFECTIVO = ["efectivo"];
+const NOMBRES_TRANSFERENCIA = ["transferencia"];
+const NOMBRES_MP = ["mercado pago", "mercadopago", "mp", "link de pago"];
+const NOMBRES_POSNET = ["posnet", "tarjeta", "débito", "crédito", "debito", "credito"];
+
+export function clasificarTotalesPorMedio(
+  totalesPorNombre: Record<string, number>
+): {
+  totalEfectivo: number;
+  totalMp: number;
+  totalTransferencia: number;
+  totalPosnet: number;
+} {
+  let totalEfectivo = 0;
+  let totalMp = 0;
+  let totalTransferencia = 0;
+  let totalPosnet = 0;
+
+  for (const [nombreRaw, monto] of Object.entries(totalesPorNombre)) {
+    const nombre = nombreRaw.trim().toLowerCase();
+
+    if (NOMBRES_EFECTIVO.includes(nombre)) {
+      totalEfectivo += monto;
+    } else if (NOMBRES_MP.includes(nombre)) {
+      totalMp += monto;
+    } else if (NOMBRES_POSNET.includes(nombre)) {
+      totalPosnet += monto;
+    } else if (NOMBRES_TRANSFERENCIA.includes(nombre)) {
+      totalTransferencia += monto;
+    } else {
+      // Medio de pago desconocido/renombrado: en vez de desaparecer silenciosamente
+      // del desglose (como hacía el matching por substring), lo tratamos como
+      // bucket residual dentro de transferencia. El invariante de suma en
+      // cerrarCaja() aborta el cierre si esto rompe la cuadratura contra el bruto.
+      totalTransferencia += monto;
+    }
+  }
+
+  return { totalEfectivo, totalMp, totalTransferencia, totalPosnet };
+}
+
 export function toNumber(value: NumericLike): number {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;

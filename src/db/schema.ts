@@ -322,6 +322,8 @@ export const stockMovimientos = pgTable(
     referenciaId: uuid("referencia_id"),
     referenciaType: text("referencia_type"),
     notas: text("notas"),
+    // Nullable: 'entrada' / 'ajuste' / 'uso_interno' movimientos don't have a payment method.
+    medioPagoId: uuid("medio_pago_id").references(() => mediosPago.id),
     fecha: timestamp("fecha", { withTimezone: true }).defaultNow(),
   },
   (table) => [
@@ -335,6 +337,7 @@ export const stockMovimientos = pgTable(
     ),
     index("stock_movimientos_tipo_idx").on(table.tipo),
     index("stock_movimientos_producto_id_idx").on(table.productoId),
+    index("stock_movimientos_medio_pago_id_idx").on(table.medioPagoId),
   ]
 );
 

@@ -17,10 +17,13 @@ export type GenerarLiquidacionResult =
 
 export type MarcarPagadaResult = { ok: true } | { ok: false; error: string };
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 export async function generarLiquidacionDesdeInput(
-  input: GenerarLiquidacionInput
+  input: GenerarLiquidacionInput,
+  txExterna?: Tx
 ): Promise<GenerarLiquidacionResult> {
-  return db.transaction(async (tx) => {
+  const runner = async (tx: Tx): Promise<GenerarLiquidacionResult> => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${input.barberoId}))`);
 
     const [existente] = await tx
@@ -94,7 +97,15 @@ export async function generarLiquidacionDesdeInput(
       .returning({ id: liquidaciones.id });
 
     return { ok: true, id: nuevaLiquidacion.id };
-  });
+  };
+
+  // Si viene una tx externa (p.ej. desde cerrarCaja), ejecutamos el cuerpo
+  // directo sobre esa tx en vez de abrir una transacción anidada.
+  if (txExterna) {
+    return runner(txExterna);
+  }
+
+  return db.transaction(runner);
 }
 
 export async function marcarLiquidacionPagada(id: string): Promise<MarcarPagadaResult> {
@@ -127,22 +138,29 @@ export async function marcarLiquidacionPagada(id: string): Promise<MarcarPagadaR
   });
 }
 
-export async function generarLiquidacionesDiariasParaFecha(input: {
-  fecha: string;
-  notas?: string | null;
-}) {
-  const barberosLiquidables = await db
+export async function generarLiquidacionesDiariasParaFecha(
+  input: {
+    fecha: string;
+    notas?: string | null;
+  },
+  txExterna?: Tx
+) {
+  const runner = txExterna ?? db;
+  const barberosLiquidables = await runner
     .select({ id: barberos.id })
     .from(barberos)
     .where(and(eq(barberos.activo, true), eq(barberos.rol, "barbero")));
 
   for (const barbero of barberosLiquidables) {
-    const result = await generarLiquidacionDesdeInput({
-      barberoId: barbero.id,
-      periodoInicio: input.fecha,
-      periodoFin: input.fecha,
-      notas: input.notas ?? "Generada automaticamente en cierre diario.",
-    });
+    const result = await generarLiquidacionDesdeInput(
+      {
+        barberoId: barbero.id,
+        periodoInicio: input.fecha,
+        periodoFin: input.fecha,
+        notas: input.notas ?? "Generada automaticamente en cierre diario.",
+      },
+      txExterna
+    );
 
     if (!result.ok && !result.error.includes("Ya existe una liquidacion")) {
       throw new Error(result.error);

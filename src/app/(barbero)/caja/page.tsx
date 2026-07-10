@@ -147,6 +147,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
       cantidad: stockMovimientos.cantidad,
       precioUnitario: stockMovimientos.precioUnitario,
       fecha: stockMovimientos.fecha,
+      medioPagoId: stockMovimientos.medioPagoId,
       notas: stockMovimientos.notas,
     })
     .from(stockMovimientos)
@@ -210,7 +211,8 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
   }
 
   for (const venta of ventasProductosDia) {
-    const medio = mediosPagoMap.get(venta.notas ?? "");
+    // fallback: movimientos previos a la migración 0035 guardaban el medio de pago en notas
+    const medio = mediosPagoMap.get(venta.medioPagoId ?? venta.notas ?? "");
     const accent = getPaymentAccent(medio?.nombre);
     const current = paymentTotals.get(accent.label) ?? {
       label: accent.label,
@@ -247,7 +249,8 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
     }),
     ...ventasProductosDia.map((venta) => {
       const producto = productosMap.get(venta.productoId ?? "");
-      const medio = mediosPagoMap.get(venta.notas ?? "");
+      // fallback: movimientos previos a la migración 0035 guardaban el medio de pago en notas
+    const medio = mediosPagoMap.get(venta.medioPagoId ?? venta.notas ?? "");
       const accent = getPaymentAccent(medio?.nombre);
       const cantidadAbs = Math.abs(Number(venta.cantidad ?? 0));
 

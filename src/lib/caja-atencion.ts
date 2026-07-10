@@ -642,7 +642,8 @@ export async function syncProductosAtencion({
       costoUnitarioSnapshot:
         producto.costoCompra === null ? null : String(Number(producto.costoCompra).toFixed(2)),
       referenciaId: atencionId,
-      notas: medioPagoId,
+      medioPagoId: medioPagoId,
+      notas: null,
     });
   }
 
@@ -769,7 +770,8 @@ export async function registrarVentaProductoDesdeInput(
       cantidad: -input.cantidad,
       precioUnitario: String(precioUnitario.toFixed(2)),
       costoUnitarioSnapshot: String(costoUnitarioSnapshot.toFixed(2)),
-      notas: input.medioPagoId,
+      medioPagoId: input.medioPagoId,
+      notas: null,
     });
 
     return { ok: true };
