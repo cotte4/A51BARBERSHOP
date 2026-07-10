@@ -103,12 +103,6 @@ export default async function OvnisWalletPage() {
             <span className="font-semibold text-amber-200">{formatOvnis(pendingBalance)}</span>{" "}
             bloqueados en apuesta activa
           </p>
-          <Link
-            href="/marciano/juegos"
-            className="mt-2 block text-xs text-amber-300 hover:underline"
-          >
-            Ver apuestas →
-          </Link>
         </div>
       )}
 

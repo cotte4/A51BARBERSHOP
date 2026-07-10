@@ -56,45 +56,20 @@ export default async function TemporadasPage() {
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <Metric label="Temporadas" value={`${lista.length}`} />
+            <div className="grid gap-3 sm:grid-cols-3">
               <Metric label="Activa" value={activaActual ? "En curso" : "Sin activa"} tone="accent" />
               <Metric label="Programadas" value={`${programadas.length}`} />
               <Metric label="Con proyeccion" value={`${conProyeccion}`} />
             </div>
           </div>
 
-          <div className="rounded-[28px] bg-zinc-950/80 p-5 ring-1 ring-zinc-800">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-              Lectura rapida
-            </p>
-            <div className="mt-4 space-y-3">
-              <div className="rounded-[22px] bg-white/5 p-4 ring-1 ring-white/10">
-                <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Temporada actual</p>
-                <p className="mt-2 text-lg font-semibold text-white">
-                  {activaActual?.nombre ?? "Ninguna activa"}
-                </p>
-                <p className="mt-2 text-sm text-zinc-400">
-                  {activaActual
-                    ? `${formatFecha(activaActual.fechaInicio)} -> ${formatFecha(
-                        activaActual.fechaFin
-                      )}`
-                    : "Definila para alinear la lectura del dashboard."}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href="/configuracion/temporadas/nuevo"
-                  className="neon-button inline-flex min-h-[48px] items-center justify-center rounded-2xl px-4 text-sm font-semibold"
-                >
-                  + Nueva temporada
-                </Link>
-                <span className="inline-flex min-h-[48px] items-center rounded-2xl bg-zinc-900 px-4 text-sm text-zinc-300 ring-1 ring-zinc-800">
-                  {programadas.length} proximas
-                </span>
-              </div>
-            </div>
+          <div className="flex items-start justify-end">
+            <Link
+              href="/configuracion/temporadas/nuevo"
+              className="neon-button inline-flex min-h-[48px] items-center justify-center rounded-2xl px-4 text-sm font-semibold"
+            >
+              + Nueva temporada
+            </Link>
           </div>
         </div>
       </section>

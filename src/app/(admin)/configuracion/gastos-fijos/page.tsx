@@ -92,18 +92,12 @@ export default async function GastosFijosPage() {
             </Link>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard label="Totales" value={`${listaGastos.length}`} hint="Gastos cargados" />
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <MetricCard label="Recurrentes" value={`${recurrentes}`} hint="Se repiten en el tiempo" />
             <MetricCard
               label="Monto listado"
               value={formatARS(String(montoTotal))}
               hint="Suma de todos los gastos visibles"
-            />
-            <MetricCard
-              label="Categorias"
-              value={`${listaCategorias.length}`}
-              hint="Contexto para ordenar egresos"
             />
           </div>
         </div>

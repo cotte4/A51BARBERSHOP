@@ -143,16 +143,7 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
     <div className="min-h-screen bg-zinc-950">
       <header className="border-b border-zinc-800 bg-zinc-900/90 px-4 py-4 backdrop-blur">
         <div className="mx-auto max-w-2xl">
-          <div className="mb-3 flex items-center justify-between">
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs font-medium text-zinc-400 transition hover:border-[#8cff59]/30 hover:text-[#8cff59]"
-            >
-              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.9">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-              Dashboard
-            </Link>
+          <div className="mb-3 flex items-center justify-end">
             <div className="flex items-center gap-2">
               <a
                 href={`/api/export/csv/${anio}-${String(mes).padStart(2, "0")}`}

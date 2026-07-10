@@ -30,12 +30,6 @@ function initials(name: string | null) {
 
 export default async function BarberosPage() {
   const lista = await db.select().from(barberos).orderBy(barberos.nombre);
-  const activos = lista.filter((barbero) => barbero.activo).length;
-  const inactivos = lista.length - activos;
-  const variables = lista.filter((barbero) => barbero.tipoModelo === "variable").length;
-  const hibridos = lista.filter((barbero) => barbero.tipoModelo === "hibrido").length;
-  const fijos = lista.filter((barbero) => barbero.tipoModelo === "fijo").length;
-  const publicos = lista.filter((barbero) => barbero.publicReservaActiva && barbero.publicSlug).length;
 
   return (
     <div className="space-y-6">
@@ -50,26 +44,6 @@ export default async function BarberosPage() {
               Cada perfil define comision, modelo y defaults de caja. La activacion se gestiona
               desde la ficha para evitar toques accidentales.
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-300">
-                {activos} activos
-              </span>
-              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-300">
-                {inactivos} inactivos
-              </span>
-              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-300">
-                {variables} variables
-              </span>
-              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-300">
-                {hibridos} hibridos
-              </span>
-              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-300">
-                {fijos} fijos
-              </span>
-              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-300">
-                {publicos} publicos
-              </span>
-            </div>
           </div>
 
           <Link
@@ -132,11 +106,9 @@ export default async function BarberosPage() {
                       <InfoChip label="Link" value={publicLink(barbero.publicSlug)} />
                     </div>
 
-                    <p className="mt-3 text-xs text-zinc-400">
-                      {barbero.publicReservaActiva
-                        ? `Visible en la landing publica${barbero.publicReservaPasswordHash ? " y protegida por clave." : "."}`
-                        : "La activacion y desactivacion se gestiona dentro de la edicion para evitar cambios accidentales."}
-                    </p>
+                    {barbero.publicReservaActiva && barbero.publicReservaPasswordHash ? (
+                      <p className="mt-3 text-xs text-zinc-400">Reserva protegida por clave.</p>
+                    ) : null}
                   </div>
                 </div>
 

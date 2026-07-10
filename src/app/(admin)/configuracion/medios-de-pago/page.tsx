@@ -76,8 +76,7 @@ export default async function MediosDePagoPage() {
             </Link>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard label="Totales" value={`${lista.length}`} hint="Medios cargados" />
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <MetricCard label="Activos" value={`${activos}`} hint="Listos para cobrar" />
             <MetricCard
               label="Con comision"
@@ -153,11 +152,6 @@ export default async function MediosDePagoPage() {
                         )}
                       </div>
 
-                      <p className="mt-2 text-sm text-zinc-400">
-                        {comision
-                          ? `Descuenta ${comision} sobre el cobro para reflejar el neto real.`
-                          : "Entra limpio a caja y no descuenta comision."}
-                      </p>
                     </div>
                   </div>
 
