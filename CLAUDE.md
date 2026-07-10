@@ -43,19 +43,30 @@ npm run verify:refactor    # typecheck + lint (run before any refactor commit)
 
 ---
 
-## Current State (May 2026)
+## Current State (July 2026)
 
-The app is live on Vercel. Core is mature. Open issues before designer handoff:
+The app is live on Vercel. Core is mature. **Barber-side launch readiness completed 2026-07-09** (spec: `../docs/specs/barber-launch-audit.md`): repago financial integrity, journey simplification (J1-J8), copy/theme polish, and flow tests — all shipped to prod, migrations 0032-0034 applied.
+
+### Repago Memas — modelo vigente (pagos flexibles)
+- Plan: **u$d 1.500 · 10% anual · 12 cuotas alemanas** (capital fijo u$d 125/cuota). Row values are explicit in DB (no code defaults).
+- **Pagos flexibles**: any amount > 0. Each payment covers the current cuota's pending interest first, remainder amortizes capital. The cuota advances when its capital is covered; overpay amortizes extra capital (less future interest). Interest is **per cuota, not time-based** — taking longer doesn't penalize.
+- Core logic: `aplicarPagoFlexible()` in `src/lib/amortizacion.ts` (pure, tested); orchestration in `src/lib/repago-service.ts` (advisory lock + `calcularSaldoReal` guard). Multiple payment rows per cuota are allowed (no unique index).
+- Tests: `npm run test:flows` (52 integration tests, includes 11 for flexible payments).
+
+### Cierre de caja — wizard con gate real
+`/caja/cierre` is a 2-step wizard: (1) count cash — mandatory, persisted in `cierres_caja.efectivo_contado`; (2) confirm with double-confirmation. A difference vs expected cash shows an amber warning but doesn't block.
 
 ### Known bugs / debt
 - **Music automation not closed** — `clienteLlegoAction()` fires events to pantalla and `musicEvents` but does NOT trigger real Spotify playback. Treat music as manually supervised for now. See `planning/features/music-auto-jam-completion.md`.
 - **Encoding bug on reserva pública** — `src/app/reservar/[slug]/page.tsx` shows corrupted characters in visible text. Fix before designer review.
+- Dead code: `src/components/caja/EfectivoChecker.tsx` and `CerrarCajaButton.tsx` are orphaned (replaced by `_CierreWizard.tsx`) — delete in next cleanup pass.
 
 ### UX maturity by surface
 - Operación diaria (hoy, caja, turnos, clientes): **mature**
 - Negocio / admin reporting: **mature**
 - Configuración: **mature**
 - Portal Marciano: **mature**
+- Repago Memas: **mature** (flexible payments, empathetic copy, tested)
 - Reserva pública: **functional but has encoding bug + needs UX pass**
 - Pantalla pública: **functional**
 - Música: **functional but automation incomplete**
