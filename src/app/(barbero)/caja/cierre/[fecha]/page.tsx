@@ -126,56 +126,71 @@ export default async function CierreDetallePage({
           </div>
         </section>
 
-        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {summaryCards.map((card) => (
-            <div key={card.label} className="panel-card rounded-[26px] p-5">
-              <p className="eyebrow text-xs font-semibold">{card.eyebrow}</p>
-              <p className="mt-3 text-sm text-zinc-400">{card.label}</p>
-              <p className="font-display mt-2 text-2xl font-semibold tracking-tight text-white">
-                {card.value}
-              </p>
-              <p className="mt-2 text-sm text-zinc-400">{card.helper}</p>
-            </div>
-          ))}
-        </section>
+        {/* Totales globales del dia: solo admin. El barbero ve su propia fila
+            en "Reparto del dia" — no el bruto/neto de toda la casa. */}
+        {isAdmin ? (
+          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {summaryCards.map((card) => (
+              <div key={card.label} className="panel-card rounded-[26px] p-5">
+                <p className="eyebrow text-xs font-semibold">{card.eyebrow}</p>
+                <p className="mt-3 text-sm text-zinc-400">{card.label}</p>
+                <p className="font-display mt-2 text-2xl font-semibold tracking-tight text-white">
+                  {card.value}
+                </p>
+                <p className="mt-2 text-sm text-zinc-400">{card.helper}</p>
+              </div>
+            ))}
+          </section>
+        ) : (
+          <section className="panel-card rounded-[26px] p-5">
+            <p className="eyebrow text-xs font-semibold">Estado</p>
+            <p className="mt-3 text-sm text-zinc-400">Caja cerrada</p>
+            <p className="font-display mt-2 text-2xl font-semibold tracking-tight text-white">
+              {horaCierre ? `A las ${horaCierre}` : "Sellada"}
+            </p>
+            <p className="mt-2 text-sm text-zinc-400">
+              Abajo tenes tu propio resumen del dia.
+            </p>
+          </section>
+        )}
 
         <section>
           <div className="space-y-5">
-            <section className="panel-card rounded-[30px] p-5">
-              <h2 className="font-display text-2xl font-semibold text-white">Totales del dia</h2>
-              <div className="mt-5 flex flex-col gap-2">
-                <Row label="Total bruto del dia" value={formatARS(cierre.totalBruto)} />
-                {Number(cierre.totalComisionesMedios ?? 0) > 0 ? (
+            {isAdmin ? (
+              <section className="panel-card rounded-[30px] p-5">
+                <h2 className="font-display text-2xl font-semibold text-white">Totales del dia</h2>
+                <div className="mt-5 flex flex-col gap-2">
+                  <Row label="Total bruto del dia" value={formatARS(cierre.totalBruto)} />
+                  {Number(cierre.totalComisionesMedios ?? 0) > 0 ? (
+                    <Row
+                      label="Comisiones medios de pago"
+                      value={`-${formatARS(cierre.totalComisionesMedios)}`}
+                      tone="text-red-300"
+                    />
+                  ) : null}
+                  <Row label="Caja neta del dia" value={formatARS(cierre.totalNeto)} strong />
                   <Row
-                    label="Comisiones medios de pago"
-                    value={`-${formatARS(cierre.totalComisionesMedios)}`}
-                    tone="text-red-300"
+                    label="Servicios netos"
+                    value={formatARS(resumen.totales.cajaNetaServicios)}
+                    tone="text-white"
                   />
-                ) : null}
-                <Row label="Caja neta del dia" value={formatARS(cierre.totalNeto)} strong />
-                <Row
-                  label="Servicios netos"
-                  value={formatARS(resumen.totales.cajaNetaServicios)}
-                  tone="text-white"
-                />
-                {Number(cierre.totalProductos ?? 0) > 0 ? (
-                  <Row label="Productos brutos" value={formatARS(cierre.totalProductos)} />
-                ) : null}
-                {Number(resumen.totales.cajaNetaProductos ?? 0) > 0 ? (
-                  <Row
-                    label="Productos netos"
-                    value={formatARS(resumen.totales.cajaNetaProductos)}
-                  />
-                ) : null}
-                {isAdmin ? (
+                  {Number(cierre.totalProductos ?? 0) > 0 ? (
+                    <Row label="Productos brutos" value={formatARS(cierre.totalProductos)} />
+                  ) : null}
+                  {Number(resumen.totales.cajaNetaProductos ?? 0) > 0 ? (
+                    <Row
+                      label="Productos netos"
+                      value={formatARS(resumen.totales.cajaNetaProductos)}
+                    />
+                  ) : null}
                   <Row
                     label="Aporte economico casa"
                     value={formatARS(resumen.totales.aporteEconomicoCasaDia)}
                     tone="text-white"
                   />
-                ) : null}
-              </div>
-            </section>
+                </div>
+              </section>
+            ) : null}
 
             {Object.keys(resumenFiltrado).length > 0 ? (
               <section className="panel-card rounded-[30px] p-5">

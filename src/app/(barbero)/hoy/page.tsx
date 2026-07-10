@@ -131,7 +131,11 @@ export default async function HoyPage() {
     (sum, r) => sum + -Number(r.cantidad ?? 0) * Number(r.precioUnitario ?? 0),
     0
   );
-  const totalCobrado = ingresosServicios + ingresosProductos;
+  // Las ventas de producto no tienen barbero asignado: son de la casa. Solo
+  // el admin las ve sumadas; al barbero se le muestra su numero propio.
+  const totalCobrado = actor.isAdmin
+    ? ingresosServicios + ingresosProductos
+    : ingresosServicios;
 
   const horaActual = getHoraActualArgentina();
   const turnosOperativos = turnosHoy.filter(

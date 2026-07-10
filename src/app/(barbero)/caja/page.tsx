@@ -343,7 +343,9 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
 
   // J3 — modo barbero: hero de 2 numeros + Cobrar/Vender + lista propia. Nada mas.
   if (!isAdmin) {
-    const cobradoHoy = totalBruto + totalProductos;
+    // totalProductos es de toda la casa (stock_movimientos no tiene barbero);
+    // el numero del barbero son solo sus servicios.
+    const cobradoHoy = totalBruto;
 
     return (
       <main className="app-shell min-h-screen px-4 py-6 pb-28">
