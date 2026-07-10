@@ -165,7 +165,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
   );
 
   const totalProductos = ventasProductosDia.reduce(
-    (sum, venta) => sum + Math.abs(Number(venta.cantidad ?? 0)) * Number(venta.precioUnitario ?? 0),
+    (sum, venta) => sum + -Number(venta.cantidad ?? 0) * Number(venta.precioUnitario ?? 0),
     0
   );
 
@@ -220,7 +220,7 @@ export default async function CajaPage({ searchParams }: CajaPageProps) {
       className: accent.className,
     };
     current.amount +=
-      Math.abs(Number(venta.cantidad ?? 0)) * Number(venta.precioUnitario ?? 0);
+      -Number(venta.cantidad ?? 0) * Number(venta.precioUnitario ?? 0);
     paymentTotals.set(accent.label, current);
   }
 

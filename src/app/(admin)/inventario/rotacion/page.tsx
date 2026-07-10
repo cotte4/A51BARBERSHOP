@@ -51,7 +51,7 @@ export default async function RotacionPage() {
   for (const m of movimientosVenta) {
     if (!m.productoId) continue;
     const prev = rotacionMap.get(m.productoId) ?? { unidades: 0, ingresoTotal: 0 };
-    const cant = Math.abs(Number(m.cantidad ?? 0));
+    const cant = -Number(m.cantidad ?? 0);
     const ingreso = cant * Number(m.precioUnitario ?? 0);
     rotacionMap.set(m.productoId, {
       unidades: prev.unidades + cant,

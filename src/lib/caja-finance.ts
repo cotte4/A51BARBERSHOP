@@ -203,7 +203,10 @@ export function buildCierreResumen(args: {
   let totalProductosCosto = 0;
 
   for (const venta of ventasProductos) {
-    const cantidadVendida = Math.abs(Number(venta.cantidad ?? 0));
+    // Ledger append-only: las reversiones (anulación/edición) se insertan como filas
+    // compensatorias con cantidad positiva. Negamos en vez de Math.abs para que
+    // venta + reversión neteen a 0 en los agregados del cierre.
+    const cantidadVendida = -Number(venta.cantidad ?? 0);
     const precioUnitario = toNumber(venta.precioUnitario);
     const bruto = cantidadVendida * precioUnitario;
     const producto = venta.productoId ? productosMap.get(venta.productoId) : undefined;

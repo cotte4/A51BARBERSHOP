@@ -275,7 +275,7 @@ export async function getKpisMes(
 
   let margenProductosMes = 0;
   for (const v of ventasMes) {
-    const cant = Math.abs(Number(v.cantidad ?? 0));
+    const cant = -Number(v.cantidad ?? 0);
     const precio = toNumber(v.precioUnitario);
     // Usa el snapshot histórico del costo; fallback al costo actual para filas anteriores a esta feature.
     const costoSnap = toNumber(v.costoUnitarioSnapshot);
@@ -420,7 +420,7 @@ export async function getPL(mes: number, anio: number): Promise<PLData> {
   let ingresosProductosBruto = 0;
   let costoProductosVendidos = 0;
   for (const v of ventasMes) {
-    const cant = Math.abs(Number(v.cantidad ?? 0));
+    const cant = -Number(v.cantidad ?? 0);
     const precio = toNumber(v.precioUnitario);
     const costoSnap = toNumber(v.costoUnitarioSnapshot);
     const prod = v.productoId ? productosMap.get(v.productoId) : undefined;

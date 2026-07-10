@@ -5,6 +5,7 @@ import { db } from "@/db";
 import {
   atenciones,
   barberos,
+  gastos,
   liquidaciones,
   mediosPago,
   productos,
@@ -44,6 +45,15 @@ export default async function CierrePage() {
     .select({ id: atenciones.id })
     .from(atenciones)
     .where(and(eq(atenciones.fecha, fechaHoy), eq(atenciones.anulado, true)));
+
+  const gastosRapidosDelDia = await db
+    .select()
+    .from(gastos)
+    .where(and(eq(gastos.fecha, fechaHoy), eq(gastos.tipo, "rapido")));
+  const totalGastosEfectivoHoy = gastosRapidosDelDia.reduce(
+    (sum, gasto) => sum + Number(gasto.monto ?? 0),
+    0
+  );
 
   const mediosPagoList = await db.select().from(mediosPago);
   const mediosPagoMap = new Map(mediosPagoList.map((medio) => [medio.id, medio]));
@@ -91,7 +101,7 @@ export default async function CierrePage() {
     0
   );
   const totalProductos = ventasProductosDelDia.reduce(
-    (sum, venta) => sum + Math.abs(Number(venta.cantidad ?? 0)) * Number(venta.precioUnitario ?? 0),
+    (sum, venta) => sum + -Number(venta.cantidad ?? 0) * Number(venta.precioUnitario ?? 0),
     0
   );
   const totalAtenciones = atencionesDelDia.length;
@@ -116,7 +126,7 @@ export default async function CierrePage() {
     const medioPago = mediosPagoMap.get(ventaMedioPagoId);
     if (!medioPago) continue;
     const nombre = medioPago.nombre ?? "Otro";
-    const bruto = Math.abs(Number(venta.cantidad ?? 0)) * Number(venta.precioUnitario ?? 0);
+    const bruto = -Number(venta.cantidad ?? 0) * Number(venta.precioUnitario ?? 0);
     const comision = bruto * (Number(medioPago.comisionPorcentaje ?? 0) / 100);
     if (!totalesPorMedio[nombre]) {
       totalesPorMedio[nombre] = { nombre, bruto: 0, comision: 0 };
@@ -387,7 +397,11 @@ export default async function CierrePage() {
           </div>
 
           <aside className="space-y-4">
-            <CierreWizard cerrarAction={cerrarCaja} totalEfectivoSistema={totalEfectivo} />
+            <CierreWizard
+              cerrarAction={cerrarCaja}
+              totalEfectivoSistema={totalEfectivo}
+              gastosEfectivoHoy={totalGastosEfectivoHoy}
+            />
 
             {gaboteEntry ? (
               <div className="rounded-[28px] border border-amber-500/30 bg-amber-500/10 p-5">

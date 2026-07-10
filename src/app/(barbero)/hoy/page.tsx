@@ -128,7 +128,7 @@ export default async function HoyPage() {
     0
   );
   const ingresosProductos = ventasHoyRows.reduce(
-    (sum, r) => sum + Math.abs(Number(r.cantidad ?? 0)) * Number(r.precioUnitario ?? 0),
+    (sum, r) => sum + -Number(r.cantidad ?? 0) * Number(r.precioUnitario ?? 0),
     0
   );
   const totalCobrado = ingresosServicios + ingresosProductos;

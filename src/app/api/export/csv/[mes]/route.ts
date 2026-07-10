@@ -175,7 +175,10 @@ export async function GET(
   }
 
   for (const v of ventasMes) {
-    const cant = Math.abs(Number(v.cantidad ?? 1));
+    // Ledger append-only: las reversiones se guardan como filas positivas. Usamos la
+    // negación (no abs) para que una fila de reversión aparezca con importe negativo
+    // y, si se suma la columna, netee contra la venta original en vez de duplicarla.
+    const cant = -Number(v.cantidad ?? -1);
     const precio = toNum(v.precioUnitario) * cant;
     const fechaStr = formatTimestamp(v.fecha);
     const fechaISO =

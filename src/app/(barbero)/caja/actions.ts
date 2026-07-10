@@ -150,8 +150,8 @@ export async function registrarAtencion(
   if (!medioPagoId) fieldErrors.medioPagoId = "Selecciona un medio de pago";
   if (precioCobradoStr === "" || precioCobradoStr === null || isNaN(Number(precioCobradoStr))) {
     fieldErrors.precioCobrado = "El precio es requerido";
-  } else if (Number(precioCobradoStr) < 0) {
-    fieldErrors.precioCobrado = "El precio no puede ser negativo";
+  } else if (Number(precioCobradoStr) <= 0) {
+    fieldErrors.precioCobrado = "El precio debe ser mayor a cero.";
   }
 
   if (!actor.isAdmin) {
@@ -345,8 +345,8 @@ export async function editarAtencion(
   if (!medioPagoId) fieldErrors.medioPagoId = "Selecciona un medio de pago";
   if (precioCobradoStr === "" || isNaN(Number(precioCobradoStr))) {
     fieldErrors.precioCobrado = "El precio es requerido";
-  } else if (Number(precioCobradoStr) < 0) {
-    fieldErrors.precioCobrado = "El precio no puede ser negativo";
+  } else if (Number(precioCobradoStr) <= 0) {
+    fieldErrors.precioCobrado = "El precio debe ser mayor a cero.";
   }
   if (!actor.isAdmin) {
     if (!actor.barberoId) {
@@ -369,19 +369,6 @@ export async function editarAtencion(
   }
 
   try {
-    // Verificar que la atencion existe y es de hoy
-    const [atencionExistente] = await db
-      .select()
-      .from(atenciones)
-      .where(eq(atenciones.id, id))
-      .limit(1);
-
-    if (!atencionExistente) return { error: "Atención no encontrada." };
-    if (atencionExistente.anulado) return { error: "No se puede editar una atención anulada." };
-    if (atencionExistente.fecha !== getFechaHoy()) {
-      return { error: "Solo se pueden editar atenciones del día de hoy." };
-    }
-
     const [barbero] = await db.select().from(barberos).where(eq(barberos.id, barberoId)).limit(1);
     const [medioPago] = await db.select().from(mediosPago).where(eq(mediosPago.id, medioPagoId)).limit(1);
     const [servicio] = await db.select().from(servicios).where(eq(servicios.id, servicioId)).limit(1);
@@ -627,7 +614,7 @@ export async function cerrarCaja(
         if (!ventaMedioPagoId) continue;
         const mp = mediosPagoMap.get(ventaMedioPagoId);
         const nombre = (mp?.nombre ?? "otro").toLowerCase();
-        const totalVenta = Math.abs(Number(venta.cantidad ?? 0)) * Number(venta.precioUnitario ?? 0);
+        const totalVenta = -Number(venta.cantidad ?? 0) * Number(venta.precioUnitario ?? 0);
         totalesPorMedio[nombre] = (totalesPorMedio[nombre] ?? 0) + totalVenta;
       }
 

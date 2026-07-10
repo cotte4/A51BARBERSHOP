@@ -26,6 +26,7 @@ import {
 } from "@/lib/finance/anulacion-reversal";
 import { calculateAtencionCommission } from "@/lib/finance/commission";
 import { resolveMarcianoCorteUsageDeltas } from "@/lib/finance/marciano-cortes";
+import { calcularNetoPorProducto } from "@/lib/finance/stock-ledger-neteo";
 
 export type AtencionCreationInput = {
   barberoId: string;
@@ -409,6 +410,9 @@ export async function anularAtencionConReversion(input: {
       .select({
         productoId: stockMovimientos.productoId,
         cantidad: stockMovimientos.cantidad,
+        precioUnitario: stockMovimientos.precioUnitario,
+        costoUnitarioSnapshot: stockMovimientos.costoUnitarioSnapshot,
+        medioPagoId: stockMovimientos.medioPagoId,
       })
       .from(stockMovimientos)
       .where(
@@ -420,9 +424,12 @@ export async function anularAtencionConReversion(input: {
 
     for (const movimiento of movimientosPrevios) {
       if (!movimiento.productoId || !movimiento.cantidad) continue;
+      // Restaura el stock con la negación de la cantidad: si la fila era una venta
+      // (cantidad negativa) se repone; si ya era una reversión previa (cantidad
+      // positiva) se descuenta, evitando doble reposición de ediciones anteriores.
       await tx
         .update(productos)
-        .set({ stockActual: sql`${productos.stockActual} + ${Math.abs(movimiento.cantidad)}` })
+        .set({ stockActual: sql`${productos.stockActual} + ${-movimiento.cantidad}` })
         .where(eq(productos.id, movimiento.productoId));
     }
 
@@ -452,14 +459,22 @@ export async function anularAtencionConReversion(input: {
       nextClientId: null,
     });
 
-    await tx
-      .delete(stockMovimientos)
-      .where(
-        and(
-          eq(stockMovimientos.referenciaId, input.atencionId),
-          eq(stockMovimientos.tipo, "venta")
-        )
-      );
+    // Ledger append-only: en vez de borrar las filas de venta, insertamos una fila
+    // compensatoria por cada movimiento previo (misma magnitud, signo invertido) para
+    // que quede rastro auditable de la anulación y el neto siga cuadrando en 0.
+    for (const movimiento of movimientosPrevios) {
+      if (!movimiento.productoId || !movimiento.cantidad) continue;
+      await tx.insert(stockMovimientos).values({
+        productoId: movimiento.productoId,
+        tipo: "venta",
+        cantidad: -movimiento.cantidad,
+        precioUnitario: movimiento.precioUnitario,
+        costoUnitarioSnapshot: movimiento.costoUnitarioSnapshot,
+        referenciaId: input.atencionId,
+        medioPagoId: movimiento.medioPagoId,
+        notas: "Reversión por anulación",
+      });
+    }
 
     await tx.delete(atencionesProductos).where(eq(atencionesProductos.atencionId, input.atencionId));
     await tx.delete(ovnisPendingCredits).where(eq(ovnisPendingCredits.atencionId, input.atencionId));
@@ -500,6 +515,10 @@ export async function syncProductosAtencion({
     .select({
       productoId: stockMovimientos.productoId,
       cantidad: stockMovimientos.cantidad,
+      precioUnitario: stockMovimientos.precioUnitario,
+      costoUnitarioSnapshot: stockMovimientos.costoUnitarioSnapshot,
+      medioPagoId: stockMovimientos.medioPagoId,
+      fecha: stockMovimientos.fecha,
     })
     .from(stockMovimientos)
     .where(
@@ -522,22 +541,31 @@ export async function syncProductosAtencion({
     0
   );
 
-  for (const movimiento of movimientosPrevios) {
-    if (!movimiento.productoId || !movimiento.cantidad) continue;
+  // Ledger append-only: en vez de borrar los movimientos previos (que pueden incluir
+  // reversiones de ediciones anteriores), calculamos el NETO por producto y
+  // restauramos/compensamos solo ese neto. Si el neto ya es 0 (reversiones previas
+  // que ya cancelaron la venta), no hace falta tocar nada para ese producto.
+  const netoPrevioPorProducto = calcularNetoPorProducto(movimientosPrevios);
+
+  for (const neto of netoPrevioPorProducto) {
     await tx
       .update(productos)
-      .set({ stockActual: sql`${productos.stockActual} + ${Math.abs(movimiento.cantidad)}` })
-      .where(eq(productos.id, movimiento.productoId));
+      .set({ stockActual: sql`${productos.stockActual} + ${-neto.neto}` })
+      .where(eq(productos.id, neto.productoId));
+
+    await tx.insert(stockMovimientos).values({
+      productoId: neto.productoId,
+      tipo: "venta",
+      cantidad: -neto.neto,
+      precioUnitario: String(neto.precioUnitario.toFixed(2)),
+      costoUnitarioSnapshot:
+        neto.costoUnitarioSnapshot === null ? null : String(neto.costoUnitarioSnapshot.toFixed(2)),
+      referenciaId: atencionId,
+      medioPagoId: neto.medioPagoId,
+      notas: "Reversión por edición",
+    });
   }
 
-  await tx
-    .delete(stockMovimientos)
-    .where(
-      and(
-        eq(stockMovimientos.referenciaId, atencionId),
-        eq(stockMovimientos.tipo, "venta")
-      )
-    );
   await tx.delete(atencionesProductos).where(eq(atencionesProductos.atencionId, atencionId));
 
   let client:

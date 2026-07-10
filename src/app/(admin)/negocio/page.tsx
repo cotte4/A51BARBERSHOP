@@ -112,7 +112,7 @@ export default async function NegocioPage() {
     0
   );
   const totalRetailHoy = ventasRetailHoyRows.reduce((sum, row) => {
-    return sum + Math.abs(toNumber(row.cantidad)) * toNumber(row.precioUnitario);
+    return sum + -toNumber(row.cantidad) * toNumber(row.precioUnitario);
   }, 0);
   const ingresoBrutoHoy = totalServiciosHoy + totalRetailHoy;
   const gastosHoy = gastosHoyRows.reduce((sum, row) => sum + toNumber(row.monto), 0);

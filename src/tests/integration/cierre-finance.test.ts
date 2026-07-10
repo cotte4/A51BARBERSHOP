@@ -108,7 +108,8 @@ describe("cierre-finance: buildCierreResumen", () => {
       ventasProductos: [
         {
           productoId: PROD_ID,
-          cantidad: 1,
+          // Ventas reales se guardan con cantidad NEGATIVA (ledger append-only).
+          cantidad: -1,
           precioUnitario: "5000",
           medioPagoId: MP_QR_ID,
         },
@@ -190,7 +191,8 @@ describe("cierre-finance: buildCierreResumen", () => {
       ],
       barberos: [PINKY, GABOTE],
       ventasProductos: [
-        { productoId: PROD_ID, cantidad: 1, precioUnitario: "5000", medioPagoId: MP_EFECTIVO_ID },
+        // Ventas reales se guardan con cantidad NEGATIVA (ledger append-only).
+        { productoId: PROD_ID, cantidad: -1, precioUnitario: "5000", medioPagoId: MP_EFECTIVO_ID },
       ],
       productos: [{ id: PROD_ID, costoCompra: "2000" }],
       mediosPago: [MP_EFECTIVO],

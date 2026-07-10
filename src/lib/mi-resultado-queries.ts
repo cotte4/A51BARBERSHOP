@@ -51,7 +51,7 @@ async function getProductoMargin(inicio: string, fin: string) {
   );
 
   return ventas.reduce((acumulado, venta) => {
-    const cantidad = Math.abs(Number(venta.cantidad ?? 0));
+    const cantidad = -Number(venta.cantidad ?? 0);
     const precio = toNumber(venta.precioUnitario);
     const costoSnapshot = toNumber(venta.costoUnitarioSnapshot);
     const producto = venta.productoId ? productosMap.get(venta.productoId) : undefined;

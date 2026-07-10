@@ -8,13 +8,16 @@ import type { CierreFormState } from "../actions";
 interface CierreWizardProps {
   cerrarAction: (prevState: CierreFormState, formData: FormData) => Promise<CierreFormState>;
   totalEfectivoSistema: number;
+  gastosEfectivoHoy?: number;
 }
 
+const TOLERANCIA_DIFERENCIA = 500;
+
 function getDifferenceTone(difference: number) {
-  if (difference === 0) {
+  if (Math.abs(difference) <= TOLERANCIA_DIFERENCIA) {
     return {
       label: "Cuadra",
-      hint: "El efectivo coincide con el sistema.",
+      hint: "El efectivo coincide con lo esperado.",
       className: "border-emerald-500/30 bg-emerald-500/12 text-emerald-200",
     };
   }
@@ -23,13 +26,17 @@ function getDifferenceTone(difference: number) {
     label: difference > 0 ? "Sobra" : "Falta",
     hint:
       difference > 0
-        ? "Hay mas efectivo que el que marca el sistema."
-        : "Falta efectivo respecto al sistema.",
+        ? "Hay mas efectivo que el esperado en caja."
+        : "Falta efectivo respecto a lo esperado en caja.",
     className: "border-amber-500/35 bg-amber-500/10 text-amber-300",
   };
 }
 
-export default function CierreWizard({ cerrarAction, totalEfectivoSistema }: CierreWizardProps) {
+export default function CierreWizard({
+  cerrarAction,
+  totalEfectivoSistema,
+  gastosEfectivoHoy = 0,
+}: CierreWizardProps) {
   const [state, formAction, isPending] = useActionState(cerrarAction, {});
   const [step, setStep] = useState<1 | 2>(1);
   const [contado, setContado] = useState("");
@@ -46,9 +53,10 @@ export default function CierreWizard({ cerrarAction, totalEfectivoSistema }: Cie
     }
   }, [state.error, state.fieldErrors]);
 
+  const efectivoEsperado = totalEfectivoSistema - gastosEfectivoHoy;
   const contadoReady = contado.trim() !== "" && !isNaN(Number(contado));
   const contadoNum = contadoReady ? Number(contado) : 0;
-  const diferencia = contadoNum - totalEfectivoSistema;
+  const diferencia = contadoNum - efectivoEsperado;
   const tone = getDifferenceTone(diferencia);
 
   return (
@@ -73,8 +81,24 @@ export default function CierreWizard({ cerrarAction, totalEfectivoSistema }: Cie
           </div>
 
           <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300">
-            Efectivo estimado por el sistema:{" "}
-            <span className="font-semibold text-white">{formatARS(totalEfectivoSistema)}</span>
+            {gastosEfectivoHoy > 0 ? (
+              <div className="space-y-1">
+                <p>
+                  Ventas en efectivo: <span className="font-semibold text-white">{formatARS(totalEfectivoSistema)}</span>
+                </p>
+                <p>
+                  − Gastos rápidos del día: <span className="font-semibold text-white">{formatARS(gastosEfectivoHoy)}</span>
+                </p>
+                <p>
+                  = Esperado en caja: <span className="font-semibold text-[#8cff59]">{formatARS(efectivoEsperado)}</span>
+                </p>
+              </div>
+            ) : (
+              <>
+                Efectivo esperado en caja:{" "}
+                <span className="font-semibold text-white">{formatARS(efectivoEsperado)}</span>
+              </>
+            )}
           </div>
 
           <div>
@@ -127,10 +151,20 @@ export default function CierreWizard({ cerrarAction, totalEfectivoSistema }: Cie
           ) : null}
 
           <div className="rounded-[24px] border border-zinc-800 bg-zinc-950/70 p-4">
+            {gastosEfectivoHoy > 0 ? (
+              <div className="mb-3 space-y-1 text-sm text-zinc-300">
+                <p>
+                  Ventas en efectivo: <span className="font-semibold text-white">{formatARS(totalEfectivoSistema)}</span>
+                </p>
+                <p>
+                  − Gastos rápidos del día: <span className="font-semibold text-white">{formatARS(gastosEfectivoHoy)}</span>
+                </p>
+              </div>
+            ) : null}
             <div className="grid grid-cols-3 gap-2 text-center">
               <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Sistema</p>
-                <p className="mt-1 text-base font-semibold text-white">{formatARS(totalEfectivoSistema)}</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Esperado</p>
+                <p className="mt-1 text-base font-semibold text-white">{formatARS(efectivoEsperado)}</p>
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Contado</p>
@@ -147,7 +181,7 @@ export default function CierreWizard({ cerrarAction, totalEfectivoSistema }: Cie
             <div
               className={`mt-4 flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm ${tone.className}`}
             >
-              {diferencia === 0 ? (
+              {Math.abs(diferencia) <= TOLERANCIA_DIFERENCIA ? (
                 <svg
                   viewBox="0 0 24 24"
                   className="h-5 w-5 shrink-0"
@@ -172,8 +206,8 @@ export default function CierreWizard({ cerrarAction, totalEfectivoSistema }: Cie
                 </svg>
               )}
               <span className="font-semibold">
-                {diferencia === 0
-                  ? "Cuadra: el efectivo coincide con el sistema."
+                {Math.abs(diferencia) <= TOLERANCIA_DIFERENCIA
+                  ? "Cuadra: el efectivo coincide con lo esperado en caja."
                   : `${tone.label} ${formatARS(Math.abs(diferencia))} — se registra en el cierre para revisar después.`}
               </span>
             </div>
