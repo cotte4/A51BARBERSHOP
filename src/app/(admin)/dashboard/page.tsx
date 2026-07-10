@@ -105,28 +105,8 @@ export default async function DashboardPage() {
                   <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-semibold text-zinc-200">
                     {formatFechaHoy(kpisDia.fechaHoy)}
                   </span>
-                  <span
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                      kpisDia.cierreRealizado
-                        ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
-                        : "border-amber-400/30 bg-amber-400/10 text-amber-200"
-                    }`}
-                  >
-                    {kpisDia.cierreRealizado ? "Caja cerrada" : "Caja abierta"}
-                  </span>
                   <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-semibold text-zinc-200">
                     {kpisDia.atencionesHoy} cortes hoy
-                  </span>
-                  <span
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                      productosStockBajo.length > 0
-                        ? "border-amber-400/30 bg-amber-400/10 text-amber-200"
-                        : "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"
-                    }`}
-                  >
-                    {productosStockBajo.length > 0
-                      ? `${productosStockBajo.length} alertas de stock`
-                      : "Stock en orden"}
                   </span>
                 </div>
 
@@ -202,7 +182,7 @@ export default async function DashboardPage() {
                 </div>
 
                 <div className="panel-soft rounded-[24px] p-4">
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
                         Pinky
@@ -227,6 +207,14 @@ export default async function DashboardPage() {
                         {kpisMes.atencionesTotales}
                       </p>
                     </div>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                        Casa mes
+                      </p>
+                      <p className="font-display mt-2 text-2xl font-semibold text-white">
+                        {formatARS(kpisMes.resultadoCasaMes)}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -234,32 +222,24 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        <section className="panel-card rounded-[28px] p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="eyebrow text-xs font-semibold">Alertas de stock</p>
-              <h2 className="font-display mt-2 text-xl font-semibold text-white">
-                Lo que pide atencion
-              </h2>
-            </div>
-            <Link
-              href="/inventario"
-              className="text-sm font-medium text-zinc-400 underline-offset-4 hover:text-[#8cff59] hover:underline"
-            >
-              Ir a inventario
-            </Link>
-          </div>
-
-          {productosStockBajo.length > 0 ? (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-[22px] border border-amber-500/35 bg-amber-500/10 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-200">
-                  Bajo stock
-                </p>
-                <p className="font-display mt-2 text-3xl font-semibold text-white">
-                  {productosStockBajo.length}
-                </p>
+        {productosStockBajo.length > 0 ? (
+          <section className="panel-card rounded-[28px] p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="eyebrow text-xs font-semibold">Alertas de stock</p>
+                <h2 className="font-display mt-2 text-xl font-semibold text-white">
+                  {productosStockBajo.length} para reponer
+                </h2>
               </div>
+              <Link
+                href="/inventario"
+                className="text-sm font-medium text-zinc-400 underline-offset-4 hover:text-[#8cff59] hover:underline"
+              >
+                Ir a inventario
+              </Link>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {productosStockBajo.slice(0, 3).map((producto) => (
                 <Link
                   key={producto.id}
@@ -276,53 +256,8 @@ export default async function DashboardPage() {
                 </Link>
               ))}
             </div>
-          ) : (
-            <div className="mt-4 rounded-[22px] border border-[#8cff59]/25 bg-[#8cff59]/10 p-4">
-              <p className="font-semibold text-[#8cff59]">Inventario en orden</p>
-              <p className="mt-1 text-sm text-zinc-300">No hay productos con stock bajo.</p>
-            </div>
-          )}
-        </section>
-
-        <section className="grid gap-4 xl:grid-cols-[0.98fr_1.02fr]">
-          <div className="panel-card rounded-[28px] p-5">
-            <p className="eyebrow text-xs font-semibold">Finanzas y control</p>
-            <h2 className="font-display mt-2 text-xl font-semibold text-white">
-              Reportes que ayudan a decidir
-            </h2>
-
-            <div className="mt-4">
-              <div className="panel-soft rounded-[22px] p-4">
-                <p className="text-xs font-medium text-zinc-400">Casa del mes</p>
-                <p className="font-display mt-2 text-2xl font-bold text-white">
-                  {formatARS(kpisMes.resultadoCasaMes)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="panel-card rounded-[28px] p-5">
-            <p className="eyebrow text-xs font-semibold">Accesos rapidos</p>
-            <h2 className="font-display mt-2 text-xl font-semibold text-white">
-              Gestion del negocio
-            </h2>
-
-            <div className="mt-4 flex flex-col gap-2">
-              <Link href="/gastos-rapidos" className="text-sm text-zinc-400 hover:text-[#8cff59]">
-                Historial de gastos
-              </Link>
-              <Link
-                href="/configuracion/medios-de-pago"
-                className="text-sm text-zinc-400 hover:text-[#8cff59]"
-              >
-                Medios de pago
-              </Link>
-              <Link href="/repago" className="text-sm text-zinc-400 hover:text-[#8cff59]">
-                Repago
-              </Link>
-            </div>
-          </div>
-        </section>
+          </section>
+        ) : null}
       </main>
     </div>
   );

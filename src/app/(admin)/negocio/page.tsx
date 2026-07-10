@@ -35,12 +35,6 @@ import {
 } from "./_lib/page-utils";
 
 const utilityLinks = [
-  { href: "/configuracion/servicios", label: "Servicios", detail: "Cambiar servicios y precios" },
-  { href: "/configuracion/barberos", label: "Barberos", detail: "Editar el equipo" },
-  { href: "/configuracion/temporadas", label: "Temporadas", detail: "Ver metas del mes" },
-  { href: "/configuracion/musica", label: "Musica", detail: "Controlar el player" },
-  { href: "/configuracion/medios-de-pago", label: "Cobros", detail: "Tarjeta, transferencia y comisiones" },
-  { href: "/configuracion/gastos-fijos", label: "Gastos fijos", detail: "Alquiler, servicios y base del mes" },
   { href: "/negocio/estilo", label: "Cortes Marciano", detail: "Configurar cortes por forma de cara" },
   { href: "/negocio/soporte", label: "Soporte", detail: "Revisar bugs internos y triage" },
   { href: "/negocio/activos", label: "Hangar", detail: "Activos, compras y flujo de inversion inicial" },
@@ -193,16 +187,7 @@ export default async function NegocioPage() {
 
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-semibold text-zinc-200">
-                  Entraron {formatARS(kpisDia.cajaNeta)} limpios
-                </span>
-                <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-semibold text-zinc-200">
                   {kpisDia.atencionesHoy} trabajos hoy
-                </span>
-                <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-semibold text-zinc-200">
-                  {gastosHoy > 0 ? `${formatARS(gastosHoy)} de gastos hoy` : "Sin gastos hoy"}
-                </span>
-                <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-semibold text-zinc-200">
-                  {stockAlerts.length > 0 ? `${stockAlerts.length} cosas para reponer` : "Stock en orden"}
                 </span>
               </div>
 
@@ -295,35 +280,9 @@ export default async function NegocioPage() {
             title="Pagos al equipo"
             detail="Pendientes, pagados y quien todavia espera cobro."
             footer="Ver liquidaciones"
-            className="min-h-[380px]"
             accentClassName="border-[#8cff59]/18 bg-[radial-gradient(circle_at_top_right,_rgba(34,211,238,0.14),_transparent_38%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
           >
-            <div className="rounded-[26px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.18))] p-5">
-              <div className="flex items-end justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-400">
-                    Falta pagar
-                  </p>
-                  <p
-                    className={`font-display mt-3 text-4xl font-semibold ${
-                      totalPendienteBarberos > 0 ? "text-amber-300" : "text-white"
-                    }`}
-                  >
-                    {formatARS(totalPendienteBarberos)}
-                  </p>
-                </div>
-                <span className="rounded-full border border-white/10 bg-black/18 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-300">
-                  {teamRows.length} perfiles
-                </span>
-              </div>
-              <p className="mt-2 text-sm text-zinc-400">
-                {totalPendienteBarberos > 0
-                  ? "Este es el total pendiente del equipo."
-                  : "No hay pagos pendientes ahora."}
-              </p>
-            </div>
-
-            <div className="mt-4 space-y-3">
+            <div className="space-y-3">
               {teamVisible.length > 0 ? (
                 teamVisible.map((row) => (
                   <div
@@ -374,27 +333,10 @@ export default async function NegocioPage() {
             title="Productos por mirar"
             detail="Solo lo que esta por terminarse o ya quedo en cero."
             footer="Ver inventario"
-            className="min-h-[340px]"
             accentClassName="border-[#8cff59]/16 bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.10),_transparent_34%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
           >
             {stockAlerts.length > 0 ? (
               <div className="space-y-3">
-                <div className="rounded-[24px] border border-amber-400/20 bg-amber-400/8 p-4">
-                  <div className="flex items-end justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-200">
-                        Hay que mirar esto
-                      </p>
-                      <p className="font-display mt-2 text-3xl font-semibold text-white">
-                        {stockAlerts.length}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-black/18 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-100">
-                      Prioridad
-                    </span>
-                  </div>
-                </div>
-
                 {stockAlerts.slice(0, 4).map((producto) => {
                   const stockActual = producto.stockActual ?? 0;
                   const stockMinimo = producto.stockMinimo ?? 5;
@@ -428,12 +370,9 @@ export default async function NegocioPage() {
                 })}
               </div>
             ) : (
-              <div className="flex h-full flex-col justify-center rounded-[24px] border border-emerald-400/20 bg-emerald-400/8 p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300">
-                  Inventario sano
-                </p>
-                <p className="font-display mt-2 text-3xl font-semibold text-white">Todo en orden</p>
-                <p className="mt-2 text-sm text-zinc-300">
+              <div className="rounded-[24px] border border-emerald-400/20 bg-emerald-400/8 p-4">
+                <p className="font-semibold text-emerald-300">Inventario sano</p>
+                <p className="mt-1 text-sm text-zinc-300">
                   No hay productos con stock bajo ni agotado.
                 </p>
               </div>
@@ -447,7 +386,6 @@ export default async function NegocioPage() {
             title="Gastos del dia"
             detail="Lo que ya salio hoy, cargado desde gastos rapidos."
             footer="Ver gastos rapidos"
-            className="min-h-[340px]"
             accentClassName="border-[#8cff59]/16 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.10),_transparent_34%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
           >
             <div className="panel-soft rounded-[24px] p-4">
@@ -466,28 +404,9 @@ export default async function NegocioPage() {
             title="Repago Memas"
             detail="La proxima cuota y lo que queda por saldar."
             footer="Ver repago y registrar pago"
-            className="min-h-[340px]"
             accentClassName="border-[#8cff59]/16 bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.10),_transparent_34%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
           >
-            <div
-              className={`rounded-[24px] border p-4 ${
-                proximaCuotaUsd > 0
-                  ? "border-sky-400/20 bg-sky-400/8"
-                  : "border-emerald-400/20 bg-emerald-400/8"
-              }`}
-            >
-              <p className="text-xs font-medium text-zinc-400">Proxima cuota</p>
-              <p className="font-display mt-2 text-3xl font-bold text-white">
-                {proximaCuotaUsd > 0 ? formatUSD(proximaCuotaUsd) : "Sin cuota"}
-              </p>
-              <p className="mt-1 text-sm text-zinc-300">
-                {proximaCuotaUsd > 0
-                  ? `${proximaCuotaEstado} - ${proximaCuotaFecha}`
-                  : "No hay una cuota pendiente ahora."}
-              </p>
-            </div>
-
-            <div className="mt-4 rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.18))] p-4">
+            <div className="rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.18))] p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-400">
@@ -523,7 +442,7 @@ export default async function NegocioPage() {
                   Accesos de soporte
                 </h2>
                 <p className="mt-2 text-sm text-zinc-400">
-                  Configuracion, perfiles y reportes largos.
+                  Herramientas propias del negocio. Los ajustes viven en la tab Config.
                 </p>
               </div>
               <div className="rounded-full border border-zinc-700 bg-black/18 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-400">
@@ -531,7 +450,7 @@ export default async function NegocioPage() {
               </div>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {utilityLinks.map((link) => (
                 <NegocioUtilityChip
                   key={link.href}

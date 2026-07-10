@@ -77,41 +77,10 @@ export default async function ConfiguracionPage() {
               Configuracion
             </h2>
             <p className="mt-3 max-w-2xl text-sm text-zinc-400">
-              Este es el tablero donde se ordena el motor del negocio. Entradas claras, acciones
-              sensibles y acceso rapido a cada modulo.
+              El motor del negocio. Cada modulo tiene su tarjeta abajo.
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-300">
-                {barberosList.length} barberos
-              </span>
-              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-300">
-                {serviciosList.length} servicios
-              </span>
-              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-300">
-                {mediosPagoList.length} medios
-              </span>
-              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-300">
-                {gastosList.length} gastos
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/configuracion/barberos"
-              className="neon-button inline-flex min-h-[52px] items-center justify-center rounded-2xl px-5 text-sm font-semibold transition"
-            >
-              Ir a barberos
-            </Link>
-            <Link
-              href="/configuracion/musica"
-              className="inline-flex min-h-[52px] items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900 px-5 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-800"
-            >
-              Ver musica
-            </Link>
           </div>
         </div>
-
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
