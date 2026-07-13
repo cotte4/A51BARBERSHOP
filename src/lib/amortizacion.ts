@@ -115,6 +115,18 @@ export function calcularSaldoReal(
   return saldoTeorico;
 }
 
+/**
+ * Convierte el monto ingresado a USD. El préstamo se descuenta siempre en USD;
+ * si la persona pagó en ARS, se convierte con el TC del día. En USD es passthrough.
+ */
+export function convertirMontoAUsd(
+  montoIngresado: number,
+  moneda: "USD" | "ARS",
+  tcDia: number
+): number {
+  return moneda === "ARS" ? montoIngresado / tcDia : montoIngresado;
+}
+
 export interface PagoFlexibleInput {
   /** Saldo real de la deuda hoy (USD) */
   saldoPendiente: number;

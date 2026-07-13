@@ -31,6 +31,7 @@ export default function RegistrarPagoForm({
   tcOnline,
 }: RegistrarPagoFormProps) {
   const [state, formAction, isPending] = useActionState(action, {});
+  const [moneda, setMoneda] = useState<"USD" | "ARS">("USD");
   const [montoPagadoUsd, setMontoPagadoUsd] = useState(cuotaTotalDefault.toFixed(2));
   const [tcDia, setTcDia] = useState("");
   const [notas, setNotas] = useState("");
@@ -39,6 +40,7 @@ export default function RegistrarPagoForm({
   const montoNumber = Number(montoPagadoUsd) || 0;
   const tcNumber = Number(tcDia) || 0;
   const montoArs = montoNumber * tcNumber;
+  const montoUsdDesdeArs = tcNumber > 0 ? montoNumber / tcNumber : 0;
 
   // Pagos flexibles: cualquier monto > 0 es válido (ver repago-service).
   // Los chips son solo sugerencias rápidas — "Otro monto" deja el campo
@@ -130,15 +132,37 @@ export default function RegistrarPagoForm({
 
         {/* monto */}
         <div className="rounded-[22px] border border-zinc-800 bg-zinc-900/60 p-4">
-          <label htmlFor="montoPagadoUsd" className="mb-3 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
-            Monto pagado
-          </label>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <label htmlFor="montoPagadoUsd" className="block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+              Monto pagado
+            </label>
+            <div className="flex gap-1 rounded-full border border-zinc-700 bg-zinc-900 p-1">
+              {(["USD", "ARS"] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setMoneda(option)}
+                  className={[
+                    "rounded-full px-3 py-1 text-xs font-semibold transition",
+                    moneda === option
+                      ? "bg-[#8cff59] text-[#07130a]"
+                      : "text-zinc-400 hover:text-zinc-200",
+                  ].join(" ")}
+                >
+                  {option === "USD" ? "u$d" : "$"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <input type="hidden" name="moneda" value={moneda} />
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-500">u$d</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-500">
+              {moneda === "USD" ? "u$d" : "$"}
+            </span>
             <input
               ref={montoInputRef}
               id="montoPagadoUsd"
-              name="montoPagadoUsd"
+              name="monto"
               type="number"
               min="0.01"
               step="0.01"
@@ -168,7 +192,8 @@ export default function RegistrarPagoForm({
             >
               mirala online
             </a>
-            .
+            . El chip <strong className="text-zinc-400">Blue</strong> es el punto medio del dólar
+            blue (promedio compra/venta).
           </p>
           <input
             id="tcDia"
@@ -204,11 +229,22 @@ export default function RegistrarPagoForm({
           </div>
         </div>
 
-        {/* preview ARS */}
+        {/* preview conversión */}
         {montoNumber > 0 && tcNumber > 0 ? (
           <div className="flex items-center justify-between rounded-[20px] border border-[#8cff59]/20 bg-[#8cff59]/8 px-4 py-3">
-            <span className="text-xs text-zinc-400">{formatUSD(montoNumber)} × ${tcNumber.toLocaleString("es-AR")}</span>
-            <span className="text-sm font-semibold text-[#b9ff96]">{formatARS(montoArs)}</span>
+            {moneda === "ARS" ? (
+              <>
+                <span className="text-xs text-zinc-400">
+                  {formatARS(montoNumber)} ÷ ${tcNumber.toLocaleString("es-AR")}
+                </span>
+                <span className="text-sm font-semibold text-[#b9ff96]">{formatUSD(montoUsdDesdeArs)}</span>
+              </>
+            ) : (
+              <>
+                <span className="text-xs text-zinc-400">{formatUSD(montoNumber)} × ${tcNumber.toLocaleString("es-AR")}</span>
+                <span className="text-sm font-semibold text-[#b9ff96]">{formatARS(montoArs)}</span>
+              </>
+            )}
           </div>
         ) : null}
 

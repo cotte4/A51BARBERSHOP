@@ -49,12 +49,22 @@ async function getTcOnline(): Promise<TcOnline> {
       next: { revalidate: 900 },
     });
     if (!res.ok) return { oficial: null, blue: null };
-    const data = (await res.json()) as Array<{ casa?: string; venta?: number }>;
+    const data = (await res.json()) as Array<{ casa?: string; compra?: number; venta?: number }>;
     const venta = (casa: string) => {
       const value = data.find((item) => item.casa === casa)?.venta;
       return typeof value === "number" && value > 0 ? Math.round(value) : null;
     };
-    return { oficial: venta("oficial"), blue: venta("blue") };
+    const blueItem = data.find((item) => item.casa === "blue");
+    const blueCompra = blueItem?.compra;
+    const blueVenta = blueItem?.venta;
+    const blueMidpoint =
+      typeof blueCompra === "number" &&
+      blueCompra > 0 &&
+      typeof blueVenta === "number" &&
+      blueVenta > 0
+        ? Math.round((blueCompra + blueVenta) / 2)
+        : null;
+    return { oficial: venta("oficial"), blue: blueMidpoint };
   } catch {
     return { oficial: null, blue: null };
   }
@@ -149,10 +159,6 @@ export default async function RepagoPage() {
   );
   const faltanteCuotaActual = Math.max(0, proximaCuotaTotal - cubiertoCuotaActual);
 
-  const saldoRestanteArs = saldoRestante * tcReferencia;
-  const proximaCuotaTotalArs = proximaCuotaTotal * tcReferencia;
-  const faltanteCuotaActualArs = faltanteCuotaActual * tcReferencia;
-
   return (
     <div className="app-shell min-h-screen">
       <header className="border-b border-zinc-800/80 bg-zinc-950/90 px-4 py-4 backdrop-blur">
@@ -199,14 +205,12 @@ export default async function RepagoPage() {
                 <StatCard
                   label="Saldo pendiente"
                   value={formatUSD(saldoRestante)}
-                  secondaryValue={formatARS(saldoRestanteArs)}
                   hint={cuotaSiguiente ? `Cuota #${cuotaSiguiente.numeroCuota}` : "Sin cuotas pendientes"}
                   tone={repago.pagadoCompleto ? "success" : "warning"}
                 />
                 <StatCard
                   label="Próxima cuota"
                   value={cuotaSiguiente ? formatUSD(proximaCuotaTotal) : "Completa"}
-                  secondaryValue={cuotaSiguiente ? formatARS(proximaCuotaTotalArs) : undefined}
                   hint={repago.pagadoCompleto ? "Deuda cerrada" : `Restan ${cantidadCuotas - cuotasPagadas} cuotas`}
                 />
                 <StatCard
@@ -242,9 +246,6 @@ export default async function RepagoPage() {
                   </p>
                   <p className="mt-1 text-2xl font-bold text-white">
                     {formatUSD(proximaCuotaTotal)}
-                  </p>
-                  <p className="text-sm font-semibold text-[#b9ff96]">
-                    {formatARS(proximaCuotaTotalArs)}
                   </p>
                   {cubiertoCuotaActual > 0.01 ? (
                     <p className="mt-1 text-xs text-zinc-500">
@@ -327,7 +328,6 @@ export default async function RepagoPage() {
                   <InfoCard
                     label="Restante"
                     value={formatUSD(saldoRestante)}
-                    secondaryValue={formatARS(saldoRestanteArs)}
                     helper={cuotaSiguiente ? `Hasta la cuota #${cuotaSiguiente.numeroCuota}` : "No quedan cuotas"}
                   />
                   <InfoCard
@@ -349,9 +349,6 @@ export default async function RepagoPage() {
                         </p>
                         <p className="mt-1 text-3xl font-bold text-white">
                           {formatUSD(cuotaSiguiente.cuotaTotal)}
-                        </p>
-                        <p className="text-lg font-semibold text-[#b9ff96]">
-                          {formatARS(cuotaSiguiente.cuotaTotal * tcReferencia)}
                         </p>
                         <p className="mt-1 text-sm text-zinc-400">
                           Capital {formatUSD(cuotaSiguiente.capital)} · Interés {formatUSD(cuotaSiguiente.interes)}

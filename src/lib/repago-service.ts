@@ -3,10 +3,16 @@ import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { repagoMemas, repagoMemasCuotas } from "@/db/schema";
-import { aplicarPagoFlexible, calcularSaldoReal, generarCronograma } from "@/lib/amortizacion";
+import {
+  aplicarPagoFlexible,
+  calcularSaldoReal,
+  convertirMontoAUsd,
+  generarCronograma,
+} from "@/lib/amortizacion";
 
 export type RegistrarCuotaRepagoInput = {
-  montoPagadoUsd: number;
+  montoIngresado: number;
+  moneda: "USD" | "ARS";
   tcDia: number;
   notas?: string | null;
 };
@@ -31,13 +37,15 @@ export type RegistrarCuotaRepagoResult =
 export async function registrarCuotaRepagoMemas(
   input: RegistrarCuotaRepagoInput
 ): Promise<RegistrarCuotaRepagoResult> {
-  if (!Number.isFinite(input.montoPagadoUsd) || input.montoPagadoUsd <= 0) {
+  if (!Number.isFinite(input.montoIngresado) || input.montoIngresado <= 0) {
     return { ok: false, error: "El monto pagado debe ser mayor a 0." };
   }
 
   if (!Number.isFinite(input.tcDia) || input.tcDia <= 0) {
     return { ok: false, error: "El tipo de cambio del dia debe ser mayor a 0." };
   }
+
+  const montoPagadoUsd = convertirMontoAUsd(input.montoIngresado, input.moneda, input.tcDia);
 
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('repago-memas'))`);
@@ -99,10 +107,10 @@ export async function registrarCuotaRepagoMemas(
         interesYaPagado,
         capitalCuota: cuotaActual.capital,
         tasaAnual,
-        montoPagadoUsd: input.montoPagadoUsd,
+        montoPagadoUsd,
       });
 
-    const montoPagadoArs = input.montoPagadoUsd * input.tcDia;
+    const montoPagadoArs = montoPagadoUsd * input.tcDia;
     const hoy = new Date().toLocaleDateString("en-CA", {
       timeZone: "America/Argentina/Buenos_Aires",
     });
@@ -116,6 +124,8 @@ export async function registrarCuotaRepagoMemas(
       interesPagado: String(interesPagado.toFixed(2)),
       tcDia: String(input.tcDia.toFixed(2)),
       notas: input.notas?.trim() || null,
+      monedaIngresada: input.moneda,
+      montoIngresado: String(input.montoIngresado.toFixed(2)),
     });
 
     await tx

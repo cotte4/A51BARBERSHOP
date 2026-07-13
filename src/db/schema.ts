@@ -506,6 +506,8 @@ export const repagoMemasCuotas = pgTable("repago_memas_cuotas", {
   interesPagado: numeric("interes_pagado", { precision: 12, scale: 2 }),
   tcDia: numeric("tc_dia", { precision: 10, scale: 2 }),
   notas: text("notas"),
+  monedaIngresada: text("moneda_ingresada").notNull().default("ARS"),
+  montoIngresado: numeric("monto_ingresado", { precision: 12, scale: 2 }),
 },
 (table) => [
   // Índice NO único: los pagos parciales generan varias filas por cuota

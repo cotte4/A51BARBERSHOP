@@ -20,23 +20,29 @@ export async function registrarCuota(
     return { error: "Solo el administrador puede registrar pagos." };
   }
 
-  const montoPagadoUsdStr = formData.get("montoPagadoUsd") as string;
+  const montoStr = formData.get("monto") as string;
+  const monedaStr = (formData.get("moneda") as string) || "";
   const tcDiaStr = formData.get("tcDia") as string;
   const notas = (formData.get("notas") as string)?.trim() || null;
 
-  const montoPagadoUsd = Number(montoPagadoUsdStr);
+  const monto = Number(montoStr);
   const tcDia = Number(tcDiaStr);
 
-  if (!montoPagadoUsdStr || Number.isNaN(montoPagadoUsd) || montoPagadoUsd <= 0) {
+  if (!montoStr || Number.isNaN(monto) || monto <= 0) {
     return { error: "El monto pagado debe ser mayor a 0." };
   }
   if (!tcDiaStr || Number.isNaN(tcDia) || tcDia <= 0) {
     return { error: "El tipo de cambio del dia debe ser mayor a 0." };
   }
+  if (monedaStr !== "USD" && monedaStr !== "ARS") {
+    return { error: "La moneda ingresada no es valida." };
+  }
+  const moneda: "USD" | "ARS" = monedaStr;
 
   try {
     const result = await registrarCuotaRepagoMemas({
-      montoPagadoUsd,
+      montoIngresado: monto,
+      moneda,
       tcDia,
       notas,
     });

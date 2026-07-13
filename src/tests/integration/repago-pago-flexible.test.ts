@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   aplicarPagoFlexible,
   calcularSaldoReal,
+  convertirMontoAUsd,
   generarCronograma,
 } from "@/lib/amortizacion";
 
@@ -149,6 +150,38 @@ describe("repago: aplicarPagoFlexible", () => {
       saldo = r.nuevoSaldo;
     }
     expect(saldo).toBeCloseTo(0, 2);
+  });
+});
+
+describe("repago: convertirMontoAUsd (pago bimoneda)", () => {
+  it("pago en USD → passthrough, el TC no altera el monto", () => {
+    expect(convertirMontoAUsd(137.5, "USD", 1200)).toBe(137.5);
+    expect(convertirMontoAUsd(137.5, "USD", 999_999)).toBe(137.5);
+  });
+
+  it("pago en ARS → convierte con el TC del día (ars / tc)", () => {
+    expect(convertirMontoAUsd(165_000, "ARS", 1200)).toBeCloseTo(137.5, 2);
+  });
+
+  it("equivalencia: pagar USD X o ARS X·TC produce el mismo efecto en el saldo", () => {
+    const tc = 1200;
+    const montoUsd = 137.5;
+    const desdeUsd = convertirMontoAUsd(montoUsd, "USD", tc);
+    const desdeArs = convertirMontoAUsd(montoUsd * tc, "ARS", tc);
+    expect(desdeArs).toBeCloseTo(desdeUsd, 6);
+
+    const base = {
+      saldoPendiente: DEUDA,
+      capitalYaPagado: 0,
+      interesYaPagado: 0,
+      capitalCuota: CAPITAL_FIJO,
+      tasaAnual: TASA,
+    };
+    const rUsd = aplicarPagoFlexible({ ...base, montoPagadoUsd: desdeUsd });
+    const rArs = aplicarPagoFlexible({ ...base, montoPagadoUsd: desdeArs });
+    expect(rArs.nuevoSaldo).toBeCloseTo(rUsd.nuevoSaldo, 6);
+    expect(rArs.capitalPagado).toBeCloseTo(rUsd.capitalPagado, 6);
+    expect(rArs.interesPagado).toBeCloseTo(rUsd.interesPagado, 6);
   });
 });
 
