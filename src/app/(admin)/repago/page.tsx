@@ -263,7 +263,7 @@ export default async function RepagoPage() {
                   action={registrarCuota}
                   cuotaTotalDefault={faltanteCuotaActual > 0 ? faltanteCuotaActual : proximaCuotaTotal}
                   tcReferencia={tcReferencia}
-                  tcOnline={tcOnline}
+                  tcSistema={tcOnline.blue}
                 />
               </div>
             </section>

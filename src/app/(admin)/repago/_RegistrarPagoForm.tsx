@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useActionState } from "react";
 import type { RegistrarCuotaState } from "./actions";
-import { formatARS } from "@/lib/format";
 
 interface RegistrarPagoFormProps {
   action: (
@@ -10,79 +10,102 @@ interface RegistrarPagoFormProps {
     formData: FormData
   ) => Promise<RegistrarCuotaState>;
   cuotaTotalDefault: number;
+  /** TC del sistema (punto medio del blue). null si DolarAPI no respondió. */
+  tcSistema: number | null;
+  /** TC configurado en el negocio — fallback para el input manual. */
   tcReferencia: number;
-  tcOnline: { oficial: number | null; blue: number | null };
 }
 
+type Moneda = "USD" | "ARS";
+
+// USD con 2 decimales; ARS entero. La forma del número ya dice qué moneda es.
 function formatUSD(value: number) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  })
-    .format(value)
-    .replace("US$", "u$d ");
+  return (
+    "u$d " +
+    value.toLocaleString("es-AR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  );
+}
+
+function formatARS(value: number) {
+  return "$ " + Math.round(value).toLocaleString("es-AR");
+}
+
+function formatEnMoneda(value: number, moneda: Moneda) {
+  return moneda === "ARS" ? formatARS(value) : formatUSD(value);
 }
 
 export default function RegistrarPagoForm({
   action,
   cuotaTotalDefault,
+  tcSistema,
   tcReferencia,
-  tcOnline,
 }: RegistrarPagoFormProps) {
   const [state, formAction, isPending] = useActionState(action, {});
-  const [moneda, setMoneda] = useState<"USD" | "ARS">("USD");
-  const [montoPagadoUsd, setMontoPagadoUsd] = useState(cuotaTotalDefault.toFixed(2));
-  const [tcDia, setTcDia] = useState("");
+
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [moneda, setMoneda] = useState<Moneda | null>(null);
+  const [monto, setMonto] = useState("");
+  const [tcManual, setTcManual] = useState("");
   const [notas, setNotas] = useState("");
-  const montoInputRef = useRef<HTMLInputElement>(null);
 
-  const montoNumber = Number(montoPagadoUsd) || 0;
-  const tcNumber = Number(tcDia) || 0;
-  const montoArs = montoNumber * tcNumber;
-  const montoUsdDesdeArs = tcNumber > 0 ? montoNumber / tcNumber : 0;
+  // TC efectivo: el del sistema, o el manual si la cotización online falló.
+  const tc = tcSistema ?? (Number(tcManual) || 0);
+  const necesitaTcManual = tcSistema === null;
 
-  // Pagos flexibles: cualquier monto > 0 es válido (ver repago-service).
-  // Los chips son solo sugerencias rápidas — "Otro monto" deja el campo
-  // libre para que el barbero cargue lo que pueda pagar ese mes.
-  const suggestedAmounts = useMemo(
-    () => [
-      {
-        id: "full",
-        label: `Cuota completa (${formatUSD(cuotaTotalDefault)})`,
-        value: cuotaTotalDefault,
-      },
-      {
-        id: "half",
-        label: `La mitad (${formatUSD(cuotaTotalDefault / 2)})`,
-        value: Number((cuotaTotalDefault / 2).toFixed(2)),
-      },
-      {
-        id: "other",
-        label: "Otro monto",
-        value: null,
-      },
-    ],
-    [cuotaTotalDefault]
-  );
-  // Cotización online (DolarAPI, cacheada 15 min en el server). Si la API
-  // falla, caemos a chips alrededor del TC de referencia configurado.
-  const suggestedTcs = useMemo(() => {
-    const online = [
-      tcOnline.oficial ? { label: "Oficial", value: tcOnline.oficial } : null,
-      tcOnline.blue ? { label: "Blue", value: tcOnline.blue } : null,
-    ].filter((item): item is { label: string; value: number } => item !== null);
+  const montoNum = Number(monto) || 0;
+  const montoUsd =
+    moneda === "ARS" ? (tc > 0 ? montoNum / tc : 0) : montoNum;
+  const montoArs = moneda === "ARS" ? montoNum : montoNum * tc;
 
-    if (online.length > 0) return online;
+  // La cuota está en USD; si pagan en pesos, la expresamos con el TC del día.
+  const cuotaEnMoneda = (m: Moneda) =>
+    m === "ARS" ? cuotaTotalDefault * tc : cuotaTotalDefault;
 
-    const base = Math.round(tcReferencia / 50) * 50;
-    return [base - 100, base, base + 100]
-      .filter((value) => value > 0)
-      .map((value) => ({ label: null, value }));
-  }, [tcOnline, tcReferencia]);
+  const redondear = (value: number, m: Moneda) =>
+    m === "ARS" ? String(Math.round(value)) : value.toFixed(2);
+
+  const elegirMoneda = (m: Moneda) => {
+    setMoneda(m);
+    // Preseleccionamos la cuota completa: el camino feliz queda en pocos taps.
+    setMonto(redondear(cuotaEnMoneda(m), m));
+    setStep(2);
+  };
+
+  const sugerencias = useMemo(() => {
+    if (!moneda) return [];
+    const full = cuotaEnMoneda(moneda);
+    return [
+      { id: "full", label: `Cuota completa (${formatEnMoneda(full, moneda)})`, value: full },
+      { id: "half", label: `La mitad (${formatEnMoneda(full / 2, moneda)})`, value: full / 2 },
+      { id: "other", label: "Otro monto", value: null as number | null },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moneda, cuotaTotalDefault, tc]);
+
+  // Tras un pago exitoso, volvemos al inicio del wizard.
+  useEffect(() => {
+    if (state.success) {
+      setStep(1);
+      setMoneda(null);
+      setMonto("");
+      setNotas("");
+    }
+  }, [state.success]);
+
+  const montoValido = montoNum > 0;
+  const tcValido = tc > 0;
 
   return (
-    <form action={formAction} className="space-y-5">
+    <form action={formAction} className="space-y-4">
+      {/* Campos reales enviados al server action */}
+      <input type="hidden" name="moneda" value={moneda ?? "USD"} />
+      <input type="hidden" name="monto" value={monto} />
+      <input type="hidden" name="tcDia" value={tc || ""} />
+      <input type="hidden" name="notas" value={notas} />
+
       {state.error ? (
         <div className="rounded-[24px] border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {state.error}
@@ -94,185 +117,232 @@ export default function RegistrarPagoForm({
         </div>
       ) : null}
 
-      <div className="space-y-4">
-        <p className="text-sm leading-6 text-zinc-300">
-          Pagá lo que puedas este mes: primero cubre el interés y el resto baja la deuda.
-        </p>
-
-        {/* opciones rápidas */}
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {suggestedAmounts.map((option) => {
-            const selected = option.value !== null && Number(montoPagadoUsd) === option.value;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => {
-                  if (option.value !== null) {
-                    setMontoPagadoUsd(option.value.toFixed(2));
-                  } else {
-                    setMontoPagadoUsd("");
-                    montoInputRef.current?.focus();
-                  }
-                }}
-                className={[
-                  "rounded-[20px] border px-3 py-3 text-left transition",
-                  selected
-                    ? "border-[#8cff59]/35 bg-[#8cff59]/10"
-                    : "border-zinc-700 bg-zinc-900 hover:border-zinc-600 hover:bg-zinc-800",
-                ].join(" ")}
-              >
-                <span className={`block text-sm font-semibold ${selected ? "text-white" : "text-zinc-100"}`}>
-                  {option.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* monto */}
-        <div className="rounded-[22px] border border-zinc-800 bg-zinc-900/60 p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <label htmlFor="montoPagadoUsd" className="block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
-              Monto pagado
-            </label>
-            <div className="flex gap-1 rounded-full border border-zinc-700 bg-zinc-900 p-1">
-              {(["USD", "ARS"] as const).map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setMoneda(option)}
-                  className={[
-                    "rounded-full px-3 py-1 text-xs font-semibold transition",
-                    moneda === option
-                      ? "bg-[#8cff59] text-[#07130a]"
-                      : "text-zinc-400 hover:text-zinc-200",
-                  ].join(" ")}
-                >
-                  {option === "USD" ? "u$d" : "$"}
-                </button>
-              ))}
-            </div>
-          </div>
-          <input type="hidden" name="moneda" value={moneda} />
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-500">
-              {moneda === "USD" ? "u$d" : "$"}
-            </span>
-            <input
-              ref={montoInputRef}
-              id="montoPagadoUsd"
-              name="monto"
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={montoPagadoUsd}
-              onChange={(event) => setMontoPagadoUsd(event.target.value)}
-              placeholder="0.00"
-              className="min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-800 px-4 pl-14 text-base text-white outline-none transition focus:border-[#8cff59]/60"
-            />
-          </div>
-          <p className="mt-2 text-xs text-zinc-500">
-            Si este mes no llegan a la cuota, no pasa nada: lo que pongas descuenta igual.
-          </p>
-        </div>
-
-        {/* TC */}
-        <div className="rounded-[22px] border border-zinc-800 bg-zinc-900/60 p-4">
-          <label htmlFor="tcDia" className="mb-3 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
-            TC del día
-          </label>
-          <p className="mb-2 text-xs text-zinc-500">
-            El dólar de hoy — tocá una cotización o{" "}
-            <a
-              href="https://dolarhoy.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-400 underline hover:text-[#8cff59]"
+      {/* PASO 1 — ¿En qué pagaron? */}
+      {step === 1 ? (
+        <div className="space-y-3">
+          <StepTitle n={1} title="¿En qué pagaron?" />
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => elegirMoneda("ARS")}
+              className="flex min-h-[96px] flex-col items-center justify-center gap-1 rounded-[24px] border border-zinc-700 bg-zinc-900 transition hover:border-zinc-500 hover:bg-zinc-800"
             >
-              mirala online
-            </a>
-            . El chip <strong className="text-zinc-400">Blue</strong> es el punto medio del dólar
-            blue (promedio compra/venta).
-          </p>
-          <input
-            id="tcDia"
-            name="tcDia"
-            type="number"
-            min="1"
-            step="1"
-            value={tcDia}
-            onChange={(event) => setTcDia(event.target.value)}
-            placeholder="Ej: 1200"
-            required
-            className="min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-800 px-4 text-base text-white outline-none transition focus:border-[#8cff59]/60"
-          />
-          <div className="mt-3 flex flex-wrap gap-2">
-            {suggestedTcs.map((option) => {
-              const selected = tcDia === String(option.value);
+              <span className="text-2xl font-bold text-white">$</span>
+              <span className="text-sm font-semibold text-zinc-200">Pesos</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => elegirMoneda("USD")}
+              className="flex min-h-[96px] flex-col items-center justify-center gap-1 rounded-[24px] border border-[#8cff59]/40 bg-[#8cff59]/10 transition hover:border-[#8cff59]/70 hover:bg-[#8cff59]/15"
+            >
+              <span className="text-2xl font-bold text-[#8cff59]">u$d</span>
+              <span className="text-sm font-semibold text-[#b9ff96]">Dólares</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <SummaryRow
+          label="Pagan en"
+          value={moneda === "ARS" ? "Pesos" : "Dólares"}
+          onEdit={() => setStep(1)}
+        />
+      )}
+
+      {/* PASO 2 — ¿Cuánto? */}
+      {step === 2 && moneda ? (
+        <div className="space-y-4">
+          <StepTitle n={2} title="¿Cuánto pagaron?" />
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {sugerencias.map((option) => {
+              const selected =
+                option.value !== null &&
+                Math.abs(Number(monto) - Number(redondear(option.value, moneda))) < 0.005;
               return (
                 <button
-                  key={`${option.label ?? "tc"}-${option.value}`}
+                  key={option.id}
                   type="button"
-                  onClick={() => setTcDia(String(option.value))}
+                  onClick={() => {
+                    if (option.value !== null) setMonto(redondear(option.value, moneda));
+                    else setMonto("");
+                  }}
                   className={[
-                    "rounded-full px-3 py-1.5 text-xs font-medium transition",
+                    "rounded-[20px] border px-3 py-3 text-left transition",
                     selected
-                      ? "bg-[#8cff59]/10 text-[#b9ff96]"
-                      : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700",
+                      ? "border-[#8cff59]/35 bg-[#8cff59]/10"
+                      : "border-zinc-700 bg-zinc-900 hover:border-zinc-600 hover:bg-zinc-800",
                   ].join(" ")}
                 >
-                  {option.label ? `${option.label} ` : ""}${option.value.toLocaleString("es-AR")}
+                  <span className={`block text-sm font-semibold ${selected ? "text-white" : "text-zinc-100"}`}>
+                    {option.label}
+                  </span>
                 </button>
               );
             })}
           </div>
-        </div>
 
-        {/* preview conversión */}
-        {montoNumber > 0 && tcNumber > 0 ? (
-          <div className="flex items-center justify-between rounded-[20px] border border-[#8cff59]/20 bg-[#8cff59]/8 px-4 py-3">
-            {moneda === "ARS" ? (
-              <>
-                <span className="text-xs text-zinc-400">
-                  {formatARS(montoNumber)} ÷ ${tcNumber.toLocaleString("es-AR")}
-                </span>
-                <span className="text-sm font-semibold text-[#b9ff96]">{formatUSD(montoUsdDesdeArs)}</span>
-              </>
-            ) : (
-              <>
-                <span className="text-xs text-zinc-400">{formatUSD(montoNumber)} × ${tcNumber.toLocaleString("es-AR")}</span>
-                <span className="text-sm font-semibold text-[#b9ff96]">{formatARS(montoArs)}</span>
-              </>
-            )}
+          <div className="rounded-[22px] border border-zinc-800 bg-zinc-900/60 p-4">
+            <label htmlFor="montoVisible" className="mb-3 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+              Monto en {moneda === "ARS" ? "pesos" : "dólares"}
+            </label>
+            <div className="relative">
+              <span
+                className={`absolute left-4 top-1/2 -translate-y-1/2 text-sm ${
+                  moneda === "ARS" ? "text-zinc-400" : "text-[#8cff59]"
+                }`}
+              >
+                {moneda === "ARS" ? "$" : "u$d"}
+              </span>
+              <input
+                id="montoVisible"
+                type="number"
+                min="0.01"
+                step={moneda === "ARS" ? "1" : "0.01"}
+                value={monto}
+                onChange={(event) => setMonto(event.target.value)}
+                placeholder="0"
+                className={`min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-800 px-4 text-base text-white outline-none transition focus:border-[#8cff59]/60 ${
+                  moneda === "ARS" ? "pl-9" : "pl-14"
+                }`}
+              />
+            </div>
+            <p className="mt-2 text-xs text-zinc-500">
+              Si este mes no llegan a la cuota, no pasa nada: lo que pongas descuenta igual.
+            </p>
           </div>
-        ) : null}
 
-        {/* notas */}
-        <div className="rounded-[22px] border border-zinc-800 bg-zinc-900/60 p-4">
-          <label htmlFor="notas" className="mb-3 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
-            Notas <span className="normal-case tracking-normal text-zinc-600">(opcional)</span>
-          </label>
-          <textarea
-            id="notas"
-            name="notas"
-            rows={2}
-            value={notas}
-            onChange={(event) => setNotas(event.target.value)}
-            placeholder="Transferencia, referencia, ajuste acordado..."
-            className="w-full resize-none rounded-2xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60"
-          />
+          {/* TC del día — informativo, no editable (salvo que la cotización falle) */}
+          {necesitaTcManual ? (
+            <div className="rounded-[22px] border border-amber-500/30 bg-amber-500/10 p-4">
+              <label htmlFor="tcManual" className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-amber-200">
+                Dólar de hoy
+              </label>
+              <p className="mb-2 text-xs text-amber-100/80">
+                No pudimos traer la cotización automática. Cargá el dólar blue de hoy a mano.
+              </p>
+              <input
+                id="tcManual"
+                type="number"
+                min="1"
+                step="1"
+                value={tcManual}
+                onChange={(event) => setTcManual(event.target.value)}
+                placeholder={`Ej: ${Math.round(tcReferencia)}`}
+                className="min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-800 px-4 text-base text-white outline-none transition focus:border-[#8cff59]/60"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-between rounded-[22px] border border-zinc-800 bg-zinc-950/70 px-4 py-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Dólar de hoy</p>
+                <p className="text-xs text-zinc-600">Blue promedio (compra/venta)</p>
+              </div>
+              <span className="text-lg font-semibold text-white">{formatARS(tc)}</span>
+            </div>
+          )}
+
+          <button
+            type="button"
+            disabled={!montoValido || !tcValido}
+            onClick={() => setStep(3)}
+            className="neon-button inline-flex min-h-[52px] w-full items-center justify-center rounded-[20px] px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Continuar
+          </button>
         </div>
+      ) : step > 2 && moneda ? (
+        <SummaryRow
+          label="Pagan"
+          value={formatEnMoneda(montoNum, moneda)}
+          onEdit={() => setStep(2)}
+        />
+      ) : null}
 
-        <button
-          type="submit"
-          disabled={isPending}
-          className="neon-button inline-flex min-h-[52px] w-full items-center justify-center rounded-[20px] px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isPending ? "Registrando..." : "Registrar pago"}
-        </button>
-      </div>
+      {/* PASO 3 — Confirmación */}
+      {step === 3 && moneda ? (
+        <div className="space-y-4">
+          <StepTitle n={3} title="Confirmá el pago" />
+
+          <div className="rounded-[24px] border border-[#8cff59]/25 bg-[#8cff59]/8 p-5">
+            <p className="text-sm leading-6 text-zinc-200">
+              Pagan{" "}
+              <strong className="font-semibold text-white">{formatEnMoneda(montoNum, moneda)}</strong>
+              {moneda === "ARS" ? (
+                <>
+                  {" "}al dólar de hoy ({formatARS(tc)})
+                </>
+              ) : null}{" "}
+              →{" "}
+              <strong className="font-semibold text-[#8cff59]">
+                baja {formatUSD(montoUsd)}
+              </strong>{" "}
+              de la deuda.
+            </p>
+            {moneda === "USD" ? (
+              <p className="mt-2 text-xs text-zinc-500">
+                Equivale a {formatARS(montoArs)} al dólar de hoy ({formatARS(tc)}).
+              </p>
+            ) : null}
+          </div>
+
+          <details className="rounded-[22px] border border-zinc-800 bg-zinc-900/60 p-4">
+            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 [&::-webkit-details-marker]:hidden">
+              Agregar nota (opcional)
+            </summary>
+            <textarea
+              rows={2}
+              value={notas}
+              onChange={(event) => setNotas(event.target.value)}
+              placeholder="Transferencia, referencia, ajuste acordado..."
+              className="mt-3 w-full resize-none rounded-2xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60"
+            />
+          </details>
+
+          <button
+            type="submit"
+            disabled={isPending || !montoValido || !tcValido}
+            className="neon-button inline-flex min-h-[52px] w-full items-center justify-center rounded-[20px] px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isPending ? "Registrando..." : "Registrar pago"}
+          </button>
+        </div>
+      ) : null}
     </form>
   );
 }
 
+function StepTitle({ n, title }: { n: number; title: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#8cff59] text-sm font-bold text-[#07130a]">
+        {n}
+      </span>
+      <h3 className="font-display text-lg font-semibold text-white">{title}</h3>
+    </div>
+  );
+}
+
+function SummaryRow({
+  label,
+  value,
+  onEdit,
+}: {
+  label: string;
+  value: string;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-[20px] border border-zinc-800 bg-zinc-950/70 px-4 py-3">
+      <span className="text-sm text-zinc-400">
+        {label} <strong className="font-semibold text-white">{value}</strong>
+      </span>
+      <button
+        type="button"
+        onClick={onEdit}
+        className="text-xs font-semibold text-zinc-400 transition hover:text-[#8cff59]"
+      >
+        cambiar
+      </button>
+    </div>
+  );
+}

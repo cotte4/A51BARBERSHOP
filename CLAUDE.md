@@ -47,11 +47,14 @@ npm run verify:refactor    # typecheck + lint (run before any refactor commit)
 
 The app is live on Vercel. Core is mature. **Barber-side launch readiness completed 2026-07-09** (spec: `../docs/specs/barber-launch-audit.md`): repago financial integrity, journey simplification (J1-J8), copy/theme polish, and flow tests — all shipped to prod, migrations 0032-0034 applied.
 
-### Repago Memas — modelo vigente (pagos flexibles)
-- Plan: **u$d 1.500 · 10% anual · 12 cuotas alemanas** (capital fijo u$d 125/cuota). Row values are explicit in DB (no code defaults).
+### Repago Memas — modelo vigente (pagos flexibles, USD, bimoneda)
+- Plan: **u$d 1.770 · 10% anual · 12 cuotas alemanas** (capital fijo u$d 147,50/cuota), inicio **2026-08-01**. Row values are explicit in DB (no code defaults; los `?? 1500`/`?? 0.1` son solo fallbacks legacy). Updated 2026-07-13 vía UPDATE directo + reset de pagos de prueba.
+- Préstamo **100% denominado en USD**. Los pesos son solo referencia calculada al vuelo (`usd * tc`); NO se persisten para saldo pendiente ni próximas cuotas. El historial de pagos sí guarda el ARS real pagado ese día.
 - **Pagos flexibles**: any amount > 0. Each payment covers the current cuota's pending interest first, remainder amortizes capital. The cuota advances when its capital is covered; overpay amortizes extra capital (less future interest). Interest is **per cuota, not time-based** — taking longer doesn't penalize.
-- Core logic: `aplicarPagoFlexible()` in `src/lib/amortizacion.ts` (pure, tested); orchestration in `src/lib/repago-service.ts` (advisory lock + `calcularSaldoReal` guard). Multiple payment rows per cuota are allowed (no unique index).
-- Tests: `npm run test:flows` (52 integration tests, includes 11 for flexible payments).
+- **Pago bimoneda**: "Registrar pago" acepta USD o ARS (selector). Si es ARS, `convertirMontoAUsd(monto, "ARS", tc) = monto / tc`; el descuento se aplica SIEMPRE en USD. Se persisten `moneda_ingresada` + `monto_ingresado` (mig 0037) para trazabilidad; el monto USD es derivable de `capital_pagado + interes_pagado`.
+- **TC sugerido**: el chip "Blue" del form es el punto medio del dólar blue `(compra+venta)/2` (DolarAPI, cacheado 15 min). El `tcReferencia` global de config no se toca.
+- Core logic: `aplicarPagoFlexible()` + `convertirMontoAUsd()` in `src/lib/amortizacion.ts` (puras, testeadas); orchestration in `src/lib/repago-service.ts` (advisory lock + `calcularSaldoReal` guard). Multiple payment rows per cuota are allowed (no unique index). El cronograma NO se persiste — se recalcula con `generarCronograma`.
+- Tests: `npm run test:flows` (73 integration tests, incluye conversión bimoneda y equivalencia USD/ARS).
 
 ### Cierre de caja — wizard con gate real
 `/caja/cierre` is a 2-step wizard: (1) count cash — mandatory, persisted in `cierres_caja.efectivo_contado`; (2) confirm with double-confirmation. A difference vs expected cash shows an amber warning but doesn't block.
