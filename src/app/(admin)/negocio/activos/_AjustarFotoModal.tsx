@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { FOTO_POS_DEFAULT, normalizeFotoPos, type PresupuestoScope } from "@/lib/presupuesto";
+import {
+  FOTO_POS_DEFAULT,
+  FOTO_ZOOM_DEFAULT,
+  FOTO_ZOOM_MAX,
+  FOTO_ZOOM_MIN,
+  getFotoCropStyle,
+  normalizeFotoPos,
+  normalizeFotoZoom,
+  type PresupuestoScope,
+} from "@/lib/presupuesto";
 import { guardarFotoPosAction } from "./presupuesto-actions";
 
 function parsePos(value: string): { x: number; y: number } {
@@ -21,6 +30,7 @@ export default function AjustarFotoModal({
   nombre,
   fotoUrl,
   fotoPos,
+  fotoZoom,
   onClose,
 }: {
   scope: PresupuestoScope;
@@ -28,10 +38,11 @@ export default function AjustarFotoModal({
   nombre: string;
   fotoUrl: string;
   fotoPos: string | null;
+  fotoZoom: string | null;
   onClose: () => void;
 }) {
   const [pos, setPos] = useState(() => parsePos(fotoPos ?? FOTO_POS_DEFAULT));
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(() => normalizeFotoZoom(fotoZoom));
   const [isPending, startTransition] = useTransition();
   const frameRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
@@ -75,6 +86,7 @@ export default function AjustarFotoModal({
       formData.set("scope", scope);
       formData.set("lineaId", lineaId);
       formData.set("fotoPos", `${Math.round(pos.x)}% ${Math.round(pos.y)}%`);
+      formData.set("fotoZoom", String(zoom));
       await guardarFotoPosAction(formData);
       onClose();
     });
@@ -106,8 +118,9 @@ export default function AjustarFotoModal({
         </div>
 
         <p className="mt-3 text-xs leading-5 text-zinc-500">
-          Arrastra la imagen para elegir que parte se ve en la miniatura. El zoom es
-          solo para mirar de cerca — no cambia lo que se guarda.
+          Arrastra la imagen para mover el encuadre y usa el zoom para recortar mas
+          cerca. Se guardan los dos; el archivo original queda intacto, asi que
+          podes reajustarlo cuando quieras.
         </p>
 
         <div
@@ -123,24 +136,21 @@ export default function AjustarFotoModal({
             src={fotoUrl}
             alt={nombre}
             draggable={false}
-            className="h-full w-full object-cover transition-transform duration-150"
-            style={{
-              objectPosition: `${pos.x}% ${pos.y}%`,
-              transform: `scale(${zoom})`,
-            }}
+            className="h-full w-full object-cover"
+            style={getFotoCropStyle(`${pos.x}% ${pos.y}%`, zoom)}
           />
           <div className="pointer-events-none absolute inset-0 rounded-[24px] ring-1 ring-inset ring-white/10" />
         </div>
 
         <div className="mt-4 flex items-center gap-3">
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Zoom
+            Recorte
           </span>
           <input
             type="range"
-            min="1"
-            max="3"
-            step="0.1"
+            min={FOTO_ZOOM_MIN}
+            max={FOTO_ZOOM_MAX}
+            step="0.05"
             value={zoom}
             onChange={(event) => setZoom(Number(event.target.value))}
             className="flex-1 accent-[#8cff59]"
@@ -159,7 +169,7 @@ export default function AjustarFotoModal({
                 src={fotoUrl}
                 alt="Previsualizacion"
                 className="h-full w-full object-cover"
-                style={{ objectPosition: `${pos.x}% ${pos.y}%` }}
+                style={getFotoCropStyle(`${pos.x}% ${pos.y}%`, zoom)}
               />
             </div>
           </div>
@@ -168,7 +178,7 @@ export default function AjustarFotoModal({
             type="button"
             onClick={() => {
               setPos(parsePos(FOTO_POS_DEFAULT));
-              setZoom(1);
+              setZoom(FOTO_ZOOM_DEFAULT);
             }}
             className="rounded-full border border-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-500 hover:border-zinc-700 hover:text-zinc-300"
           >

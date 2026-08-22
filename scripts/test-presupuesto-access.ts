@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
 
 async function main() {
-  const { canViewPresupuestoMemas, getPresupuestoTotals, normalizeFotoPos } =
-    await import("../src/lib/presupuesto");
+  const {
+    canViewPresupuestoMemas,
+    getPresupuestoTotals,
+    normalizeFotoPos,
+    normalizeFotoZoom,
+    getFotoCropStyle,
+  } = await import("../src/lib/presupuesto");
 
   // Solo el asesor (lado Memas) ve el presupuesto.
   assert.equal(canViewPresupuestoMemas("asesor"), true);
@@ -50,7 +55,30 @@ async function main() {
   assert.equal(normalizeFotoPos(undefined), "50% 50%");
   assert.equal(normalizeFotoPos(""), "50% 50%");
 
-  console.log("Presupuesto access + totals + fotoPos passed");
+  // Zoom del recorte: acotado a [1, 4], basura cae en 1.
+  assert.equal(normalizeFotoZoom(2.5), 2.5);
+  assert.equal(normalizeFotoZoom("1.75"), 1.75);
+  assert.equal(normalizeFotoZoom(0.2), 1);      // por debajo del minimo
+  assert.equal(normalizeFotoZoom(99), 4);       // por encima del maximo
+  assert.equal(normalizeFotoZoom(-3), 1);
+  assert.equal(normalizeFotoZoom("scale(9)"), 1);
+  assert.equal(normalizeFotoZoom(null), 1);
+  assert.equal(normalizeFotoZoom(undefined), 1);
+  assert.equal(normalizeFotoZoom(NaN), 1);
+
+  // El origen del transform sigue a la posicion: al hacer zoom, el punto
+  // elegido queda quieto en vez de irse de cuadro.
+  const crop = getFotoCropStyle("30% 70%", 2);
+  assert.equal(crop.objectPosition, "30% 70%");
+  assert.equal(crop.transformOrigin, "30% 70%");
+  assert.equal(crop.transform, "scale(2)");
+
+  // El hover multiplica sobre el recorte guardado, no lo reemplaza.
+  assert.equal(getFotoCropStyle("50% 50%", 2, 1.5).transform, "scale(3)");
+  // Sin nada guardado, sin recorte.
+  assert.equal(getFotoCropStyle(null, null).transform, "scale(1)");
+
+  console.log("Presupuesto access + totals + fotoPos + zoom passed");
 }
 
 main().catch((error) => {

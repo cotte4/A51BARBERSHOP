@@ -99,6 +99,7 @@ export default async function HangarPage({
           notas: linea.notas,
           fotoUrl: linea.fotoUrl,
           fotoPos: linea.fotoPos,
+          fotoZoom: linea.fotoZoom,
           comprobanteUrl: linea.comprobanteUrl,
         }))}
         total={totals.total}

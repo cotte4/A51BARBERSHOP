@@ -5,9 +5,8 @@ import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { formatARS } from "@/lib/format";
 import {
-  FOTO_POS_DEFAULT,
   PRESUPUESTO_CATEGORIAS,
-  normalizeFotoPos,
+  getFotoCropStyle,
   type PresupuestoScope,
 } from "@/lib/presupuesto";
 import AjustarFotoModal from "./_AjustarFotoModal";
@@ -27,6 +26,7 @@ export type PresupuestoLineaView = {
   notas: string | null;
   fotoUrl: string | null;
   fotoPos: string | null;
+  fotoZoom: string | null;
   comprobanteUrl: string | null;
 };
 
@@ -267,7 +267,10 @@ function LineaRow({
   onEdit: () => void;
 }) {
   const [ajustando, setAjustando] = useState(false);
-  const objectPosition = normalizeFotoPos(linea.fotoPos ?? FOTO_POS_DEFAULT);
+  const [hover, setHover] = useState(false);
+  // El hover multiplica sobre el recorte guardado en vez de reemplazarlo, para
+  // que acercarse no pierda el encuadre elegido.
+  const cropStyle = getFotoCropStyle(linea.fotoPos, linea.fotoZoom, hover ? 1.35 : 1);
 
   return (
     <div className="flex flex-wrap items-center gap-4 rounded-[26px] border border-zinc-800 bg-zinc-950/70 p-4 transition hover:border-[#8cff59]/25">
@@ -275,7 +278,9 @@ function LineaRow({
         <button
           type="button"
           onClick={() => setAjustando(true)}
-          title="Ajustar encuadre"
+          onMouseEnter={() => setHover(true)}
+          onMouseLeave={() => setHover(false)}
+          title="Ajustar encuadre y recorte"
           className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-[20px] border border-zinc-800 bg-zinc-900"
         >
           <Image
@@ -283,8 +288,8 @@ function LineaRow({
             alt={linea.nombre}
             fill
             sizes="64px"
-            style={{ objectPosition }}
-            className="object-cover transition-transform duration-200 group-hover:scale-[1.35]"
+            style={cropStyle}
+            className="object-cover transition-transform duration-200"
           />
           <span className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/70 to-transparent pb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white opacity-0 transition group-hover:opacity-100">
             Ajustar
@@ -305,6 +310,7 @@ function LineaRow({
           nombre={linea.nombre}
           fotoUrl={linea.fotoUrl}
           fotoPos={linea.fotoPos}
+          fotoZoom={linea.fotoZoom}
           onClose={() => setAjustando(false)}
         />
       ) : null}

@@ -65,6 +65,40 @@ export function normalizeFotoPos(value: string | null | undefined): string {
   return `${x}% ${y}%`;
 }
 
+export const FOTO_ZOOM_DEFAULT = 1;
+export const FOTO_ZOOM_MIN = 1;
+export const FOTO_ZOOM_MAX = 4;
+
+/** Zoom del recorte, acotado a [1, 4]. Cualquier basura cae en 1 (sin recorte). */
+export function normalizeFotoZoom(value: string | number | null | undefined): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed)) return FOTO_ZOOM_DEFAULT;
+  const clamped = Math.min(FOTO_ZOOM_MAX, Math.max(FOTO_ZOOM_MIN, parsed));
+  return Math.round(clamped * 100) / 100;
+}
+
+/**
+ * Estilo del recorte, en un solo lugar para que la miniatura de la lista y la
+ * previsualizacion del modal se vean exactamente igual.
+ *
+ * transformOrigin acompana a objectPosition: al escalar, el punto elegido
+ * queda quieto en vez de irse de cuadro.
+ */
+export function getFotoCropStyle(
+  fotoPos: string | null | undefined,
+  fotoZoom: string | number | null | undefined,
+  extraScale = 1
+) {
+  const position = normalizeFotoPos(fotoPos);
+  const zoom = normalizeFotoZoom(fotoZoom) * extraScale;
+
+  return {
+    objectPosition: position,
+    transformOrigin: position,
+    transform: `scale(${zoom})`,
+  };
+}
+
 export function getScopeLabel(scope: string | null | undefined): string {
   switch (scope) {
     case "memas":

@@ -10,6 +10,7 @@ import {
   canViewPresupuestoMemas,
   isPresupuestoCategoria,
   normalizeFotoPos,
+  normalizeFotoZoom,
   isPresupuestoScope,
   type PresupuestoCategoria,
   type PresupuestoScope,
@@ -202,6 +203,7 @@ export async function guardarFotoPosAction(formData: FormData) {
   const scope = parseScope(formData);
   const lineaId = (formData.get("lineaId") as string | null)?.trim();
   const fotoPos = (formData.get("fotoPos") as string | null)?.trim();
+  const fotoZoom = (formData.get("fotoZoom") as string | null)?.trim();
 
   if (!lineaId) {
     return;
@@ -211,7 +213,10 @@ export async function guardarFotoPosAction(formData: FormData) {
 
   await db
     .update(presupuestoLineas)
-    .set({ fotoPos: normalizeFotoPos(fotoPos) })
+    .set({
+      fotoPos: normalizeFotoPos(fotoPos),
+      fotoZoom: normalizeFotoZoom(fotoZoom).toFixed(2),
+    })
     .where(
       and(
         eq(presupuestoLineas.id, lineaId),
