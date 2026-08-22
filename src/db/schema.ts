@@ -1426,6 +1426,8 @@ export const presupuestoLineas = pgTable("presupuesto_lineas", {
     .notNull()
     .default("0"),
   notas: text("notas"),
+  fotoUrl: text("foto_url"),
+  comprobanteUrl: text("comprobante_url"),
   orden: integer("orden").notNull().default(0),
   creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
 }, (table) => [

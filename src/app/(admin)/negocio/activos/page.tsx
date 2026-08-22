@@ -97,9 +97,10 @@ export default async function HangarPage({
           nombre: linea.nombre,
           montoEstimado: toMoneyNumber(linea.montoEstimado),
           notas: linea.notas,
+          fotoUrl: linea.fotoUrl,
+          comprobanteUrl: linea.comprobanteUrl,
         }))}
         total={totals.total}
-        grupos={totals.grupos}
       />
     );
   }

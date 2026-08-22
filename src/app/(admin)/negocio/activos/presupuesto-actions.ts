@@ -62,6 +62,8 @@ export async function crearLineaPresupuestoAction(
   const categoria = (formData.get("categoria") as string | null)?.trim();
   const montoRaw = (formData.get("montoEstimado") as string | null)?.trim();
   const notas = (formData.get("notas") as string | null)?.trim() || null;
+  const fotoUrl = (formData.get("fotoUrl") as string | null)?.trim() || null;
+  const comprobanteUrl = (formData.get("comprobanteUrl") as string | null)?.trim() || null;
 
   const fieldErrors: PresupuestoLineaFormState["fieldErrors"] = {};
 
@@ -84,6 +86,8 @@ export async function crearLineaPresupuestoAction(
     nombre: nombre as string,
     montoEstimado: monto.toFixed(2),
     notas,
+    fotoUrl,
+    comprobanteUrl,
     orden,
   });
 
@@ -107,6 +111,8 @@ export async function actualizarLineaPresupuestoAction(
   const categoria = (formData.get("categoria") as string | null)?.trim();
   const montoRaw = (formData.get("montoEstimado") as string | null)?.trim();
   const notas = (formData.get("notas") as string | null)?.trim() || null;
+  const fotoUrl = (formData.get("fotoUrl") as string | null)?.trim() || null;
+  const comprobanteUrl = (formData.get("comprobanteUrl") as string | null)?.trim() || null;
 
   if (!lineaId) {
     return { error: "Falta la linea a editar." };
@@ -134,6 +140,8 @@ export async function actualizarLineaPresupuestoAction(
       nombre: nombre as string,
       montoEstimado: monto.toFixed(2),
       notas,
+      fotoUrl,
+      comprobanteUrl,
     })
     .where(
       and(

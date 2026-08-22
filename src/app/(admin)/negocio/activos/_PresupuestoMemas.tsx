@@ -1,12 +1,14 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import Image from "next/image";
 import Link from "next/link";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { formatARS } from "@/lib/format";
 import {
   PRESUPUESTO_CATEGORIAS,
   type PresupuestoScope,
 } from "@/lib/presupuesto";
+import HangarUploadField from "./_HangarUploadField";
 import {
   actualizarLineaPresupuestoAction,
   borrarLineaPresupuestoAction,
@@ -20,12 +22,8 @@ export type PresupuestoLineaView = {
   nombre: string;
   montoEstimado: number;
   notas: string | null;
-};
-
-type Grupo = {
-  categoria: string;
-  subtotal: number;
-  count: number;
+  fotoUrl: string | null;
+  comprobanteUrl: string | null;
 };
 
 const initialState: PresupuestoLineaFormState = {};
@@ -52,16 +50,39 @@ export default function PresupuestoMemas({
   nombre,
   lineas,
   total,
-  grupos,
 }: {
   scope: PresupuestoScope;
   nombre: string;
   lineas: PresupuestoLineaView[];
   total: number;
-  grupos: Grupo[];
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState<string | null>(null);
+
+  // Categorias con items, en el orden canonico, con su subtotal.
+  const categoriasConItems = useMemo(() => {
+    return PRESUPUESTO_CATEGORIAS.map((categoria) => {
+      const items = lineas.filter((linea) => linea.categoria === categoria);
+      return {
+        categoria,
+        count: items.length,
+        subtotal: items.reduce((sum, linea) => sum + linea.montoEstimado, 0),
+      };
+    }).filter((grupo) => grupo.count > 0);
+  }, [lineas]);
+
+  const visibles = useMemo(
+    () => (filtro ? lineas.filter((linea) => linea.categoria === filtro) : lineas),
+    [lineas, filtro]
+  );
+
+  const totalVisible = useMemo(
+    () => visibles.reduce((sum, linea) => sum + linea.montoEstimado, 0),
+    [visibles]
+  );
+
+  const filtrando = filtro !== null;
 
   return (
     <div className="app-shell min-h-screen pb-24">
@@ -93,15 +114,23 @@ export default function PresupuestoMemas({
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               <HeroStat
-                label="Total presupuestado"
-                value={formatARS(total)}
-                helper="Suma de todas las lineas cargadas"
+                label={filtrando ? `Total ${filtro}` : "Total presupuestado"}
+                value={formatARS(filtrando ? totalVisible : total)}
+                helper={
+                  filtrando
+                    ? `de ${formatARS(total)} · ${Math.round((totalVisible / (total || 1)) * 100)}% del total`
+                    : "Suma de todas las lineas cargadas"
+                }
                 accent
               />
               <HeroStat
-                label="Lineas"
-                value={`${lineas.length}`}
-                helper={`${grupos.length} categoria${grupos.length === 1 ? "" : "s"} con items`}
+                label={filtrando ? "Items filtrados" : "Lineas"}
+                value={`${visibles.length}`}
+                helper={
+                  filtrando
+                    ? `de ${lineas.length} lineas en total`
+                    : `${categoriasConItems.length} categoria${categoriasConItems.length === 1 ? "" : "s"} con items`
+                }
               />
               <HeroStat
                 label="Impacto en A51"
@@ -109,6 +138,30 @@ export default function PresupuestoMemas({
                 helper="Un presupuesto no mueve capital ni Finanzas"
               />
             </div>
+
+            {categoriasConItems.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                <FiltroChip
+                  label="Todo"
+                  count={lineas.length}
+                  monto={total}
+                  active={!filtrando}
+                  onClick={() => setFiltro(null)}
+                />
+                {categoriasConItems.map((grupo) => (
+                  <FiltroChip
+                    key={grupo.categoria}
+                    label={grupo.categoria}
+                    count={grupo.count}
+                    monto={grupo.subtotal}
+                    active={filtro === grupo.categoria}
+                    onClick={() =>
+                      setFiltro((prev) => (prev === grupo.categoria ? null : grupo.categoria))
+                    }
+                  />
+                ))}
+              </div>
+            ) : null}
 
             <div className="flex flex-wrap justify-end gap-2">
               <button
@@ -132,111 +185,65 @@ export default function PresupuestoMemas({
               scope={scope}
               action={crearLineaPresupuestoAction}
               submitLabel="Agregar linea"
+              categoriaSugerida={filtro}
               onDone={() => setShowForm(false)}
             />
           </section>
         ) : null}
 
         {lineas.length === 0 ? (
-          <section className="mt-5 panel-card rounded-[30px] p-6 text-center">
+          <section className="panel-card mt-5 rounded-[30px] p-6 text-center">
             <p className="text-sm text-zinc-400">
               Todavia no hay lineas cargadas. Arranca por el inmueble y la obra.
             </p>
           </section>
         ) : (
-          <section className="mt-5 space-y-5">
-            {grupos.map((grupo) => {
-              const items = lineas.filter((linea) => linea.categoria === grupo.categoria);
-
-              return (
-                <section
-                  key={grupo.categoria}
-                  className="rounded-[30px] border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(24,24,27,0.96),rgba(9,9,11,0.98))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
+          <section className="mt-5 space-y-3">
+            {visibles.map((linea) =>
+              editingId === linea.id ? (
+                <div
+                  key={linea.id}
+                  className="rounded-[26px] border border-[#8cff59]/25 bg-zinc-950/80 p-5"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <div
-                        className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getCategoryTone(grupo.categoria)}`}
-                      >
-                        {grupo.categoria}
-                      </div>
-                      <h2 className="font-display mt-3 text-2xl font-semibold text-white">
-                        {grupo.count} item{grupo.count === 1 ? "" : "s"}
-                      </h2>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Subtotal</p>
-                      <p className="mt-1 text-2xl font-semibold text-white">
-                        {formatARS(grupo.subtotal)}
-                      </p>
-                      <p className="mt-1 text-xs text-zinc-500">
-                        {total > 0 ? `${Math.round((grupo.subtotal / total) * 100)}% del total` : "—"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 space-y-3">
-                    {items.map((linea) =>
-                      editingId === linea.id ? (
-                        <div
-                          key={linea.id}
-                          className="rounded-[24px] border border-[#8cff59]/25 bg-zinc-950/80 p-4"
-                        >
-                          <LineaForm
-                            scope={scope}
-                            action={actualizarLineaPresupuestoAction}
-                            submitLabel="Guardar cambios"
-                            linea={linea}
-                            onDone={() => setEditingId(null)}
-                            onCancel={() => setEditingId(null)}
-                          />
-                        </div>
-                      ) : (
-                        <div
-                          key={linea.id}
-                          className="flex flex-wrap items-center justify-between gap-4 rounded-[24px] border border-zinc-800 bg-zinc-950/70 px-4 py-4"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-base font-semibold text-white">{linea.nombre}</p>
-                            <p className="mt-1 text-sm text-zinc-500">
-                              {linea.notas || "Sin notas"}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <p className="text-lg font-semibold text-white">
-                              {formatARS(linea.montoEstimado)}
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingId(linea.id);
-                                setShowForm(false);
-                              }}
-                              className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-[#8cff59]/40 hover:text-[#b9ff96]"
-                            >
-                              Editar
-                            </button>
-                            <BorrarLineaButton scope={scope} lineaId={linea.id} />
-                          </div>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </section>
-              );
-            })}
+                  <h2 className="font-display text-lg font-semibold text-white">
+                    Editar linea
+                  </h2>
+                  <LineaForm
+                    scope={scope}
+                    action={actualizarLineaPresupuestoAction}
+                    submitLabel="Guardar cambios"
+                    linea={linea}
+                    onDone={() => setEditingId(null)}
+                    onCancel={() => setEditingId(null)}
+                  />
+                </div>
+              ) : (
+                <LineaRow
+                  key={linea.id}
+                  scope={scope}
+                  linea={linea}
+                  onEdit={() => {
+                    setEditingId(linea.id);
+                    setShowForm(false);
+                  }}
+                />
+              )
+            )}
 
             <section className="rounded-[30px] border border-[#8cff59]/22 bg-[#8cff59]/10 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">
-                    Total inversion Memas
+                    {filtrando ? `Subtotal ${filtro}` : "Total inversion Memas"}
                   </p>
                   <p className="mt-1 text-xs text-zinc-500">
-                    {lineas.length} linea{lineas.length === 1 ? "" : "s"} · CAPEX puntual
+                    {visibles.length} linea{visibles.length === 1 ? "" : "s"}
+                    {filtrando ? ` · total general ${formatARS(total)}` : " · CAPEX puntual"}
                   </p>
                 </div>
-                <p className="text-3xl font-semibold text-[#b9ff96]">{formatARS(total)}</p>
+                <p className="text-3xl font-semibold text-[#b9ff96]">
+                  {formatARS(filtrando ? totalVisible : total)}
+                </p>
               </div>
             </section>
           </section>
@@ -246,11 +253,107 @@ export default function PresupuestoMemas({
   );
 }
 
+function LineaRow({
+  scope,
+  linea,
+  onEdit,
+}: {
+  scope: PresupuestoScope;
+  linea: PresupuestoLineaView;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-4 rounded-[26px] border border-zinc-800 bg-zinc-950/70 p-4 transition hover:border-[#8cff59]/25">
+      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[20px] border border-zinc-800 bg-zinc-900">
+        {linea.fotoUrl ? (
+          <Image
+            src={linea.fotoUrl}
+            alt={linea.nombre}
+            fill
+            sizes="64px"
+            className="object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
+            {linea.categoria.slice(0, 3)}
+          </div>
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-base font-semibold text-white">{linea.nombre}</p>
+          <span
+            className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${getCategoryTone(linea.categoria)}`}
+          >
+            {linea.categoria}
+          </span>
+          {linea.comprobanteUrl ? (
+            <a
+              href={linea.comprobanteUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-300 hover:border-[#8cff59]/40 hover:text-[#b9ff96]"
+            >
+              Ver recibo
+            </a>
+          ) : null}
+        </div>
+        <p className="mt-1 truncate text-sm text-zinc-500">{linea.notas || "Sin notas"}</p>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <p className="text-lg font-semibold text-white">{formatARS(linea.montoEstimado)}</p>
+        <button
+          type="button"
+          onClick={onEdit}
+          className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-[#8cff59]/40 hover:text-[#b9ff96]"
+        >
+          Editar
+        </button>
+        <BorrarLineaButton scope={scope} lineaId={linea.id} />
+      </div>
+    </div>
+  );
+}
+
+function FiltroChip({
+  label,
+  count,
+  monto,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  monto: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+        active
+          ? "border-[#8cff59]/30 bg-[#8cff59]/10 text-[#b9ff96]"
+          : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+      }`}
+    >
+      {label}
+      <span className={active ? "ml-2 text-[#8cff59]/70" : "ml-2 text-zinc-600"}>
+        {count} · {formatARS(monto)}
+      </span>
+    </button>
+  );
+}
+
 function LineaForm({
   scope,
   action,
   submitLabel,
   linea,
+  categoriaSugerida,
   onDone,
   onCancel,
 }: {
@@ -261,6 +364,7 @@ function LineaForm({
   ) => Promise<PresupuestoLineaFormState>;
   submitLabel: string;
   linea?: PresupuestoLineaView;
+  categoriaSugerida?: string | null;
   onDone?: () => void;
   onCancel?: () => void;
 }) {
@@ -272,6 +376,9 @@ function LineaForm({
       onDone?.();
     }
   }, [state.success, onDone]);
+
+  const defaultCategoria =
+    linea?.categoria ?? categoriaSugerida ?? PRESUPUESTO_CATEGORIAS[0];
 
   return (
     <form action={formAction} className="mt-4 flex flex-col gap-4">
@@ -302,7 +409,7 @@ function LineaForm({
           <label className="text-sm font-medium text-zinc-300">Categoria</label>
           <select
             name="categoria"
-            defaultValue={linea?.categoria ?? PRESUPUESTO_CATEGORIAS[0]}
+            defaultValue={defaultCategoria}
             className="min-h-[44px] rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-sm text-white outline-none focus:border-[#8cff59]/60"
           >
             {PRESUPUESTO_CATEGORIAS.map((categoria) => (
@@ -341,6 +448,27 @@ function LineaForm({
             className="min-h-[44px] rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-sm text-white outline-none focus:border-[#8cff59]/60"
           />
         </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <HangarUploadField
+          name="fotoUrl"
+          label="Foto"
+          helper="JPG, PNG o WEBP hasta 8 MB."
+          kind="photo"
+          accept="image/jpeg,image/png,image/webp"
+          initialValue={linea?.fotoUrl ?? null}
+          assetId={`presupuesto-${linea?.id ?? "nueva"}`}
+        />
+        <HangarUploadField
+          name="comprobanteUrl"
+          label="Recibo / presupuesto"
+          helper="JPG, PNG, WEBP o PDF hasta 8 MB."
+          kind="receipt"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          initialValue={linea?.comprobanteUrl ?? null}
+          assetId={`presupuesto-${linea?.id ?? "nueva"}`}
+        />
       </div>
 
       <div className="flex flex-wrap justify-end gap-2">
