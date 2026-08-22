@@ -44,6 +44,7 @@ export default function AjustarFotoModal({
   const [pos, setPos] = useState(() => parsePos(fotoPos ?? FOTO_POS_DEFAULT));
   const [zoom, setZoom] = useState(() => normalizeFotoZoom(fotoZoom));
   const [isPending, startTransition] = useTransition();
+  const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
 
@@ -79,6 +80,12 @@ export default function AjustarFotoModal({
     event.currentTarget.releasePointerCapture(event.pointerId);
     dragRef.current = null;
   }
+
+  // La miniatura mide 64px de lado y en pantallas retina pide el doble de
+  // pixeles reales. Si el archivo no los tiene, a este zoom se va a ver blando
+  // y no hay codigo que lo arregle: falta resolucion en el original.
+  const pixelesNecesarios = Math.round(64 * zoom * 2);
+  const seVeBlanda = natural !== null && Math.min(natural.w, natural.h) < pixelesNecesarios;
 
   function handleGuardar() {
     startTransition(async () => {
@@ -136,6 +143,12 @@ export default function AjustarFotoModal({
             src={fotoUrl}
             alt={nombre}
             draggable={false}
+            onLoad={(event) =>
+              setNatural({
+                w: event.currentTarget.naturalWidth,
+                h: event.currentTarget.naturalHeight,
+              })
+            }
             className="h-full w-full object-cover"
             style={getFotoCropStyle(`${pos.x}% ${pos.y}%`, zoom)}
           />
@@ -157,6 +170,14 @@ export default function AjustarFotoModal({
           />
           <span className="w-10 text-right text-xs text-zinc-400">{zoom.toFixed(1)}x</span>
         </div>
+
+        {seVeBlanda ? (
+          <p className="mt-2 rounded-2xl border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-300">
+            A este zoom la miniatura puede verse borrosa: la foto es de{" "}
+            {natural?.w}x{natural?.h} y no tiene suficiente detalle para recortar
+            tanto. Bajá el recorte o subí una foto más grande.
+          </p>
+        ) : null}
 
         <div className="mt-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">

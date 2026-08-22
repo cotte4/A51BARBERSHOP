@@ -287,7 +287,11 @@ function LineaRow({
             src={linea.fotoUrl}
             alt={linea.nombre}
             fill
-            sizes="64px"
+            // La caja mide 64px, pero el recorte la escala hasta 4x y el hover
+            // suma 1.35x. Pidiendo 64px, Next servia un thumbnail que al
+            // acercarlo se veia pixelado: hay que pedir el tamano MAXIMO que
+            // la imagen llega a mostrarse, no el de la caja.
+            sizes="384px"
             style={cropStyle}
             className="object-cover transition-transform duration-200"
           />
