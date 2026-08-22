@@ -1427,6 +1427,8 @@ export const presupuestoLineas = pgTable("presupuesto_lineas", {
     .default("0"),
   notas: text("notas"),
   fotoUrl: text("foto_url"),
+  // Encuadre elegido a mano en el modal, formato CSS object-position ("50% 50%").
+  fotoPos: text("foto_pos"),
   comprobanteUrl: text("comprobante_url"),
   orden: integer("orden").notNull().default(0),
   creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),

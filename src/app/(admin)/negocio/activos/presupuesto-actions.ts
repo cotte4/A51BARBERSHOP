@@ -9,6 +9,7 @@ import { toMoneyNumber } from "@/lib/hangar";
 import {
   canViewPresupuestoMemas,
   isPresupuestoCategoria,
+  normalizeFotoPos,
   isPresupuestoScope,
   type PresupuestoCategoria,
   type PresupuestoScope,
@@ -177,6 +178,40 @@ export async function borrarLineaPresupuestoAction(formData: FormData) {
 
   await db
     .delete(presupuestoLineas)
+    .where(
+      and(
+        eq(presupuestoLineas.id, lineaId),
+        eq(presupuestoLineas.presupuestoId, presupuesto.id)
+      )
+    );
+
+  await touchPresupuesto(presupuesto.id);
+  revalidatePresupuesto();
+}
+
+/**
+ * Guarda solo el encuadre de la foto. Separado del update general para que
+ * ajustar la imagen no pise nombre, monto ni categoria si alguien tenia el
+ * form de edicion abierto en otra pestana.
+ */
+export async function guardarFotoPosAction(formData: FormData) {
+  if (!(await requirePresupuestoAccess())) {
+    return;
+  }
+
+  const scope = parseScope(formData);
+  const lineaId = (formData.get("lineaId") as string | null)?.trim();
+  const fotoPos = (formData.get("fotoPos") as string | null)?.trim();
+
+  if (!lineaId) {
+    return;
+  }
+
+  const presupuesto = await getOrCreatePresupuesto(scope);
+
+  await db
+    .update(presupuestoLineas)
+    .set({ fotoPos: normalizeFotoPos(fotoPos) })
     .where(
       and(
         eq(presupuestoLineas.id, lineaId),

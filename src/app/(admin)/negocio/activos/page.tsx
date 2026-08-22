@@ -98,6 +98,7 @@ export default async function HangarPage({
           montoEstimado: toMoneyNumber(linea.montoEstimado),
           notas: linea.notas,
           fotoUrl: linea.fotoUrl,
+          fotoPos: linea.fotoPos,
           comprobanteUrl: linea.comprobanteUrl,
         }))}
         total={totals.total}

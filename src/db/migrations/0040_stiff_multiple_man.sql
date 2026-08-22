@@ -1,0 +1,1 @@
+ALTER TABLE "presupuesto_lineas" ADD COLUMN "foto_pos" text;

@@ -5,9 +5,12 @@ import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { formatARS } from "@/lib/format";
 import {
+  FOTO_POS_DEFAULT,
   PRESUPUESTO_CATEGORIAS,
+  normalizeFotoPos,
   type PresupuestoScope,
 } from "@/lib/presupuesto";
+import AjustarFotoModal from "./_AjustarFotoModal";
 import HangarUploadField from "./_HangarUploadField";
 import {
   actualizarLineaPresupuestoAction,
@@ -23,6 +26,7 @@ export type PresupuestoLineaView = {
   montoEstimado: number;
   notas: string | null;
   fotoUrl: string | null;
+  fotoPos: string | null;
   comprobanteUrl: string | null;
 };
 
@@ -262,23 +266,48 @@ function LineaRow({
   linea: PresupuestoLineaView;
   onEdit: () => void;
 }) {
+  const [ajustando, setAjustando] = useState(false);
+  const objectPosition = normalizeFotoPos(linea.fotoPos ?? FOTO_POS_DEFAULT);
+
   return (
     <div className="flex flex-wrap items-center gap-4 rounded-[26px] border border-zinc-800 bg-zinc-950/70 p-4 transition hover:border-[#8cff59]/25">
-      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[20px] border border-zinc-800 bg-zinc-900">
-        {linea.fotoUrl ? (
+      {linea.fotoUrl ? (
+        <button
+          type="button"
+          onClick={() => setAjustando(true)}
+          title="Ajustar encuadre"
+          className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-[20px] border border-zinc-800 bg-zinc-900"
+        >
           <Image
             src={linea.fotoUrl}
             alt={linea.nombre}
             fill
             sizes="64px"
-            className="object-cover"
+            style={{ objectPosition }}
+            className="object-cover transition-transform duration-200 group-hover:scale-[1.35]"
           />
-        ) : (
+          <span className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/70 to-transparent pb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white opacity-0 transition group-hover:opacity-100">
+            Ajustar
+          </span>
+        </button>
+      ) : (
+        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[20px] border border-zinc-800 bg-zinc-900">
           <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
             {linea.categoria.slice(0, 3)}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {ajustando && linea.fotoUrl ? (
+        <AjustarFotoModal
+          scope={scope}
+          lineaId={linea.id}
+          nombre={linea.nombre}
+          fotoUrl={linea.fotoUrl}
+          fotoPos={linea.fotoPos}
+          onClose={() => setAjustando(false)}
+        />
+      ) : null}
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">

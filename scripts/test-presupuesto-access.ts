@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 
 async function main() {
-  const { canViewPresupuestoMemas, getPresupuestoTotals } = await import(
-    "../src/lib/presupuesto"
-  );
+  const { canViewPresupuestoMemas, getPresupuestoTotals, normalizeFotoPos } =
+    await import("../src/lib/presupuesto");
 
   // Solo el asesor (lado Memas) ve el presupuesto.
   assert.equal(canViewPresupuestoMemas("asesor"), true);
@@ -35,7 +34,23 @@ async function main() {
   assert.equal(vacio.total, 0);
   assert.equal(vacio.grupos.length, 0);
 
-  console.log("Presupuesto access + totals passed");
+  // Encuadre de foto: el valor va a un style inline, no puede entrar texto libre.
+  assert.equal(normalizeFotoPos("25% 75%"), "25% 75%");
+  assert.equal(normalizeFotoPos("0% 0%"), "0% 0%");
+  assert.equal(normalizeFotoPos("100% 100%"), "100% 100%");
+  assert.equal(normalizeFotoPos("33.5% 66.5%"), "33.5% 66.5%");
+  // Fuera de rango, formatos raros y payloads -> default.
+  assert.equal(normalizeFotoPos("120% 50%"), "50% 50%");
+  assert.equal(normalizeFotoPos("-10% 50%"), "50% 50%");
+  assert.equal(normalizeFotoPos("50%"), "50% 50%");
+  assert.equal(normalizeFotoPos("center top"), "50% 50%");
+  assert.equal(normalizeFotoPos("50% 50%; background: url(x)"), "50% 50%");
+  assert.equal(normalizeFotoPos("</style><script>alert(1)</script>"), "50% 50%");
+  assert.equal(normalizeFotoPos(null), "50% 50%");
+  assert.equal(normalizeFotoPos(undefined), "50% 50%");
+  assert.equal(normalizeFotoPos(""), "50% 50%");
+
+  console.log("Presupuesto access + totals + fotoPos passed");
 }
 
 main().catch((error) => {
