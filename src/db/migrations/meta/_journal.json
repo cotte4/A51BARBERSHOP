@@ -267,6 +267,13 @@
       "when": 1783974820471,
       "tag": "0037_exotic_sauron",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1787411979600,
+      "tag": "0038_charming_colonel_america",
+      "breakpoints": true
     }
   ]
 }

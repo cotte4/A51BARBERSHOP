@@ -20,6 +20,10 @@ import {
   HANGAR_ASSET_ESTADOS_COMPRA,
   HANGAR_ASSET_PAYMENT_TYPES,
 } from "@/lib/hangar";
+import {
+  PRESUPUESTO_CATEGORIAS,
+  PRESUPUESTO_SCOPES,
+} from "@/lib/presupuesto";
 
 // ————————————————————————————
 // BETTER AUTH TABLES
@@ -1386,6 +1390,51 @@ export const barberShopAssetPayments = pgTable("barber_shop_asset_payments", {
     "barber_shop_asset_payments_tipo_check",
     sql`${table.tipo} IN (${sql.raw(HANGAR_ASSET_PAYMENT_TYPES.map((item) => `'${item}'`).join(", "))})`
   ),
+]);
+
+// ————————————————————————————
+// PRESUPUESTOS (proyección CAPEX — NO toca capital ni finanzas de A51)
+// ————————————————————————————
+export const presupuestos = pgTable("presupuestos", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  nombre: text("nombre").notNull(),
+  scope: text("scope")
+    .notNull()
+    .default("memas")
+    .$type<(typeof PRESUPUESTO_SCOPES)[number]>(),
+  notas: text("notas"),
+  creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
+  actualizadoEn: timestamp("actualizado_en", { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index("presupuestos_scope_idx").on(table.scope),
+  check(
+    "presupuestos_scope_check",
+    sql`${table.scope} IN (${sql.raw(PRESUPUESTO_SCOPES.map((item) => `'${item}'`).join(", "))})`
+  ),
+]);
+
+export const presupuestoLineas = pgTable("presupuesto_lineas", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  presupuestoId: uuid("presupuesto_id")
+    .notNull()
+    .references(() => presupuestos.id, { onDelete: "cascade" }),
+  categoria: text("categoria")
+    .notNull()
+    .$type<(typeof PRESUPUESTO_CATEGORIAS)[number]>(),
+  nombre: text("nombre").notNull(),
+  montoEstimado: numeric("monto_estimado", { precision: 12, scale: 2 })
+    .notNull()
+    .default("0"),
+  notas: text("notas"),
+  orden: integer("orden").notNull().default(0),
+  creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index("presupuesto_lineas_presupuesto_idx").on(table.presupuestoId),
+  check(
+    "presupuesto_lineas_categoria_check",
+    sql`${table.categoria} IN (${sql.raw(PRESUPUESTO_CATEGORIAS.map((item) => `'${item}'`).join(", "))})`
+  ),
+  check("presupuesto_lineas_monto_no_negativo", sql`${table.montoEstimado} >= 0`),
 ]);
 
 // ————————————————————————————

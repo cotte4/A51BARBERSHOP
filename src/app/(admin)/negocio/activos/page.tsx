@@ -17,7 +17,10 @@ import {
   getAssetFinancials,
   getEstadoCompraLabel,
   HANGAR_ASSET_CATEGORIAS,
+  toMoneyNumber,
 } from "@/lib/hangar";
+import { getPresupuestoConLineas } from "@/lib/presupuesto-server";
+import PresupuestoMemas from "./_PresupuestoMemas";
 import SimuladorHangar from "./_SimuladorHangar";
 
 function getMesActualArgentina() {
@@ -63,7 +66,7 @@ function getCategoryTone(category: string) {
 export default async function HangarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ categoria?: string; estado?: string; sim?: string }>;
+  searchParams: Promise<{ categoria?: string; estado?: string; sim?: string; vista?: string }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string } | undefined)?.role;
@@ -71,7 +74,29 @@ export default async function HangarPage({
     redirect("/caja");
   }
 
-  const { categoria, estado, sim } = await searchParams;
+  const { categoria, estado, sim, vista } = await searchParams;
+  // Vista de presupuesto: universo aparte. Sale antes de tocar assets, capital
+  // o costos, asi que ninguna metrica de A51 se ve afectada por esta rama.
+  if (vista === "memas") {
+    const { presupuesto, lineas, totals } = await getPresupuestoConLineas("memas");
+
+    return (
+      <PresupuestoMemas
+        scope="memas"
+        nombre={presupuesto.nombre}
+        lineas={lineas.map((linea) => ({
+          id: linea.id,
+          categoria: linea.categoria,
+          nombre: linea.nombre,
+          montoEstimado: toMoneyNumber(linea.montoEstimado),
+          notas: linea.notas,
+        }))}
+        total={totals.total}
+        grupos={totals.grupos}
+      />
+    );
+  }
+
   const mesActual = getMesActualArgentina();
 
   const [assets, payments, capitalRows, costosMes] = await Promise.all([
@@ -219,7 +244,15 @@ export default async function HangarPage({
                 </div>
               </section>
 
-              <div className="flex flex-wrap justify-end gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <div className="mr-auto flex flex-wrap gap-2">
+                  <FilterChip href="/negocio/activos" active label="Activos A51" />
+                  <FilterChip
+                    href="/negocio/activos?vista=memas"
+                    active={false}
+                    label="Presupuesto Memas"
+                  />
+                </div>
                 <Link
                   href="/negocio/activos?sim=1"
                   className="ghost-button inline-flex min-h-[42px] items-center rounded-[16px] px-4 text-sm font-semibold"
