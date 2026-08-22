@@ -34,6 +34,15 @@ export function isPresupuestoScope(value: string | null | undefined): value is P
   return PRESUPUESTO_SCOPES.includes(value as PresupuestoScope);
 }
 
+/**
+ * Unica fuente de verdad de quien accede al presupuesto Memas: solo el rol
+ * asesor (el lado Memas). Ni el admin de A51 — es el presupuesto de la
+ * contraparte. La usan tanto la vista como las server actions.
+ */
+export function canViewPresupuestoMemas(role: string | null | undefined): boolean {
+  return role === "asesor";
+}
+
 export function getScopeLabel(scope: string | null | undefined): string {
   switch (scope) {
     case "memas":

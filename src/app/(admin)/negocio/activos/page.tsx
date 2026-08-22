@@ -19,6 +19,7 @@ import {
   HANGAR_ASSET_CATEGORIAS,
   toMoneyNumber,
 } from "@/lib/hangar";
+import { canViewPresupuestoMemas } from "@/lib/presupuesto";
 import { getPresupuestoConLineas } from "@/lib/presupuesto-server";
 import PresupuestoMemas from "./_PresupuestoMemas";
 import SimuladorHangar from "./_SimuladorHangar";
@@ -75,9 +76,15 @@ export default async function HangarPage({
   }
 
   const { categoria, estado, sim, vista } = await searchParams;
+  const puedeVerPresupuesto = canViewPresupuestoMemas(userRole);
+
   // Vista de presupuesto: universo aparte. Sale antes de tocar assets, capital
   // o costos, asi que ninguna metrica de A51 se ve afectada por esta rama.
   if (vista === "memas") {
+    if (!puedeVerPresupuesto) {
+      redirect("/negocio/activos");
+    }
+
     const { presupuesto, lineas, totals } = await getPresupuestoConLineas("memas");
 
     return (
@@ -245,14 +252,16 @@ export default async function HangarPage({
               </section>
 
               <div className="flex flex-wrap items-center justify-end gap-2">
-                <div className="mr-auto flex flex-wrap gap-2">
-                  <FilterChip href="/negocio/activos" active label="Activos A51" />
-                  <FilterChip
-                    href="/negocio/activos?vista=memas"
-                    active={false}
-                    label="Presupuesto Memas"
-                  />
-                </div>
+                {puedeVerPresupuesto ? (
+                  <div className="mr-auto flex flex-wrap gap-2">
+                    <FilterChip href="/negocio/activos" active label="Activos A51" />
+                    <FilterChip
+                      href="/negocio/activos?vista=memas"
+                      active={false}
+                      label="Presupuesto Memas"
+                    />
+                  </div>
+                ) : null}
                 <Link
                   href="/negocio/activos?sim=1"
                   className="ghost-button inline-flex min-h-[42px] items-center rounded-[16px] px-4 text-sm font-semibold"

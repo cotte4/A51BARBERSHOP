@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { presupuestoLineas } from "@/db/schema";
-import { requireAdminSession } from "@/lib/admin-action";
+import { getAdminSessionContext } from "@/lib/admin-action";
 import { toMoneyNumber } from "@/lib/hangar";
 import {
+  canViewPresupuestoMemas,
   isPresupuestoCategoria,
   isPresupuestoScope,
   type PresupuestoCategoria,
@@ -29,12 +30,14 @@ export type PresupuestoLineaFormState = {
 };
 
 /**
- * Gate: admin | asesor. A diferencia de las acciones de activos (que usan
- * requireOwnerSession = solo admin), el presupuesto lo carga el asesor, y
- * coincide con el gate de lectura de /negocio/activos.
+ * Gate: SOLO rol asesor (el lado Memas). Ni siquiera el admin escribe aca —
+ * es el presupuesto de la contraparte, no de A51. Espeja el gate de lectura
+ * de la vista en page.tsx; ocultar el chip no alcanza, un POST directo
+ * llegaria igual.
  */
 async function requirePresupuestoAccess() {
-  return requireAdminSession();
+  const actor = await getAdminSessionContext();
+  return Boolean(actor && canViewPresupuestoMemas(actor.role));
 }
 
 function revalidatePresupuesto() {
