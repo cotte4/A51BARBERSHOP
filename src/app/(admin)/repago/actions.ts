@@ -23,6 +23,7 @@ export async function registrarCuota(
   const montoStr = formData.get("monto") as string;
   const monedaStr = (formData.get("moneda") as string) || "";
   const tcDiaStr = formData.get("tcDia") as string;
+  const fechaPago = ((formData.get("fechaPago") as string) || "").trim();
   const notas = (formData.get("notas") as string)?.trim() || null;
 
   const monto = Number(montoStr);
@@ -38,12 +39,16 @@ export async function registrarCuota(
     return { error: "La moneda ingresada no es valida." };
   }
   const moneda: "USD" | "ARS" = monedaStr;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaPago)) {
+    return { error: "Elegí la fecha en que se recibió el pago." };
+  }
 
   try {
     const result = await registrarCuotaRepagoMemas({
       montoIngresado: monto,
       moneda,
       tcDia,
+      fechaPago,
       notas,
     });
 
@@ -54,5 +59,7 @@ export async function registrarCuota(
   }
 
   revalidatePath("/repago");
+  revalidatePath("/negocio");
+  revalidatePath("/dashboard");
   return { success: true };
 }

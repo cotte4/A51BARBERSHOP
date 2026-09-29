@@ -1,11 +1,15 @@
 /**
- * Lógica de amortización alemana para el módulo Memas.
+ * Lógica del repago Memas. Todas las cifras en USD.
  *
- * Fórmula:
- *   capitalFijo = deudaUsd / cantidadCuotas
- *   interes_N   = saldo_N × (tasaAnual / 12)
- *   cuotaTotal_N = capitalFijo + interes_N
- *   saldo_N+1   = saldo_N - capitalFijo
+ * Modelo vigente: "pagá cuando puedas" con interés por tiempo real.
+ *   - El interés corre desde el primer pago, día a día, a `tasaAnual`
+ *     sobre el capital que se sigue debiendo:  capital × tasa × días / 365.
+ *   - Cada pago cubre primero el interés corrido y el resto devuelve capital.
+ *   - El interés total nunca supera el del plan de referencia (cronograma
+ *     alemán pactado). Si cancelan antes, pagan menos interés.
+ *
+ * El cronograma alemán queda solo como referencia: fija el tope de interés y
+ * la cuota mensual sugerida (capital fijo + interés corrido).
  */
 
 export interface CuotaCronograma {
@@ -18,8 +22,9 @@ export interface CuotaCronograma {
 }
 
 /**
- * Genera el cronograma completo de amortización alemana.
- * Todas las cifras en USD.
+ * Cronograma alemán de referencia:
+ *   capitalFijo = deudaUsd / cantidadCuotas
+ *   interes_N   = saldo_N × (tasaAnual / 12)
  */
 export function generarCronograma(
   deudaUsd: number,
@@ -33,7 +38,6 @@ export function generarCronograma(
 
   for (let i = 1; i <= cantidadCuotas; i++) {
     const interes = saldo * tasaMensual;
-    const cuotaTotal = capitalFijo + interes;
     const saldoFinal = Math.max(0, saldo - capitalFijo);
 
     cronograma.push({
@@ -41,7 +45,7 @@ export function generarCronograma(
       saldoInicial: saldo,
       capital: capitalFijo,
       interes,
-      cuotaTotal,
+      cuotaTotal: capitalFijo + interes,
       saldoFinal,
     });
 
@@ -51,68 +55,18 @@ export function generarCronograma(
   return cronograma;
 }
 
-/**
- * Devuelve la próxima cuota esperada según cuántas ya se pagaron.
- * Si todas las cuotas están pagadas, devuelve null.
- */
-export function calcularCuotaSiguiente(
-  cronograma: CuotaCronograma[],
-  cuotasPagadas: number
-): CuotaCronograma | null {
-  if (cuotasPagadas >= cronograma.length) return null;
-  return cronograma[cuotasPagadas]; // índice 0 = cuota 1
+/** Redondeo a centavos. Cada paso del cálculo trabaja en centavos exactos. */
+export function redondearUsd(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-/**
- * Calcula la fecha proyectada de cancelación completa.
- * Devuelve string "Mes YYYY" (ej: "abril de 2027").
- *
- * Proyecta desde el último pago real (una cuota por mes hacia adelante);
- * si todavía no hubo pagos, proyecta desde hoy. Así la fecha acompaña la
- * realidad de los pagos en vez de asumir que arrancaron en `fechaInicio`.
- *
- * @param fechaUltimoPago - fecha "YYYY-MM-DD" del último pago registrado, o null
- * @param cuotasPagadas - cantidad de cuotas ya registradas
- * @param cantidadCuotas - total de cuotas pactadas
- */
-export function calcularFechaCancelacion(
-  fechaUltimoPago: string | null | undefined,
-  cuotasPagadas: number,
-  cantidadCuotas: number
-): string {
-  const cuotasRestantes = Math.max(0, cantidadCuotas - cuotasPagadas);
-  const base = fechaUltimoPago ?? new Date().toLocaleDateString("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires",
-  });
-  const [year, month, day] = base.split("-").map(Number);
-  const fechaBase = new Date(Date.UTC(year, month - 1, day, 12));
-  fechaBase.setUTCMonth(fechaBase.getUTCMonth() + cuotasRestantes);
-
-  return fechaBase.toLocaleDateString("es-AR", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
-
-/**
- * Saldo real de la deuda en USD.
- *
- * Usa el cache `saldo_pendiente` cuando es coherente (0 < saldo ≤ deuda);
- * si viene nulo o corrupto (p. ej. un valor legacy en ARS), cae al saldo
- * teórico del cronograma para esa altura del plan.
- */
-export function calcularSaldoReal(
-  saldoCache: number | null | undefined,
-  deudaUsd: number,
-  saldoTeorico: number
-): number {
-  if (saldoCache == null) return saldoTeorico;
-  const saldo = Number(saldoCache);
-  if (Number.isFinite(saldo) && saldo >= 0 && saldo <= deudaUsd) {
-    return saldo;
-  }
-  return saldoTeorico;
+/** Días corridos entre dos fechas "YYYY-MM-DD" (0 si `hasta` es anterior). */
+export function diasEntre(desde: string, hasta: string): number {
+  const toUtc = (fecha: string) => {
+    const [y, m, d] = fecha.slice(0, 10).split("-").map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.max(0, Math.round((toUtc(hasta) - toUtc(desde)) / 86_400_000));
 }
 
 /**
@@ -124,73 +78,147 @@ export function convertirMontoAUsd(
   moneda: "USD" | "ARS",
   tcDia: number
 ): number {
-  return moneda === "ARS" ? montoIngresado / tcDia : montoIngresado;
+  return redondearUsd(moneda === "ARS" ? montoIngresado / tcDia : montoIngresado);
 }
 
-export interface PagoFlexibleInput {
-  /** Saldo real de la deuda hoy (USD) */
-  saldoPendiente: number;
-  /** Capital ya amortizado dentro de la cuota corriente (pagos parciales previos) */
-  capitalYaPagado: number;
-  /** Interés ya pagado dentro de la cuota corriente */
-  interesYaPagado: number;
-  /** Capital objetivo de la cuota corriente según cronograma */
-  capitalCuota: number;
-  /** Tasa anual (ej. 0.10) */
+export interface PlanRepago {
+  deudaUsd: number;
   tasaAnual: number;
-  /** Monto del pago (USD) */
-  montoPagadoUsd: number;
+  cantidadCuotas: number;
 }
 
-export interface PagoFlexibleResult {
-  interesPagado: number;
+export interface PagoRepago {
+  /** "YYYY-MM-DD" */
+  fecha: string;
+  montoUsd: number;
+}
+
+export interface AplicacionPago extends PagoRepago {
+  /** Días de interés que corrieron desde el pago anterior */
+  dias: number;
+  interes: number;
+  capital: number;
+  /** Lo que sobró después de cancelar todo (debería ser siempre 0) */
+  excedente: number;
+  /** Capital adeudado después de este pago */
+  saldoDespues: number;
+}
+
+export interface EstadoRepago {
+  aplicaciones: AplicacionPago[];
+  capitalFijo: number;
+  topeInteres: number;
+  totalPagadoUsd: number;
   capitalPagado: number;
-  nuevoSaldo: number;
-  cuotaCompletada: boolean;
+  interesPagado: number;
+  /** Capital que falta devolver */
+  saldoCapital: number;
+  /** Interés corrido y todavía no pagado a la fecha de corte */
+  interesCorrido: number;
+  /** Lo que hay que pagar a la fecha de corte para cancelar todo */
+  totalParaCancelar: number;
   pagadoCompleto: boolean;
+  /** Cuotas del plan de referencia cubiertas por el capital devuelto */
+  cuotasCubiertas: number;
+  /** Cuota sugerida a la fecha de corte: capital fijo + interés corrido */
+  cuotaSugerida: number;
 }
 
-/**
- * Aplica un pago flexible ("pagá lo que puedas") sobre la cuota corriente.
- *
- * El interés de la cuota se calcula UNA vez sobre el saldo al inicio de la
- * cuota (saldo actual + capital ya amortizado dentro de ella). Cada pago
- * cubre primero el interés pendiente y el resto amortiza capital. La cuota
- * queda completada cuando su capital objetivo está cubierto o la deuda
- * entera quedó saldada.
- */
-export function aplicarPagoFlexible(input: PagoFlexibleInput): PagoFlexibleResult {
-  const saldoInicioCuota = input.saldoPendiente + input.capitalYaPagado;
-  const interesCuotaTotal = saldoInicioCuota * (input.tasaAnual / 12);
-  const interesPendiente = Math.max(0, interesCuotaTotal - input.interesYaPagado);
-
-  const interesPagado = Math.min(input.montoPagadoUsd, interesPendiente);
-  const capitalPagado = Math.min(
-    input.montoPagadoUsd - interesPagado,
-    input.saldoPendiente
+/** Interés total del plan de referencia: es el tope que nunca se supera. */
+export function calcularTopeInteres(plan: PlanRepago): number {
+  return redondearUsd(
+    generarCronograma(plan.deudaUsd, plan.tasaAnual, plan.cantidadCuotas).reduce(
+      (sum, cuota) => sum + cuota.interes,
+      0
+    )
   );
-
-  const nuevoSaldo = Math.max(0, input.saldoPendiente - capitalPagado);
-  const pagadoCompleto = nuevoSaldo <= 0.01;
-  const capitalObjetivo = Math.min(input.capitalCuota, saldoInicioCuota);
-  const cuotaCompletada =
-    pagadoCompleto || input.capitalYaPagado + capitalPagado + 0.01 >= capitalObjetivo;
-
-  return { interesPagado, capitalPagado, nuevoSaldo, cuotaCompletada, pagadoCompleto };
 }
 
 /**
- * Calcula el porcentaje de avance de pago (0–100).
+ * Recalcula todo el repago desde la lista de pagos.
  *
- * @param capitalPagadoAcumulado - suma de capitalPagado de todas las cuotas registradas
- * @param deudaUsd - deuda original en USD
+ * Es la única fuente de verdad: los montos de capital/interés guardados en
+ * cada fila son un reflejo de este cálculo, no al revés.
+ *
+ * @param hasta - fecha de corte "YYYY-MM-DD" para el interés corrido (hoy)
  */
-export function calcularPorcentajeAvance(
-  capitalPagadoAcumulado: number,
-  deudaUsd: number
-): number {
-  if (deudaUsd <= 0) return 100;
-  return Math.min(100, Math.max(0, (capitalPagadoAcumulado / deudaUsd) * 100));
+export function calcularEstadoRepago(
+  plan: PlanRepago,
+  pagos: PagoRepago[],
+  hasta: string
+): EstadoRepago {
+  const tasaDiaria = plan.tasaAnual / 365;
+  const topeInteres = calcularTopeInteres(plan);
+  const capitalFijo = plan.deudaUsd / plan.cantidadCuotas;
+  const ordenados = [...pagos].sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  let saldo = redondearUsd(plan.deudaUsd);
+  let interesPendiente = 0;
+  let interesDevengado = 0;
+  let desde = null as string | null;
+
+  // Devenga interés entre `desde` y `fecha`, sin pasar el tope del plan.
+  const devengar = (fecha: string) => {
+    if (desde === null) return 0;
+    const dias = diasEntre(desde, fecha);
+    const bruto = redondearUsd(saldo * tasaDiaria * dias);
+    const disponible = redondearUsd(Math.max(0, topeInteres - interesDevengado));
+    const interes = Math.min(bruto, disponible);
+    interesDevengado = redondearUsd(interesDevengado + interes);
+    interesPendiente = redondearUsd(interesPendiente + interes);
+    return dias;
+  };
+
+  const aplicaciones: AplicacionPago[] = ordenados.map((pago) => {
+    const dias = devengar(pago.fecha);
+    if (desde === null || pago.fecha > desde) desde = pago.fecha;
+
+    const monto = redondearUsd(pago.montoUsd);
+    const interes = Math.min(monto, interesPendiente);
+    const capital = Math.min(redondearUsd(monto - interes), saldo);
+    const excedente = redondearUsd(monto - interes - capital);
+
+    interesPendiente = redondearUsd(interesPendiente - interes);
+    saldo = redondearUsd(saldo - capital);
+
+    return { ...pago, montoUsd: monto, dias, interes, capital, excedente, saldoDespues: saldo };
+  });
+
+  const pagadoCompleto = aplicaciones.length > 0 && saldo <= 0;
+  if (!pagadoCompleto && desde !== null && hasta > desde) devengar(hasta);
+  const interesCorrido = pagadoCompleto ? 0 : interesPendiente;
+
+  const suma = (key: "montoUsd" | "capital" | "interes") =>
+    redondearUsd(aplicaciones.reduce((s, a) => s + a[key], 0));
+  const capitalPagado = suma("capital");
+  const totalParaCancelar = redondearUsd(saldo + interesCorrido);
+
+  return {
+    aplicaciones,
+    capitalFijo,
+    topeInteres,
+    totalPagadoUsd: suma("montoUsd"),
+    capitalPagado,
+    interesPagado: suma("interes"),
+    saldoCapital: saldo,
+    interesCorrido,
+    totalParaCancelar,
+    pagadoCompleto,
+    cuotasCubiertas: Math.min(
+      plan.cantidadCuotas,
+      Math.floor((capitalPagado + 0.01) / capitalFijo)
+    ),
+    cuotaSugerida: Math.min(totalParaCancelar, redondearUsd(capitalFijo + interesCorrido)),
+  };
+}
+
+/**
+ * Meses que faltan si de acá en adelante devuelven el capital fijo del plan
+ * (u$d 147,50) cada mes. Es una estimación para mostrar, no una obligación.
+ */
+export function mesesRestantesEstimados(saldoCapital: number, capitalFijo: number): number {
+  if (saldoCapital <= 0 || capitalFijo <= 0) return 0;
+  return Math.ceil(redondearUsd(saldoCapital / capitalFijo) - 0.0001);
 }
 
 /**

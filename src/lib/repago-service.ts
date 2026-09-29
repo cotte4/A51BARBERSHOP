@@ -1,38 +1,118 @@
 import "server-only";
 
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { repagoMemas, repagoMemasCuotas } from "@/db/schema";
 import {
-  aplicarPagoFlexible,
-  calcularSaldoReal,
+  calcularEstadoRepago,
   convertirMontoAUsd,
-  generarCronograma,
+  formatUSD,
+  redondearUsd,
+  type EstadoRepago,
+  type PagoRepago,
+  type PlanRepago,
 } from "@/lib/amortizacion";
+
+type RepagoRow = typeof repagoMemas.$inferSelect;
+type PagoRow = typeof repagoMemasCuotas.$inferSelect;
+
+export function fechaHoyArgentina(): string {
+  return new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+  });
+}
+
+export function planDesdeRepago(repago: RepagoRow): PlanRepago {
+  return {
+    deudaUsd: Number(repago.deudaUsd ?? 1500),
+    tasaAnual: Number(repago.tasaAnualUsd ?? 0.1),
+    cantidadCuotas: repago.cantidadCuotasPactadas ?? 12,
+  };
+}
+
+/**
+ * Monto en USD que efectivamente entró con ese pago. Se deriva de lo que la
+ * persona entregó (moneda + monto + TC), no del reparto capital/interés
+ * guardado, porque ese reparto se recalcula con el modelo vigente.
+ */
+export function montoUsdDeFila(fila: PagoRow): number {
+  const ingresado = Number(fila.montoIngresado);
+  const tc = Number(fila.tcDia);
+  if (fila.montoIngresado != null && Number.isFinite(ingresado) && ingresado > 0) {
+    if (fila.monedaIngresada === "USD") return redondearUsd(ingresado);
+    if (Number.isFinite(tc) && tc > 0) return convertirMontoAUsd(ingresado, "ARS", tc);
+  }
+  // Filas legacy sin monto ingresado: el USD aplicado es capital + interés.
+  return redondearUsd(Number(fila.capitalPagado ?? 0) + Number(fila.interesPagado ?? 0));
+}
+
+/**
+ * Orden canónico de los pagos: por fecha y, dentro del mismo día, por id.
+ * El índice de cada fila coincide con `estado.aplicaciones`.
+ */
+function ordenarFilas(filas: PagoRow[]): PagoRow[] {
+  return filas
+    .filter((fila) => fila.fechaPago)
+    .sort(
+      (a, b) =>
+        String(a.fechaPago).localeCompare(String(b.fechaPago)) || a.id.localeCompare(b.id)
+    );
+}
+
+function pagosDesdeFilas(filas: PagoRow[]): PagoRepago[] {
+  return filas.map((fila) => ({
+    fecha: String(fila.fechaPago).slice(0, 10),
+    montoUsd: montoUsdDeFila(fila),
+  }));
+}
+
+export type EstadoRepagoCompleto = {
+  repago: RepagoRow;
+  plan: PlanRepago;
+  /** Filas en orden canónico — mismo índice que estado.aplicaciones */
+  filas: PagoRow[];
+  estado: EstadoRepago;
+};
+
+/** Carga el repago y lo recalcula entero a la fecha de corte (hoy por defecto). */
+export async function getEstadoRepago(
+  hasta: string = fechaHoyArgentina()
+): Promise<EstadoRepagoCompleto | null> {
+  const [repago] = await db.select().from(repagoMemas).limit(1);
+  if (!repago) return null;
+
+  const filas = ordenarFilas(
+    await db.select().from(repagoMemasCuotas).where(eq(repagoMemasCuotas.repagoId, repago.id))
+  );
+
+  const plan = planDesdeRepago(repago);
+  return { repago, plan, filas, estado: calcularEstadoRepago(plan, pagosDesdeFilas(filas), hasta) };
+}
 
 export type RegistrarCuotaRepagoInput = {
   montoIngresado: number;
   moneda: "USD" | "ARS";
   tcDia: number;
+  /** "YYYY-MM-DD" — día en que se recibió la plata */
+  fechaPago: string;
   notas?: string | null;
 };
 
 export type RegistrarCuotaRepagoResult =
-  | { ok: true; cuotaCompletada: boolean; nuevoSaldoUsd: number }
+  | { ok: true; pagadoCompleto: boolean; nuevoSaldoUsd: number }
   | {
       ok: false;
       error: string;
     };
 
 /**
- * Registra un pago flexible sobre el plan Memas.
+ * Registra un pago sobre el repago Memas.
  *
- * Modelo: se puede pagar cualquier monto > 0 ("de a cuanto puedan").
- * Cada pago cubre primero el interés pendiente de la cuota corriente
- * (calculado sobre el saldo al inicio de esa cuota) y el resto amortiza
- * capital. La cuota se marca como pagada cuando su capital objetivo
- * (cronograma alemán) queda cubierto; el excedente amortiza saldo extra.
- * Varias filas en repago_memas_cuotas pueden compartir numeroCuota.
+ * Modelo: interés por tiempo real desde el primer pago, con tope en el
+ * interés del plan de referencia (ver `calcularEstadoRepago`). Después de
+ * insertar, se recalcula TODO el historial y se reescribe el reparto
+ * capital/interés de cada fila y el cache del repago, para que lo guardado
+ * siempre coincida con el cálculo vigente.
  */
 export async function registrarCuotaRepagoMemas(
   input: RegistrarCuotaRepagoInput
@@ -45,98 +125,105 @@ export async function registrarCuotaRepagoMemas(
     return { ok: false, error: "El tipo de cambio del dia debe ser mayor a 0." };
   }
 
+  const hoy = fechaHoyArgentina();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.fechaPago)) {
+    return { ok: false, error: "La fecha del pago no es valida." };
+  }
+  if (input.fechaPago > hoy) {
+    return { ok: false, error: "La fecha del pago no puede ser futura." };
+  }
+
   const montoPagadoUsd = convertirMontoAUsd(input.montoIngresado, input.moneda, input.tcDia);
 
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('repago-memas'))`);
 
     const [repago] = await tx.select().from(repagoMemas).limit(1);
-
     if (!repago) {
       return { ok: false, error: "No hay deuda configurada." };
     }
 
-    if (repago.pagadoCompleto) {
-      return { ok: false, error: "La deuda ya esta cancelada." };
-    }
+    const plan = planDesdeRepago(repago);
+    const filasPrevias = ordenarFilas(
+      await tx.select().from(repagoMemasCuotas).where(eq(repagoMemasCuotas.repagoId, repago.id))
+    );
+    const pagosPrevios = pagosDesdeFilas(filasPrevias);
 
-    const deudaUsd = Number(repago.deudaUsd ?? 1500);
-    const tasaAnual = Number(repago.tasaAnualUsd ?? 0.1);
-    const cantidadCuotas = repago.cantidadCuotasPactadas ?? 12;
-    const cuotasPagadas = repago.cuotasPagadas ?? 0;
-
-    if (cuotasPagadas >= cantidadCuotas) {
+    const ultimaFecha = pagosPrevios.at(-1)?.fecha;
+    if (ultimaFecha && input.fechaPago < ultimaFecha) {
       return {
         ok: false,
-        error: "Todas las cuotas pactadas ya fueron registradas. Si quedó saldo, hablalo con Memas.",
+        error: `La fecha no puede ser anterior al último pago cargado (${ultimaFecha}).`,
       };
     }
 
-    const cronograma = generarCronograma(deudaUsd, tasaAnual, cantidadCuotas);
-    const numeroCuota = cuotasPagadas + 1;
-    const cuotaActual = cronograma[cuotasPagadas];
+    const antes = calcularEstadoRepago(plan, pagosPrevios, input.fechaPago);
+    if (antes.pagadoCompleto) {
+      return { ok: false, error: "La deuda ya esta cancelada." };
+    }
+    if (montoPagadoUsd > antes.totalParaCancelar + 0.005) {
+      return {
+        ok: false,
+        error: `El pago (${formatUSD(montoPagadoUsd)}) supera lo que falta. Para cancelar todo alcanza con ${formatUSD(antes.totalParaCancelar)}.`,
+      };
+    }
 
-    // Saldo real (USD): cache coherente o teórico como fallback
-    const saldoPendienteActual = calcularSaldoReal(
-      repago.saldoPendiente == null ? null : Number(repago.saldoPendiente),
-      deudaUsd,
-      cuotaActual.saldoInicial
-    );
-
-    // Progreso previo dentro de la cuota corriente (pagos parciales anteriores)
-    const [progreso] = await tx
-      .select({
-        interesAcum: sql<string>`coalesce(sum(${repagoMemasCuotas.interesPagado}), 0)`,
-        capitalAcum: sql<string>`coalesce(sum(${repagoMemasCuotas.capitalPagado}), 0)`,
+    const [nuevaFila] = await tx
+      .insert(repagoMemasCuotas)
+      .values({
+        repagoId: repago.id,
+        numeroCuota: filasPrevias.length + 1,
+        fechaPago: input.fechaPago,
+        montoPagado: (montoPagadoUsd * input.tcDia).toFixed(2),
+        tcDia: input.tcDia.toFixed(2),
+        notas: input.notas?.trim() || null,
+        monedaIngresada: input.moneda,
+        montoIngresado: input.montoIngresado.toFixed(2),
       })
-      .from(repagoMemasCuotas)
-      .where(
-        and(
-          eq(repagoMemasCuotas.repagoId, repago.id),
-          eq(repagoMemasCuotas.numeroCuota, numeroCuota)
-        )
-      );
+      .returning();
 
-    const interesYaPagado = Number(progreso?.interesAcum ?? 0);
-    const capitalYaPagado = Number(progreso?.capitalAcum ?? 0);
+    const estado = await recalcularYPersistir(tx, repago.id, plan, [...filasPrevias, nuevaFila]);
 
-    const { interesPagado, capitalPagado, nuevoSaldo, cuotaCompletada, pagadoCompleto } =
-      aplicarPagoFlexible({
-        saldoPendiente: saldoPendienteActual,
-        capitalYaPagado,
-        interesYaPagado,
-        capitalCuota: cuotaActual.capital,
-        tasaAnual,
-        montoPagadoUsd,
-      });
-
-    const montoPagadoArs = montoPagadoUsd * input.tcDia;
-    const hoy = new Date().toLocaleDateString("en-CA", {
-      timeZone: "America/Argentina/Buenos_Aires",
-    });
-
-    await tx.insert(repagoMemasCuotas).values({
-      repagoId: repago.id,
-      numeroCuota,
-      fechaPago: hoy,
-      montoPagado: String(montoPagadoArs.toFixed(2)),
-      capitalPagado: String(capitalPagado.toFixed(2)),
-      interesPagado: String(interesPagado.toFixed(2)),
-      tcDia: String(input.tcDia.toFixed(2)),
-      notas: input.notas?.trim() || null,
-      monedaIngresada: input.moneda,
-      montoIngresado: String(input.montoIngresado.toFixed(2)),
-    });
-
-    await tx
-      .update(repagoMemas)
-      .set({
-        cuotasPagadas: cuotaCompletada ? cuotasPagadas + 1 : cuotasPagadas,
-        saldoPendiente: String(nuevoSaldo.toFixed(2)),
-        pagadoCompleto,
-      })
-      .where(eq(repagoMemas.id, repago.id));
-
-    return { ok: true, cuotaCompletada, nuevoSaldoUsd: nuevoSaldo };
+    return { ok: true, pagadoCompleto: estado.pagadoCompleto, nuevoSaldoUsd: estado.saldoCapital };
   });
+}
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * Reescribe el reparto capital/interés de cada fila y el cache del repago con
+ * el cálculo vigente. `numero_cuota` pasa a ser el número de pago (1, 2, 3…).
+ */
+async function recalcularYPersistir(
+  tx: Tx,
+  repagoId: string,
+  plan: PlanRepago,
+  filas: PagoRow[]
+): Promise<EstadoRepago> {
+  const ordenadas = ordenarFilas(filas);
+  const pagos = pagosDesdeFilas(ordenadas);
+  const estado = calcularEstadoRepago(plan, pagos, pagos.at(-1)?.fecha ?? fechaHoyArgentina());
+
+  for (const [i, fila] of ordenadas.entries()) {
+    const aplicacion = estado.aplicaciones[i];
+    await tx
+      .update(repagoMemasCuotas)
+      .set({
+        numeroCuota: i + 1,
+        capitalPagado: aplicacion.capital.toFixed(2),
+        interesPagado: aplicacion.interes.toFixed(2),
+      })
+      .where(eq(repagoMemasCuotas.id, fila.id));
+  }
+
+  await tx
+    .update(repagoMemas)
+    .set({
+      cuotasPagadas: estado.cuotasCubiertas,
+      saldoPendiente: estado.saldoCapital.toFixed(2),
+      pagadoCompleto: estado.pagadoCompleto,
+    })
+    .where(eq(repagoMemas.id, repagoId));
+
+  return estado;
 }

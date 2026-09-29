@@ -2,6 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useActionState } from "react";
+import {
+  calcularEstadoRepago,
+  convertirMontoAUsd,
+  formatUSD,
+  type PagoRepago,
+  type PlanRepago,
+} from "@/lib/amortizacion";
 import type { RegistrarCuotaState } from "./actions";
 
 interface RegistrarPagoFormProps {
@@ -9,26 +16,20 @@ interface RegistrarPagoFormProps {
     prevState: RegistrarCuotaState,
     formData: FormData
   ) => Promise<RegistrarCuotaState>;
-  cuotaTotalDefault: number;
+  plan: PlanRepago;
+  /** Pagos ya registrados (USD) — para calcular el interés a la fecha elegida */
+  pagos: PagoRepago[];
+  /** "YYYY-MM-DD" de hoy en Argentina */
+  hoy: string;
   /** TC del sistema (punto medio del blue). null si DolarAPI no respondió. */
   tcSistema: number | null;
-  /** TC configurado en el negocio — fallback para el input manual. */
+  /** TC configurado en el negocio — solo como placeholder del input. */
   tcReferencia: number;
 }
 
 type Moneda = "USD" | "ARS";
 
-// USD con 2 decimales; ARS entero. La forma del número ya dice qué moneda es.
-function formatUSD(value: number) {
-  return (
-    "u$d " +
-    value.toLocaleString("es-AR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
-  );
-}
-
+// ARS entero. La forma del número ya dice qué moneda es.
 function formatARS(value: number) {
   return "$ " + Math.round(value).toLocaleString("es-AR");
 }
@@ -37,53 +38,82 @@ function formatEnMoneda(value: number, moneda: Moneda) {
   return moneda === "ARS" ? formatARS(value) : formatUSD(value);
 }
 
+function formatFechaCorta(value: string) {
+  const [y, m, d] = value.split("-");
+  return `${d}/${m}/${y}`;
+}
+
 export default function RegistrarPagoForm({
   action,
-  cuotaTotalDefault,
+  plan,
+  pagos,
+  hoy,
   tcSistema,
   tcReferencia,
 }: RegistrarPagoFormProps) {
   const [state, formAction, isPending] = useActionState(action, {});
 
+  const ultimaFecha = pagos.reduce<string | null>(
+    (max, pago) => (max === null || pago.fecha > max ? pago.fecha : max),
+    null
+  );
+
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [moneda, setMoneda] = useState<Moneda | null>(null);
   const [monto, setMonto] = useState("");
-  const [tcManual, setTcManual] = useState("");
+  const [fechaPago, setFechaPago] = useState(hoy);
+  const [tcInput, setTcInput] = useState(tcSistema ? String(tcSistema) : "");
   const [notas, setNotas] = useState("");
 
-  // TC efectivo: el del sistema, o el manual si la cotización online falló.
-  const tc = tcSistema ?? (Number(tcManual) || 0);
-  const necesitaTcManual = tcSistema === null;
-
+  const tc = Number(tcInput) || 0;
   const montoNum = Number(monto) || 0;
-  const montoUsd =
-    moneda === "ARS" ? (tc > 0 ? montoNum / tc : 0) : montoNum;
-  const montoArs = moneda === "ARS" ? montoNum : montoNum * tc;
+  const montoUsd = moneda === "ARS" ? (tc > 0 ? convertirMontoAUsd(montoNum, "ARS", tc) : 0) : montoNum;
 
-  // La cuota está en USD; si pagan en pesos, la expresamos con el TC del día.
-  const cuotaEnMoneda = (m: Moneda) =>
-    m === "ARS" ? cuotaTotalDefault * tc : cuotaTotalDefault;
+  const fechaValida =
+    /^\d{4}-\d{2}-\d{2}$/.test(fechaPago) &&
+    fechaPago <= hoy &&
+    (ultimaFecha === null || fechaPago >= ultimaFecha);
 
+  // Estado de la deuda al día del pago (interés corrido hasta esa fecha)
+  const estadoAlDia = useMemo(
+    () => calcularEstadoRepago(plan, pagos, fechaValida ? fechaPago : hoy),
+    [plan, pagos, fechaPago, fechaValida, hoy]
+  );
+
+  // Cómo quedaría si se registra este pago
+  const preview = useMemo(() => {
+    if (!fechaValida || montoUsd <= 0) return null;
+    const estado = calcularEstadoRepago(plan, [...pagos, { fecha: fechaPago, montoUsd }], fechaPago);
+    return { estado, aplicacion: estado.aplicaciones.at(-1) ?? null };
+  }, [plan, pagos, fechaPago, fechaValida, montoUsd]);
+
+  const superaLoQueFalta = montoUsd > estadoAlDia.totalParaCancelar + 0.005;
+
+  const enMoneda = (usd: number, m: Moneda) => (m === "ARS" ? usd * tc : usd);
   const redondear = (value: number, m: Moneda) =>
     m === "ARS" ? String(Math.round(value)) : value.toFixed(2);
 
   const elegirMoneda = (m: Moneda) => {
     setMoneda(m);
-    // Preseleccionamos la cuota completa: el camino feliz queda en pocos taps.
-    setMonto(redondear(cuotaEnMoneda(m), m));
+    setMonto(tc > 0 || m === "USD" ? redondear(enMoneda(estadoAlDia.cuotaSugerida, m), m) : "");
     setStep(2);
   };
 
-  const sugerencias = useMemo(() => {
-    if (!moneda) return [];
-    const full = cuotaEnMoneda(moneda);
-    return [
-      { id: "full", label: `Cuota completa (${formatEnMoneda(full, moneda)})`, value: full },
-      { id: "half", label: `La mitad (${formatEnMoneda(full / 2, moneda)})`, value: full / 2 },
-      { id: "other", label: "Otro monto", value: null as number | null },
-    ];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [moneda, cuotaTotalDefault, tc]);
+  const sugerencias = moneda
+    ? [
+        {
+          id: "sugerida",
+          label: `Cuota sugerida (${formatEnMoneda(enMoneda(estadoAlDia.cuotaSugerida, moneda), moneda)})`,
+          value: enMoneda(estadoAlDia.cuotaSugerida, moneda),
+        },
+        {
+          id: "total",
+          label: `Cancelar todo (${formatEnMoneda(enMoneda(estadoAlDia.totalParaCancelar, moneda), moneda)})`,
+          value: enMoneda(estadoAlDia.totalParaCancelar, moneda),
+        },
+        { id: "other", label: "Otro monto", value: null as number | null },
+      ]
+    : [];
 
   // Tras un pago exitoso, volvemos al inicio del wizard.
   useEffect(() => {
@@ -92,11 +122,13 @@ export default function RegistrarPagoForm({
       setMoneda(null);
       setMonto("");
       setNotas("");
+      setFechaPago(hoy);
     }
-  }, [state.success]);
+  }, [state.success, hoy]);
 
-  const montoValido = montoNum > 0;
+  const montoValido = montoNum > 0 && !superaLoQueFalta;
   const tcValido = tc > 0;
+  const puedeSeguir = montoValido && tcValido && fechaValida;
 
   return (
     <form action={formAction} className="space-y-4">
@@ -104,6 +136,7 @@ export default function RegistrarPagoForm({
       <input type="hidden" name="moneda" value={moneda ?? "USD"} />
       <input type="hidden" name="monto" value={monto} />
       <input type="hidden" name="tcDia" value={tc || ""} />
+      <input type="hidden" name="fechaPago" value={fechaPago} />
       <input type="hidden" name="notas" value={notas} />
 
       {state.error ? (
@@ -148,10 +181,60 @@ export default function RegistrarPagoForm({
         />
       )}
 
-      {/* PASO 2 — ¿Cuánto? */}
+      {/* PASO 2 — ¿Cuándo y cuánto? */}
       {step === 2 && moneda ? (
         <div className="space-y-4">
-          <StepTitle n={2} title="¿Cuánto pagaron?" />
+          <StepTitle n={2} title="¿Cuándo y cuánto pagaron?" />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-[22px] border border-zinc-800 bg-zinc-900/60 p-4">
+              <label htmlFor="fechaPago" className="mb-3 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                Día que recibiste la plata
+              </label>
+              <input
+                id="fechaPago"
+                type="date"
+                value={fechaPago}
+                min={ultimaFecha ?? undefined}
+                max={hoy}
+                onChange={(event) => setFechaPago(event.target.value)}
+                className="min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-800 px-4 text-base text-white outline-none transition focus:border-[#8cff59]/60 [color-scheme:dark]"
+              />
+              {!fechaValida ? (
+                <p className="mt-2 text-xs text-red-300">
+                  {fechaPago > hoy
+                    ? "No puede ser una fecha futura."
+                    : `No puede ser anterior al último pago (${ultimaFecha ? formatFechaCorta(ultimaFecha) : "-"}).`}
+                </p>
+              ) : (
+                <p className="mt-2 text-xs text-zinc-500">
+                  El interés se calcula hasta este día.
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-[22px] border border-zinc-800 bg-zinc-900/60 p-4">
+              <label htmlFor="tcDia" className="mb-3 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                Dólar de ese día
+              </label>
+              <input
+                id="tcDia"
+                type="number"
+                min="1"
+                step="0.01"
+                value={tcInput}
+                onChange={(event) => setTcInput(event.target.value)}
+                placeholder={`Ej: ${Math.round(tcReferencia)}`}
+                className="min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-800 px-4 text-base text-white outline-none transition focus:border-[#8cff59]/60"
+              />
+              <p className="mt-2 text-xs text-zinc-500">
+                {tcSistema
+                  ? `Blue promedio de hoy: ${formatARS(tcSistema)}. Cambialo si acordaron otro.`
+                  : "No pudimos traer la cotización automática. Cargala a mano."}
+                {moneda === "USD" ? " En dólares solo sirve para ver el equivalente en pesos." : ""}
+              </p>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {sugerencias.map((option) => {
@@ -206,44 +289,21 @@ export default function RegistrarPagoForm({
                 }`}
               />
             </div>
-            <p className="mt-2 text-xs text-zinc-500">
-              Si este mes no llegan a la cuota, no pasa nada: lo que pongas descuenta igual.
-            </p>
-          </div>
-
-          {/* TC del día — informativo, no editable (salvo que la cotización falle) */}
-          {necesitaTcManual ? (
-            <div className="rounded-[22px] border border-amber-500/30 bg-amber-500/10 p-4">
-              <label htmlFor="tcManual" className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-amber-200">
-                Dólar de hoy
-              </label>
-              <p className="mb-2 text-xs text-amber-100/80">
-                No pudimos traer la cotización automática. Cargá el dólar blue de hoy a mano.
+            {superaLoQueFalta ? (
+              <p className="mt-2 text-xs text-red-300">
+                Es más de lo que falta. Para cancelar todo al {formatFechaCorta(fechaPago)} alcanza con{" "}
+                {formatEnMoneda(enMoneda(estadoAlDia.totalParaCancelar, moneda), moneda)}.
               </p>
-              <input
-                id="tcManual"
-                type="number"
-                min="1"
-                step="1"
-                value={tcManual}
-                onChange={(event) => setTcManual(event.target.value)}
-                placeholder={`Ej: ${Math.round(tcReferencia)}`}
-                className="min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-800 px-4 text-base text-white outline-none transition focus:border-[#8cff59]/60"
-              />
-            </div>
-          ) : (
-            <div className="flex items-center justify-between rounded-[22px] border border-zinc-800 bg-zinc-950/70 px-4 py-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Dólar de hoy</p>
-                <p className="text-xs text-zinc-600">Blue promedio (compra/venta)</p>
-              </div>
-              <span className="text-lg font-semibold text-white">{formatARS(tc)}</span>
-            </div>
-          )}
+            ) : (
+              <p className="mt-2 text-xs text-zinc-500">
+                Cualquier monto sirve: primero cubre el interés corrido y el resto baja la deuda.
+              </p>
+            )}
+          </div>
 
           <button
             type="button"
-            disabled={!montoValido || !tcValido}
+            disabled={!puedeSeguir}
             onClick={() => setStep(3)}
             className="neon-button inline-flex min-h-[52px] w-full items-center justify-center rounded-[20px] px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -253,13 +313,13 @@ export default function RegistrarPagoForm({
       ) : step > 2 && moneda ? (
         <SummaryRow
           label="Pagan"
-          value={formatEnMoneda(montoNum, moneda)}
+          value={`${formatEnMoneda(montoNum, moneda)} el ${formatFechaCorta(fechaPago)}`}
           onEdit={() => setStep(2)}
         />
       ) : null}
 
       {/* PASO 3 — Confirmación */}
-      {step === 3 && moneda ? (
+      {step === 3 && moneda && preview?.aplicacion ? (
         <div className="space-y-4">
           <StepTitle n={3} title="Confirmá el pago" />
 
@@ -267,20 +327,25 @@ export default function RegistrarPagoForm({
             <p className="text-sm leading-6 text-zinc-200">
               Pagan{" "}
               <strong className="font-semibold text-white">{formatEnMoneda(montoNum, moneda)}</strong>
-              {moneda === "ARS" ? (
-                <>
-                  {" "}al dólar de hoy ({formatARS(tc)})
-                </>
-              ) : null}{" "}
-              →{" "}
-              <strong className="font-semibold text-[#8cff59]">
-                baja {formatUSD(montoUsd)}
-              </strong>{" "}
-              de la deuda.
+              {moneda === "ARS" ? <> al dólar {formatARS(tc)}</> : null} ={" "}
+              <strong className="font-semibold text-[#8cff59]">{formatUSD(montoUsd)}</strong>.
             </p>
-            {moneda === "USD" ? (
-              <p className="mt-2 text-xs text-zinc-500">
-                Equivale a {formatARS(montoArs)} al dólar de hoy ({formatARS(tc)}).
+            <div className="mt-4 space-y-2 text-sm">
+              <BreakdownRow
+                label={`Interés de ${preview.aplicacion.dias} días`}
+                value={formatUSD(preview.aplicacion.interes)}
+              />
+              <BreakdownRow label="Baja la deuda" value={formatUSD(preview.aplicacion.capital)} strong />
+              <BreakdownRow
+                label="Deuda después del pago"
+                value={
+                  preview.estado.pagadoCompleto ? "¡Saldada!" : formatUSD(preview.estado.saldoCapital)
+                }
+              />
+            </div>
+            {moneda === "USD" && tc > 0 ? (
+              <p className="mt-3 text-xs text-zinc-500">
+                Equivale a {formatARS(montoUsd * tc)} al dólar {formatARS(tc)}.
               </p>
             ) : null}
           </div>
@@ -293,14 +358,14 @@ export default function RegistrarPagoForm({
               rows={2}
               value={notas}
               onChange={(event) => setNotas(event.target.value)}
-              placeholder="Transferencia, referencia, ajuste acordado..."
+              placeholder="Efectivo, transferencia, referencia..."
               className="mt-3 w-full resize-none rounded-2xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60"
             />
           </details>
 
           <button
             type="submit"
-            disabled={isPending || !montoValido || !tcValido}
+            disabled={isPending || !puedeSeguir}
             className="neon-button inline-flex min-h-[52px] w-full items-center justify-center rounded-[20px] px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isPending ? "Registrando..." : "Registrar pago"}
@@ -318,6 +383,15 @@ function StepTitle({ n, title }: { n: number; title: string }) {
         {n}
       </span>
       <h3 className="font-display text-lg font-semibold text-white">{title}</h3>
+    </div>
+  );
+}
+
+function BreakdownRow({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-t border-white/8 pt-2">
+      <span className="text-zinc-400">{label}</span>
+      <span className={strong ? "font-semibold text-[#8cff59]" : "font-medium text-white"}>{value}</span>
     </div>
   );
 }
