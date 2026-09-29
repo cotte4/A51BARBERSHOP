@@ -47,14 +47,15 @@ npm run verify:refactor    # typecheck + lint (run before any refactor commit)
 
 The app is live on Vercel. Core is mature. **Barber-side launch readiness completed 2026-07-09** (spec: `../docs/specs/barber-launch-audit.md`): repago financial integrity, journey simplification (J1-J8), copy/theme polish, and flow tests — all shipped to prod, migrations 0032-0034 applied.
 
-### Repago Memas — modelo vigente (pagos flexibles, USD, bimoneda)
-- Plan: **u$d 1.770 · 10% anual · 12 cuotas alemanas** (capital fijo u$d 147,50/cuota), inicio **2026-08-01**. Row values are explicit in DB (no code defaults; los `?? 1500`/`?? 0.1` son solo fallbacks legacy). Updated 2026-07-13 vía UPDATE directo + reset de pagos de prueba.
-- Préstamo **100% denominado en USD**. Los pesos son solo referencia calculada al vuelo (`usd * tc`); NO se persisten para saldo pendiente ni próximas cuotas. El historial de pagos sí guarda el ARS real pagado ese día.
-- **Pagos flexibles**: any amount > 0. Each payment covers the current cuota's pending interest first, remainder amortizes capital. The cuota advances when its capital is covered; overpay amortizes extra capital (less future interest). Interest is **per cuota, not time-based** — taking longer doesn't penalize.
-- **Pago bimoneda**: "Registrar pago" acepta USD o ARS (selector). Si es ARS, `convertirMontoAUsd(monto, "ARS", tc) = monto / tc`; el descuento se aplica SIEMPRE en USD. Se persisten `moneda_ingresada` + `monto_ingresado` (mig 0037) para trazabilidad; el monto USD es derivable de `capital_pagado + interes_pagado`.
-- **TC sugerido**: el chip "Blue" del form es el punto medio del dólar blue `(compra+venta)/2` (DolarAPI, cacheado 15 min). El `tcReferencia` global de config no se toca.
-- Core logic: `aplicarPagoFlexible()` + `convertirMontoAUsd()` in `src/lib/amortizacion.ts` (puras, testeadas); orchestration in `src/lib/repago-service.ts` (advisory lock + `calcularSaldoReal` guard). Multiple payment rows per cuota are allowed (no unique index). El cronograma NO se persiste — se recalcula con `generarCronograma`.
-- Tests: `npm run test:flows` (73 integration tests, incluye conversión bimoneda y equivalencia USD/ARS).
+### Repago Memas — modelo vigente (interés por tiempo real con tope, desde 2026-09-29)
+- Plan: **u$d 1.770 · 10% anual · 12 cuotas de referencia** (capital fijo u$d 147,50). El cronograma alemán ya NO es una obligación mensual: solo define el **tope de interés** (u$d 95,88 = interés total del cronograma) y la **cuota sugerida**.
+- **Interés por tiempo real**: corre desde el **primer pago**, `capital adeudado × 10% × días / 365`. Cada pago cubre primero el interés corrido y el resto devuelve capital. El interés total nunca supera el tope → si cancelan antes, pagan menos interés. Decisión de Was (2026-09-29).
+- **Fuente de verdad = la lista de pagos** (fecha + USD entregado). `calcularEstadoRepago()` en `src/lib/amortizacion.ts` (pura, testeada) recalcula todo. `capital_pagado`/`interes_pagado` por fila, `saldo_pendiente` y `cuotas_pagadas` (= cuotas de referencia cubiertas) son cache: `registrarCuotaRepagoMemas()` los reescribe para TODO el historial tras cada pago. `numero_cuota` = número de pago (1, 2, 3…).
+- USD entregado por fila: USD → `monto_ingresado`; ARS → `monto_ingresado / tc_dia` (redondeado a centavos). `monto_pagado` = equivalente ARS al TC del día (lo usa el P&L).
+- **Registrar pago**: fecha editable (≤ hoy, ≥ último pago), TC editable (sugerido: blue promedio de DolarAPI), vista previa exacta interés/capital. Se **rechaza** un pago mayor a lo que falta para cancelar (antes el excedente se perdía en silencio).
+- **P&L**: descuenta solo la suma de pagos reales del mes (ARS). Un mes sin pagos no descuenta nada (antes proyectaba una cuota teórica × `tcReferencia`). Decisión de Was (2026-09-29).
+- Server helper único: `getEstadoRepago()` en `src/lib/repago-service.ts` — lo usan `/repago`, `/negocio` y `dashboard-queries`.
+- Tests: `src/tests/integration/repago-interes-tiempo.test.ts` (incluye los 2 pagos reales de prod y el escenario u$d 600).
 
 ### Cierre de caja — wizard con gate real
 `/caja/cierre` is a 2-step wizard: (1) count cash — mandatory, persisted in `cierres_caja.efectivo_contado`; (2) confirm with double-confirmation. A difference vs expected cash shows an amber warning but doesn't block.
@@ -68,7 +69,7 @@ The app is live on Vercel. Core is mature. **Barber-side launch readiness comple
 - Negocio / admin reporting: **mature**
 - Configuración: **mature**
 - Portal Marciano: **mature**
-- Repago Memas: **mature** (flexible payments, empathetic copy, tested)
+- Repago Memas: **mature** (pagos libres, interés por tiempo con tope, tested)
 - Reserva pública: **functional, needs UX pass** (encoding bug fixed in 425ecc2)
 - Pantalla pública: **functional**
 - Música: **functional but automation incomplete**
