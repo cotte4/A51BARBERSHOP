@@ -5,15 +5,13 @@ import {
   cierresCaja,
   gastos,
   temporadas,
-  repagoMemas,
-  repagoMemasCuotas,
   stockMovimientos,
   productos,
   configuracionNegocio,
   costosFijosValores,
   costosFijosNegocio,
 } from "@/db/schema";
-import { generarCronograma, calcularCuotaSiguiente, calcularSaldoReal } from "./amortizacion";
+import { getEstadoRepago } from "./repago-service";
 import { and, desc, eq, gte, lte, sum, count, avg, isNull, or } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { toNumber, getDaysInMonth } from "./caja-finance";
@@ -110,8 +108,9 @@ export async function getKpisDia(): Promise<{
 
 // ————————————————————————————
 // Cuota Memas del mes — ÚNICA fuente de verdad, la usan getKpisMes y getPL.
-// Si la cuota del mes ya se pagó usa el monto ARS real; si no, proyecta
-// cuota teórica × TC de referencia. Saldo pendiente siempre en USD.
+// Pagos flexibles: el P&L descuenta solo la plata que realmente se pagó en
+// el mes (suma de todos los pagos, en ARS al TC de cada día). Un mes sin
+// pagos no descuenta nada. Saldo pendiente siempre en USD.
 // ————————————————————————————
 
 type CuotaMemasDelMes = {
@@ -123,72 +122,32 @@ type CuotaMemasDelMes = {
   deudaUsd: number;
 };
 
-async function getCuotaMemasDelMes(
-  inicio: string,
-  fin: string,
-  tcReferencia: number
-): Promise<CuotaMemasDelMes> {
-  const [repago] = await db
-    .select({
-      pagadoCompleto: repagoMemas.pagadoCompleto,
-      cuotasPagadas: repagoMemas.cuotasPagadas,
-      cantidadCuotasPactadas: repagoMemas.cantidadCuotasPactadas,
-      saldoPendiente: repagoMemas.saldoPendiente,
-      deudaUsd: repagoMemas.deudaUsd,
-      tasaAnualUsd: repagoMemas.tasaAnualUsd,
-    })
-    .from(repagoMemas)
-    .limit(1);
+async function getCuotaMemasDelMes(inicio: string, fin: string): Promise<CuotaMemasDelMes> {
+  const completo = await getEstadoRepago();
 
-  if (!repago || repago.pagadoCompleto) {
+  if (!completo) {
     return {
       cuotaMemasMes: 0,
       cuotaMemasPagada: false,
       saldoMemasPendienteUsd: 0,
-      cuotasPagadas: repago?.cuotasPagadas ?? 0,
-      cantidadCuotasPactadas: repago?.cantidadCuotasPactadas ?? null,
-      deudaUsd: toNumber(repago?.deudaUsd),
+      cuotasPagadas: 0,
+      cantidadCuotasPactadas: null,
+      deudaUsd: 0,
     };
   }
 
-  const deudaUsd = toNumber(repago.deudaUsd);
-  const cronograma = generarCronograma(
-    deudaUsd,
-    toNumber(repago.tasaAnualUsd),
-    repago.cantidadCuotasPactadas ?? 12
-  );
-  const proximaCuota = calcularCuotaSiguiente(cronograma, repago.cuotasPagadas ?? 0);
-  const saldoMemasPendienteUsd = calcularSaldoReal(
-    repago.saldoPendiente == null ? null : Number(repago.saldoPendiente),
-    deudaUsd,
-    proximaCuota?.saldoInicial ?? 0
-  );
-
-  const cuotaDelMes = await db
-    .select({ montoPagado: repagoMemasCuotas.montoPagado })
-    .from(repagoMemasCuotas)
-    .where(and(gte(repagoMemasCuotas.fechaPago, inicio), lte(repagoMemasCuotas.fechaPago, fin)))
-    .limit(1);
-
-  const contexto = {
-    saldoMemasPendienteUsd,
-    cuotasPagadas: repago.cuotasPagadas ?? 0,
-    cantidadCuotasPactadas: repago.cantidadCuotasPactadas ?? null,
-    deudaUsd,
-  };
-
-  if (cuotaDelMes.length > 0 && cuotaDelMes[0].montoPagado) {
-    return {
-      cuotaMemasMes: toNumber(cuotaDelMes[0].montoPagado),
-      cuotaMemasPagada: true,
-      ...contexto,
-    };
-  }
+  const pagosDelMes = completo.filas.filter((fila) => {
+    const fecha = String(fila.fechaPago).slice(0, 10);
+    return fecha >= inicio && fecha <= fin;
+  });
 
   return {
-    cuotaMemasMes: proximaCuota ? proximaCuota.cuotaTotal * tcReferencia : 0,
-    cuotaMemasPagada: false,
-    ...contexto,
+    cuotaMemasMes: pagosDelMes.reduce((sum, fila) => sum + toNumber(fila.montoPagado), 0),
+    cuotaMemasPagada: pagosDelMes.length > 0,
+    saldoMemasPendienteUsd: completo.estado.saldoCapital,
+    cuotasPagadas: completo.estado.cuotasCubiertas,
+    cantidadCuotasPactadas: completo.plan.cantidadCuotas,
+    deudaUsd: completo.plan.deudaUsd,
   };
 }
 
@@ -298,16 +257,7 @@ export async function getKpisMes(
 
   // Cuota Memas — misma lógica que el P&L (getCuotaMemasDelMes), no el
   // campo legacy cuotaMensual que el servicio de repago nunca actualiza.
-  const [config] = await db
-    .select({ tcReferencia: configuracionNegocio.tcReferencia })
-    .from(configuracionNegocio)
-    .limit(1);
-  const tcReferencia = toNumber(config?.tcReferencia) || 1400;
-  const { cuotaMemasMes, saldoMemasPendienteUsd } = await getCuotaMemasDelMes(
-    inicio,
-    fin,
-    tcReferencia
-  );
+  const { cuotaMemasMes, saldoMemasPendienteUsd } = await getCuotaMemasDelMes(inicio, fin);
 
   const resultadoPinkyMes = ingresosNetosPinky + resultadoCasaMes - cuotaMemasMes;
 
@@ -480,7 +430,7 @@ export async function getPL(mes: number, anio: number): Promise<PLData> {
     cuotasPagadas,
     cantidadCuotasPactadas,
     deudaUsd,
-  } = await getCuotaMemasDelMes(inicio, fin, tcReferencia);
+  } = await getCuotaMemasDelMes(inicio, fin);
 
   // Cálculos finales
   const feesMedioPagoTotal = feesMedioPagoGabote + feesMedioPagoPinky;

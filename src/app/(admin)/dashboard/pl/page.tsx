@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { formatARS } from "@/lib/format";
 import { getPL } from "@/lib/dashboard-queries";
+import { formatUSD } from "@/lib/amortizacion";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -136,8 +137,8 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
 
   const cuotaLabel =
     pl.cantidadCuotasPactadas
-      ? `cuota ${pl.cuotasPagadas + 1} de ${pl.cantidadCuotasPactadas}`
-      : `${pl.cuotasPagadas} pagadas`;
+      ? `pagos del mes · ${pl.cuotasPagadas} de ${pl.cantidadCuotasPactadas} cuotas cubiertas`
+      : "pagos del mes";
 
   return (
     <div className="min-h-screen bg-zinc-950">
@@ -284,8 +285,7 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
                       <p className="mt-0.5 text-xs text-zinc-500">{cuotaLabel}</p>
                       {pl.deudaUsd > 0 && (
                         <p className="mt-1 text-xs text-zinc-500">
-                          Saldo pendiente: u$d {pl.deudaUsd.toLocaleString("es-AR")}
-                          {pl.saldoPendiente > 0 && ` · ${formatARS(pl.saldoPendiente)}`}
+                          Falta devolver: {formatUSD(pl.saldoPendiente)} de {formatUSD(pl.deudaUsd)}
                         </p>
                       )}
                     </div>

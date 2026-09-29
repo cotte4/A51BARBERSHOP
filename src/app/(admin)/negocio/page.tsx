@@ -8,27 +8,19 @@ import {
   gastos,
   liquidaciones,
   productos,
-  repagoMemas,
   stockMovimientos,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import {
-  calcularCuotaSiguiente,
-  calcularSaldoReal,
-  formatUSD,
-  generarCronograma,
-} from "@/lib/amortizacion";
+import { formatUSD } from "@/lib/amortizacion";
+import { getEstadoRepago } from "@/lib/repago-service";
 import { getKpisDia } from "@/lib/dashboard-queries";
 import {
   SmartCard as NegocioSmartCard,
   UtilityChip as NegocioUtilityChip,
 } from "./_components/NegocioCards";
 import {
-  addMonthsToDate,
   formatARS,
   formatHeaderDate,
-  formatShortDate,
-  getDueLabel,
   getFechaHoyArgentina,
   getInitials,
   toNumber,
@@ -60,7 +52,7 @@ export default async function NegocioPage() {
     listaLiquidaciones,
     listaProductos,
     gastosHoyRows,
-    repagoRows,
+    repago,
     atencionesHoyRows,
     ventasRetailHoyRows,
   ] = await Promise.all([
@@ -77,7 +69,7 @@ export default async function NegocioPage() {
       .from(productos)
       .where(eq(productos.activo, true)),
     db.select({ monto: gastos.monto }).from(gastos).where(eq(gastos.fecha, fechaHoy)),
-    db.select().from(repagoMemas).limit(1),
+    getEstadoRepago(fechaHoy),
     db
       .select({
         precioCobrado: atenciones.precioCobrado,
@@ -140,34 +132,10 @@ export default async function NegocioPage() {
     .filter((producto) => (producto.stockActual ?? 0) <= (producto.stockMinimo ?? 5))
     .sort((a, b) => (a.stockActual ?? 0) - (b.stockActual ?? 0));
 
-  const [repago] = repagoRows;
-  let proximaCuotaUsd = 0;
-  let proximaCuotaFecha = "";
-  let proximaCuotaEstado = "Sin deuda activa";
-  let saldoPendienteUsd = 0;
-
-  if (repago && !repago.pagadoCompleto) {
-    const deudaUsd = toNumber(repago.deudaUsd);
-    const tasaAnual = toNumber(repago.tasaAnualUsd);
-    const cantidadCuotas = repago.cantidadCuotasPactadas ?? 0;
-    const cuotasPagadas = repago.cuotasPagadas ?? 0;
-    const cronograma = generarCronograma(deudaUsd, tasaAnual, cantidadCuotas);
-    const cuotaSiguiente = calcularCuotaSiguiente(cronograma, cuotasPagadas);
-
-    // Cache USD coherente o saldo teórico como fallback (filas legacy en ARS)
-    saldoPendienteUsd = calcularSaldoReal(
-      repago.saldoPendiente == null ? null : Number(repago.saldoPendiente),
-      deudaUsd,
-      cuotaSiguiente?.saldoInicial ?? 0
-    );
-
-    if (cuotaSiguiente) {
-      const dueDate = addMonthsToDate(repago.fechaInicio ?? fechaHoy, cuotasPagadas);
-      proximaCuotaUsd = cuotaSiguiente.cuotaTotal;
-      proximaCuotaFecha = formatShortDate(dueDate);
-      proximaCuotaEstado = getDueLabel(dueDate, fechaHoy);
-    }
-  }
+  const proximaCuotaUsd =
+    repago && !repago.estado.pagadoCompleto ? repago.estado.cuotaSugerida : 0;
+  const saldoPendienteUsd =
+    repago && !repago.estado.pagadoCompleto ? repago.estado.saldoCapital : 0;
 
   return (
     <main className="app-shell min-h-screen px-4 py-5 pb-28">
@@ -265,7 +233,7 @@ export default async function NegocioPage() {
                 </div>
                 <p className="mt-2 text-sm text-zinc-400">
                   {proximaCuotaUsd > 0
-                    ? `${proximaCuotaEstado} - ${proximaCuotaFecha}`
+                    ? `Sugerida hoy · faltan ${formatUSD(saldoPendienteUsd)}`
                     : "No hay una cuota pendiente ahora."}
                 </p>
               </div>
@@ -403,7 +371,7 @@ export default async function NegocioPage() {
             eyebrow="Deuda"
             kicker={saldoPendienteUsd > 0 ? "Ojo" : "Tranquilo"}
             title="Repago Memas"
-            detail="La proxima cuota y lo que queda por saldar."
+            detail="Lo que falta devolver y la cuota sugerida."
             footer="Ver repago y registrar pago"
             accentClassName="border-[#8cff59]/16 bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.10),_transparent_34%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
           >

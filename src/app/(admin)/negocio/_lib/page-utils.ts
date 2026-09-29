@@ -32,41 +32,6 @@ export function getInitials(nombre: string): string {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
-export function addMonthsToDate(fecha: string, months: number): Date {
-  const [year, month, day] = fecha.split("-").map(Number);
-  const result = new Date(Date.UTC(year, month - 1, day, 12));
-  result.setUTCMonth(result.getUTCMonth() + months);
-  return result;
-}
-
-export function formatShortDate(date: Date): string {
-  return date.toLocaleDateString("es-AR", {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  });
-}
-
-export function getDueLabel(date: Date, today: string): string {
-  const base = new Date(`${today}T12:00:00Z`);
-  const diffDays = Math.round((date.getTime() - base.getTime()) / 86400000);
-
-  if (diffDays < 0) {
-    const overdue = Math.abs(diffDays);
-    return `Vencida hace ${overdue} dia${overdue === 1 ? "" : "s"}`;
-  }
-
-  if (diffDays === 0) {
-    return "Vence hoy";
-  }
-
-  if (diffDays === 1) {
-    return "Vence manana";
-  }
-
-  return `Vence en ${diffDays} dias`;
-}
-
 export function getBepProgress(actual: number, target: number): number {
   if (target <= 0) return 0;
   return Math.max(0, Math.min(100, Math.round((actual / target) * 100)));

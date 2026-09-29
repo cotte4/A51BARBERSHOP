@@ -141,8 +141,8 @@ function ResultBox({ label, valor }: { label: string; valor: number }) {
 export function PLPDF({ data }: { data: PLPDFData }) {
   const hoy = new Date().toISOString().split("T")[0]!;
   const cuotaLabel = data.cantidadCuotasPactadas
-    ? `cuota ${data.cuotasPagadas + 1} de ${data.cantidadCuotasPactadas}`
-    : `${data.cuotasPagadas} pagadas`;
+    ? `pagos del mes, ${data.cuotasPagadas} de ${data.cantidadCuotasPactadas} cuotas cubiertas`
+    : "pagos del mes";
 
   return (
     <Document title={`P&L ${nombreMes(data.mes, data.anio)}`} author="A51 Barber">
@@ -223,7 +223,7 @@ export function PLPDF({ data }: { data: PLPDFData }) {
           <View style={pdfStyles.section}>
             <Text style={pdfStyles.sectionTitle}>Financiero</Text>
             <PLRow
-              label={`Repago inversion inicial (${cuotaLabel}${data.deudaUsd > 0 ? ` — u$d ${data.deudaUsd.toLocaleString("es-AR")} pendiente` : ""})`}
+              label={`Repago inversion inicial (${cuotaLabel}${data.deudaUsd > 0 ? ` — falta devolver u$d ${data.saldoPendiente.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""})`}
               valor={data.cuotaMemasMes}
               negativo
               signo="-"
