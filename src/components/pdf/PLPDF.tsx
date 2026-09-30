@@ -156,23 +156,23 @@ export function PLPDF({ data }: { data: PLPDFData }) {
 
         {/* 1. INGRESOS */}
         <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>Ingresos</Text>
-          <PLRow label="Servicios Gabote" valor={data.ingresosGaboteBruto} signo="+" />
-          <PLRow label="Servicios Pinky" valor={data.ingresosPinkyBruto} signo="+" />
+          <Text style={pdfStyles.sectionTitle}>Lo que entró</Text>
+          <PLRow label="Cortes de Gabote" valor={data.ingresosGaboteBruto} signo="+" />
+          <PLRow label="Cortes de Pinky" valor={data.ingresosPinkyBruto} signo="+" />
           <PLRow
             label="Venta de productos"
             valor={data.ingresosProductosBruto}
             signo="+"
             muted={data.ingresosProductosBruto === 0}
           />
-          <ResultBox label="Ingreso bruto total" valor={data.ingresoBrutoTotal} />
+          <ResultBox label="Entró en total" valor={data.ingresoBrutoTotal} />
         </View>
 
         {/* 2. COSTOS VARIABLES */}
         <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>Costos variables</Text>
+          <Text style={pdfStyles.sectionTitle}>Lo que se va con cada venta</Text>
           <PLRow
-            label={`Comision Gabote (${data.comisionGabotePct}%)`}
+            label={`Lo que cobra Gabote (${data.comisionGabotePct}% de sus cortes)`}
             valor={data.comisionGabote}
             negativo
             signo="-"
@@ -180,7 +180,7 @@ export function PLPDF({ data }: { data: PLPDFData }) {
             muted
           />
           <PLRow
-            label="Costo productos vendidos"
+            label="Lo que costaron los productos vendidos"
             valor={data.costoProductosVendidos}
             negativo
             signo="-"
@@ -188,19 +188,19 @@ export function PLPDF({ data }: { data: PLPDFData }) {
             muted
           />
           <PLRow
-            label="Fees medios de pago"
+            label="Comisiones de MP y tarjeta"
             valor={data.feesMedioPagoTotal}
             negativo
             signo="-"
             indent
             muted
           />
-          <ResultBox label={`Margen bruto (${data.margenBrutoPct}%)`} valor={data.margenBruto} />
+          <ResultBox label={`Queda después de eso (${data.margenBrutoPct}%)`} valor={data.margenBruto} />
         </View>
 
         {/* 3. COSTOS FIJOS */}
         <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>Costos operativos</Text>
+          <Text style={pdfStyles.sectionTitle}>Gastos del mes</Text>
           {data.gastosPorCategoria.map(({ categoria, monto }) => (
             <PLRow
               key={categoria}
@@ -213,17 +213,17 @@ export function PLPDF({ data }: { data: PLPDFData }) {
             />
           ))}
           {data.gastosPorCategoria.length === 0 && (
-            <PLRow label="Sin gastos registrados" valor={0} muted />
+            <PLRow label="No hay gastos cargados" valor={0} muted />
           )}
-          <ResultBox label="Resultado operativo" valor={data.resultadoOperativo} />
+          <ResultBox label="Queda después de los gastos" valor={data.resultadoOperativo} />
         </View>
 
         {/* 4. FINANCIERO */}
         {data.cuotaMemasMes > 0 && (
           <View style={pdfStyles.section}>
-            <Text style={pdfStyles.sectionTitle}>Financiero</Text>
+            <Text style={pdfStyles.sectionTitle}>Préstamo Memas</Text>
             <PLRow
-              label={`Repago inversion inicial (${cuotaLabel}${data.deudaUsd > 0 ? ` — falta devolver u$d ${data.saldoPendiente.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""})`}
+              label={`Pagos del préstamo (${cuotaLabel}${data.deudaUsd > 0 ? ` — falta devolver u$d ${data.saldoPendiente.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""})`}
               valor={data.cuotaMemasMes}
               negativo
               signo="-"
@@ -237,7 +237,7 @@ export function PLPDF({ data }: { data: PLPDFData }) {
         <View style={[pdfStyles.resultBox, pdfStyles.resultBoxPositive, { marginTop: 12 }]}>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <Text style={[pdfStyles.resultText, pdfStyles.resultTextPositive, { fontSize: 12, textAlign: "left" }]}>
-              Resultado neto del negocio
+              Queda este mes
             </Text>
             <Text style={[
               pdfStyles.resultText,

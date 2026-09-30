@@ -160,7 +160,7 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
               </a>
             </div>
           </div>
-          <h1 className="font-display text-xl font-bold text-white">P&amp;L mensual</h1>
+          <h1 className="font-display text-xl font-bold text-white">El mes completo</h1>
         </div>
       </header>
 
@@ -192,38 +192,38 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
 
         {sinDatos ? (
           <div className="panel-card rounded-[28px] p-8 text-center">
-            <p className="text-sm text-zinc-400">No hay datos registrados para este mes.</p>
+            <p className="text-sm text-zinc-400">No hay nada cargado en este mes.</p>
           </div>
         ) : (
           <>
             {/* ── 1. INGRESOS ───────────────────────────────────── */}
-            <Section eyebrow="Paso 1" title="Ingresos">
-              <Row label="Servicios Gabote" valor={pl.ingresosGaboteBruto} />
-              <Row label="Servicios Pinky" valor={pl.ingresosPinkyBruto} />
+            <Section eyebrow="1" title="Lo que entró">
+              <Row label="Cortes de Gabote" valor={pl.ingresosGaboteBruto} />
+              <Row label="Cortes de Pinky" valor={pl.ingresosPinkyBruto} />
               <Row
                 label="Venta de productos"
                 valor={pl.ingresosProductosBruto}
                 muted={pl.ingresosProductosBruto === 0}
               />
-              <TotalRow label="Ingreso bruto total" valor={pl.ingresoBrutoTotal} />
+              <TotalRow label="Entró en total" valor={pl.ingresoBrutoTotal} />
             </Section>
 
             {/* ── 2. COSTOS VARIABLES ───────────────────────────── */}
-            <Section eyebrow="Paso 2" title="Costos variables">
+            <Section eyebrow="2" title="Lo que se va con cada venta">
               <Row
-                label="Comisión Gabote"
+                label="Lo que cobra Gabote"
                 valor={pl.comisionGabote}
-                sub={`${pl.comisionGabotePct}% de sus servicios`}
+                sub={`${pl.comisionGabotePct}% de sus cortes`}
                 negativo
               />
               <Row
-                label="Costo de productos vendidos"
+                label="Lo que costaron los productos vendidos"
                 valor={pl.costoProductosVendidos}
                 negativo
                 muted={pl.costoProductosVendidos === 0}
               />
               <Row
-                label="Fees medios de pago"
+                label="Comisiones de MP y tarjeta"
                 valor={pl.feesMedioPagoTotal}
                 sub={
                   pl.feesMedioPagoPinky > 0
@@ -233,16 +233,16 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
                 negativo
               />
               <TotalRow
-                label="Margen bruto"
+                label="Queda después de eso"
                 valor={pl.margenBruto}
                 badge={`${pl.margenBrutoPct}%`}
               />
             </Section>
 
             {/* ── 3. COSTOS FIJOS ───────────────────────────────── */}
-            <Section eyebrow="Paso 3" title="Costos operativos">
+            <Section eyebrow="3" title="Gastos del mes">
               {pl.gastosPorCategoria.length === 0 ? (
-                <p className="text-sm text-zinc-500">Sin gastos registrados este mes.</p>
+                <p className="text-sm text-zinc-500">No hay gastos cargados este mes.</p>
               ) : (
                 pl.gastosPorCategoria.map(({ categoria, monto }) => (
                   <Row
@@ -258,7 +258,7 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
               {/* Total gastos + vs presupuesto */}
               <div className="mt-3 flex items-center justify-between rounded-[16px] bg-zinc-800/60 px-4 py-3">
                 <div>
-                  <p className="text-sm font-semibold text-white">Total gastos</p>
+                  <p className="text-sm font-semibold text-white">Gastos en total</p>
                   {gastosVsPresupuesto !== null && (
                     <p className={`text-xs font-medium ${
                       gastosVsPresupuesto > 100 ? "text-red-400" : "text-zinc-400"
@@ -272,16 +272,16 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
                 </p>
               </div>
 
-              <TotalRow label="Resultado operativo" valor={pl.resultadoOperativo} />
+              <TotalRow label="Queda después de los gastos" valor={pl.resultadoOperativo} />
             </Section>
 
             {/* ── 4. FINANCIERO ─────────────────────────────────── */}
             {pl.cuotaMemasMes > 0 && (
-              <Section eyebrow="Paso 4" title="Financiero">
+              <Section eyebrow="4" title="Préstamo Memas">
                 <div className="rounded-[16px] border border-zinc-800 bg-zinc-900/50 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-zinc-200">Repago inversión inicial</p>
+                      <p className="text-sm font-semibold text-zinc-200">Pagos del préstamo este mes</p>
                       <p className="mt-0.5 text-xs text-zinc-500">{cuotaLabel}</p>
                       {pl.deudaUsd > 0 && (
                         <p className="mt-1 text-xs text-zinc-500">
@@ -299,14 +299,13 @@ export default async function PLPage({ searchParams }: { searchParams: SearchPar
 
             {/* ── RESULTADO NETO ────────────────────────────────── */}
             <div className="overflow-hidden rounded-[28px] border border-[#8cff59]/30 bg-[#8cff59]/8 p-5">
-              <p className="eyebrow text-xs font-semibold text-[#8cff59]/70">Resultado</p>
-              <div className="mt-3 flex items-end justify-between gap-4">
+                            <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="font-display text-lg font-semibold text-white">
-                    Resultado neto del negocio
+                    Queda este mes
                   </p>
                   <p className="mt-1 text-xs text-zinc-400">
-                    Va íntegramente a Pinky como dueño
+                    Es lo que le queda a Pinky como dueño.
                   </p>
                 </div>
                 <p className={`font-display shrink-0 text-3xl font-bold tabular-nums ${

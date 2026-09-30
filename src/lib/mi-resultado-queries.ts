@@ -218,6 +218,8 @@ export async function getMiResultadoData() {
       paraVosHoy: tusCortesHoy,
       paraVosMes: ingresosNetosPinky,
       paraLaBarberMes: resultadoCasaMes,
+      // Todos los gastos del mes (rápidos + costos fijos), el mismo número que usa el P&L
+      gastosMes: plMes.gastosFijosMes,
     },
     gastosRapidos: {
       habilitados: gastosRapidosHabilitados,

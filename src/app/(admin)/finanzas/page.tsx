@@ -11,7 +11,6 @@ import {
 } from "@/db/schema";
 import { formatFecha } from "@/lib/fecha";
 import { formatARS } from "@/lib/format";
-import { getCapitalMovimientoLabel } from "@/lib/hangar";
 import { copiarMesAnterior, eliminarCosto, eliminarMovimiento } from "./actions";
 
 function getMesActualAR(): string {
@@ -233,7 +232,7 @@ export default async function FinanzasPage({
                           href={`/finanzas/${costo.id}/editar`}
                           className="inline-flex min-h-[36px] items-center rounded-xl bg-zinc-800 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-700"
                         >
-                          Item
+                          Editar
                         </Link>
                         <DeleteCostoButton id={costo.id} />
                       </div>
@@ -259,25 +258,41 @@ export default async function FinanzasPage({
           <div className="bg-[radial-gradient(circle_at_top_left,_rgba(140,255,89,0.07),_transparent_40%)] p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="eyebrow text-xs font-semibold">Inversion inicial</p>
-                <h2 className="font-display mt-2 text-xl font-semibold text-white">
-                  Capital e inversion
+                <h2 className="font-display text-xl font-semibold text-white">
+                  La plata que pusieron los socios
                 </h2>
               </div>
               <Link
                 href="/finanzas/movimiento/nuevo"
                 className="ghost-button inline-flex min-h-[44px] items-center rounded-2xl px-4 text-sm font-semibold"
               >
-                + Registrar movimiento
+                Cargar movimiento
               </Link>
             </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <CapitalMetric label="Aportado" value={formatARS(totalAportado)} tone="accent" />
-              <CapitalMetric label="Retirado" value={formatARS(totalRetirado)} tone="warn" />
-              <CapitalMetric label="Hangar" value={formatARS(totalInvertidoHangar)} tone="info" />
-              <CapitalMetric label="Disponible" value={formatARS(capitalDisponible)} tone={capitalDisponible >= 0 ? "accent" : "danger"} />
-            </div>
+            {/* La cuenta completa, para poder hacerla a mano */}
+            <dl className="mt-4 text-base tabular-nums">
+              <div className="flex items-baseline justify-between gap-4 py-1.5">
+                <dt className="text-zinc-300">Pusieron los socios</dt>
+                <dd className="text-white">{formatARS(totalAportado)}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-4 py-1.5">
+                <dt className="text-zinc-300">Retiros</dt>
+                <dd className="text-white">− {formatARS(totalRetirado)}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-4 py-1.5">
+                <dt className="text-zinc-300">Compras del Hangar</dt>
+                <dd className="text-white">− {formatARS(totalInvertidoHangar)}</dd>
+              </div>
+              <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-zinc-700 pt-3">
+                <dt className="font-semibold text-white">
+                  {capitalDisponible >= 0 ? "Queda disponible" : "! Se usó de más"}
+                </dt>
+                <dd className="font-display text-2xl font-bold text-white">
+                  {formatARS(Math.abs(capitalDisponible))}
+                </dd>
+              </div>
+            </dl>
           </div>
 
           {movimientos.length === 0 ? (
@@ -295,55 +310,31 @@ export default async function FinanzasPage({
               {movimientos.map((movement) => {
                 const linkedHangar = hangarPaymentMap.get(movement.id);
                 const isAporte = movement.tipo === "aporte";
-                const isRetiro = movement.tipo === "retiro";
-                const tone = isAporte
-                  ? "bg-[#8cff59]/15 text-[#8cff59]"
-                  : isRetiro
-                    ? "bg-amber-500/15 text-amber-300"
-                    : "bg-sky-500/15 text-sky-300";
-                const amountTone = isAporte
-                  ? "text-[#8cff59]"
-                  : isRetiro
-                    ? "text-amber-300"
-                    : "text-sky-300";
-                const prefix = isRetiro ? "−" : "+";
+                const titulo = isAporte
+                  ? "Aporte de los socios"
+                  : movement.tipo === "retiro"
+                    ? "Retiro"
+                    : "Compra del Hangar";
 
                 return (
-                  <div key={movement.id} className="flex items-center justify-between gap-4 px-5 py-3.5">
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${tone}`}>
-                        {prefix}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-white">
-                            {getCapitalMovimientoLabel(movement.tipo)}
-                          </p>
-                          {linkedHangar ? (
-                            <span className="rounded-full border border-sky-400/25 bg-sky-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-200">
-                              Hangar
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="text-xs text-zinc-500">
-                          {formatFecha(movement.fecha)}
-                          {movement.descripcion ? ` · ${movement.descripcion}` : ""}
-                          {linkedHangar ? ` · ${linkedHangar.assetNombre}` : ""}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-3">
-                      <p className={`font-display text-base font-semibold ${amountTone}`}>
-                        {prefix}
-                        {formatARS(movement.monto)}
+                  <div key={movement.id} className="px-5 py-3.5">
+                    <div className="flex items-baseline justify-between gap-4">
+                      <p className="min-w-0 font-medium text-white">{titulo}</p>
+                      <p className="shrink-0 font-semibold tabular-nums text-white">
+                        {isAporte ? "+" : "−"} {formatARS(movement.monto)}
                       </p>
+                    </div>
+                    <p className="mt-0.5 text-sm text-zinc-400">
+                      {formatFecha(movement.fecha)}
+                      {movement.descripcion ? ` · ${movement.descripcion}` : ""}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       {linkedHangar ? (
                         <Link
                           href={`/negocio/activos/${linkedHangar.assetId}`}
                           className="inline-flex min-h-[40px] items-center rounded-xl bg-zinc-800 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-700"
                         >
-                          Ver activo
+                          Ver la compra
                         </Link>
                       ) : (
                         <>
@@ -364,32 +355,6 @@ export default async function FinanzasPage({
           )}
         </section>
       </main>
-    </div>
-  );
-}
-
-function CapitalMetric({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: "accent" | "warn" | "danger" | "info";
-}) {
-  const className =
-    tone === "accent"
-      ? "text-[#8cff59]"
-      : tone === "warn"
-        ? "text-amber-300"
-        : tone === "info"
-          ? "text-sky-300"
-          : "text-red-400";
-
-  return (
-    <div className="rounded-[20px] bg-white/6 px-3 py-3 ring-1 ring-white/8">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">{label}</p>
-      <p className={`mt-1.5 font-display text-lg font-bold ${className}`}>{value}</p>
     </div>
   );
 }

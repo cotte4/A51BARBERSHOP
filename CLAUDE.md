@@ -70,7 +70,16 @@ Pinky nunca usó la app porque vio Caja "muy complicada" (en prod hay 28 atencio
 - **Default del cobro**: servicio y medio más usados en 30 días; si no hay cobros recientes, los más usados del historial (antes caía en el primer servicio de la tabla, Tintura, el más caro).
 - **`/caja/cierre`**: una pantalla (`_CierreForm.tsx`). "En efectivo debería haber $X" (efectivo cobrado − gastos rápidos), "¿Cuánto contaste?", la diferencia en una frase, Cerrar caja con doble toque. El conteo sigue siendo obligatorio y se guarda en `cierres_caja.efectivo_contado`; la diferencia avisa (ámbar si pasa de $500) pero no bloquea.
 - No se muestran en Caja: neto, comisiones de medios, margen. Eso es de Negocio / P&L.
-- Pendiente: Liquidaciones / Mi resultado y Negocio / Finanzas / P&L con el mismo criterio; importar los meses históricos desde la planilla de Was.
+- **Resto de las pantallas de plata, mismo criterio (2026-09-30)**:
+  - `/negocio`: una lista de 5 números, cada uno lleva a donde se trabaja (Caja, gastos, liquidaciones, repago, inventario) + "Más". "Hoy entraron" es el mismo bruto que muestra Caja.
+  - `/dashboard` ("Números"): cortes de hoy, cuántos faltan para cubrir los gastos del día, y el mes. Ya no repite caja ni stock.
+  - `/mi-resultado`: "Tus cortes este mes" + "La barber este mes" como suma a la vista (parte de la casa + ganancia de productos − gastos = queda para la barber).
+  - `/liquidaciones`: "Falta pagarle al equipo", para pagar, ya pagadas.
+  - `/dashboard/pl` y su PDF: mismas cuentas, etiquetas en castellano llano ("Lo que entró", "Comisiones de MP y tarjeta", "Queda este mes"). En pantalla el título es "El mes completo".
+  - `/finanzas`: el capital como suma (pusieron los socios − retiros − compras del Hangar = queda / se usó de más); movimientos legibles en el celular.
+  - Header del modo barbero: solo marca, fecha, nombre y Salir.
+- **Una sola definición de "queda para la barber"**: `getKpisMes` ahora resta también los costos fijos de Finanzas, igual que `getPL` (antes Números y Mi resultado daban distinto).
+- Pendiente: importar los meses históricos desde la planilla de Was; con datos reales, repasar estas pantallas.
 
 ### Known bugs / debt
 - **Music automation not closed** — `clienteLlegoAction()` fires events to pantalla and `musicEvents` but does NOT trigger real Spotify playback. Treat music as manually supervised for now. See `planning/features/music-auto-jam-completion.md`.

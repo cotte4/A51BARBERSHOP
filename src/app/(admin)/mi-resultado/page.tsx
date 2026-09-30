@@ -1,23 +1,16 @@
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import IngresosSummary from "@/components/mi-resultado/IngresosSummary";
-import EgresosSummary from "@/components/mi-resultado/EgresosSummary";
-import ResultadoPersonal from "@/components/mi-resultado/ResultadoPersonal";
-import GastoRapidoFAB from "@/components/gastos-rapidos/GastoRapidoFAB";
-import GastosHistorialModal from "@/components/gastos-rapidos/GastosHistorialModal";
-import { getMiResultadoData, getGastosRapidosDelMes } from "@/lib/mi-resultado-queries";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 import { formatARS } from "@/lib/format";
-import { registrarGastoRapidoAction } from "@/app/(admin)/gastos-rapidos/actions";
+import { getMiResultadoData } from "@/lib/mi-resultado-queries";
 
-function formatMonthLabel(fecha: string, mes: number, anio: number) {
-  const current = new Date(`${fecha}T12:00:00`);
+function formatMonthLabel(fecha: string) {
   return new Intl.DateTimeFormat("es-AR", {
     month: "long",
     year: "numeric",
     timeZone: "America/Argentina/Buenos_Aires",
-  }).format(current) || `${String(mes).padStart(2, "0")}/${anio}`;
+  }).format(new Date(`${fecha}T12:00:00`));
 }
 
 export default async function MiResultadoPage() {
@@ -28,91 +21,59 @@ export default async function MiResultadoPage() {
     redirect("/caja");
   }
 
-  const [data, { gastos, total }] = await Promise.all([
-    getMiResultadoData(),
-    getGastosRapidosDelMes(),
-  ]);
-
-  const monthLabel = formatMonthLabel(data.fechaHoy, data.mes, data.anio);
-  const netoMes = data.resultado.paraVosMes;
-  const netoHoy = data.resultado.paraVosHoy;
-  const balanceTitle = netoMes < 0 ? "Resultado en rojo" : "Resultado sano";
+  const { fechaHoy, ingresos, resultado } = await getMiResultadoData();
 
   return (
     <div className="app-shell min-h-screen px-4 py-6 pb-28">
-      <div className="mx-auto flex max-w-6xl flex-col gap-5">
-        <section className="overflow-hidden rounded-[32px] border border-zinc-800/80 bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.16),_transparent_32%),radial-gradient(circle_at_bottom_left,_rgba(14,165,233,0.1),_transparent_28%),linear-gradient(180deg,_rgba(24,24,27,0.98),_rgba(9,9,11,0.98))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-7">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-            <div className="space-y-4">
-              <div className="space-y-3">
-                <p className="eyebrow text-xs font-semibold">Panel financiero</p>
-                <h1 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                  Mi resultado
-                </h1>
-                <p className="max-w-2xl text-sm capitalize leading-6 text-zinc-300 sm:text-base">
-                  {monthLabel}
-                </p>
-              </div>
-            </div>
+      <div className="mx-auto flex max-w-xl flex-col gap-6">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-white">Mi resultado</h1>
+          <p className="mt-1 text-sm capitalize text-zinc-300">{formatMonthLabel(fechaHoy)}</p>
+        </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[520px]">
-              <HeroStat label="Resultado hoy" value={formatARS(netoHoy)} helper="Lo que queda para vos en el dia." />
-              <HeroStat label="Resultado mes" value={formatARS(netoMes)} helper={balanceTitle} />
-              <HeroStat label="Egresos mes" value={formatARS(data.egresos.totalMes)} helper="Suma de fijos, rapidos y comisiones." />
-              <HeroStat label="Ingresos mes" value={formatARS(data.ingresos.totalMes)} helper="Corte, aporte casa y productos." tone="accent" />
-            </div>
-          </div>
-
-          <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-white/8 pt-4">
-            <GastoRapidoFAB
-              action={registrarGastoRapidoAction}
-              returnTo="/mi-resultado"
-              historyHref="/gastos-rapidos"
-              fixed={false}
-              showHistoryLink={false}
-              buttonLabel="Registrar gasto rapido"
-              buttonClassName="neon-button inline-flex min-h-[52px] items-center justify-center rounded-[20px] px-5 text-sm font-semibold"
-            />
-            <GastosHistorialModal gastos={gastos} total={total} />
-            <Link
-              href="/gastos-rapidos"
-              className="inline-flex min-h-[52px] items-center justify-center rounded-[20px] border border-zinc-700 bg-zinc-950 px-5 text-sm font-medium text-zinc-200 transition hover:bg-zinc-800"
-            >
-              Ver gastos del mes
-            </Link>
-          </div>
+        {/* Lo de Pinky: sus cortes, ya sin la comisión de MP / tarjeta */}
+        <section className="panel-card rounded-[28px] p-6">
+          <p className="text-sm text-zinc-300">Tus cortes este mes</p>
+          <p className="font-display mt-1 text-5xl font-bold tabular-nums tracking-tight text-white">
+            {formatARS(resultado.paraVosMes)}
+          </p>
+          <p className="mt-2 text-sm tabular-nums text-zinc-300">Hoy: {formatARS(resultado.paraVosHoy)}</p>
         </section>
 
-        <section className="space-y-5">
-          <div className="grid gap-5 xl:grid-cols-2">
-            <IngresosSummary {...data.ingresos} />
-            <EgresosSummary {...data.egresos} />
-          </div>
-          <ResultadoPersonal {...data.resultado} />
+        {/* Lo de la casa: la suma se puede hacer a mano */}
+        <section className="panel-card rounded-[28px] p-6">
+          <h2 className="font-display text-xl font-semibold text-white">La barber este mes</h2>
+          <dl className="mt-3 text-base tabular-nums">
+            <div className="flex items-baseline justify-between gap-4 py-1.5">
+              <dt className="text-zinc-300">Cortes de los barberos (parte de la casa)</dt>
+              <dd className="text-white">{formatARS(ingresos.aporteCasaMes)}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-4 py-1.5">
+              <dt className="text-zinc-300">Ganancia por productos</dt>
+              <dd className="text-white">{formatARS(ingresos.productosMes)}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-4 py-1.5">
+              <dt className="text-zinc-300">Gastos del mes</dt>
+              <dd className="text-white">− {formatARS(resultado.gastosMes)}</dd>
+            </div>
+            <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-zinc-700 pt-3">
+              <dt className="font-semibold text-white">Queda para la barber</dt>
+              <dd className="font-display text-2xl font-bold text-white">
+                {formatARS(resultado.paraLaBarberMes)}
+              </dd>
+            </div>
+          </dl>
         </section>
+
+        <div className="flex flex-wrap gap-x-6 gap-y-2 px-1 text-sm font-medium text-zinc-300">
+          <Link href="/gastos-rapidos" className="underline underline-offset-4 hover:text-[#8cff59]">
+            Ver los gastos
+          </Link>
+          <Link href="/dashboard/pl" className="underline underline-offset-4 hover:text-[#8cff59]">
+            Ver el mes completo
+          </Link>
+        </div>
       </div>
-    </div>
-  );
-}
-
-function HeroStat({
-  label,
-  value,
-  helper,
-  tone,
-}: {
-  label: string;
-  value: string;
-  helper: string;
-  tone?: "accent" | "neutral";
-}) {
-  return (
-    <div className={`rounded-[24px] border p-4 ${tone === "accent" ? "border-[#8cff59]/20 bg-[#8cff59]/10" : "border-zinc-800 bg-zinc-950/70"}`}>
-      <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{label}</p>
-      <p className={`mt-2 text-2xl font-semibold ${tone === "accent" ? "text-[#b9ff96]" : "text-white"}`}>
-        {value}
-      </p>
-      <p className="mt-1 text-xs text-zinc-500">{helper}</p>
     </div>
   );
 }

@@ -25,13 +25,6 @@ export function formatHeaderDate(fecha: string): string {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
-export function getInitials(nombre: string): string {
-  const parts = nombre.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "??";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
-}
-
 export function getBepProgress(actual: number, target: number): number {
   if (target <= 0) return 0;
   return Math.max(0, Math.min(100, Math.round((actual / target) * 100)));

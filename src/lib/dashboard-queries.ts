@@ -249,7 +249,17 @@ export async function getKpisMes(
     .from(gastos)
     .where(and(gte(gastos.fecha, inicio), lte(gastos.fecha, fin)));
 
-  const gastosFijosMes = gastosMes.reduce((s, g) => s + toNumber(g.monto), 0);
+  // Igual que el P&L: gastos cargados + costos fijos del mes (pestaña Finanzas).
+  // Sin los costos fijos, "queda para la barber" daba distinto acá que en Mi resultado.
+  const mesClave = `${anio}-${String(mes).padStart(2, "0")}`;
+  const costosFijosMes = await db
+    .select({ monto: costosFijosValores.monto })
+    .from(costosFijosValores)
+    .where(eq(costosFijosValores.mes, mesClave));
+
+  const gastosFijosMes =
+    gastosMes.reduce((s, g) => s + toNumber(g.monto), 0) +
+    costosFijosMes.reduce((s, c) => s + toNumber(c.monto), 0);
 
   // Resultado casa
   const resultadoCasaMes =

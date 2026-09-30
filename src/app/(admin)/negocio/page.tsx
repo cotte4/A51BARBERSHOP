@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -13,28 +14,23 @@ import {
 import { auth } from "@/lib/auth";
 import { formatUSD } from "@/lib/amortizacion";
 import { getEstadoRepago } from "@/lib/repago-service";
-import { nombreMes, SITUACION_LABEL, SITUACION_PILL } from "@/components/repago/situacion";
+import { SITUACION_LABEL } from "@/components/repago/situacion";
 import { getKpisDia } from "@/lib/dashboard-queries";
-import {
-  SmartCard as NegocioSmartCard,
-  UtilityChip as NegocioUtilityChip,
-} from "./_components/NegocioCards";
 import {
   formatARS,
   formatHeaderDate,
   getFechaHoyArgentina,
-  getInitials,
   toNumber,
 } from "./_lib/page-utils";
 
 const utilityLinks = [
-  { href: "/negocio/estilo", label: "Cortes Marciano", detail: "Configurar cortes por forma de cara" },
-  { href: "/negocio/soporte", label: "Soporte", detail: "Revisar bugs internos y triage" },
-  { href: "/negocio/activos", label: "Hangar", detail: "Activos, compras y flujo de inversion inicial" },
-  { href: "/finanzas", label: "Costos fijos", detail: "Items mensuales y capital del negocio" },
-  { href: "/mi-resultado", label: "Mi resultado", detail: "Ver tu numero personal" },
-  { href: "/dashboard/pl", label: "Reporte mensual", detail: "Abrir el detalle largo" },
-  { href: "/ovnis", label: "OVNIS", detail: "Dashboard de la economía de OVNIS" },
+  { href: "/mi-resultado", label: "Mi resultado" },
+  { href: "/dashboard/pl", label: "El mes completo" },
+  { href: "/finanzas", label: "Costos fijos y capital" },
+  { href: "/negocio/activos", label: "Hangar (compras y activos)" },
+  { href: "/negocio/estilo", label: "Cortes Marciano" },
+  { href: "/ovnis", label: "OVNIS" },
+  { href: "/negocio/soporte", label: "Soporte" },
 ] as const;
 
 export default async function NegocioPage() {
@@ -104,334 +100,117 @@ export default async function NegocioPage() {
   const ingresoBrutoHoy = totalServiciosHoy + totalRetailHoy;
   const gastosHoy = gastosHoyRows.reduce((sum, row) => sum + toNumber(row.monto), 0);
 
-  const teamRows = listaBarberos
+  const pendientesEquipo = listaBarberos
     .filter((barbero) => barbero.activo && barbero.rol !== "admin")
-    .map((barbero) => {
-      const pendiente = listaLiquidaciones
+    .map((barbero) => ({
+      id: barbero.id,
+      nombre: barbero.nombre,
+      pendiente: listaLiquidaciones
         .filter((liquidacion) => liquidacion.barberoId === barbero.id)
-        .reduce((sum, liquidacion) => sum + toNumber(liquidacion.montoAPagar), 0);
-
-      return {
-        id: barbero.id,
-        nombre: barbero.nombre,
-        initials: getInitials(barbero.nombre),
-        pendiente,
-      };
-    })
-    .sort((a, b) => {
-      if (b.pendiente !== a.pendiente) {
-        return b.pendiente - a.pendiente;
-      }
-
-      return a.nombre.localeCompare(b.nombre, "es");
-    });
-
-  const teamVisible = teamRows.slice(0, 4);
-  const totalPendienteBarberos = teamRows.reduce((sum, row) => sum + row.pendiente, 0);
+        .reduce((sum, liquidacion) => sum + toNumber(liquidacion.montoAPagar), 0),
+    }))
+    .filter((row) => row.pendiente > 0)
+    .sort((a, b) => b.pendiente - a.pendiente);
+  const totalPendienteBarberos = pendientesEquipo.reduce((sum, row) => sum + row.pendiente, 0);
 
   const stockAlerts = listaProductos
     .filter((producto) => (producto.stockActual ?? 0) <= (producto.stockMinimo ?? 5))
     .sort((a, b) => (a.stockActual ?? 0) - (b.stockActual ?? 0));
 
-  const proximaCuotaUsd =
-    repago && !repago.estado.capitalDevuelto ? (repago.calendario.sugerencia?.montoUsd ?? 0) : 0;
   // Sin préstamo cargado se muestra igual que uno devuelto
   const situacionRepago = repago?.calendario.situacion ?? "devuelto";
-  const proximaRepago = repago?.calendario.proxima ?? null;
-  const detalleRepago =
-    situacionRepago === "atrasado"
-      ? "Para ponerse al día"
-      : proximaRepago
-        ? `${proximaRepago.cubierto > 0 ? "Completar la cuota de" : "Cuota de"} ${nombreMes(proximaRepago.mes, "mes")}`
-        : "";
   const saldoPendienteUsd =
     repago && !repago.estado.capitalDevuelto ? repago.estado.saldoCapital : 0;
 
+  // Cada fila es un número y lleva a la pantalla donde se trabaja
+  const filas: { href: string; label: string; valor: string; detalle: string }[] = [
+    {
+      href: "/caja",
+      label: "Hoy entraron",
+      valor: formatARS(ingresoBrutoHoy),
+      detalle: `${kpisDia.atencionesHoy === 1 ? "1 servicio" : `${kpisDia.atencionesHoy} servicios`} · ${
+        kpisDia.cierreRealizado ? "✓ caja cerrada" : "caja abierta"
+      }`,
+    },
+    {
+      href: "/gastos-rapidos",
+      label: "Gastos de hoy",
+      valor: formatARS(gastosHoy),
+      detalle: "",
+    },
+    {
+      href: "/liquidaciones",
+      label: "Falta pagarle al equipo",
+      valor: formatARS(totalPendienteBarberos),
+      detalle: pendientesEquipo.map((row) => `${row.nombre} ${formatARS(row.pendiente)}`).join(" · "),
+    },
+    {
+      href: "/repago",
+      label: "Falta devolver del préstamo",
+      valor: formatUSD(saldoPendienteUsd),
+      detalle: SITUACION_LABEL[situacionRepago],
+    },
+    {
+      href: "/inventario",
+      label: "Productos por reponer",
+      valor: String(stockAlerts.length),
+      detalle: stockAlerts
+        .slice(0, 3)
+        .map((producto) =>
+          (producto.stockActual ?? 0) <= 0
+            ? `${producto.nombre} (agotado)`
+            : `${producto.nombre} (quedan ${producto.stockActual})`
+        )
+        .join(" · "),
+    },
+  ];
+
   return (
-    <main className="app-shell min-h-screen px-4 py-5 pb-28">
-      <div className="mx-auto max-w-6xl space-y-5">
-        <section className="relative overflow-hidden rounded-[30px] border border-zinc-800/80 bg-[linear-gradient(120deg,rgba(8,10,10,0.96),rgba(12,15,14,0.92)_45%,rgba(8,10,10,0.94))] px-5 py-5 shadow-[0_22px_60px_rgba(0,0,0,0.2)] backdrop-blur">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.12),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(34,211,238,0.08),_transparent_24%)]" />
-          <div className="absolute left-5 top-4 h-px w-16 bg-[#8cff59]/70" />
-          <div className="absolute right-5 top-4 h-px w-12 bg-cyan-300/55" />
-          <div className="relative z-10 grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
-            <div>
-              <p className="eyebrow text-xs font-semibold">Negocio</p>
-              <h1 className="font-display mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                Resumen del negocio - {headerDate}
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
-                Caja, equipo, stock y deuda en una sola mirada. Lo importante arriba, lo demas abajo.
-              </p>
+    <main className="app-shell min-h-screen px-4 py-6 pb-28">
+      <div className="mx-auto flex max-w-xl flex-col gap-6">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-white">Negocio</h1>
+          <p className="mt-1 text-sm text-zinc-300">{headerDate}</p>
+        </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-semibold text-zinc-200">
-                  {kpisDia.atencionesHoy} trabajos hoy
-                </span>
-              </div>
-
-            </div>
-
-            <div className="grid gap-3">
-              <div className="panel-soft rounded-[24px] px-4 py-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500">
-                      Caja de hoy
-                    </p>
-                    <p className="font-display mt-2 text-3xl font-semibold text-white">
-                      {formatARS(kpisDia.cajaNeta)}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] ${
-                      kpisDia.cierreRealizado
-                        ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
-                        : "border-amber-400/30 bg-amber-400/10 text-amber-200"
-                    }`}
-                  >
-                    {kpisDia.cierreRealizado ? "Caja cerrada" : "Caja abierta"}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm text-zinc-400">
-                  {ingresoBrutoHoy > 0
-                    ? `Ingreso bruto estimado: ${formatARS(ingresoBrutoHoy)}`
-                    : "Todavia no entraron movimientos hoy."}
-                </p>
-              </div>
-
-              <div className="panel-soft rounded-[24px] px-4 py-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500">
-                      Equipo
-                    </p>
-                    <p className="font-display mt-2 text-3xl font-semibold text-white">
-                      {formatARS(totalPendienteBarberos)}
-                    </p>
-                  </div>
-                  <span className="rounded-full border border-white/10 bg-black/18 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-300">
-                    {teamRows.length} perfiles
-                  </span>
-                </div>
-                <p className="mt-2 text-sm text-zinc-400">
-                  {totalPendienteBarberos > 0
-                    ? "Esto es lo que falta pagar al equipo."
-                    : "No hay pagos pendientes ahora."}
-                </p>
-              </div>
-
-              <div className="panel-soft rounded-[24px] px-4 py-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500">
-                      Cuota
-                    </p>
-                    <p className="font-display mt-2 text-3xl font-semibold text-white">
-                      {proximaCuotaUsd > 0 ? formatUSD(proximaCuotaUsd) : "Sin cuota"}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] ${SITUACION_PILL[situacionRepago]}`}
-                  >
-                    {SITUACION_LABEL[situacionRepago]}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm text-zinc-400">
-                  {proximaCuotaUsd > 0
-                    ? `${detalleRepago} · faltan ${formatUSD(saldoPendienteUsd)} en total`
-                    : "No hay una cuota pendiente ahora."}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
-          <NegocioSmartCard
-            href="/liquidaciones"
-            eyebrow="Equipo"
-            kicker="Pagos"
-            title="Pagos al equipo"
-            detail="Pendientes, pagados y quien todavia espera cobro."
-            footer="Ver liquidaciones"
-            accentClassName="border-[#8cff59]/18 bg-[radial-gradient(circle_at_top_right,_rgba(34,211,238,0.14),_transparent_38%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
-          >
-            <div className="space-y-3">
-              {teamVisible.length > 0 ? (
-                teamVisible.map((row) => (
-                  <div
-                    key={row.id}
-                    className={`flex items-center gap-3 rounded-[22px] border px-4 py-3 ${
-                      row.pendiente > 0
-                        ? "border-amber-400/20 bg-amber-400/8"
-                        : "border-emerald-400/18 bg-emerald-400/8"
-                    }`}
-                  >
-                    <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-zinc-950 text-sm font-bold text-white">
-                      {row.initials}
-                      <span
-                        className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border border-zinc-950 ${
-                          row.pendiente > 0 ? "bg-amber-300" : "bg-emerald-300"
-                        }`}
-                      />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-white">{row.nombre}</p>
-                      <p
-                        className={`mt-1 text-sm ${
-                          row.pendiente > 0 ? "text-amber-200" : "text-emerald-300"
-                        }`}
-                      >
-                        {row.pendiente > 0
-                          ? `Pendiente ${formatARS(row.pendiente)}`
-                          : "Al dia"}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-[22px] border border-dashed border-zinc-700 bg-zinc-950/50 p-5 text-sm text-zinc-400">
-                  No hay barberos configurados para mostrar en esta portada.
-                </div>
-              )}
-            </div>
-          </NegocioSmartCard>
-        </section>
-
-        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          <NegocioSmartCard
-            href="/inventario"
-            eyebrow="Stock"
-            kicker={stockAlerts.length > 0 ? "Revisar" : "Todo bien"}
-            title="Productos por mirar"
-            detail="Solo lo que esta por terminarse o ya quedo en cero."
-            footer="Ver inventario"
-            accentClassName="border-[#8cff59]/16 bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.10),_transparent_34%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
-          >
-            {stockAlerts.length > 0 ? (
-              <div className="space-y-3">
-                {stockAlerts.slice(0, 4).map((producto) => {
-                  const stockActual = producto.stockActual ?? 0;
-                  const stockMinimo = producto.stockMinimo ?? 5;
-
-                  return (
-                    <div
-                      key={producto.id}
-                      className="rounded-[22px] border border-zinc-700/80 bg-zinc-950/55 px-4 py-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-semibold text-white">{producto.nombre}</p>
-                          <p className="mt-1 text-sm text-zinc-400">
-                            {stockActual <= 0
-                              ? "Stock agotado"
-                              : `Quedan ${stockActual} (minimo ${stockMinimo})`}
-                          </p>
-                        </div>
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                            stockActual <= 0
-                              ? "bg-red-500/16 text-red-300"
-                              : "bg-amber-400/16 text-amber-200"
-                          }`}
-                        >
-                          {stockActual <= 0 ? "Urgente" : "Bajo"}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="rounded-[24px] border border-emerald-400/20 bg-emerald-400/8 p-4">
-                <p className="font-semibold text-emerald-300">Inventario sano</p>
-                <p className="mt-1 text-sm text-zinc-300">
-                  No hay productos con stock bajo ni agotado.
-                </p>
-              </div>
-            )}
-          </NegocioSmartCard>
-
-          <NegocioSmartCard
-            href="/gastos-rapidos"
-            eyebrow="Gastos"
-            kicker={gastosHoy > 0 ? "Hoy" : "Sin gastos"}
-            title="Gastos del dia"
-            detail="Lo que ya salio hoy, cargado desde gastos rapidos."
-            footer="Ver gastos rapidos"
-            accentClassName="border-[#8cff59]/16 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.10),_transparent_34%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
-          >
-            <div className="panel-soft rounded-[24px] p-4">
-              <p className="text-xs font-medium text-zinc-400">Gastos de hoy</p>
-              <p className="font-display mt-2 text-3xl font-bold text-white">
-                {formatARS(gastosHoy)}
-              </p>
-              <p className="mt-1 text-sm text-zinc-400">Movimientos cargados con fecha de hoy.</p>
-            </div>
-          </NegocioSmartCard>
-
-          <NegocioSmartCard
-            href="/repago"
-            eyebrow="Deuda"
-            kicker={situacionRepago === "atrasado" ? "Ojo" : "Tranquilo"}
-            title="Repago Memas"
-            detail="Lo que falta devolver y la cuota sugerida."
-            footer="Ver repago y registrar pago"
-            accentClassName="border-[#8cff59]/16 bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.10),_transparent_34%),linear-gradient(180deg,rgba(39,39,42,0.98),rgba(24,24,27,0.98))]"
-          >
-            <div className="rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.18))] p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-400">
-                    Saldo pendiente
-                  </p>
-                  <p className="mt-2 text-sm text-zinc-300">
-                    {saldoPendienteUsd > 0
-                      ? `Faltan devolver ${formatUSD(saldoPendienteUsd)}`
-                      : "No queda nada por devolver."}
-                  </p>
-                </div>
-                <span
-                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${SITUACION_PILL[situacionRepago]}`}
+        <section className="panel-card rounded-[28px] p-5">
+          <ul className="divide-y divide-zinc-800/70">
+            {filas.map((fila) => (
+              <li key={fila.href}>
+                <Link
+                  href={fila.href}
+                  className="flex items-baseline justify-between gap-4 rounded-xl py-3.5 hover:bg-white/4"
                 >
-                  {SITUACION_LABEL[situacionRepago]}
-                </span>
-              </div>
-            </div>
-          </NegocioSmartCard>
+                  <span className="min-w-0">
+                    <span className="block text-zinc-200">{fila.label}</span>
+                    {fila.detalle ? (
+                      <span className="block text-sm text-zinc-400">{fila.detalle}</span>
+                    ) : null}
+                  </span>
+                  <span className="shrink-0 font-display text-xl font-bold tabular-nums text-white">
+                    {fila.valor} <span aria-hidden="true" className="text-base font-normal text-zinc-500">›</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
 
-        <section className="relative overflow-hidden rounded-[30px] border border-zinc-800/90 bg-[linear-gradient(180deg,rgba(26,26,29,0.98),rgba(18,18,20,0.98))] p-5">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,_rgba(140,255,89,0.05),_transparent_24%)]" />
-          <div className="relative z-10">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="max-w-2xl">
-                <p className="eyebrow text-xs font-semibold">Ajustes</p>
-                <h2 className="font-display mt-2 text-2xl font-semibold text-white">
-                  Accesos de soporte
-                </h2>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Herramientas propias del negocio. Los ajustes viven en la tab Config.
-                </p>
-              </div>
-              <div className="rounded-full border border-zinc-700 bg-black/18 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-400">
-                Poco uso diario
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {utilityLinks.map((link) => (
-                <NegocioUtilityChip
-                  key={link.href}
+        <section className="panel-card rounded-[28px] p-5">
+          <h2 className="font-display text-xl font-semibold text-white">Más</h2>
+          <ul className="mt-2 divide-y divide-zinc-800/70">
+            {utilityLinks.map((link) => (
+              <li key={link.href}>
+                <Link
                   href={link.href}
-                  label={link.label}
-                  detail={link.detail}
-                />
-              ))}
-            </div>
-          </div>
+                  className="flex items-center justify-between gap-4 rounded-xl py-3 text-zinc-200 hover:bg-white/4 hover:text-white"
+                >
+                  {link.label}
+                  <span aria-hidden="true" className="text-zinc-500">›</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
       </div>
     </main>
