@@ -147,9 +147,6 @@ export default async function RepagoPage() {
     });
   }
 
-  // Una parte con la cuenta a la vista, para que se pueda verificar a mano
-  const ejemploTramo = tramosInteres.find((tramo) => tramo.dias > 0 && tramo.interes > 0) ?? null;
-
   return (
     <div className="app-shell min-h-screen">
       <header className="border-b border-zinc-800/80 bg-zinc-950/90 px-4 py-4 backdrop-blur">
@@ -225,79 +222,34 @@ export default async function RepagoPage() {
           </div>
           <p className="font-display mt-3 text-3xl font-bold tabular-nums text-white">
             {formatUSD(estado.interesAcumulado)}
-            <span className="ml-2 text-sm font-normal text-zinc-500">de interés hasta hoy</span>
+            <span className="ml-2 text-sm font-normal text-zinc-500">hasta hoy</span>
+          </p>
+          <p className="mt-2 text-sm leading-6 text-zinc-400">
+            Es el {tasaPct}% por año por tener la plata prestada. No se descuenta de los pagos: se arregla
+            al final.{" "}
+            {estado.capitalDevuelto
+              ? "Ya devolvieron todo, así que dejó de sumar."
+              : topeAlcanzado
+                ? "Ya llegó al máximo, no suma más."
+                : `Hoy suma ${formatUSD(interesPorDia)} por día y nunca pasa de ${formatUSD(estado.topeInteres)}.`}
           </p>
 
-          <dl className="mt-4 grid gap-3 text-sm leading-6 sm:grid-cols-2">
-            <div className="rounded-[18px] border border-zinc-800 bg-zinc-950/40 p-3">
-              <dt className="font-semibold text-zinc-200">¿Qué es?</dt>
-              <dd className="text-zinc-400">
-                Lo que cuesta tener la plata prestada: {tasaPct}% por año sobre lo que falta devolver.
-              </dd>
-            </div>
-            <div className="rounded-[18px] border border-zinc-800 bg-zinc-950/40 p-3">
-              <dt className="font-semibold text-zinc-200">¿Ya lo pagaron?</dt>
-              <dd className="text-zinc-400">
-                No. Cada pago va entero a devolver los {formatUSD(plan.deudaUsd)}. El interés se arregla
-                cuando terminen.
-              </dd>
-            </div>
-            <div className="rounded-[18px] border border-zinc-800 bg-zinc-950/40 p-3">
-              <dt className="font-semibold text-zinc-200">¿Cuánto suma por día?</dt>
-              <dd className="text-zinc-400">
-                {estado.capitalDevuelto
-                  ? "Nada: ya devolvieron todo, así que dejó de sumar."
-                  : topeAlcanzado
-                    ? "Nada: ya llegó al máximo."
-                    : `Hoy deben ${formatUSD(estado.saldoCapital)}, eso suma ${formatUSD(interesPorDia)} por día (unos ${formatUSD(interesPorDia * 30)} por mes). Cada pago lo achica.`}
-              </dd>
-            </div>
-            <div className="rounded-[18px] border border-zinc-800 bg-zinc-950/40 p-3">
-              <dt className="font-semibold text-zinc-200">¿Hasta cuánto puede llegar?</dt>
-              <dd className="text-zinc-400">
-                Como máximo {formatUSD(estado.topeInteres)}, lo que costaba el plan de{" "}
-                {plan.cantidadCuotas} cuotas. Si devuelven antes, es menos: si hoy devolvieran todo, quedaría
-                en {formatUSD(estado.interesAcumulado)}.
-              </dd>
-            </div>
-          </dl>
-
           {tramosInteres.length > 0 ? (
-            <details className="mt-4 rounded-[22px] border border-zinc-800 bg-zinc-950/60 p-4">
-              <summary className="cursor-pointer text-sm font-semibold text-zinc-300 [&::-webkit-details-marker]:hidden">
-                Ver la cuenta
-              </summary>
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
-                Entre un pago y el siguiente la deuda no cambia, así que se calcula por partes:
-              </p>
-              <ul className="mt-2 divide-y divide-zinc-800/60 text-sm tabular-nums">
-                {tramosInteres.map((tramo) => (
-                  <li
-                    key={`${tramo.desde}-${tramo.hasta}`}
-                    className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5"
-                  >
-                    <span className="text-zinc-400">
-                      Del {formatFecha(tramo.desde)}{" "}
-                      {tramo.hasta === hoy ? "hasta hoy" : `al ${formatFecha(tramo.hasta)}`} (
-                      {plural(tramo.dias, "día", "días")})
-                      debían <span className="whitespace-nowrap text-zinc-200">{formatUSD(tramo.sobre)}</span>
-                    </span>
-                    <span className="font-semibold text-white">{formatUSD(tramo.interes)}</span>
-                  </li>
-                ))}
-                <li className="flex items-baseline justify-between gap-4 py-2.5">
-                  <span className="font-semibold text-zinc-200">Total</span>
-                  <span className="font-semibold text-white">{formatUSD(estado.interesAcumulado)}</span>
+            <ul className="mt-4 text-sm tabular-nums">
+              {tramosInteres.map((tramo) => (
+                <li
+                  key={`${tramo.desde}-${tramo.hasta}`}
+                  className="flex items-baseline justify-between gap-4 border-t border-zinc-800/60 py-2"
+                >
+                  <span className="text-zinc-400">
+                    {formatFecha(tramo.desde)} → {tramo.hasta === hoy ? "hoy" : formatFecha(tramo.hasta)}:{" "}
+                    {plural(tramo.dias, "día", "días")} debiendo{" "}
+                    <span className="whitespace-nowrap">{formatUSD(tramo.sobre)}</span>
+                  </span>
+                  <span className="whitespace-nowrap text-white">{formatUSD(tramo.interes)}</span>
                 </li>
-              </ul>
-              {ejemploTramo ? (
-                <p className="mt-2 text-xs leading-5 text-zinc-500">
-                  Cada parte = deuda × {tasaPct}% × días ÷ 365. Por ejemplo:{" "}
-                  {formatUSD(ejemploTramo.sobre)} × {tasaPct}% × {ejemploTramo.dias} ÷ 365 ={" "}
-                  {formatUSD(ejemploTramo.interes)}.
-                </p>
-              ) : null}
-            </details>
+              ))}
+            </ul>
           ) : null}
         </section>
 
