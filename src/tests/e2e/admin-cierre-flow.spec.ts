@@ -84,11 +84,14 @@ test.describe("Flow 2: Admin cierre de caja", () => {
     }
 
     // Si el botón de cerrar caja está disponible, verificarlo
-    const cerrarBtn = page.getByRole("button", { name: /cerrar caja|confirmar cierre/i });
+    const cerrarBtn = page.getByRole("button", { name: /^cerrar caja$/i });
     const hasCerrarBtn = await cerrarBtn.isVisible({ timeout: 3_000 }).catch(() => false);
 
     if (hasCerrarBtn) {
+      // El cierre pide el efectivo contado y un segundo toque para confirmar
+      await page.locator("#efectivo-contado").fill("0");
       await cerrarBtn.click();
+      await page.getByRole("button", { name: /sí, cerrar la caja/i }).click();
       // Esperar redirect al resumen del cierre
       await page.waitForURL(/\/cierre\/20\d{2}-\d{2}-\d{2}/, { timeout: 10_000 });
 
