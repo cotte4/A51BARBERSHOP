@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
+  calcularCalendarioCuotas,
   calcularEstadoRepago,
   calcularTopeInteres,
   convertirMontoAUsd,
   diasEntre,
-  mesesRestantesEstimados,
 } from "@/lib/amortizacion";
 
 // Plan real: u$d 1.770, 10% anual, 12 cuotas de referencia (capital fijo 147,50)
@@ -36,10 +36,9 @@ describe("repago: primero el capital", () => {
     expect(e.aplicaciones.map((a) => a.saldoDespues)).toEqual([1640.97, 1510.25, 910.25]);
   });
 
-  it("cuotas cubiertas y cuota sugerida salen del plan de referencia", () => {
+  it("cuotas cubiertas salen del plan de referencia", () => {
     const e = calcularEstadoRepago(PLAN, PAGOS_REALES, "2026-09-29");
     expect(e.cuotasCubiertas).toBe(5); // 859,75 / 147,50 = 5,8
-    expect(e.cuotaSugerida).toBe(147.5);
   });
 });
 
@@ -96,10 +95,6 @@ describe("repago: casos borde", () => {
     expect(e).toMatchObject({ saldoCapital: 1770, interesAcumulado: 0, capitalDevuelto: false });
   });
 
-  it("cuota sugerida nunca pasa de lo que falta", () => {
-    const e = calcularEstadoRepago(PLAN, [{ fecha: "2026-01-01", montoUsd: 1700 }], "2026-01-01");
-    expect(e.cuotaSugerida).toBe(70);
-  });
 });
 
 describe("repago: helpers", () => {
@@ -113,9 +108,64 @@ describe("repago: helpers", () => {
     expect(convertirMontoAUsd(900_000, "ARS", 1500)).toBe(600);
   });
 
-  it("meses restantes estimados a u$d 147,50 por mes", () => {
-    expect(mesesRestantesEstimados(910.25, 147.5)).toBe(7);
-    expect(mesesRestantesEstimados(295, 147.5)).toBe(2);
-    expect(mesesRestantesEstimados(0, 147.5)).toBe(0);
+});
+
+describe("repago: calendario de cuotas (¿van al día?)", () => {
+  const INICIO = "2026-08-01"; // cuota 1 = agosto 2026, cuota 12 = julio 2027
+
+  it("caso real: 859,75 devueltos al 29/09 → 5 cuotas pagadas, la de enero en parte, adelantados", () => {
+    const c = calcularCalendarioCuotas(PLAN, INICIO, 859.75, "2026-09-29");
+    expect(c.cuotas.map((q) => q.estado)).toEqual([
+      "pagada", "pagada", "pagada", "pagada", "pagada", // ago → dic
+      "parcial", // ene 2027
+      "pendiente", "pendiente", "pendiente", "pendiente", "pendiente", "pendiente",
+    ]);
+    expect(c.situacion).toBe("adelantado");
+    expect(c.ultimaPagada?.mes).toBe("2026-12");
+    expect(c.proxima).toMatchObject({ numero: 6, mes: "2027-01", cubierto: 122.25 });
+    expect(c.faltaProxima).toBe(25.25);
+    expect(c.sugerencia).toEqual({ tipo: "proxima_cuota", montoUsd: 25.25 });
+    // La marca de "hoy" cae en septiembre
+    expect(c.cuotas.find((q) => q.esMesActual)?.mes).toBe("2026-09");
+  });
+
+  it("la cuota del mes se puede pagar durante el mes: no está atrasada hasta que termina", () => {
+    const c = calcularCalendarioCuotas(PLAN, INICIO, 147.5, "2026-09-10");
+    expect(c.situacion).toBe("al_dia");
+    expect(c.cuotas[1]).toMatchObject({ mes: "2026-09", estado: "pendiente", esMesActual: true });
+    expect(c.sugerencia).toEqual({ tipo: "proxima_cuota", montoUsd: 147.5 });
+  });
+
+  it("meses terminados sin cubrir → atrasados, y la sugerencia es ponerse al día", () => {
+    const c = calcularCalendarioCuotas(PLAN, INICIO, 100, "2026-10-15");
+    expect(c.situacion).toBe("atrasado");
+    expect(c.atrasoUsd).toBe(195); // agosto + septiembre (295) − 100
+    expect(c.cuotas.slice(0, 3).map((q) => q.estado)).toEqual(["atrasada", "atrasada", "pendiente"]);
+    expect(c.sugerencia).toEqual({ tipo: "ponerse_al_dia", montoUsd: 195 });
+  });
+
+  it("pagos antes de que arranque el plan → adelantados", () => {
+    const c = calcularCalendarioCuotas(PLAN, INICIO, 129.03, "2026-07-23");
+    expect(c.situacion).toBe("adelantado");
+    expect(c.cuotas.some((q) => q.esMesActual)).toBe(false);
+  });
+
+  it("todo devuelto → todas pagadas y sin sugerencia", () => {
+    const c = calcularCalendarioCuotas(PLAN, INICIO, 1770, "2026-12-01");
+    expect(c.situacion).toBe("devuelto");
+    expect(c.cuotas.every((q) => q.estado === "pagada")).toBe(true);
+    expect(c.sugerencia).toBeNull();
+  });
+
+  it("la última cuota absorbe el redondeo: las cuotas suman la deuda exacta", () => {
+    const c = calcularCalendarioCuotas({ deudaUsd: 1000, tasaAnual: 0.1, cantidadCuotas: 3 }, INICIO, 0, "2026-08-01");
+    expect(c.cuotas.map((q) => q.monto)).toEqual([333.33, 333.33, 333.34]);
+  });
+
+  it("escala a otros planes: 24 cuotas cruzan de año bien", () => {
+    const c = calcularCalendarioCuotas({ deudaUsd: 2400, tasaAnual: 0.1, cantidadCuotas: 24 }, "2026-11-01", 0, "2026-11-01");
+    expect(c.cuotas).toHaveLength(24);
+    expect(c.cuotas[2].mes).toBe("2027-01");
+    expect(c.cuotas[23].mes).toBe("2028-10");
   });
 });

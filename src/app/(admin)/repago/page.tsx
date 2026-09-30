@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { diasEntre, formatUSD, mesesRestantesEstimados } from "@/lib/amortizacion";
+import { diasEntre, formatUSD } from "@/lib/amortizacion";
 import { formatFecha } from "@/lib/fecha";
 import { db } from "@/db";
 import { configuracionNegocio } from "@/db/schema";
@@ -9,20 +9,9 @@ import { fechaHoyArgentina, getEstadoRepago, montoUsdDeFila } from "@/lib/repago
 import { registrarCuota } from "./actions";
 import { formatARS } from "@/lib/format";
 import BrandMark from "@/components/BrandMark";
+import { nombreMes, SITUACION_LABEL, SITUACION_PILL } from "@/components/repago/situacion";
+import CuotasPlan from "./_CuotasPlan";
 import RegistrarPagoForm from "./_RegistrarPagoForm";
-
-function formatMonthYear(value: string): string {
-  return new Date(`${value}T12:00:00`).toLocaleDateString("es-AR", {
-    month: "long",
-    year: "numeric",
-    timeZone: "America/Argentina/Buenos_Aires",
-  });
-}
-
-function addMonths(value: string, months: number): string {
-  const [y, m, d] = value.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1 + months, Math.min(d, 28), 12)).toISOString().slice(0, 10);
-}
 
 function plural(n: number, uno: string, varios: string): string {
   return `${n} ${n === 1 ? uno : varios}`;
@@ -100,7 +89,7 @@ export default async function RepagoPage() {
     );
   }
 
-  const { plan, filas, estado } = completo;
+  const { plan, filas, estado, calendario } = completo;
   const devuelto = estado.capitalDevuelto;
   const cantidadPagos = estado.aplicaciones.length;
   const primerPago = estado.aplicaciones[0] ?? null;
@@ -120,7 +109,20 @@ export default async function RepagoPage() {
     .join(" + ");
 
   const porcentajeDevuelto = Math.min(100, (estado.totalPagadoUsd / plan.deudaUsd) * 100);
-  const mesesEstimados = mesesRestantesEstimados(estado.saldoCapital, estado.capitalFijo);
+
+  // Qué conviene pagar ahora, según el calendario de cuotas
+  const { sugerencia, proxima } = calendario;
+  const sugerenciaForm = sugerencia
+    ? {
+        montoUsd: sugerencia.montoUsd,
+        label:
+          sugerencia.tipo === "ponerse_al_dia"
+            ? "Ponerse al día"
+            : proxima && proxima.cubierto > 0
+              ? `Completar cuota de ${nombreMes(proxima.mes, "mes")}`
+              : `Cuota de ${proxima ? nombreMes(proxima.mes, "mes") : "este mes"}`,
+      }
+    : null;
 
   // Cómo se fue acumulando el interés: un tramo entre cada pago, y el último hasta hoy
   const tramosInteres = estado.aplicaciones.slice(1).map((aplicacion, index) => ({
@@ -155,13 +157,9 @@ export default async function RepagoPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="eyebrow text-xs font-semibold">Repago Memas · préstamo en dólares</p>
             <span
-              className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                devuelto
-                  ? "border-[#8cff59]/25 bg-[#8cff59]/10 text-[#8cff59]"
-                  : "border-white/10 bg-white/8 text-zinc-200"
-              }`}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${SITUACION_PILL[calendario.situacion]}`}
             >
-              {devuelto ? "✓ Préstamo devuelto" : "En curso"}
+              {SITUACION_LABEL[calendario.situacion]}
             </span>
           </div>
 
@@ -185,16 +183,8 @@ export default async function RepagoPage() {
               : "Todavía no hubo pagos."}
           </p>
 
-          <div className="mt-5 flex items-center gap-3">
-            <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-zinc-800">
-              <div
-                className="h-full rounded-full bg-[#8cff59]"
-                style={{ width: `${porcentajeDevuelto}%` }}
-              />
-            </div>
-            <span className="text-sm font-semibold tabular-nums text-zinc-300">
-              {porcentajeDevuelto.toFixed(0)}% devuelto
-            </span>
+          <div className="mt-6 border-t border-zinc-800 pt-5">
+            <CuotasPlan calendario={calendario} porcentajeDevuelto={porcentajeDevuelto} />
           </div>
         </section>
 
@@ -203,10 +193,7 @@ export default async function RepagoPage() {
           <section className="panel-card rounded-[28px] p-5">
             <h2 className="font-display text-xl font-semibold text-white">Registrar pago</h2>
             <p className="mt-1 text-sm leading-6 text-zinc-400">
-              Sugerido: {formatUSD(estado.cuotaSugerida)} por mes, sin obligación.
-              {mesesEstimados > 0
-                ? ` A ese ritmo terminan en ${plural(mesesEstimados, "mes", "meses")} (${formatMonthYear(addMonths(hoy, mesesEstimados))}).`
-                : ""}
+              Cargá lo que te dieron y el día en que te lo dieron. Cualquier monto sirve.
             </p>
             <div className="mt-5">
               <RegistrarPagoForm
@@ -214,6 +201,7 @@ export default async function RepagoPage() {
                 plan={plan}
                 pagos={estado.aplicaciones.map(({ fecha, montoUsd }) => ({ fecha, montoUsd }))}
                 hoy={hoy}
+                sugerencia={sugerenciaForm}
                 tcReferencia={tcReferencia}
                 tcSistema={tcOnline.blue}
               />

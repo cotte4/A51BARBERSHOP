@@ -13,6 +13,7 @@ import {
 import { auth } from "@/lib/auth";
 import { formatUSD } from "@/lib/amortizacion";
 import { getEstadoRepago } from "@/lib/repago-service";
+import { nombreMes, SITUACION_LABEL, SITUACION_PILL } from "@/components/repago/situacion";
 import { getKpisDia } from "@/lib/dashboard-queries";
 import {
   SmartCard as NegocioSmartCard,
@@ -133,7 +134,16 @@ export default async function NegocioPage() {
     .sort((a, b) => (a.stockActual ?? 0) - (b.stockActual ?? 0));
 
   const proximaCuotaUsd =
-    repago && !repago.estado.capitalDevuelto ? repago.estado.cuotaSugerida : 0;
+    repago && !repago.estado.capitalDevuelto ? (repago.calendario.sugerencia?.montoUsd ?? 0) : 0;
+  // Sin préstamo cargado se muestra igual que uno devuelto
+  const situacionRepago = repago?.calendario.situacion ?? "devuelto";
+  const proximaRepago = repago?.calendario.proxima ?? null;
+  const detalleRepago =
+    situacionRepago === "atrasado"
+      ? "Para ponerse al día"
+      : proximaRepago
+        ? `${proximaRepago.cubierto > 0 ? "Completar la cuota de" : "Cuota de"} ${nombreMes(proximaRepago.mes, "mes")}`
+        : "";
   const saldoPendienteUsd =
     repago && !repago.estado.capitalDevuelto ? repago.estado.saldoCapital : 0;
 
@@ -222,18 +232,14 @@ export default async function NegocioPage() {
                     </p>
                   </div>
                   <span
-                    className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] ${
-                      saldoPendienteUsd > 0
-                        ? "border-red-400/30 bg-red-500/14 text-red-300"
-                        : "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
-                    }`}
+                    className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] ${SITUACION_PILL[situacionRepago]}`}
                   >
-                    {saldoPendienteUsd > 0 ? "Hay deuda" : "Sin deuda"}
+                    {SITUACION_LABEL[situacionRepago]}
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-zinc-400">
                   {proximaCuotaUsd > 0
-                    ? `Sugerida hoy · faltan ${formatUSD(saldoPendienteUsd)}`
+                    ? `${detalleRepago} · faltan ${formatUSD(saldoPendienteUsd)} en total`
                     : "No hay una cuota pendiente ahora."}
                 </p>
               </div>
@@ -369,7 +375,7 @@ export default async function NegocioPage() {
           <NegocioSmartCard
             href="/repago"
             eyebrow="Deuda"
-            kicker={saldoPendienteUsd > 0 ? "Ojo" : "Tranquilo"}
+            kicker={situacionRepago === "atrasado" ? "Ojo" : "Tranquilo"}
             title="Repago Memas"
             detail="Lo que falta devolver y la cuota sugerida."
             footer="Ver repago y registrar pago"
@@ -383,18 +389,14 @@ export default async function NegocioPage() {
                   </p>
                   <p className="mt-2 text-sm text-zinc-300">
                     {saldoPendienteUsd > 0
-                      ? `${formatUSD(saldoPendienteUsd)} siguen pendientes`
-                      : "No queda saldo pendiente en repago."}
+                      ? `Faltan devolver ${formatUSD(saldoPendienteUsd)}`
+                      : "No queda nada por devolver."}
                   </p>
                 </div>
                 <span
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    saldoPendienteUsd > 0
-                      ? "bg-red-500/14 text-red-300"
-                      : "bg-emerald-400/14 text-emerald-300"
-                  }`}
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${SITUACION_PILL[situacionRepago]}`}
                 >
-                  {saldoPendienteUsd > 0 ? "Hay deuda" : "Sin deuda"}
+                  {SITUACION_LABEL[situacionRepago]}
                 </span>
               </div>
             </div>

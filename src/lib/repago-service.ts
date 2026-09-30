@@ -4,10 +4,12 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { repagoMemas, repagoMemasCuotas } from "@/db/schema";
 import {
+  calcularCalendarioCuotas,
   calcularEstadoRepago,
   convertirMontoAUsd,
   formatUSD,
   redondearUsd,
+  type CalendarioCuotas,
   type EstadoRepago,
   type PagoRepago,
   type PlanRepago,
@@ -72,6 +74,8 @@ export type EstadoRepagoCompleto = {
   /** Filas en orden canónico — mismo índice que estado.aplicaciones */
   filas: PagoRow[];
   estado: EstadoRepago;
+  /** Cuotas de referencia contra lo devuelto: ¿van al día? */
+  calendario: CalendarioCuotas;
 };
 
 /** Carga el repago y lo recalcula entero a la fecha de corte (hoy por defecto). */
@@ -86,7 +90,14 @@ export async function getEstadoRepago(
   );
 
   const plan = planDesdeRepago(repago);
-  return { repago, plan, filas, estado: calcularEstadoRepago(plan, pagosDesdeFilas(filas), hasta) };
+  const pagos = pagosDesdeFilas(filas);
+  const estado = calcularEstadoRepago(plan, pagos, hasta);
+  const fechaInicio = repago.fechaInicio
+    ? String(repago.fechaInicio).slice(0, 10)
+    : (pagos[0]?.fecha ?? hasta);
+  const calendario = calcularCalendarioCuotas(plan, fechaInicio, estado.totalPagadoUsd, hasta);
+
+  return { repago, plan, filas, estado, calendario };
 }
 
 export type RegistrarCuotaRepagoInput = {

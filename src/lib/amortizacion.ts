@@ -10,7 +10,8 @@
  *     alemán pactado). Si devuelven antes, el interés es menor.
  *
  * El cronograma alemán queda solo como referencia: fija el tope de interés y
- * la cuota mensual sugerida (capital fijo).
+ * el calendario de cuotas contra el que se mide si van al día
+ * (`calcularCalendarioCuotas`).
  */
 
 export interface CuotaCronograma {
@@ -120,8 +121,6 @@ export interface EstadoRepago {
   capitalDevuelto: boolean;
   /** Cuotas del plan de referencia cubiertas por lo devuelto */
   cuotasCubiertas: number;
-  /** Cuota sugerida: el capital fijo del plan, sin pasarse de lo que falta */
-  cuotaSugerida: number;
 }
 
 /** Interés total del plan de referencia: es el tope que nunca se supera. */
@@ -201,17 +200,130 @@ export function calcularEstadoRepago(
       plan.cantidadCuotas,
       Math.floor((capitalPagado + 0.01) / capitalFijo)
     ),
-    cuotaSugerida: Math.min(saldo, redondearUsd(capitalFijo)),
   };
 }
 
+export type EstadoCuota = "pagada" | "parcial" | "atrasada" | "pendiente";
+
+export interface CuotaCalendario {
+  numero: number;
+  /** Mes al que corresponde la cuota, "YYYY-MM" */
+  mes: string;
+  monto: number;
+  /** Cuánto de esta cuota ya está cubierto con lo devuelto */
+  cubierto: number;
+  estado: EstadoCuota;
+  esMesActual: boolean;
+}
+
+export type SituacionRepago = "adelantado" | "al_dia" | "atrasado" | "devuelto";
+
+export interface CalendarioCuotas {
+  cuotas: CuotaCalendario[];
+  situacion: SituacionRepago;
+  /** Lo que falta para cubrir las cuotas de meses que ya terminaron */
+  atrasoUsd: number;
+  /** Última cuota cubierta entera, en orden */
+  ultimaPagada: CuotaCalendario | null;
+  /** Primera cuota que no está cubierta entera */
+  proxima: CuotaCalendario | null;
+  faltaProxima: number;
+  /** Qué conviene pagar ahora: ponerse al día, o completar la próxima cuota */
+  sugerencia: { tipo: "ponerse_al_dia" | "proxima_cuota"; montoUsd: number } | null;
+}
+
+function sumarMeses(mes: string, meses: number): string {
+  const [y, m] = mes.split("-").map(Number);
+  const total = y * 12 + (m - 1) + meses;
+  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, "0")}`;
+}
+
 /**
- * Meses que faltan si de acá en adelante devuelven el capital fijo del plan
- * (u$d 147,50) cada mes. Es una estimación para mostrar, no una obligación.
+ * Calendario de cuotas de referencia contra lo devuelto.
+ *
+ * No cambia ningún número de la deuda: reparte lo devuelto en las cuotas del
+ * plan, en orden, para mostrar hasta dónde están cubiertos. La cuota de cada
+ * mes se puede pagar durante ese mes; queda atrasada recién cuando el mes
+ * terminó sin cubrirla. Funciona para cualquier cantidad de cuotas.
+ *
+ * @param fechaInicio - "YYYY-MM-DD": el mes de la cuota 1
+ * @param totalDevuelto - USD devueltos (suma de los pagos)
+ * @param hoy - "YYYY-MM-DD"
  */
-export function mesesRestantesEstimados(saldoCapital: number, capitalFijo: number): number {
-  if (saldoCapital <= 0 || capitalFijo <= 0) return 0;
-  return Math.ceil(redondearUsd(saldoCapital / capitalFijo) - 0.0001);
+export function calcularCalendarioCuotas(
+  plan: PlanRepago,
+  fechaInicio: string,
+  totalDevuelto: number,
+  hoy: string
+): CalendarioCuotas {
+  const n = Math.max(1, plan.cantidadCuotas);
+  const deudaCent = Math.round(plan.deudaUsd * 100);
+  const baseCent = Math.floor(deudaCent / n);
+  const mesInicio = fechaInicio.slice(0, 7);
+  const mesActual = hoy.slice(0, 7);
+
+  let disponibleCent = Math.round(Math.max(0, totalDevuelto) * 100);
+  let vencidoCent = 0;
+  let conEsteMesCent = 0;
+
+  const cuotas: CuotaCalendario[] = Array.from({ length: n }, (_, i) => {
+    // La última cuota absorbe los centavos del redondeo: la suma da la deuda exacta.
+    const montoCent = i === n - 1 ? deudaCent - baseCent * (n - 1) : baseCent;
+    const cubiertoCent = Math.min(montoCent, disponibleCent);
+    disponibleCent -= cubiertoCent;
+
+    const mes = sumarMeses(mesInicio, i);
+    if (mes < mesActual) vencidoCent += montoCent;
+    if (mes <= mesActual) conEsteMesCent += montoCent;
+
+    const estado: EstadoCuota =
+      cubiertoCent >= montoCent
+        ? "pagada"
+        : mes < mesActual
+          ? "atrasada"
+          : cubiertoCent > 0
+            ? "parcial"
+            : "pendiente";
+
+    return {
+      numero: i + 1,
+      mes,
+      monto: montoCent / 100,
+      cubierto: cubiertoCent / 100,
+      estado,
+      esMesActual: mes === mesActual,
+    };
+  });
+
+  const devueltoCent = Math.round(Math.max(0, totalDevuelto) * 100);
+  const atrasoCent = Math.max(0, vencidoCent - devueltoCent);
+  const situacion: SituacionRepago =
+    devueltoCent >= deudaCent
+      ? "devuelto"
+      : atrasoCent > 0
+        ? "atrasado"
+        : devueltoCent > conEsteMesCent
+          ? "adelantado"
+          : "al_dia";
+
+  const pagadas = cuotas.filter((cuota) => cuota.estado === "pagada");
+  const proxima = cuotas.find((cuota) => cuota.estado !== "pagada") ?? null;
+  const faltaProxima = proxima ? redondearUsd(proxima.monto - proxima.cubierto) : 0;
+
+  return {
+    cuotas,
+    situacion,
+    atrasoUsd: atrasoCent / 100,
+    ultimaPagada: pagadas.at(-1) ?? null,
+    proxima,
+    faltaProxima,
+    sugerencia:
+      situacion === "devuelto"
+        ? null
+        : situacion === "atrasado"
+          ? { tipo: "ponerse_al_dia", montoUsd: atrasoCent / 100 }
+          : { tipo: "proxima_cuota", montoUsd: faltaProxima },
+  };
 }
 
 /**

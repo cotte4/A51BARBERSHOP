@@ -21,6 +21,8 @@ interface RegistrarPagoFormProps {
   pagos: PagoRepago[];
   /** "YYYY-MM-DD" de hoy en Argentina */
   hoy: string;
+  /** Qué conviene pagar ahora (completar la próxima cuota o ponerse al día) */
+  sugerencia: { label: string; montoUsd: number } | null;
   /** TC del sistema (punto medio del blue). null si DolarAPI no respondió. */
   tcSistema: number | null;
   /** TC configurado en el negocio — solo como placeholder del input. */
@@ -48,6 +50,7 @@ export default function RegistrarPagoForm({
   plan,
   pagos,
   hoy,
+  sugerencia,
   tcSistema,
   tcReferencia,
 }: RegistrarPagoFormProps) {
@@ -87,17 +90,22 @@ export default function RegistrarPagoForm({
 
   const elegirMoneda = (m: Moneda) => {
     setMoneda(m);
-    setMonto(tc > 0 || m === "USD" ? redondear(enMoneda(estadoActual.cuotaSugerida, m), m) : "");
+    const montoInicial = sugerencia?.montoUsd ?? 0;
+    setMonto(montoInicial > 0 && (tc > 0 || m === "USD") ? redondear(enMoneda(montoInicial, m), m) : "");
     setStep(2);
   };
 
   const sugerencias = moneda
     ? [
-        {
-          id: "sugerida",
-          label: `Cuota sugerida (${formatEnMoneda(enMoneda(estadoActual.cuotaSugerida, moneda), moneda)})`,
-          value: enMoneda(estadoActual.cuotaSugerida, moneda),
-        },
+        ...(sugerencia && sugerencia.montoUsd > 0 && sugerencia.montoUsd < faltaAntes - 0.005
+          ? [
+              {
+                id: "sugerida",
+                label: `${sugerencia.label} (${formatEnMoneda(enMoneda(sugerencia.montoUsd, moneda), moneda)})`,
+                value: enMoneda(sugerencia.montoUsd, moneda) as number | null,
+              },
+            ]
+          : []),
         {
           id: "total",
           label: `Todo lo que falta (${formatEnMoneda(enMoneda(faltaAntes, moneda), moneda)})`,
