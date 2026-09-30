@@ -193,15 +193,15 @@ export default async function RepagoPage() {
           <h2 className="font-display text-xl font-semibold text-white">Interés</h2>
           <dl className="mt-3 text-base tabular-nums">
             <div className="flex items-baseline justify-between gap-4 py-1.5">
-              <dt className="text-zinc-300">Les prestamos</dt>
+              <dt className="text-zinc-300">El préstamo</dt>
               <dd className="font-semibold text-white">{formatUSD(plan.deudaUsd)}</dd>
             </div>
             <div className="flex items-baseline justify-between gap-4 py-1.5">
-              <dt className="text-zinc-300">Interés, se paga al final</dt>
+              <dt className="text-zinc-300">Los intereses</dt>
               <dd className="font-display text-2xl font-bold text-white">{formatUSD(estado.topeInteres)}</dd>
             </div>
           </dl>
-          <p className="mt-2 text-sm text-zinc-300">Si terminan de devolver antes, es menos.</p>
+          <p className="mt-2 text-sm text-zinc-300">Los intereses se pagan al final. Si terminan de devolver antes, son menos.</p>
         </section>
 
         {/* Historial: consulta */}
