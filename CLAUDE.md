@@ -62,8 +62,15 @@ The app is live on Vercel. Core is mature. **Barber-side launch readiness comple
 - Pantalla diseñada con la vara de `~/CasamodaProject/.claude/skills/revisar-pantalla` (una tarea, una acción, sin copias repetidas).
 - Tests: `src/tests/integration/repago-capital-primero.test.ts` (los 3 pagos reales de prod).
 
-### Cierre de caja — wizard con gate real
-`/caja/cierre` is a 2-step wizard: (1) count cash — mandatory, persisted in `cierres_caja.efectivo_contado`; (2) confirm with double-confirmation. A difference vs expected cash shows an amber warning but doesn't block.
+### Caja y cierre — una pantalla cada uno (2026-09-30)
+Pinky nunca usó la app porque vio Caja "muy complicada" (en prod hay 28 atenciones, la última de mayo 2026, y 1 solo cierre). Se rehízo con el criterio de repago: un número, una acción, la cuenta a la vista.
+- **`/caja`**: "Hoy entraron $X" (bruto de servicios + productos), botón **Cobrar**, link "Vender producto", la lista "Lo de hoy" que **suma exactamente el total**, y "Cerrar caja" al final (solo admin). Misma pantalla para admin y barbero; el barbero ve solo sus servicios ("Hoy cobraste"). Desglose por barbero solo si trabajó más de uno. Tocar una fila muestra Editar/Anular.
+- La lista y el total salen de `armarCajaDelDia()` en `src/lib/caja-dia.ts` (pura, testeada en `caja-dia.test.ts`): el producto vendido dentro de una atención suma en esa fila; anuladas se listan tachadas y no suman; las reversiones no son filas.
+- **Cada cosa en un solo lugar**: Cierre salió de la barra de abajo (es el último paso de Caja); el gasto vive solo en la barra (sin flotantes en Caja); cobrar es un solo formulario (`QuickCheckoutPanel`) con tres puertas: Hoy, Caja (`/caja/nueva`) y la ficha del cliente.
+- **Default del cobro**: servicio y medio más usados en 30 días; si no hay cobros recientes, los más usados del historial (antes caía en el primer servicio de la tabla, Tintura, el más caro).
+- **`/caja/cierre`**: una pantalla (`_CierreForm.tsx`). "En efectivo debería haber $X" (efectivo cobrado − gastos rápidos), "¿Cuánto contaste?", la diferencia en una frase, Cerrar caja con doble toque. El conteo sigue siendo obligatorio y se guarda en `cierres_caja.efectivo_contado`; la diferencia avisa (ámbar si pasa de $500) pero no bloquea.
+- No se muestran en Caja: neto, comisiones de medios, margen. Eso es de Negocio / P&L.
+- Pendiente: Liquidaciones / Mi resultado y Negocio / Finanzas / P&L con el mismo criterio; importar los meses históricos desde la planilla de Was.
 
 ### Known bugs / debt
 - **Music automation not closed** — `clienteLlegoAction()` fires events to pantalla and `musicEvents` but does NOT trigger real Spotify playback. Treat music as manually supervised for now. See `planning/features/music-auto-jam-completion.md`.
@@ -248,7 +255,7 @@ import MyComponent from "@/components/feature/MyComponent";
 - Access validation for Server Actions: use `src/lib/admin-action.ts` (admin check) and `src/lib/caja-access.ts` (barber-owns-entry check) — never skip these
 
 ### Navigation
-- `src/components/navigation/RoleBottomNav.tsx` is the **only** bottom nav. It renders 5 tabs para barbero and 7 para admin (4 operación + 3 gestión).
+- `src/components/navigation/RoleBottomNav.tsx` is the **only** bottom nav. It renders 5 tabs para barbero and 7 para admin (4 operación: Hoy, Caja, Clientes, Gasto + 3 gestión). Cierre no es un tab: se entra desde Caja.
 - `AdminBottomNav` was deleted. Never recreate it.
 - `/negocio` is the admin hub — all owner-only tools live there, not in the bottom nav directly.
 
