@@ -14,6 +14,7 @@ import {
   confirmarTurnoAction,
   rechazarTurnoAction,
 } from "@/app/(admin)/turnos/actions";
+import { getDefaultsCobroRecientes } from "@/lib/dashboard-queries";
 import { getTurnosActorContext } from "@/lib/turnos-access";
 import { getTurnosVisibleList } from "@/lib/turnos";
 import HoyDashboard from "./_HoyDashboard";
@@ -153,6 +154,8 @@ export default async function HoyPage() {
 
   const fechaLabel = formatFechaHoyLabel(fechaHoy);
 
+  const defaultsCobro = await getDefaultsCobroRecientes();
+
   return (
     <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-6">
       <HoyDashboard
@@ -174,6 +177,8 @@ export default async function HoyPage() {
           comisionPorcentaje: m.comisionPorcentaje,
         }))}
         registrarAction={registrarAtencionExpressAction}
+        defaultServicioId={defaultsCobro.servicioId ?? undefined}
+        defaultMedioPagoId={defaultsCobro.medioPagoId ?? undefined}
         marcianosTurnos={marcianosTurnosHoy.map((m) => ({
           turnoId: m.turnoId,
           horaInicio: m.horaInicio,

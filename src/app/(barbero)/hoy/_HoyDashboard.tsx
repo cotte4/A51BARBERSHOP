@@ -28,6 +28,8 @@ type Props = {
     prevState: AtencionRapidaState,
     formData: FormData
   ) => Promise<AtencionRapidaState>;
+  defaultServicioId?: string;
+  defaultMedioPagoId?: string;
   marcianosTurnos: {
     turnoId: string;
     horaInicio: string;
@@ -187,6 +189,8 @@ export default function HoyDashboard({
   servicios,
   mediosPago,
   registrarAction,
+  defaultServicioId,
+  defaultMedioPagoId,
   marcianosTurnos,
 }: Props) {
   const router = useRouter();
@@ -303,6 +307,8 @@ export default function HoyDashboard({
           mediosPago={mediosPago}
           action={registrarAction}
           returnTo="/hoy"
+          defaultServicioId={defaultServicioId}
+          defaultMedioPagoId={defaultMedioPagoId}
         />
       </FullScreenOverlay>
 

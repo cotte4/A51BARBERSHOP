@@ -835,27 +835,43 @@ function getFechaHace30Dias(): string {
   return fecha.toISOString().slice(0, 10);
 }
 
-export async function getDefaultsCobroRecientes(): Promise<DefaultsCobroRecientes> {
-  const desde = getFechaHace30Dias();
+async function getMasUsados(desde: string | null) {
+  const filtro = desde
+    ? and(gte(atenciones.fecha, desde), eq(atenciones.anulado, false))
+    : eq(atenciones.anulado, false);
 
-  const [servicioTop] = await db
-    .select({ servicioId: atenciones.servicioId, total: count() })
-    .from(atenciones)
-    .where(and(gte(atenciones.fecha, desde), eq(atenciones.anulado, false)))
-    .groupBy(atenciones.servicioId)
-    .orderBy(desc(count()))
-    .limit(1);
-
-  const [medioPagoTop] = await db
-    .select({ medioPagoId: atenciones.medioPagoId, total: count() })
-    .from(atenciones)
-    .where(and(gte(atenciones.fecha, desde), eq(atenciones.anulado, false)))
-    .groupBy(atenciones.medioPagoId)
-    .orderBy(desc(count()))
-    .limit(1);
+  const [[servicioTop], [medioPagoTop]] = await Promise.all([
+    db
+      .select({ servicioId: atenciones.servicioId, total: count() })
+      .from(atenciones)
+      .where(filtro)
+      .groupBy(atenciones.servicioId)
+      .orderBy(desc(count()))
+      .limit(1),
+    db
+      .select({ medioPagoId: atenciones.medioPagoId, total: count() })
+      .from(atenciones)
+      .where(filtro)
+      .groupBy(atenciones.medioPagoId)
+      .orderBy(desc(count()))
+      .limit(1),
+  ]);
 
   return {
     servicioId: servicioTop?.servicioId ?? null,
     medioPagoId: medioPagoTop?.medioPagoId ?? null,
+  };
+}
+
+export async function getDefaultsCobroRecientes(): Promise<DefaultsCobroRecientes> {
+  const recientes = await getMasUsados(getFechaHace30Dias());
+  if (recientes.servicioId && recientes.medioPagoId) return recientes;
+
+  // Sin cobros en el último mes el cobro arrancaba con el primer servicio de la tabla
+  // (podía ser el más caro). Se usa el historial completo antes que un orden arbitrario.
+  const historico = await getMasUsados(null);
+  return {
+    servicioId: recientes.servicioId ?? historico.servicioId,
+    medioPagoId: recientes.medioPagoId ?? historico.medioPagoId,
   };
 }

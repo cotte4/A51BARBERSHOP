@@ -118,16 +118,6 @@ function ScissorsIcon() {
   );
 }
 
-function ClipboardCheckIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
-      <path d="M9 5H7a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2Z" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M9 13l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function CashIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
@@ -215,23 +205,14 @@ const ADMIN_NAV_LEFT: NavItem[] = [
     href: "/caja",
     label: "Caja",
     icon: <ScissorsIcon />,
-    isActive: (pathname) =>
-      pathname === "/caja" ||
-      pathname === "/caja/nueva" ||
-      pathname === "/caja/vender" ||
-      (pathname.startsWith("/caja/") && !pathname.startsWith("/caja/cierre")),
+    // El cierre es el último paso de Caja, no un lugar aparte
+    isActive: (pathname) => pathname === "/caja" || pathname.startsWith("/caja/"),
   },
   {
     href: "/clientes",
     label: "Clientes",
     icon: <UsersIcon />,
     isActive: (pathname) => pathname.startsWith("/clientes"),
-  },
-  {
-    href: "/caja/cierre",
-    label: "Cierre",
-    icon: <ClipboardCheckIcon />,
-    isActive: (pathname) => pathname.startsWith("/caja/cierre"),
   },
   {
     href: "/gastos-rapidos",
