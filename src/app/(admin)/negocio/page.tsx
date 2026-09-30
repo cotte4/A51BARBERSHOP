@@ -133,9 +133,9 @@ export default async function NegocioPage() {
     .sort((a, b) => (a.stockActual ?? 0) - (b.stockActual ?? 0));
 
   const proximaCuotaUsd =
-    repago && !repago.estado.pagadoCompleto ? repago.estado.cuotaSugerida : 0;
+    repago && !repago.estado.capitalDevuelto ? repago.estado.cuotaSugerida : 0;
   const saldoPendienteUsd =
-    repago && !repago.estado.pagadoCompleto ? repago.estado.saldoCapital : 0;
+    repago && !repago.estado.capitalDevuelto ? repago.estado.saldoCapital : 0;
 
   return (
     <main className="app-shell min-h-screen px-4 py-5 pb-28">

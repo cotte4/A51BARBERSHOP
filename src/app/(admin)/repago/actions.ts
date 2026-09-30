@@ -2,11 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { getAdminActorContext } from "@/lib/dal/authz";
+import { formatUSD } from "@/lib/amortizacion";
 import { registrarCuotaRepagoMemas } from "@/lib/repago-service";
 
 export type RegistrarCuotaState = {
   error?: string;
   success?: boolean;
+  /** Qué quedó registrado y cuánto falta, para mostrar tras guardar */
+  resumen?: string;
 };
 
 export async function registrarCuota(
@@ -43,6 +46,7 @@ export async function registrarCuota(
     return { error: "Elegí la fecha en que se recibió el pago." };
   }
 
+  let resumen: string;
   try {
     const result = await registrarCuotaRepagoMemas({
       montoIngresado: monto,
@@ -53,6 +57,12 @@ export async function registrarCuota(
     });
 
     if (!result.ok) return { error: result.error };
+    const [y, m, d] = fechaPago.split("-");
+    resumen =
+      `Pago de ${formatUSD(result.montoUsd)} del ${d}/${m}/${y} registrado. ` +
+      (result.pagadoCompleto
+        ? "¡Devolvieron todo el préstamo!"
+        : `Faltan devolver ${formatUSD(result.nuevoSaldoUsd)}.`);
   } catch (error) {
     console.error("Error registrando cuota Memas:", error);
     return { error: "No se pudo registrar el pago. Intenta de nuevo." };
@@ -61,5 +71,5 @@ export async function registrarCuota(
   revalidatePath("/repago");
   revalidatePath("/negocio");
   revalidatePath("/dashboard");
-  return { success: true };
+  return { success: true, resumen };
 }

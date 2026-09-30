@@ -99,7 +99,7 @@ export type RegistrarCuotaRepagoInput = {
 };
 
 export type RegistrarCuotaRepagoResult =
-  | { ok: true; pagadoCompleto: boolean; nuevoSaldoUsd: number }
+  | { ok: true; pagadoCompleto: boolean; nuevoSaldoUsd: number; montoUsd: number }
   | {
       ok: false;
       error: string;
@@ -108,11 +108,10 @@ export type RegistrarCuotaRepagoResult =
 /**
  * Registra un pago sobre el repago Memas.
  *
- * Modelo: interés por tiempo real desde el primer pago, con tope en el
- * interés del plan de referencia (ver `calcularEstadoRepago`). Después de
- * insertar, se recalcula TODO el historial y se reescribe el reparto
- * capital/interés de cada fila y el cache del repago, para que lo guardado
- * siempre coincida con el cálculo vigente.
+ * Modelo: primero el capital (todo el pago baja la deuda) y el interés se
+ * acumula aparte (ver `calcularEstadoRepago`). Después de insertar, se
+ * recalcula TODO el historial y se reescriben las filas y el cache del
+ * repago, para que lo guardado siempre coincida con el cálculo vigente.
  */
 export async function registrarCuotaRepagoMemas(
   input: RegistrarCuotaRepagoInput
@@ -158,13 +157,13 @@ export async function registrarCuotaRepagoMemas(
     }
 
     const antes = calcularEstadoRepago(plan, pagosPrevios, input.fechaPago);
-    if (antes.pagadoCompleto) {
-      return { ok: false, error: "La deuda ya esta cancelada." };
+    if (antes.capitalDevuelto) {
+      return { ok: false, error: "Ya devolvieron todo el préstamo." };
     }
-    if (montoPagadoUsd > antes.totalParaCancelar + 0.005) {
+    if (montoPagadoUsd > antes.saldoCapital + 0.005) {
       return {
         ok: false,
-        error: `El pago (${formatUSD(montoPagadoUsd)}) supera lo que falta. Para cancelar todo alcanza con ${formatUSD(antes.totalParaCancelar)}.`,
+        error: `El pago (${formatUSD(montoPagadoUsd)}) supera lo que falta devolver (${formatUSD(antes.saldoCapital)}).`,
       };
     }
 
@@ -184,15 +183,39 @@ export async function registrarCuotaRepagoMemas(
 
     const estado = await recalcularYPersistir(tx, repago.id, plan, [...filasPrevias, nuevaFila]);
 
-    return { ok: true, pagadoCompleto: estado.pagadoCompleto, nuevoSaldoUsd: estado.saldoCapital };
+    return {
+      ok: true,
+      pagadoCompleto: estado.capitalDevuelto,
+      nuevoSaldoUsd: estado.saldoCapital,
+      montoUsd: montoPagadoUsd,
+    };
+  });
+}
+
+/**
+ * Vuelve a calcular y guardar todo el historial con el modelo vigente, sin
+ * agregar pagos. Se usa cuando cambia la regla de cálculo.
+ */
+export async function recalcularRepagoMemas(): Promise<EstadoRepago | null> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('repago-memas'))`);
+    const [repago] = await tx.select().from(repagoMemas).limit(1);
+    if (!repago) return null;
+    const filas = await tx
+      .select()
+      .from(repagoMemasCuotas)
+      .where(eq(repagoMemasCuotas.repagoId, repago.id));
+    return recalcularYPersistir(tx, repago.id, planDesdeRepago(repago), filas);
   });
 }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
- * Reescribe el reparto capital/interés de cada fila y el cache del repago con
- * el cálculo vigente. `numero_cuota` pasa a ser el número de pago (1, 2, 3…).
+ * Reescribe cada fila y el cache del repago con el cálculo vigente.
+ * `capital_pagado` = lo que bajó la deuda; `interes_pagado` = 0 (el interés
+ * se acumula aparte, no se cobra de los pagos). `numero_cuota` = número de
+ * pago (1, 2, 3…). `pagado_completo` = capital devuelto.
  */
 async function recalcularYPersistir(
   tx: Tx,
@@ -211,7 +234,7 @@ async function recalcularYPersistir(
       .set({
         numeroCuota: i + 1,
         capitalPagado: aplicacion.capital.toFixed(2),
-        interesPagado: aplicacion.interes.toFixed(2),
+        interesPagado: "0.00",
       })
       .where(eq(repagoMemasCuotas.id, fila.id));
   }
@@ -221,7 +244,7 @@ async function recalcularYPersistir(
     .set({
       cuotasPagadas: estado.cuotasCubiertas,
       saldoPendiente: estado.saldoCapital.toFixed(2),
-      pagadoCompleto: estado.pagadoCompleto,
+      pagadoCompleto: estado.capitalDevuelto,
     })
     .where(eq(repagoMemas.id, repagoId));
 

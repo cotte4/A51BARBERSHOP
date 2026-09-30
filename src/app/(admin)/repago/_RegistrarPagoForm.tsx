@@ -17,7 +17,7 @@ interface RegistrarPagoFormProps {
     formData: FormData
   ) => Promise<RegistrarCuotaState>;
   plan: PlanRepago;
-  /** Pagos ya registrados (USD) — para calcular el interés a la fecha elegida */
+  /** Pagos ya registrados (USD) — para calcular cómo queda la deuda */
   pagos: PagoRepago[];
   /** "YYYY-MM-DD" de hoy en Argentina */
   hoy: string;
@@ -74,20 +74,12 @@ export default function RegistrarPagoForm({
     fechaPago <= hoy &&
     (ultimaFecha === null || fechaPago >= ultimaFecha);
 
-  // Estado de la deuda al día del pago (interés corrido hasta esa fecha)
-  const estadoAlDia = useMemo(
-    () => calcularEstadoRepago(plan, pagos, fechaValida ? fechaPago : hoy),
-    [plan, pagos, fechaPago, fechaValida, hoy]
-  );
+  // Cómo está la deuda hoy y cómo quedaría con este pago
+  const estadoActual = useMemo(() => calcularEstadoRepago(plan, pagos, hoy), [plan, pagos, hoy]);
+  const faltaAntes = estadoActual.saldoCapital;
+  const faltaDespues = Math.max(0, Math.round((faltaAntes - montoUsd) * 100) / 100);
 
-  // Cómo quedaría si se registra este pago
-  const preview = useMemo(() => {
-    if (!fechaValida || montoUsd <= 0) return null;
-    const estado = calcularEstadoRepago(plan, [...pagos, { fecha: fechaPago, montoUsd }], fechaPago);
-    return { estado, aplicacion: estado.aplicaciones.at(-1) ?? null };
-  }, [plan, pagos, fechaPago, fechaValida, montoUsd]);
-
-  const superaLoQueFalta = montoUsd > estadoAlDia.totalParaCancelar + 0.005;
+  const superaLoQueFalta = montoUsd > faltaAntes + 0.005;
 
   const enMoneda = (usd: number, m: Moneda) => (m === "ARS" ? usd * tc : usd);
   const redondear = (value: number, m: Moneda) =>
@@ -95,7 +87,7 @@ export default function RegistrarPagoForm({
 
   const elegirMoneda = (m: Moneda) => {
     setMoneda(m);
-    setMonto(tc > 0 || m === "USD" ? redondear(enMoneda(estadoAlDia.cuotaSugerida, m), m) : "");
+    setMonto(tc > 0 || m === "USD" ? redondear(enMoneda(estadoActual.cuotaSugerida, m), m) : "");
     setStep(2);
   };
 
@@ -103,13 +95,13 @@ export default function RegistrarPagoForm({
     ? [
         {
           id: "sugerida",
-          label: `Cuota sugerida (${formatEnMoneda(enMoneda(estadoAlDia.cuotaSugerida, moneda), moneda)})`,
-          value: enMoneda(estadoAlDia.cuotaSugerida, moneda),
+          label: `Cuota sugerida (${formatEnMoneda(enMoneda(estadoActual.cuotaSugerida, moneda), moneda)})`,
+          value: enMoneda(estadoActual.cuotaSugerida, moneda),
         },
         {
           id: "total",
-          label: `Cancelar todo (${formatEnMoneda(enMoneda(estadoAlDia.totalParaCancelar, moneda), moneda)})`,
-          value: enMoneda(estadoAlDia.totalParaCancelar, moneda),
+          label: `Todo lo que falta (${formatEnMoneda(enMoneda(faltaAntes, moneda), moneda)})`,
+          value: enMoneda(faltaAntes, moneda),
         },
         { id: "other", label: "Otro monto", value: null as number | null },
       ]
@@ -146,7 +138,7 @@ export default function RegistrarPagoForm({
       ) : null}
       {state.success ? (
         <div className="rounded-[24px] border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-          ¡Listo! Pago registrado.
+          ✓ {state.resumen ?? "Pago registrado."}
         </div>
       ) : null}
 
@@ -166,10 +158,10 @@ export default function RegistrarPagoForm({
             <button
               type="button"
               onClick={() => elegirMoneda("USD")}
-              className="flex min-h-[96px] flex-col items-center justify-center gap-1 rounded-[24px] border border-[#8cff59]/40 bg-[#8cff59]/10 transition hover:border-[#8cff59]/70 hover:bg-[#8cff59]/15"
+              className="flex min-h-[96px] flex-col items-center justify-center gap-1 rounded-[24px] border border-zinc-700 bg-zinc-900 transition hover:border-zinc-500 hover:bg-zinc-800"
             >
-              <span className="text-2xl font-bold text-[#8cff59]">u$d</span>
-              <span className="text-sm font-semibold text-[#b9ff96]">Dólares</span>
+              <span className="text-2xl font-bold text-white">u$d</span>
+              <span className="text-sm font-semibold text-zinc-200">Dólares</span>
             </button>
           </div>
         </div>
@@ -208,7 +200,7 @@ export default function RegistrarPagoForm({
                 </p>
               ) : (
                 <p className="mt-2 text-xs text-zinc-500">
-                  El interés se calcula hasta este día.
+                  Queda anotado con esta fecha en el historial.
                 </p>
               )}
             </div>
@@ -291,12 +283,11 @@ export default function RegistrarPagoForm({
             </div>
             {superaLoQueFalta ? (
               <p className="mt-2 text-xs text-red-300">
-                Es más de lo que falta. Para cancelar todo al {formatFechaCorta(fechaPago)} alcanza con{" "}
-                {formatEnMoneda(enMoneda(estadoAlDia.totalParaCancelar, moneda), moneda)}.
+                ! Es más de lo que falta devolver ({formatEnMoneda(enMoneda(faltaAntes, moneda), moneda)}).
               </p>
             ) : (
               <p className="mt-2 text-xs text-zinc-500">
-                Cualquier monto sirve: primero cubre el interés corrido y el resto baja la deuda.
+                Cualquier monto sirve: todo lo que paguen baja la deuda.
               </p>
             )}
           </div>
@@ -319,7 +310,7 @@ export default function RegistrarPagoForm({
       ) : null}
 
       {/* PASO 3 — Confirmación */}
-      {step === 3 && moneda && preview?.aplicacion ? (
+      {step === 3 && moneda ? (
         <div className="space-y-4">
           <StepTitle n={3} title="Confirmá el pago" />
 
@@ -327,20 +318,22 @@ export default function RegistrarPagoForm({
             <p className="text-sm leading-6 text-zinc-200">
               Pagan{" "}
               <strong className="font-semibold text-white">{formatEnMoneda(montoNum, moneda)}</strong>
-              {moneda === "ARS" ? <> al dólar {formatARS(tc)}</> : null} ={" "}
-              <strong className="font-semibold text-[#8cff59]">{formatUSD(montoUsd)}</strong>.
+              {moneda === "ARS" ? (
+                <>
+                  {" "}
+                  al dólar {formatARS(tc)} ={" "}
+                  <strong className="font-semibold text-white">{formatUSD(montoUsd)}</strong>
+                </>
+              ) : null}{" "}
+              el {formatFechaCorta(fechaPago)}.
             </p>
             <div className="mt-4 space-y-2 text-sm">
+              <BreakdownRow label="Falta devolver hoy" value={formatUSD(faltaAntes)} />
+              <BreakdownRow label="Este pago" value={`− ${formatUSD(montoUsd)}`} />
               <BreakdownRow
-                label={`Interés de ${preview.aplicacion.dias} días`}
-                value={formatUSD(preview.aplicacion.interes)}
-              />
-              <BreakdownRow label="Baja la deuda" value={formatUSD(preview.aplicacion.capital)} strong />
-              <BreakdownRow
-                label="Deuda después del pago"
-                value={
-                  preview.estado.pagadoCompleto ? "¡Saldada!" : formatUSD(preview.estado.saldoCapital)
-                }
+                label="Falta después del pago"
+                value={faltaDespues <= 0 ? "¡Nada! Devolvieron todo" : formatUSD(faltaDespues)}
+                strong
               />
             </div>
             {moneda === "USD" && tc > 0 ? (
