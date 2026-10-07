@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { QRCodeSVG } from "qrcode.react";
 import type { DatosPantalla, TableroPublico } from "@/lib/torneo-juego";
 
 gsap.registerPlugin(useGSAP);
@@ -402,6 +403,24 @@ function EscenaReveal({
   );
 }
 
+/** QR chico en la esquina: los jugadores proponen canciones para el parlante desde el celular. */
+function QrJukebox() {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => setUrl(`${window.location.origin}/jukebox`), []);
+  if (!url) return null;
+  return (
+    <div className="pointer-events-none absolute bottom-6 right-6 z-20 flex items-center gap-4 border border-[#8cff59]/40 bg-black/80 px-4 py-3">
+      <div className="text-right">
+        <p className="torneo-hud text-[11px] text-[#8cff59]">Poné tu tema</p>
+        <p className="mt-1 text-sm text-[#cfd8cc]">Escaneá y sumá tu canción</p>
+      </div>
+      <div className="bg-white p-1.5">
+        <QRCodeSVG value={url} size={96} />
+      </div>
+    </div>
+  );
+}
+
 // ————————————————————————————
 // Pantalla
 // ————————————————————————————
@@ -471,6 +490,8 @@ export function PantallaVista({ datos }: { datos: DatosPantalla }) {
         style={{ width: ANCHO, height: ALTO, transform: `scale(${escala})` }}
       >
         {vista}
+        {/* Solo donde hay lugar: la grilla del sorteo y el cuadro ocupan los 1080 px. */}
+        {!escena && (!tablero || tablero.torneo.estado === "finalizado") && <QrJukebox />}
         {escena && <EscenaReveal escena={escena} jugadores={jugadores} alTerminar={terminar} />}
       </div>
       <button

@@ -22,6 +22,12 @@ export default function InscripcionForm() {
               <p className="mt-4 text-base text-[#cfd8cc]">
                 Tu lugar se confirma cuando pagues la cuota en el local.
               </p>
+              <a
+                href="/jukebox"
+                className="torneo-hud mt-6 inline-block border border-[#8cff59]/50 px-4 py-3 text-xs text-[#8cff59] transition hover:bg-[#8cff59]/10"
+              >
+                Proponé una canción
+              </a>
             </div>
           </div>
         </div>
