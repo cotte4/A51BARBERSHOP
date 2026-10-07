@@ -24,6 +24,7 @@ import {
 } from "./_lib/page-utils";
 
 const utilityLinks = [
+  { href: "/torneo-admin", label: "Torneo FIFA" },
   { href: "/mi-resultado", label: "Mi resultado" },
   { href: "/dashboard/pl", label: "El mes completo" },
   { href: "/finanzas", label: "Costos fijos y capital" },

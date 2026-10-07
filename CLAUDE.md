@@ -84,10 +84,12 @@ Pinky nunca usó la app porque vio Caja "muy complicada" (en prod hay 28 atencio
 ### Torneo FIFA y portal cerrado (desde 2026-10-07)
 - Plan: `planning/features/torneo-fifa-umbrella.md` (7 slices). Torneo EA FC presencial: inscripción pública sin cuenta en `/torneo`, panel de Pinky en `/torneo-admin` (botón "Pagó", cupo 16 por orden de pago), sorteo y cuadro en `src/lib/torneo.ts` (puro, testeado) y `src/lib/torneo-juego.ts`.
 - **El portal de clientes (`/marciano/*`, `/ar-lab`) está cerrado por defecto**: `src/lib/launch-mode.ts`, se abre con `PORTAL_CLIENTE_ABIERTO=true`. La landing muestra el torneo y tarjetas "Próximamente" inertes.
+- **También cerrados con el mismo flag**: `/reservar` y sus APIs (`/api/turnos/reservar`, `/api/turnos/disponibles`, `/api/reservar/access`). La landing pone el torneo primero y el resto como carteles "Próximamente".
+- **Anti-spam de la inscripción**: honeypot + 20 intentos/10 min por IP (memoria) + tope de 40 inscripciones/10 min en la base. Test de humo: `npm run test:torneo:smoke` (no correr con un torneo real creado).
 - **La música sí está implementada**: `clienteLlegoAction` ya dispara la reproducción (el punto de "Known bugs" sobre música quedó viejo). El jukebox público de YouTube solo suena con un dispositivo de staff con `/musica` abierto y "Activar Jukebox" prendido.
 
 ### Known bugs / debt
-- **Music automation not closed** — `clienteLlegoAction()` fires events to pantalla and `musicEvents` but does NOT trigger real Spotify playback. Treat music as manually supervised for now. See `planning/features/music-auto-jam-completion.md`.
+- **Music**: `clienteLlegoAction()` ya dispara la reproducción (ver "Torneo FIFA y portal cerrado"). El jukebox público (`/jukebox`) solo suena con un dispositivo de staff con `/musica` abierto. Detalle: `planning/features/music-auto-jam-completion.md`.
 - Stock ledger is append-only since 2026-07: anulaciones/ediciones insert compensating movements (never DELETE); sales aggregates must sum `-cantidad`, never `Math.abs`. Standalone product sales are anulable by admin from /caja (reversión with `referencia_type = 'stock_movimiento'`).
 
 ### UX maturity by surface
@@ -98,7 +100,8 @@ Pinky nunca usó la app porque vio Caja "muy complicada" (en prod hay 28 atencio
 - Repago Memas: **mature** (capital primero, interés aparte con tope, tested)
 - Reserva pública: **functional, needs UX pass** (encoding bug fixed in 425ecc2)
 - Pantalla pública: **functional**
-- Música: **functional but automation incomplete**
+- Música: **functional** (jukebox público auditado para uso externo, 2026-10-07)
+- Torneo FIFA (`/torneo`, `/torneo-admin`, `/torneo/pantalla`): **built, pending rehearsal en el local**
 
 ### Functional gaps (not blocking, but relevant for designer)
 - No dedicated reprogramación de turno flow
