@@ -1,0 +1,366 @@
+.torneo-theme {
+  --t-bg: #07090a;
+  --t-green: #8cff59;
+  --t-line: rgb(140 255 89 / 0.28);
+  --t-red: #ff3b4e;
+  --t-text: #f4f7f2;
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgb(140 255 89 / 0.07), transparent 60%),
+    var(--t-bg);
+  color: var(--t-text);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+.torneo-theme *:focus-visible {
+  outline: 2px solid var(--t-green);
+  outline-offset: 3px;
+}
+.torneo-content {
+  position: relative;
+  z-index: 2;
+}
+.torneo-hud {
+  font-family: var(--font-hud), monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+.torneo-titulo {
+  font-family: var(--font-titulo), sans-serif;
+  text-transform: uppercase;
+  letter-spacing: -0.005em;
+  line-height: 0.92;
+}
+
+.torneo-pitch {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.06;
+  pointer-events: none;
+}
+.torneo-pitch svg {
+  width: 100%;
+  height: 100%;
+}
+.torneo-scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0.5;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0.025) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+/* Rayo tractor */
+.torneo-hero {
+  position: relative;
+}
+.torneo-beam {
+  position: absolute;
+  left: 50%;
+  top: 40px;
+  width: min(620px, 140%);
+  height: 440px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  z-index: 0;
+  background:
+    radial-gradient(60% 30% at 50% 100%, rgb(140 255 89 / 0.28), transparent 70%),
+    linear-gradient(to bottom, rgb(140 255 89 / 0.38), rgb(140 255 89 / 0.05) 85%, transparent);
+  clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
+  filter: blur(6px);
+  opacity: 0.8;
+}
+
+/* Score bug */
+.torneo-bug {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: linear-gradient(180deg, #111915, #0a0f0c);
+  border: 1px solid var(--t-line);
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+}
+.torneo-bug > div {
+  padding: 12px 12px 14px;
+  min-width: 0;
+}
+.torneo-bug > div + div {
+  border-left: 1px solid var(--t-line);
+}
+.torneo-bug-label {
+  font-size: 0.625rem;
+  color: var(--t-green);
+}
+.torneo-bug-valor {
+  margin-top: 6px;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.05;
+}
+@media (min-width: 640px) {
+  .torneo-bug-valor {
+    font-size: 1.9rem;
+  }
+  .torneo-bug > div {
+    padding: 16px 20px 18px;
+  }
+}
+.torneo-progress {
+  margin-top: 8px;
+  height: 4px;
+  background: rgb(255 255 255 / 0.12);
+}
+.torneo-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--t-green);
+  box-shadow: 0 0 10px var(--t-green);
+}
+.torneo-premios {
+  margin-top: 8px;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 12px 14px;
+  border: 1px solid var(--t-line);
+  background: rgb(140 255 89 / 0.05);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+}
+
+/* Ficha de jugador */
+.torneo-ficha-borde {
+  padding: 1px;
+  position: relative;
+  background: linear-gradient(
+    115deg,
+    rgb(140 255 89 / 0.15),
+    var(--t-green),
+    rgb(255 255 255 / 0.5),
+    var(--t-green),
+    rgb(140 255 89 / 0.15)
+  );
+  background-size: 250% 250%;
+  clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 26px 100%, 0 calc(100% - 26px));
+}
+.torneo-ficha {
+  background:
+    radial-gradient(90% 50% at 100% 0%, rgb(140 255 89 / 0.1), transparent 60%),
+    linear-gradient(180deg, #0f1612, #090d0b);
+  padding: 22px 18px 20px;
+  clip-path: polygon(0 0, calc(100% - 25px) 0, 100% 25px, 100% 100%, 25px 100%, 0 calc(100% - 25px));
+}
+@media (min-width: 640px) {
+  .torneo-ficha {
+    padding: 32px 32px 28px;
+  }
+}
+
+.torneo-label {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--t-green);
+  margin-bottom: 7px;
+}
+.torneo-input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 14px;
+  font-size: 1rem;
+  color: #fff;
+  background: #050807;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-bottom: 2px solid var(--t-line);
+  border-radius: 0;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.torneo-input::placeholder {
+  color: #7d887a;
+}
+.torneo-input:focus {
+  outline: none;
+  border-color: var(--t-green);
+  box-shadow: 0 0 0 3px rgb(140 255 89 / 0.28);
+}
+
+.torneo-boton {
+  width: 100%;
+  min-height: 56px;
+  border: 0;
+  cursor: pointer;
+  color: #041004;
+  font-family: var(--font-titulo), sans-serif;
+  font-weight: 800;
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-style: italic;
+  background: var(--t-green);
+  box-shadow: 0 0 26px rgb(140 255 89 / 0.45);
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  transition:
+    box-shadow 0.2s,
+    transform 0.1s;
+}
+.torneo-boton:hover:not(:disabled) {
+  box-shadow: 0 0 40px rgb(140 255 89 / 0.75);
+}
+.torneo-boton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.torneo-boton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.torneo-error {
+  border: 1px solid rgb(255 59 78 / 0.5);
+  background: rgb(255 59 78 / 0.1);
+  color: #ffb3bb;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+}
+
+/* Próximamente (inerte) */
+.torneo-soon {
+  opacity: 0.7;
+  cursor: default;
+  user-select: none;
+}
+.torneo-soon-card {
+  border: 1px dashed var(--t-line);
+  background: rgb(140 255 89 / 0.03);
+  padding: 14px;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+}
+.torneo-pill {
+  display: inline-block;
+  font-size: 0.55rem;
+  padding: 3px 8px;
+  color: var(--t-green);
+  border: 1px solid var(--t-line);
+  background: rgb(140 255 89 / 0.08);
+  white-space: nowrap;
+}
+
+/* Animaciones */
+@media (prefers-reduced-motion: no-preference) {
+  .torneo-up {
+    opacity: 0;
+    animation: torneo-up 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+    animation-delay: calc(var(--i, 0) * 110ms + 80ms);
+  }
+  .torneo-beam {
+    animation: torneo-pulse 5s ease-in-out infinite;
+  }
+  .torneo-ovni {
+    animation: torneo-float 4s ease-in-out infinite;
+  }
+  .torneo-ficha-borde {
+    animation: torneo-holo 7s linear infinite;
+  }
+  .torneo-glitch {
+    animation: torneo-glitch 0.9s steps(1) 1.2s 1 both;
+  }
+  .torneo-flip-in {
+    animation: torneo-flip 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    transform-origin: 50% 0;
+  }
+}
+@keyframes torneo-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes torneo-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+@keyframes torneo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+@keyframes torneo-holo {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 250% 50%;
+  }
+}
+@keyframes torneo-glitch {
+  0% {
+    text-shadow: none;
+    transform: skewX(-8deg);
+  }
+  10% {
+    text-shadow:
+      4px 0 var(--t-red),
+      -4px 0 var(--t-green);
+    transform: skewX(-14deg) translateX(3px);
+  }
+  20% {
+    text-shadow:
+      -5px 0 var(--t-red),
+      5px 0 var(--t-green);
+    transform: skewX(-4deg) translateX(-3px);
+  }
+  30% {
+    text-shadow:
+      3px 0 var(--t-red),
+      -3px 0 var(--t-green);
+    transform: skewX(-8deg);
+  }
+  40%,
+  100% {
+    text-shadow: none;
+    transform: skewX(-8deg);
+  }
+}
+@keyframes torneo-flip {
+  0% {
+    opacity: 0;
+    transform: perspective(900px) rotateX(-70deg) translateY(-12px);
+    filter: hue-rotate(60deg) brightness(2);
+  }
+  50% {
+    opacity: 1;
+    transform: perspective(900px) rotateX(12deg);
+    filter: none;
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  70% {
+    transform: translateX(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}

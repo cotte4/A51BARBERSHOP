@@ -1652,3 +1652,95 @@ export const ovnisBets = pgTable(
     index("ovnis_bets_play_expiry_idx").on(table.playExpiresAt),
   ]
 );
+
+// ————————————————————————————
+// TORNEO (inscripción pública, sorteo y cuadro de eliminación directa)
+// ————————————————————————————
+export const torneos = pgTable("torneos", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  nombre: text("nombre").notNull(),
+  // null = "Fecha a confirmar"
+  fecha: timestamp("fecha", { withTimezone: true }),
+  cuotaArs: numeric("cuota_ars", { precision: 12, scale: 2 }).notNull().default("4200"),
+  cupo: integer("cupo").notNull().default(16),
+  estado: text("estado")
+    .notNull()
+    .default("inscripcion")
+    .$type<"inscripcion" | "sorteado" | "en_juego" | "finalizado">(),
+  premiosTexto: text("premios_texto"),
+  // Cuántos cruces de la ronda 1 ya se revelaron en la pantalla (reveal reanudable).
+  revealPaso: integer("reveal_paso").notNull().default(0),
+  sorteoSemilla: text("sorteo_semilla"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const torneoEquipos = pgTable(
+  "torneo_equipos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    torneoId: uuid("torneo_id")
+      .notNull()
+      .references(() => torneos.id, { onDelete: "cascade" }),
+    nombre: text("nombre").notNull(),
+  },
+  (table) => [uniqueIndex("torneo_equipos_nombre_idx").on(table.torneoId, table.nombre)]
+);
+
+export const torneoJugadores = pgTable(
+  "torneo_jugadores",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    torneoId: uuid("torneo_id")
+      .notNull()
+      .references(() => torneos.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
+    nombre: text("nombre").notNull(),
+    // Siempre en minúsculas y sin espacios (se normaliza antes de insertar).
+    email: text("email").notNull(),
+    whatsapp: text("whatsapp").notNull(),
+    consentimiento: boolean("consentimiento").notNull().default(false),
+    estadoPago: text("estado_pago")
+      .notNull()
+      .default("pendiente")
+      .$type<"pendiente" | "pagado">(),
+    pagadoEn: timestamp("pagado_en", { withTimezone: true }),
+    // Orden en que Pinky marcó "Pagó": define quién entra en el cupo.
+    ordenPago: integer("orden_pago"),
+    equipoId: uuid("equipo_id").references(() => torneoEquipos.id, { onDelete: "set null" }),
+    posicionSorteo: integer("posicion_sorteo"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("torneo_jugadores_email_idx").on(table.torneoId, table.email),
+    index("torneo_jugadores_pago_idx").on(table.torneoId, table.estadoPago, table.ordenPago),
+  ]
+);
+
+export const torneoPartidos = pgTable(
+  "torneo_partidos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    torneoId: uuid("torneo_id")
+      .notNull()
+      .references(() => torneos.id, { onDelete: "cascade" }),
+    // 1 = primera ronda (octavos con 16). La final es la ronda más alta.
+    ronda: integer("ronda").notNull(),
+    posicion: integer("posicion").notNull(),
+    jugadorAId: uuid("jugador_a_id").references(() => torneoJugadores.id, { onDelete: "set null" }),
+    jugadorBId: uuid("jugador_b_id").references(() => torneoJugadores.id, { onDelete: "set null" }),
+    ganadorId: uuid("ganador_id").references(() => torneoJugadores.id, { onDelete: "set null" }),
+    marcadorA: integer("marcador_a"),
+    marcadorB: integer("marcador_b"),
+    // Pase directo: un solo jugador, avanza sin jugar.
+    esBye: boolean("es_bye").notNull().default(false),
+    estado: text("estado")
+      .notNull()
+      .default("pendiente")
+      .$type<"pendiente" | "listo" | "jugado">(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("torneo_partidos_slot_idx").on(table.torneoId, table.ronda, table.posicion),
+  ]
+);

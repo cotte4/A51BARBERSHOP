@@ -1,0 +1,217 @@
+import { describe, expect, it } from "vitest";
+import {
+  avanzarGanador,
+  calcularPodio,
+  resumenCupo,
+  siguienteOrdenPago,
+  sortearTorneo,
+  tamanoCuadro,
+  torneoTerminado,
+  type PartidoCuadro,
+} from "@/lib/torneo";
+
+const ids = (prefijo: string, n: number) => Array.from({ length: n }, (_, i) => `${prefijo}${i + 1}`);
+
+function jugarTodo(partidos: PartidoCuadro[]): PartidoCuadro[] {
+  // Siempre gana el jugador A: simula un torneo completo ronda por ronda.
+  let cuadro = partidos;
+  const rondas = Math.max(...cuadro.map((p) => p.ronda));
+  for (let ronda = 1; ronda <= rondas; ronda++) {
+    for (const p of cuadro.filter((x) => x.ronda === ronda)) {
+      const actual = cuadro.find((x) => x.ronda === p.ronda && x.posicion === p.posicion)!;
+      if (actual.esBye || actual.estado === "jugado") continue;
+      cuadro = avanzarGanador(cuadro, actual.ronda, actual.posicion, actual.jugadorAId!);
+    }
+  }
+  return cuadro;
+}
+
+describe("tamanoCuadro", () => {
+  it("redondea a la potencia de 2 siguiente", () => {
+    expect(tamanoCuadro(2)).toBe(2);
+    expect(tamanoCuadro(3)).toBe(4);
+    expect(tamanoCuadro(13)).toBe(16);
+    expect(tamanoCuadro(16)).toBe(16);
+    expect(tamanoCuadro(17)).toBe(32);
+  });
+});
+
+describe("sortearTorneo", () => {
+  const jugadores = ids("j", 16);
+  const equipos = ids("e", 20);
+
+  it("16 jugadores: 8 cruces en la ronda 1, 4 rondas, ningún bye", () => {
+    const r = sortearTorneo({ jugadorIds: jugadores, equipoIds: equipos, semilla: "x" });
+    expect(r.rondas).toBe(4);
+    expect(r.partidos.filter((p) => p.ronda === 1)).toHaveLength(8);
+    expect(r.partidos).toHaveLength(15);
+    expect(r.partidos.some((p) => p.esBye)).toBe(false);
+    expect(r.partidos.filter((p) => p.ronda === 1).every((p) => p.estado === "listo")).toBe(true);
+  });
+
+  it("cada jugador aparece una sola vez en la ronda 1", () => {
+    const r = sortearTorneo({ jugadorIds: jugadores, equipoIds: equipos, semilla: "x" });
+    const enRonda1 = r.partidos
+      .filter((p) => p.ronda === 1)
+      .flatMap((p) => [p.jugadorAId, p.jugadorBId]);
+    expect(new Set(enRonda1).size).toBe(16);
+    expect([...enRonda1].sort()).toEqual([...jugadores].sort());
+  });
+
+  it("los equipos nunca se repiten y salen del pool", () => {
+    const r = sortearTorneo({ jugadorIds: jugadores, equipoIds: equipos, semilla: "otra" });
+    const asignados = r.asignaciones.map((a) => a.equipoId);
+    expect(new Set(asignados).size).toBe(16);
+    expect(asignados.every((e) => equipos.includes(e))).toBe(true);
+    expect(r.asignaciones.map((a) => a.posicionSorteo).sort((a, b) => a - b)).toEqual(
+      Array.from({ length: 16 }, (_, i) => i + 1),
+    );
+  });
+
+  it("misma semilla = mismo sorteo; otra semilla = otro sorteo", () => {
+    const a = sortearTorneo({ jugadorIds: jugadores, equipoIds: equipos, semilla: "s1" });
+    const b = sortearTorneo({ jugadorIds: jugadores, equipoIds: equipos, semilla: "s1" });
+    const c = sortearTorneo({ jugadorIds: jugadores, equipoIds: equipos, semilla: "s2" });
+    expect(b).toEqual(a);
+    expect(c.asignaciones).not.toEqual(a.asignaciones);
+  });
+
+  it("13 jugadores: 3 byes en cruces distintos, ya avanzados a la ronda 2", () => {
+    const r = sortearTorneo({ jugadorIds: ids("j", 13), equipoIds: equipos, semilla: "b" });
+    const byes = r.partidos.filter((p) => p.ronda === 1 && p.esBye);
+    expect(byes).toHaveLength(3);
+    expect(new Set(byes.map((p) => p.posicion)).size).toBe(3);
+    for (const bye of byes) {
+      expect(bye.jugadorBId).toBeNull();
+      expect(bye.ganadorId).toBe(bye.jugadorAId);
+      expect(bye.estado).toBe("jugado");
+      const siguiente = r.partidos.find(
+        (p) => p.ronda === 2 && p.posicion === Math.ceil(bye.posicion / 2),
+      )!;
+      const lado = bye.posicion % 2 === 1 ? siguiente.jugadorAId : siguiente.jugadorBId;
+      expect(lado).toBe(bye.ganadorId);
+    }
+  });
+
+  it("2 jugadores: solo la final", () => {
+    const r = sortearTorneo({ jugadorIds: ["a", "b"], equipoIds: ["e1", "e2"], semilla: "z" });
+    expect(r.rondas).toBe(1);
+    expect(r.partidos).toHaveLength(1);
+    expect(r.partidos[0].estado).toBe("listo");
+  });
+
+  it("rechaza menos de 2 jugadores, faltante de equipos y repetidos", () => {
+    expect(() => sortearTorneo({ jugadorIds: ["a"], equipoIds: ["e1"], semilla: "z" })).toThrow();
+    expect(() =>
+      sortearTorneo({ jugadorIds: ids("j", 16), equipoIds: ids("e", 15), semilla: "z" }),
+    ).toThrow(/equipos/);
+    expect(() => sortearTorneo({ jugadorIds: ["a", "a"], equipoIds: ["e1", "e2"], semilla: "z" })).toThrow();
+    expect(() => sortearTorneo({ jugadorIds: ["a", "b"], equipoIds: ["e1", "e1"], semilla: "z" })).toThrow();
+  });
+});
+
+describe("avanzarGanador", () => {
+  const base = sortearTorneo({ jugadorIds: ids("j", 16), equipoIds: ids("e", 20), semilla: "x" }).partidos;
+
+  it("no modifica el cuadro original y pasa al ganador a la ronda siguiente", () => {
+    const p1 = base.find((p) => p.ronda === 1 && p.posicion === 1)!;
+    const despues = avanzarGanador(base, 1, 1, p1.jugadorAId!, { a: 2, b: 2 });
+    expect(base.find((p) => p.ronda === 1 && p.posicion === 1)!.ganadorId).toBeNull();
+    const jugado = despues.find((p) => p.ronda === 1 && p.posicion === 1)!;
+    expect(jugado.estado).toBe("jugado");
+    expect(jugado.marcadorA).toBe(2);
+    expect(despues.find((p) => p.ronda === 2 && p.posicion === 1)!.jugadorAId).toBe(p1.jugadorAId);
+  });
+
+  it("el partido siguiente queda 'listo' cuando están los dos", () => {
+    let c = base;
+    const a = c.find((p) => p.ronda === 1 && p.posicion === 1)!;
+    const b = c.find((p) => p.ronda === 1 && p.posicion === 2)!;
+    c = avanzarGanador(c, 1, 1, a.jugadorAId!);
+    expect(c.find((p) => p.ronda === 2 && p.posicion === 1)!.estado).toBe("pendiente");
+    c = avanzarGanador(c, 1, 2, b.jugadorBId!);
+    const r2 = c.find((p) => p.ronda === 2 && p.posicion === 1)!;
+    expect(r2.estado).toBe("listo");
+    expect(r2.jugadorAId).toBe(a.jugadorAId);
+    expect(r2.jugadorBId).toBe(b.jugadorBId);
+  });
+
+  it("permite corregir el ganador mientras la ronda siguiente no se jugó", () => {
+    const p1 = base.find((p) => p.ronda === 1 && p.posicion === 1)!;
+    let c = avanzarGanador(base, 1, 1, p1.jugadorAId!);
+    c = avanzarGanador(c, 1, 1, p1.jugadorBId!);
+    expect(c.find((p) => p.ronda === 2 && p.posicion === 1)!.jugadorAId).toBe(p1.jugadorBId);
+  });
+
+  it("no deja corregir si el partido siguiente ya se jugó", () => {
+    let c = base;
+    const a = c.find((p) => p.ronda === 1 && p.posicion === 1)!;
+    const b = c.find((p) => p.ronda === 1 && p.posicion === 2)!;
+    c = avanzarGanador(c, 1, 1, a.jugadorAId!);
+    c = avanzarGanador(c, 1, 2, b.jugadorAId!);
+    c = avanzarGanador(c, 2, 1, a.jugadorAId!);
+    expect(() => avanzarGanador(c, 1, 1, a.jugadorBId!)).toThrow(/ya se jugó/);
+  });
+
+  it("rechaza ganador ajeno, partido sin definir y bye", () => {
+    expect(() => avanzarGanador(base, 1, 1, "intruso")).toThrow(/uno de los dos/);
+    expect(() => avanzarGanador(base, 2, 1, "j1")).toThrow(/Todavía no están/);
+    const con13 = sortearTorneo({ jugadorIds: ids("j", 13), equipoIds: ids("e", 20), semilla: "b" }).partidos;
+    const bye = con13.find((p) => p.esBye)!;
+    expect(() => avanzarGanador(con13, 1, bye.posicion, bye.jugadorAId!)).toThrow(/pase directo/);
+  });
+});
+
+describe("torneo completo", () => {
+  it("16 jugadores: se juega hasta el podio", () => {
+    const { partidos } = sortearTorneo({ jugadorIds: ids("j", 16), equipoIds: ids("e", 20), semilla: "x" });
+    expect(torneoTerminado(partidos)).toBe(false);
+    const fin = jugarTodo(partidos);
+    expect(fin.every((p) => p.estado === "jugado")).toBe(true);
+    const podio = calcularPodio(fin);
+    expect(podio.campeonId).not.toBeNull();
+    expect(podio.subcampeonId).not.toBeNull();
+    expect(podio.tercerosIds).toHaveLength(2);
+    expect(new Set([podio.campeonId, podio.subcampeonId, ...podio.tercerosIds]).size).toBe(4);
+    expect(torneoTerminado(fin)).toBe(true);
+  });
+
+  it("13 jugadores con byes también llega al campeón", () => {
+    const { partidos } = sortearTorneo({ jugadorIds: ids("j", 13), equipoIds: ids("e", 20), semilla: "b" });
+    const fin = jugarTodo(partidos);
+    expect(calcularPodio(fin).campeonId).not.toBeNull();
+  });
+
+  it("2 jugadores: campeón y subcampeón, sin terceros", () => {
+    const { partidos } = sortearTorneo({ jugadorIds: ["a", "b"], equipoIds: ["e1", "e2"], semilla: "z" });
+    const podio = calcularPodio(jugarTodo(partidos));
+    expect(podio.campeonId).not.toBeNull();
+    expect(podio.tercerosIds).toEqual([]);
+  });
+});
+
+describe("cupo", () => {
+  const pagado = (orden: number) => ({ estadoPago: "pagado" as const, ordenPago: orden });
+  const pendiente = { estadoPago: "pendiente" as const, ordenPago: null };
+
+  it("cuenta solo los pagados y avisa cuando está lleno", () => {
+    const quince = [...Array.from({ length: 15 }, (_, i) => pagado(i + 1)), pendiente, pendiente];
+    expect(resumenCupo(quince, 16)).toEqual({ pagados: 15, cupo: 16, lugaresLibres: 1, lleno: false });
+    const dieciseis = [...quince, pagado(16)];
+    expect(resumenCupo(dieciseis, 16).lleno).toBe(true);
+  });
+
+  it("el próximo orden de pago sigue al máximo; null si está lleno", () => {
+    expect(siguienteOrdenPago([pendiente], 16)).toBe(1);
+    expect(siguienteOrdenPago([pagado(1), pagado(2), pendiente], 16)).toBe(3);
+    const lleno = Array.from({ length: 16 }, (_, i) => pagado(i + 1));
+    expect(siguienteOrdenPago(lleno, 16)).toBeNull();
+  });
+
+  it("deshacer un pago libera el lugar", () => {
+    const lleno = Array.from({ length: 16 }, (_, i) => pagado(i + 1));
+    lleno[3] = pendiente as never;
+    expect(resumenCupo(lleno, 16).lleno).toBe(false);
+    expect(siguienteOrdenPago(lleno, 16)).toBe(17);
+  });
+});
