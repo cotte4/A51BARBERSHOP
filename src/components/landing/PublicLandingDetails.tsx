@@ -1,4 +1,5 @@
 import Link from "next/link";
+import MarcianoCerradoPill from "@/components/landing/MarcianoCerradoPill";
 import PublicGaleriaCortes from "./PublicGaleriaCortes";
 
 const services = [
@@ -58,11 +59,13 @@ const marcianoPerks = [
 ] as const;
 
 type PublicLandingDetailsProps = {
+  marcianoAbierto: boolean;
   reserveHref: string;
   marcianosHref: string;
 };
 
 export default function PublicLandingDetails({
+  marcianoAbierto,
   reserveHref,
   marcianosHref,
 }: PublicLandingDetailsProps) {
@@ -185,23 +188,27 @@ export default function PublicLandingDetails({
                 "Los Marcianos no se identifican. Se reconocen."
               </p>
 
-              <Link
-                href={marcianosHref}
-                className="neon-button mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-7 text-base font-semibold"
-              >
-                Tengo mi acceso
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.9"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              {marcianoAbierto ? (
+                <Link
+                  href={marcianosHref}
+                  className="neon-button mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-7 text-base font-semibold"
                 >
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </Link>
+                  Tengo mi acceso
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.9"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              ) : (
+                <MarcianoCerradoPill className="mt-8 min-h-12 px-7" />
+              )}
             </div>
 
             {/* RIGHT: membership card + benefits */}

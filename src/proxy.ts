@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { betterFetch } from "@better-fetch/fetch";
 import type { Session } from "@/lib/auth";
+import { isPortalClienteAbierto } from "@/lib/launch-mode";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Portal de clientes cerrado hasta que se habilite: solo el torneo y el teaser son públicos.
+  const esPortalCliente =
+    pathname === "/marciano" ||
+    pathname.startsWith("/marciano/") ||
+    pathname === "/ar-lab" ||
+    pathname.startsWith("/ar-lab/");
+  if (esPortalCliente && !isPortalClienteAbierto()) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
 
   const { data: session } = await betterFetch<Session>("/api/auth/get-session", {
     baseURL: request.nextUrl.origin,
@@ -33,7 +44,12 @@ export async function proxy(request: NextRequest) {
     if (!isAuthenticated) {
       return NextResponse.next();
     }
-    if (isMarciano) return NextResponse.redirect(new URL("/marciano", request.url));
+    // Con el portal cerrado, el Marciano ve la landing (si no, /marciano lo devolvería acá: bucle).
+    if (isMarciano) {
+      return isPortalClienteAbierto()
+        ? NextResponse.redirect(new URL("/marciano", request.url))
+        : NextResponse.next();
+    }
     if (isAsesor) return NextResponse.redirect(new URL("/dashboard", request.url));
     if (isAdmin) return NextResponse.redirect(new URL("/hoy", request.url));
     return NextResponse.redirect(new URL("/hoy", request.url));
@@ -77,7 +93,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/mi-resultado") ||
     pathname.startsWith("/gastos-rapidos") ||
     pathname.startsWith("/finanzas") ||
-    pathname.startsWith("/ovnis")
+    pathname.startsWith("/ovnis") ||
+    pathname.startsWith("/torneo-admin")
   ) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
@@ -176,8 +193,10 @@ export const config = {
     "/gastos-rapidos/:path*",
     "/finanzas/:path*",
     "/ovnis/:path*",
+    "/torneo-admin/:path*",
     "/caja/:path*",
     "/clientes/:path*",
     "/marciano/:path*",
+    "/ar-lab/:path*",
   ],
 };

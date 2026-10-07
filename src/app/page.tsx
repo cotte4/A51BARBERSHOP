@@ -1,22 +1,25 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import MarcianoCerradoPill from "@/components/landing/MarcianoCerradoPill";
 import PublicLandingDetails from "@/components/landing/PublicLandingDetails";
 import PublicLandingHero from "@/components/landing/PublicLandingHero";
 import { auth } from "@/lib/auth";
+import { isPortalClienteAbierto } from "@/lib/launch-mode";
 
 export default async function RootPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const role = (session?.user as { role?: string } | undefined)?.role;
+  const marcianoAbierto = isPortalClienteAbierto();
   const reserveHref = "/reservar";
   const loginHref = "/login";
   const marcianosHref = "/marciano/login";
 
-  if (role === "marciano") {
+  if (role === "marciano" && marcianoAbierto) {
     redirect("/marciano");
   }
 
-  if (session?.user) {
+  if (session?.user && role !== "marciano") {
     redirect("/hoy");
   }
 
@@ -33,10 +36,12 @@ export default async function RootPage() {
 
       <div className="relative">
         <PublicLandingHero
+          marcianoAbierto={marcianoAbierto}
           reserveHref={reserveHref}
           marcianosHref={marcianosHref}
         />
         <PublicLandingDetails
+          marcianoAbierto={marcianoAbierto}
           reserveHref={reserveHref}
           marcianosHref={marcianosHref}
         />
@@ -58,12 +63,16 @@ export default async function RootPage() {
                 >
                   Reservar turno
                 </Link>
-                <Link
-                  href={marcianosHref}
-                  className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 text-sm font-semibold text-zinc-100 transition hover:border-[#8cff59]/30 hover:bg-white/10"
-                >
-                  Club Marciano
-                </Link>
+                {marcianoAbierto ? (
+                  <Link
+                    href={marcianosHref}
+                    className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 text-sm font-semibold text-zinc-100 transition hover:border-[#8cff59]/30 hover:bg-white/10"
+                  >
+                    Club Marciano
+                  </Link>
+                ) : (
+                  <MarcianoCerradoPill />
+                )}
                 <Link
                   href={loginHref}
                   className="text-xs text-zinc-600 transition hover:text-zinc-400 sm:px-2"

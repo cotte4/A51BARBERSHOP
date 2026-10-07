@@ -2,6 +2,7 @@
 
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
+import { assertPortalClienteAbierto } from "@/lib/launch-mode";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -102,6 +103,7 @@ export async function registerMarcianoAction(
   _prevState: MarcianoRegisterState,
   formData: FormData
 ): Promise<MarcianoRegisterState> {
+  assertPortalClienteAbierto();
   const parsed = registerSchema.safeParse({
     email: normalizeMarcianoEmail(formData.get("email")) ?? "",
     password: String(formData.get("password") ?? ""),
@@ -383,6 +385,7 @@ export async function requestMarcianoPasswordResetAction(
   _prevState: MarcianoPasswordState,
   formData: FormData
 ): Promise<MarcianoPasswordState> {
+  assertPortalClienteAbierto();
   const parsed = requestPasswordResetSchema.safeParse({
     email: normalizeMarcianoEmail(formData.get("email")) ?? "",
   });
@@ -427,6 +430,7 @@ export async function changeMarcianoPasswordAction(
   _prevState: MarcianoPasswordState,
   formData: FormData
 ): Promise<MarcianoPasswordState> {
+  assertPortalClienteAbierto();
   const parsed = changePasswordSchema.safeParse({
     currentPassword: String(formData.get("currentPassword") ?? ""),
     newPassword: String(formData.get("newPassword") ?? ""),
@@ -468,6 +472,7 @@ export async function resetMarcianoPasswordAction(
   _prevState: MarcianoPasswordState,
   formData: FormData
 ): Promise<MarcianoPasswordState> {
+  assertPortalClienteAbierto();
   const parsed = resetPasswordSchema.safeParse({
     token: String(formData.get("token") ?? ""),
     newPassword: String(formData.get("newPassword") ?? ""),

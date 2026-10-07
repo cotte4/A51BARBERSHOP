@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { assertPortalClienteAbierto } from "@/lib/launch-mode";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { barberos, clients, marcianoBeneficiosUso, productos, servicios, visitLogs } from "@/db/schema";
@@ -11,6 +12,7 @@ export function normalizeMarcianoEmail(value: FormDataEntryValue | null): string
 }
 
 export async function getMarcianoPortalSession() {
+  assertPortalClienteAbierto();
   const actor = await getCurrentActorContext();
   const role = actor?.role;
 

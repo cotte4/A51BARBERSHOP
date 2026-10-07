@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import BrandMark from "@/components/BrandMark";
+import MarcianoCerradoPill from "@/components/landing/MarcianoCerradoPill";
 
 const infoTags = [
   "Mar del Plata",
@@ -21,11 +22,13 @@ const heroStats = [
 ];
 
 type PublicLandingHeroProps = {
+  marcianoAbierto: boolean;
   reserveHref: string;
   marcianosHref: string;
 };
 
 export default function PublicLandingHero({
+  marcianoAbierto,
   reserveHref,
   marcianosHref,
 }: PublicLandingHeroProps) {
@@ -152,12 +155,16 @@ export default function PublicLandingHero({
               >
                 Reservar turno
               </Link>
-              <Link
-                href={marcianosHref}
-                className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-7 text-base font-semibold text-zinc-100 transition hover:border-[#8cff59]/30 hover:bg-white/10"
-              >
-                Soy Marciano
-              </Link>
+              {marcianoAbierto ? (
+                <Link
+                  href={marcianosHref}
+                  className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-7 text-base font-semibold text-zinc-100 transition hover:border-[#8cff59]/30 hover:bg-white/10"
+                >
+                  Soy Marciano
+                </Link>
+              ) : (
+                <MarcianoCerradoPill className="min-h-12 px-7" />
+              )}
             </div>
 
             {/* Info tags */}
