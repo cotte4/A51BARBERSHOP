@@ -293,6 +293,34 @@ export async function marcarPago(jugadorId: string, pagado: boolean): Promise<Re
   });
 }
 
+export type ResultadoEliminar =
+  | { ok: true }
+  | { ok: false; motivo: "no_existe" | "pagado" | "cerrado" };
+
+/** Saca a un anotado que no pagó (pruebas, errores, duplicados). El cliente de la app queda. */
+export async function eliminarJugador(jugadorId: string): Promise<ResultadoEliminar> {
+  return db.transaction(async (tx) => {
+    const [jugador] = await tx
+      .select()
+      .from(torneoJugadores)
+      .where(eq(torneoJugadores.id, jugadorId))
+      .limit(1);
+    if (!jugador) return { ok: false, motivo: "no_existe" } as const;
+
+    const [torneo] = await tx
+      .select()
+      .from(torneos)
+      .where(eq(torneos.id, jugador.torneoId))
+      .for("update")
+      .limit(1);
+    if (!torneo || torneo.estado !== "inscripcion") return { ok: false, motivo: "cerrado" } as const;
+    if (jugador.estadoPago === "pagado") return { ok: false, motivo: "pagado" } as const;
+
+    await tx.delete(torneoJugadores).where(eq(torneoJugadores.id, jugadorId));
+    return { ok: true } as const;
+  });
+}
+
 export type ConfigTorneo = {
   nombre: string;
   /** "YYYY-MM-DDTHH:mm" hora Argentina, o null = fecha a confirmar. */

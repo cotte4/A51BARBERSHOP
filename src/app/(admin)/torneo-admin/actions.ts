@@ -6,6 +6,7 @@ import { requireOwnerSession } from "@/lib/admin-action";
 import {
   actualizarConfig,
   asegurarTorneo,
+  eliminarJugador,
   getTorneoVigente,
   marcarPago,
   reemplazarEquipos,
@@ -36,6 +37,26 @@ export async function crearTorneoAction(): Promise<TorneoAdminState> {
   const denegado = await exigirAdmin();
   if (denegado) return denegado;
   await asegurarTorneo();
+  refrescar();
+  return { ok: true, mensaje: null };
+}
+
+export async function eliminarJugadorAction(jugadorId: string): Promise<TorneoAdminState> {
+  const denegado = await exigirAdmin();
+  if (denegado) return denegado;
+  if (!z.string().uuid().safeParse(jugadorId).success) {
+    return { ok: false, mensaje: "Jugador inválido." };
+  }
+
+  const resultado = await eliminarJugador(jugadorId);
+  if (!resultado.ok) {
+    const mensajes = {
+      no_existe: "Ese jugador ya no existe.",
+      pagado: "Pagó: primero deshacé el pago.",
+      cerrado: "El torneo ya se sorteó: no se puede sacar a nadie.",
+    } as const;
+    return { ok: false, mensaje: mensajes[resultado.motivo] };
+  }
   refrescar();
   return { ok: true, mensaje: null };
 }

@@ -51,6 +51,24 @@ async function main() {
     afirmar(creados.length === 17, "se crearon 17 clientes con tag torneo-fifa");
     afirmar(creados.every((c) => c.tags.includes("torneo-fifa")), "los clientes llevan el tag torneo-fifa");
 
+    console.log("2b. Sacar a un anotado");
+    const extra18 = await datos.inscribirJugador({
+      nombre: "Jugador Prueba 18",
+      email: `torneo-smoke-18@${DOMINIO}`,
+      whatsapp: "223 000 9018",
+    });
+    afirmar(extra18.ok, "el jugador 18 se anotó");
+    const j18 = (await datos.listarJugadores(torneo.id)).find((j) => j.email === `torneo-smoke-18@${DOMINIO}`)!;
+    afirmar((await datos.marcarPago(j18.id, true)).ok, "el 18 paga");
+    const noSale = await datos.eliminarJugador(j18.id);
+    afirmar(!noSale.ok && noSale.motivo === "pagado", "no se saca a alguien que pagó");
+    afirmar((await datos.marcarPago(j18.id, false)).ok, "se deshace el pago del 18");
+    afirmar((await datos.eliminarJugador(j18.id)).ok, "se saca al 18 de la lista");
+    afirmar(
+      (await datos.listarJugadores(torneo.id)).length === 17,
+      "quedan 17 anotados",
+    );
+
     console.log("3. Pagos y cupo");
     const jugadores = await datos.listarJugadores(torneo.id);
     for (const j of jugadores.slice(0, 16)) {
