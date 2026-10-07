@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { QRCodeSVG } from "qrcode.react";
@@ -165,9 +166,15 @@ function Encabezado({
   );
 }
 
+// Three.js solo se descarga en la espera, y nunca en el servidor.
+const PelotaAlien = dynamic(() => import("./_PelotaAlien"), { ssr: false });
+
 function Espera({ previa }: { previa: DatosPantalla["previa"] }) {
   return (
     <div className="flex h-full flex-col items-center justify-center text-center">
+      <div className="-mb-12 -mt-16">
+        <PelotaAlien tamano={440} />
+      </div>
       <p className="torneo-hud text-[28px] text-[#8cff59]">A51 · Señal interceptada</p>
       <h1 className="torneo-titulo mt-6 text-[170px] font-extrabold italic text-white">
         {previa ? previa.nombre : "El torneo abre pronto"}
