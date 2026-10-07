@@ -1,14 +1,41 @@
 import { z } from "zod";
-import { hashDeviceKey, canProposeAgain } from "@/lib/jukebox";
+import {
+  canProposeAgain,
+  getClientIp,
+  hashDeviceKey,
+  isJukeboxEnabled,
+  parseIsoDuration,
+} from "@/lib/jukebox";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const SEARCH_RATE_LIMIT_PER_MINUTE = 10;
+const CACHE_TTL_MS = 10 * 60 * 1000;
+const CACHE_MAX_ENTRIES = 200;
+const IP_SEARCH_WINDOW_MS = 10 * 60 * 1000;
+const IP_SEARCH_MAX = 120; // el Wi-Fi del local comparte una sola IP
+
+// Cache y throttle en memoria: por instancia serverless, pero alcanza para cuidar la cuota de YouTube.
+const searchCache = new Map<string, { at: number; results: unknown[] }>();
+const ipSearches = new Map<string, number[]>();
+
+function ipSearchAllowed(ip: string): boolean {
+  const now = Date.now();
+  const recent = (ipSearches.get(ip) ?? []).filter((t) => now - t < IP_SEARCH_WINDOW_MS);
+  if (recent.length >= IP_SEARCH_MAX) {
+    ipSearches.set(ip, recent);
+    return false;
+  }
+  recent.push(now);
+  ipSearches.set(ip, recent);
+  if (ipSearches.size > 1000) ipSearches.clear();
+  return true;
+}
 
 const querySchema = z.object({
   q: z.string().trim().min(2).max(120),
-  deviceKey: z.string().trim().min(8).max(256).optional(),
+  deviceKey: z.string().trim().min(8).max(256),
 });
 
 type YouTubeSearchItem = {
@@ -25,20 +52,15 @@ type YouTubeVideosItem = {
   contentDetails: { duration: string };
 };
 
-function parseIsoDuration(iso: string): number | null {
-  const match = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso);
-  if (!match) return null;
-  const h = parseInt(match[1] ?? "0");
-  const m = parseInt(match[2] ?? "0");
-  const s = parseInt(match[3] ?? "0");
-  return h * 3600 + m * 60 + s;
-}
-
 export async function GET(request: Request) {
+  if (!(await isJukeboxEnabled())) {
+    return Response.json({ error: "El jukebox está desactivado." }, { status: 403 });
+  }
+
   const url = new URL(request.url);
   const parsed = querySchema.safeParse({
     q: url.searchParams.get("q"),
-    deviceKey: url.searchParams.get("deviceKey") ?? undefined,
+    deviceKey: url.searchParams.get("deviceKey"),
   });
 
   if (!parsed.success) {
@@ -47,21 +69,25 @@ export async function GET(request: Request) {
 
   const { q, deviceKey } = parsed.data;
 
-  if (deviceKey) {
-    const hash = hashDeviceKey(deviceKey);
-    const allowed = await canProposeAgain(hash);
-    if (!allowed) {
-      return Response.json(
-        { error: "Esperá unos minutos antes de proponer otro tema." },
-        { status: 429 }
-      );
-    }
+  const allowed = await canProposeAgain(hashDeviceKey(deviceKey));
+  if (!allowed) {
+    return Response.json(
+      { error: "Esperá unos minutos antes de proponer otro tema." },
+      { status: 429 }
+    );
   }
 
-  const apiKey =
-    process.env.YOUTUBE_API_KEY ??
-    process.env.YOUTUBE_API_KEY_BEATS ??
-    process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+  const cacheKey = q.toLowerCase();
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+    return Response.json({ results: cached.results }, { headers: { "Cache-Control": "no-store" } });
+  }
+
+  if (!ipSearchAllowed(getClientIp(request))) {
+    return Response.json({ error: "Demasiadas búsquedas. Probá en unos minutos." }, { status: 429 });
+  }
+
+  const apiKey = process.env.YOUTUBE_API_KEY ?? process.env.YOUTUBE_API_KEY_BEATS;
 
   if (!apiKey) {
     return Response.json({ error: "YouTube API no configurada." }, { status: 500 });
@@ -104,21 +130,21 @@ export async function GET(request: Request) {
       durationMap.set(v.id, parseIsoDuration(v.contentDetails.duration));
     }
 
-    return Response.json(
-      {
-        results: items.map((item) => ({
-          videoId: item.id.videoId,
-          title: item.snippet.title,
-          channelTitle: item.snippet.channelTitle,
-          thumbnailUrl:
-            item.snippet.thumbnails.medium?.url ??
-            item.snippet.thumbnails.default?.url ??
-            "",
-          durationSeconds: durationMap.get(item.id.videoId) ?? null,
-        })),
-      },
-      { headers: { "Cache-Control": "no-store" } }
-    );
+    const results = items.map((item) => ({
+      videoId: item.id.videoId,
+      title: item.snippet.title,
+      channelTitle: item.snippet.channelTitle,
+      thumbnailUrl:
+        item.snippet.thumbnails.medium?.url ??
+        item.snippet.thumbnails.default?.url ??
+        "",
+      durationSeconds: durationMap.get(item.id.videoId) ?? null,
+    }));
+
+    if (searchCache.size >= CACHE_MAX_ENTRIES) searchCache.clear();
+    searchCache.set(cacheKey, { at: Date.now(), results });
+
+    return Response.json({ results }, { headers: { "Cache-Control": "no-store" } });
   } catch {
     return Response.json({ error: "No pude buscar en YouTube." }, { status: 500 });
   }

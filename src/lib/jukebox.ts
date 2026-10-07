@@ -1,9 +1,16 @@
 import { createHash } from "node:crypto";
-import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, like, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { configuracionNegocio, jukeboxProposals, jukeboxQueue } from "@/db/schema";
 
 const RATE_LIMIT_MINUTES = 5;
+const IP_LIMIT_WINDOW_MINUTES = 10;
+const IP_LIMIT_MAX_PROPOSALS = 25; // el Wi-Fi del local comparte una sola IP
+const GLOBAL_CAP_PER_HOUR = 60;
+export const MAX_DURATION_SECONDS = 6 * 60;
+const QUEUE_LOCK_ID = 51_000_001;
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export type JukeboxProposalSummary = {
   id: string;
@@ -26,6 +33,7 @@ export type JukeboxQueueItem = {
   channelTitle: string;
   thumbnailUrl: string | null;
   proposedByName: string;
+  durationSeconds: number | null;
   state: "queued" | "playing" | "played" | "skipped";
   positionHint: number;
   startedAt: string | null;
@@ -35,6 +43,26 @@ export function hashDeviceKey(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
 }
 
+export function getClientIp(request: Request): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  const first = forwarded?.split(",")[0]?.trim();
+  return first || request.headers.get("x-real-ip") || "unknown";
+}
+
+// deviceKeyHash guarda "<hash dispositivo>|<hash ip>" para limitar por IP sin tocar el schema.
+export function buildProposerHash(deviceKey: string, ip: string): string {
+  return `${hashDeviceKey(deviceKey)}|${hashDeviceKey(ip)}`;
+}
+
+export function parseIsoDuration(iso: string): number | null {
+  const match = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso);
+  if (!match) return null;
+  const h = parseInt(match[1] ?? "0");
+  const m = parseInt(match[2] ?? "0");
+  const s = parseInt(match[3] ?? "0");
+  return h * 3600 + m * 60 + s;
+}
+
 export async function canProposeAgain(deviceKeyHash: string): Promise<boolean> {
   const windowStart = new Date(Date.now() - RATE_LIMIT_MINUTES * 60 * 1000);
   const [row] = await db
@@ -42,11 +70,34 @@ export async function canProposeAgain(deviceKeyHash: string): Promise<boolean> {
     .from(jukeboxProposals)
     .where(
       and(
-        eq(jukeboxProposals.deviceKeyHash, deviceKeyHash),
+        like(jukeboxProposals.deviceKeyHash, `${deviceKeyHash}%`),
         gt(jukeboxProposals.createdAt, windowStart),
       )
     );
   return (row?.count ?? 0) === 0;
+}
+
+export async function isIpWithinLimit(ip: string): Promise<boolean> {
+  const windowStart = new Date(Date.now() - IP_LIMIT_WINDOW_MINUTES * 60 * 1000);
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(jukeboxProposals)
+    .where(
+      and(
+        like(jukeboxProposals.deviceKeyHash, `%|${hashDeviceKey(ip)}`),
+        gt(jukeboxProposals.createdAt, windowStart),
+      )
+    );
+  return (row?.count ?? 0) < IP_LIMIT_MAX_PROPOSALS;
+}
+
+export async function isGlobalCapReached(): Promise<boolean> {
+  const windowStart = new Date(Date.now() - 60 * 60 * 1000);
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(jukeboxProposals)
+    .where(gt(jukeboxProposals.createdAt, windowStart));
+  return (row?.count ?? 0) >= GLOBAL_CAP_PER_HOUR;
 }
 
 export async function listPendingProposals(): Promise<JukeboxProposalSummary[]> {
@@ -82,6 +133,7 @@ export async function listQueue(): Promise<JukeboxQueueItem[]> {
       videoTitle: jukeboxProposals.videoTitle,
       channelTitle: jukeboxProposals.channelTitle,
       thumbnailUrl: jukeboxProposals.thumbnailUrl,
+      durationSeconds: jukeboxProposals.durationSeconds,
       proposedByName: jukeboxProposals.proposedByName,
     })
     .from(jukeboxQueue)
@@ -98,6 +150,7 @@ export async function listQueue(): Promise<JukeboxQueueItem[]> {
     videoTitle: r.videoTitle,
     channelTitle: r.channelTitle,
     thumbnailUrl: r.thumbnailUrl,
+    durationSeconds: r.durationSeconds,
     proposedByName: r.proposedByName,
     state: r.state as JukeboxQueueItem["state"],
     positionHint: r.positionHint,
@@ -117,6 +170,7 @@ export async function getNowPlaying(): Promise<JukeboxQueueItem | null> {
       videoTitle: jukeboxProposals.videoTitle,
       channelTitle: jukeboxProposals.channelTitle,
       thumbnailUrl: jukeboxProposals.thumbnailUrl,
+      durationSeconds: jukeboxProposals.durationSeconds,
       proposedByName: jukeboxProposals.proposedByName,
     })
     .from(jukeboxQueue)
@@ -133,6 +187,7 @@ export async function getNowPlaying(): Promise<JukeboxQueueItem | null> {
     videoTitle: row.videoTitle,
     channelTitle: row.channelTitle,
     thumbnailUrl: row.thumbnailUrl,
+    durationSeconds: row.durationSeconds,
     proposedByName: row.proposedByName,
     state: row.state as JukeboxQueueItem["state"],
     positionHint: row.positionHint,
@@ -152,6 +207,7 @@ export async function getNextInQueue(): Promise<JukeboxQueueItem | null> {
       videoTitle: jukeboxProposals.videoTitle,
       channelTitle: jukeboxProposals.channelTitle,
       thumbnailUrl: jukeboxProposals.thumbnailUrl,
+      durationSeconds: jukeboxProposals.durationSeconds,
       proposedByName: jukeboxProposals.proposedByName,
     })
     .from(jukeboxQueue)
@@ -169,6 +225,7 @@ export async function getNextInQueue(): Promise<JukeboxQueueItem | null> {
     videoTitle: row.videoTitle,
     channelTitle: row.channelTitle,
     thumbnailUrl: row.thumbnailUrl,
+    durationSeconds: row.durationSeconds,
     proposedByName: row.proposedByName,
     state: row.state as JukeboxQueueItem["state"],
     positionHint: row.positionHint,
@@ -176,64 +233,84 @@ export async function getNextInQueue(): Promise<JukeboxQueueItem | null> {
   };
 }
 
-export async function enqueueApproved(proposalId: string): Promise<void> {
-  const [last] = await db
-    .select({ pos: jukeboxQueue.positionHint })
+// Promueve el siguiente "queued" a "playing" si no hay nada sonando. Corre dentro de una transacción con lock.
+async function startNextIfIdle(tx: Tx): Promise<void> {
+  const [playing] = await tx
+    .select({ id: jukeboxQueue.id })
     .from(jukeboxQueue)
-    .where(sql`${jukeboxQueue.state} in ('queued', 'playing')`)
-    .orderBy(desc(jukeboxQueue.positionHint))
+    .where(eq(jukeboxQueue.state, "playing"))
     .limit(1);
+  if (playing) return;
 
-  const nextPos = (last?.pos ?? 0) + 1;
+  const [next] = await tx
+    .select({ id: jukeboxQueue.id, proposalId: jukeboxQueue.proposalId })
+    .from(jukeboxQueue)
+    .where(eq(jukeboxQueue.state, "queued"))
+    .orderBy(asc(jukeboxQueue.positionHint))
+    .limit(1);
+  if (!next) return;
 
-  await db.insert(jukeboxQueue).values({
-    proposalId,
-    positionHint: nextPos,
-    state: "queued",
+  await tx
+    .update(jukeboxQueue)
+    .set({ state: "playing", startedAt: new Date() })
+    .where(eq(jukeboxQueue.id, next.id));
+
+  await tx
+    .update(jukeboxProposals)
+    .set({ status: "played", resolvedAt: new Date() })
+    .where(eq(jukeboxProposals.id, next.proposalId));
+}
+
+export async function enqueueApproved(proposalId: string): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${QUEUE_LOCK_ID})`);
+
+    const [last] = await tx
+      .select({ pos: jukeboxQueue.positionHint })
+      .from(jukeboxQueue)
+      .where(sql`${jukeboxQueue.state} in ('queued', 'playing')`)
+      .orderBy(desc(jukeboxQueue.positionHint))
+      .limit(1);
+
+    await tx.insert(jukeboxQueue).values({
+      proposalId,
+      positionHint: (last?.pos ?? 0) + 1,
+      state: "queued",
+    });
+
+    await startNextIfIdle(tx);
   });
 }
 
 export async function markPlayed(queueItemId: string): Promise<void> {
-  await db
-    .update(jukeboxQueue)
-    .set({ state: "played", endedAt: new Date() })
-    .where(eq(jukeboxQueue.id, queueItemId));
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${QUEUE_LOCK_ID})`);
 
-  const next = await getNextInQueue();
-  if (next) {
-    await db
+    // Si otra pestaña ya avanzó, este item ya no está "playing" y no hacemos nada.
+    const [ended] = await tx
       .update(jukeboxQueue)
-      .set({ state: "playing", startedAt: new Date() })
-      .where(eq(jukeboxQueue.id, next.id));
+      .set({ state: "played", endedAt: new Date() })
+      .where(and(eq(jukeboxQueue.id, queueItemId), eq(jukeboxQueue.state, "playing")))
+      .returning({ id: jukeboxQueue.id });
+    if (!ended) return;
 
-    await db
-      .update(jukeboxProposals)
-      .set({ status: "played", resolvedAt: new Date() })
-      .where(eq(jukeboxProposals.id, next.proposalId));
-  }
+    await startNextIfIdle(tx);
+  });
 }
 
 export async function skipCurrent(): Promise<void> {
-  const current = await getNowPlaying();
-  if (!current) return;
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${QUEUE_LOCK_ID})`);
 
-  await db
-    .update(jukeboxQueue)
-    .set({ state: "skipped", endedAt: new Date() })
-    .where(eq(jukeboxQueue.id, current.id));
-
-  const next = await getNextInQueue();
-  if (next) {
-    await db
+    const [skipped] = await tx
       .update(jukeboxQueue)
-      .set({ state: "playing", startedAt: new Date() })
-      .where(eq(jukeboxQueue.id, next.id));
+      .set({ state: "skipped", endedAt: new Date() })
+      .where(eq(jukeboxQueue.state, "playing"))
+      .returning({ id: jukeboxQueue.id });
+    if (!skipped) return;
 
-    await db
-      .update(jukeboxProposals)
-      .set({ status: "played", resolvedAt: new Date() })
-      .where(eq(jukeboxProposals.id, next.proposalId));
-  }
+    await startNextIfIdle(tx);
+  });
 }
 
 async function getConfig() {

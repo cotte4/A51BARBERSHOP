@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const POLL_INTERVAL_MS = 3000;
 const PLAYER_ORIGIN = "https://www.youtube.com";
+const FALLBACK_DURATION_SECONDS = 6 * 60;
+const FALLBACK_MARGIN_SECONDS = 5;
 
 type NowPlayingResponse = {
   nowPlaying: {
@@ -11,6 +13,7 @@ type NowPlayingResponse = {
     youtubeVideoId: string;
     videoTitle: string;
     proposedByName: string;
+    durationSeconds: number | null;
   } | null;
 };
 
@@ -24,7 +27,13 @@ export default function JukeboxPlayer() {
     if (advancingRef.current) return;
     advancingRef.current = true;
     try {
-      await fetch("/api/jukebox/next", { method: "POST", cache: "no-store" });
+      // Se manda el id del tema para que un aviso tardío (evento + temporizador) no salte el siguiente.
+      await fetch("/api/jukebox/next", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ queueItemId: currentIdRef.current }),
+      });
     } finally {
       advancingRef.current = false;
     }
@@ -80,6 +89,24 @@ export default function JukeboxPlayer() {
     return () => window.removeEventListener("message", onMessage);
   }, [advance]);
 
+  // Respaldo: si YouTube no avisa el fin, avanzamos cuando se cumple la duración (+ margen).
+  const nowPlayingId = nowPlaying?.id ?? null;
+  const nowPlayingDuration = nowPlaying?.durationSeconds ?? null;
+  useEffect(() => {
+    if (!nowPlayingId) return;
+    const seconds = (nowPlayingDuration ?? FALLBACK_DURATION_SECONDS) + FALLBACK_MARGIN_SECONDS;
+    const timer = window.setTimeout(advance, seconds * 1000);
+    return () => window.clearTimeout(timer);
+  }, [nowPlayingId, nowPlayingDuration, advance]);
+
+  // Handshake: sin este mensaje el iframe no emite infoDelivery (playerState 0 = terminó).
+  function handleIframeLoad() {
+    iframeRef.current?.contentWindow?.postMessage(
+      JSON.stringify({ event: "listening", id: 1, channel: "widget" }),
+      PLAYER_ORIGIN
+    );
+  }
+
   if (!nowPlaying) return null;
 
   const videoChanged = nowPlaying.id !== currentIdRef.current;
@@ -106,6 +133,7 @@ export default function JukeboxPlayer() {
           key={nowPlaying.id}
           ref={iframeRef}
           src={embedUrl}
+          onLoad={handleIframeLoad}
           allow="autoplay; encrypted-media"
           allowFullScreen
           className="aspect-video w-full"
