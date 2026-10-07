@@ -115,6 +115,9 @@ export default function PublicLandingDetails({
           </div>
 
           <div className="mt-6 flex justify-start">
+            {!marcianoAbierto ? (
+              <MarcianoCerradoPill etiqueta="Reservar turno" />
+            ) : (
             <Link
               href={reserveHref}
               className="ghost-button inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold"
@@ -132,6 +135,7 @@ export default function PublicLandingDetails({
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </Link>
+            )}
           </div>
         </div>
 

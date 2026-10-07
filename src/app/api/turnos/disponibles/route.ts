@@ -1,3 +1,4 @@
+import { isPortalClienteAbierto } from "@/lib/launch-mode";
 import { z } from "zod";
 import { canAccessPublicReserva } from "@/lib/public-reserva-access";
 import {
@@ -19,6 +20,8 @@ const querySchema = z.object({
 });
 
 export async function GET(request: Request) {
+  if (!isPortalClienteAbierto()) return new Response("Not found", { status: 404 });
+
   const url = new URL(request.url);
   const parsed = querySchema.safeParse({
     fecha: url.searchParams.get("fecha"),

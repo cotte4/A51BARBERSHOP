@@ -1,3 +1,4 @@
+import { isPortalClienteAbierto } from "@/lib/launch-mode";
 import { z } from "zod";
 import { canAccessPublicReserva } from "@/lib/public-reserva-access";
 import { createTurnoReserva } from "@/lib/turnos-reserva";
@@ -38,6 +39,8 @@ function getRequestIp(request: Request): string | null {
 }
 
 export async function POST(request: Request) {
+  if (!isPortalClienteAbierto()) return new Response("Not found", { status: 404 });
+
   const body = await request.json().catch(() => null);
   const parsed = reservaSchema.safeParse(body);
 

@@ -1,3 +1,4 @@
+import { isPortalClienteAbierto } from "@/lib/launch-mode";
 import { z } from "zod";
 import {
   grantPublicReservaAccess,
@@ -12,6 +13,8 @@ const accessSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  if (!isPortalClienteAbierto()) return new Response("Not found", { status: 404 });
+
   const body = await request.json().catch(() => null);
   const parsed = accessSchema.safeParse(body);
 

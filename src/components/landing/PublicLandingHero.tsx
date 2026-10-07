@@ -121,7 +121,7 @@ export default function PublicLandingHero({
               className="animate-fade-up font-display mt-6 max-w-2xl text-6xl font-semibold leading-[0.9] text-white sm:text-7xl lg:text-[5.5rem]"
               style={{ animationDelay: "0.2s" }}
             >
-              Cae con turno.
+              {marcianoAbierto ? "Cae con turno." : "Torneo FIFA."}
             </h1>
 
             {/* Headline line 2 — glitch */}
@@ -132,7 +132,7 @@ export default function PublicLandingHero({
                   "a51-fade-up 0.7s 0.32s ease both, a51-glitch 11s 3s ease-in-out infinite",
               }}
             >
-              Subite a Marcianos.
+              {marcianoAbierto ? "Subite a Marcianos." : "Anotate en A51."}
             </p>
 
             {/* Subtext */}
@@ -140,7 +140,9 @@ export default function PublicLandingHero({
               className="animate-fade-up mt-7 max-w-xl text-base leading-7 text-zinc-300 sm:text-lg"
               style={{ animationDelay: "0.46s" }}
             >
-              Reserva online en dos pasos, sin llamadas. Y si ya sos Marciano, tu carril está abierto.
+              {marcianoAbierto
+                ? "Reserva online en dos pasos, sin llamadas. Y si ya sos Marciano, tu carril está abierto."
+                : "Torneo de EA FC 27 en PS4, 16 jugadores y eliminación directa. Anotate online, sumá tu equipo y jugá en el local."}
             </p>
 
             {/* CTAs */}
@@ -148,13 +150,25 @@ export default function PublicLandingHero({
               className="animate-fade-up mt-8 flex flex-col gap-3 sm:flex-row"
               style={{ animationDelay: "0.58s" }}
             >
-              <Link
-                href={reserveHref}
-                className="neon-button inline-flex min-h-12 items-center justify-center rounded-2xl px-7 text-base font-semibold"
-                aria-label="Reservar turno en A51 Barber Shop"
-              >
-                Reservar turno
-              </Link>
+              {marcianoAbierto ? (
+                <Link
+                  href={reserveHref}
+                  className="neon-button inline-flex min-h-12 items-center justify-center rounded-2xl px-7 text-base font-semibold"
+                  aria-label="Reservar turno en A51 Barber Shop"
+                >
+                  Reservar turno
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/torneo"
+                    className="neon-button inline-flex min-h-12 items-center justify-center rounded-2xl px-7 text-base font-semibold"
+                  >
+                    Anotarme al torneo
+                  </Link>
+                  <MarcianoCerradoPill className="min-h-12 px-7" etiqueta="Reservar turno" />
+                </>
+              )}
               {marcianoAbierto ? (
                 <Link
                   href={marcianosHref}

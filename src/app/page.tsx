@@ -57,12 +57,21 @@ export default async function RootPage() {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Link
-                  href={reserveHref}
-                  className="neon-button inline-flex min-h-11 items-center justify-center rounded-2xl px-5 text-sm font-semibold"
-                >
-                  Reservar turno
-                </Link>
+                {marcianoAbierto ? (
+                  <Link
+                    href={reserveHref}
+                    className="neon-button inline-flex min-h-11 items-center justify-center rounded-2xl px-5 text-sm font-semibold"
+                  >
+                    Reservar turno
+                  </Link>
+                ) : (
+                  <Link
+                    href="/torneo"
+                    className="neon-button inline-flex min-h-11 items-center justify-center rounded-2xl px-5 text-sm font-semibold"
+                  >
+                    Anotarme al torneo
+                  </Link>
+                )}
                 {marcianoAbierto ? (
                   <Link
                     href={marcianosHref}

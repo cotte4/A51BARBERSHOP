@@ -6,12 +6,14 @@ import { isPortalClienteAbierto } from "@/lib/launch-mode";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Portal de clientes cerrado hasta que se habilite: solo el torneo y el teaser son públicos.
+  // Portal de clientes y reserva online cerrados hasta que se habiliten: solo el torneo y el teaser son públicos.
   const esPortalCliente =
     pathname === "/marciano" ||
     pathname.startsWith("/marciano/") ||
     pathname === "/ar-lab" ||
-    pathname.startsWith("/ar-lab/");
+    pathname.startsWith("/ar-lab/") ||
+    pathname === "/reservar" ||
+    pathname.startsWith("/reservar/");
   if (esPortalCliente && !isPortalClienteAbierto()) {
     return NextResponse.redirect(new URL("/", request.url));
   }
@@ -198,5 +200,7 @@ export const config = {
     "/clientes/:path*",
     "/marciano/:path*",
     "/ar-lab/:path*",
+    "/reservar",
+    "/reservar/:path*",
   ],
 };
