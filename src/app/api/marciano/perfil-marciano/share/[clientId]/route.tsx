@@ -2,6 +2,7 @@ export const runtime = "edge";
 
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
+import { isPortalClienteAbierto } from "@/lib/launch-mode";
 
 const SHAPE_LABELS: Record<string, string> = {
   oval: "Ovalado",
@@ -16,6 +17,9 @@ export async function GET(
   { params }: { params: Promise<{ clientId: string }> }
 ) {
   await params; // consume params (clientId used for auth context only — not needed for MVP)
+
+  // Portal de clientes cerrado: la imagen para compartir tampoco se sirve.
+  if (!isPortalClienteAbierto()) return new Response("Not found", { status: 404 });
 
   const { searchParams } = request.nextUrl;
   const style = searchParams.get("style") ?? "Marciano";
