@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import BrandMark from "@/components/BrandMark";
 import MarcianoCerradoPill from "@/components/landing/MarcianoCerradoPill";
+import TorneoHeroCard from "@/components/landing/TorneoHeroCard";
 
 const infoTags = [
   "Mar del Plata",
@@ -162,12 +163,11 @@ export default function PublicLandingHero({
                 <>
                   <Link
                     href="/torneo"
-                    className="neon-button inline-flex min-h-12 items-center justify-center rounded-2xl px-7 text-base font-semibold"
+                    className="neon-button inline-flex min-h-12 items-center justify-center whitespace-nowrap rounded-2xl px-7 text-base font-semibold"
                   >
                     Anotarme al torneo
                   </Link>
-                  <MarcianoCerradoPill className="min-h-12 px-7" etiqueta="Reservar turno" />
-                </>
+                  </>
               )}
               {marcianoAbierto ? (
                 <Link
@@ -177,7 +177,7 @@ export default function PublicLandingHero({
                   Soy Marciano
                 </Link>
               ) : (
-                <MarcianoCerradoPill className="min-h-12 px-7" />
+                <MarcianoCerradoPill className="min-h-12 whitespace-nowrap px-7" etiqueta="Reservas y Club Marciano" />
               )}
             </div>
 
@@ -198,6 +198,9 @@ export default function PublicLandingHero({
           </div>
 
           {/* RIGHT — visual card */}
+          {!marcianoAbierto ? (
+            <TorneoHeroCard />
+          ) : (
           <div
             className="animate-scale-in-landing panel-card relative overflow-hidden rounded-[36px] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.32)] transition hover:-translate-y-1 sm:p-5 lg:p-6"
             style={{ animationDelay: "0.15s" }}
@@ -266,6 +269,7 @@ export default function PublicLandingHero({
               </div>
             </div>
           </div>
+          )}
 
         </div>
       </div>
