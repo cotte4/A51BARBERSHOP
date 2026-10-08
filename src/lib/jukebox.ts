@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { and, asc, desc, eq, gt, like, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { configuracionNegocio, jukeboxProposals, jukeboxQueue } from "@/db/schema";
+import { resolverPedido, type PedidoCliente } from "@/lib/jukebox-pedido";
 
 const RATE_LIMIT_MINUTES = 5;
 const IP_LIMIT_WINDOW_MINUTES = 10;
@@ -117,6 +118,31 @@ export async function waitingBlock(videoId: string): Promise<"repetido" | "llena
   if (todos.some((t) => t.videoId === videoId)) return "repetido";
   if (todos.length >= MAX_WAITING) return "llena";
   return null;
+}
+
+/** El último tema que pidió este dispositivo, ya traducido para el cliente (nada interno sale de acá). */
+export async function getLastProposalForDevice(deviceKey: string): Promise<PedidoCliente | null> {
+  const [ultima] = await db
+    .select({ id: jukeboxProposals.id, videoTitle: jukeboxProposals.videoTitle, status: jukeboxProposals.status })
+    .from(jukeboxProposals)
+    .where(like(jukeboxProposals.deviceKeyHash, `${hashDeviceKey(deviceKey)}%`))
+    .orderBy(desc(jukeboxProposals.createdAt))
+    .limit(1);
+  if (!ultima) return null;
+
+  const [[item], activos] = await Promise.all([
+    db
+      .select({ state: jukeboxQueue.state, positionHint: jukeboxQueue.positionHint })
+      .from(jukeboxQueue)
+      .where(eq(jukeboxQueue.proposalId, ultima.id))
+      .orderBy(desc(jukeboxQueue.createdAt))
+      .limit(1),
+    db
+      .select({ state: jukeboxQueue.state, positionHint: jukeboxQueue.positionHint })
+      .from(jukeboxQueue)
+      .where(sql`${jukeboxQueue.state} in ('queued', 'playing')`),
+  ]);
+  return resolverPedido(ultima, item ?? null, activos);
 }
 
 /** Saca un tema que todavía no empezó a sonar (Pinky modera la cola auto-aprobada). */

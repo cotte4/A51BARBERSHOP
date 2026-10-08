@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { PedidoCliente } from "@/lib/jukebox-pedido";
 
 const GENRES = ["Reggaeton", "Trap", "Rock", "Cumbia", "Pop", "Hip Hop", "Electrónica", "Salsa"];
 const DEVICE_KEY_STORAGE = "a51-jukebox-device-key";
@@ -41,6 +42,34 @@ function getOrCreateDeviceKey(): string {
   return key;
 }
 
+// La marca del cooldown queda guardada tras proponer: sirve para saber si hay un pedido que seguir.
+function yaPropuso(): boolean {
+  return localStorage.getItem(COOLDOWN_STORAGE) !== null;
+}
+
+const PUNTO_PEDIDO: Record<PedidoCliente["estado"], string> = {
+  en_revision: "bg-zinc-400",
+  en_cola: "bg-[#8cff59]",
+  sonando: "animate-pulse bg-[#8cff59]",
+  ya_sono: "bg-zinc-600",
+  no_entro: "bg-zinc-600",
+};
+
+function textoPedido(pedido: PedidoCliente): string {
+  switch (pedido.estado) {
+    case "en_revision":
+      return "Esperando que Pinky lo apruebe";
+    case "en_cola":
+      return pedido.lugar ? `En la cola, lugar ${pedido.lugar}` : "En la cola, sale ahora";
+    case "sonando":
+      return "Está sonando ahora";
+    case "ya_sono":
+      return "Ya sonó";
+    case "no_entro":
+      return "No entró a la cola";
+  }
+}
+
 function isInCooldown(): boolean {
   const last = localStorage.getItem(COOLDOWN_STORAGE);
   if (!last) return false;
@@ -72,11 +101,37 @@ export default function JukeboxClient() {
 
   const [cooldownSecs, setCooldownSecs] = useState(0);
   const [ahora, setAhora] = useState<AhoraSonando | null>(null);
+  // Cambia con cada pedido para consultar al toque, sin esperar los 10 s.
+  const [pedidosHechos, setPedidosHechos] = useState(0);
+  const [miPedido, setMiPedido] = useState<PedidoCliente | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isInCooldown()) setCooldownSecs(cooldownRemaining());
+    if (yaPropuso()) setPedidosHechos(1);
   }, []);
+
+  useEffect(() => {
+    if (pedidosHechos === 0) return;
+    let vivo = true;
+    const deviceKey = getOrCreateDeviceKey();
+    const consultar = async () => {
+      try {
+        const res = await fetch(`/api/jukebox/mine?deviceKey=${encodeURIComponent(deviceKey)}`, {
+          cache: "no-store",
+        });
+        if (res.ok && vivo) setMiPedido(((await res.json()) as { pedido: PedidoCliente | null }).pedido);
+      } catch {
+        // sin conexión un momento: queda lo último que se vio
+      }
+    };
+    void consultar();
+    const timer = setInterval(consultar, 10_000);
+    return () => {
+      vivo = false;
+      clearInterval(timer);
+    };
+  }, [pedidosHechos]);
 
   useEffect(() => {
     let vivo = true;
@@ -164,6 +219,7 @@ export default function JukeboxClient() {
       setCooldownSecs(cooldownRemaining());
       setAutoApproved(data.autoApproved ?? false);
       setSubmitted(true);
+      setPedidosHechos((n) => n + 1);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "No se pudo enviar la propuesta.");
     } finally {
@@ -181,10 +237,23 @@ export default function JukeboxClient() {
     </section>
   ) : null;
 
+  const activo = miPedido?.estado === "en_cola" || miPedido?.estado === "sonando";
+  const tuTema = miPedido ? (
+    <section className="panel-card rounded-[22px] px-4 py-3" aria-live="polite">
+      <p className="eyebrow text-sm font-semibold text-zinc-400">Tu tema</p>
+      <p className="mt-1 truncate text-sm font-semibold text-white">{miPedido.videoTitle}</p>
+      <p className={`mt-1 flex items-center gap-2 text-sm ${activo ? "text-[#8cff59]" : "text-zinc-300"}`}>
+        <span className={`h-2 w-2 shrink-0 rounded-full ${PUNTO_PEDIDO[miPedido.estado]}`} aria-hidden="true" />
+        {textoPedido(miPedido)}
+      </p>
+    </section>
+  ) : null;
+
   if (submitted) {
     return (
       <>
       {sonando}
+      {tuTema}
       <section className="panel-card rounded-[28px] p-6 text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[#8cff59]/30 bg-[#8cff59]/10">
           <svg viewBox="0 0 24 24" className="h-7 w-7 text-[#8cff59]" fill="none" stroke="currentColor" strokeWidth="1.9">
@@ -238,6 +307,7 @@ export default function JukeboxClient() {
   return (
     <>
       {sonando}
+      {tuTema}
       <section className="panel-card rounded-[28px] p-5">
         <p className="eyebrow text-zinc-500">Jukebox</p>
         <h1 className="mt-2 font-display text-2xl font-semibold text-white">
