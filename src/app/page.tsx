@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import MarcianoCerradoPill from "@/components/landing/MarcianoCerradoPill";
 import PublicLandingDetails from "@/components/landing/PublicLandingDetails";
 import PublicLandingHero from "@/components/landing/PublicLandingHero";
+import TorneoCtaFlotante from "@/components/landing/TorneoCtaFlotante";
 import { auth } from "@/lib/auth";
 import { isPortalClienteAbierto } from "@/lib/launch-mode";
 import { getTorneoVigente } from "@/lib/torneo-data";
@@ -89,7 +90,8 @@ export default async function RootPage() {
                 ) : (
                   <Link
                     href="/torneo"
-                    className="neon-button inline-flex min-h-11 items-center justify-center rounded-2xl px-5 text-sm font-semibold"
+                    data-cta-torneo=""
+                    className="neon-button inline-flex min-h-12 items-center justify-center rounded-2xl px-5 text-sm font-semibold"
                   >
                     Anotarme al torneo
                   </Link>
@@ -115,6 +117,8 @@ export default async function RootPage() {
           </div>
         </footer>
       </div>
+
+      {marcianoAbierto ? null : <TorneoCtaFlotante />}
     </main>
   );
 }

@@ -86,6 +86,60 @@ function cooldownRemaining(): number {
   return Math.max(0, Math.ceil((COOLDOWN_MS - (Date.now() - parseInt(last))) / 1000));
 }
 
+// Pasos que ve el cliente; "no_entro" no tiene paso (se muestra solo el texto).
+const PASOS = ["Enviado", "En la cola", "Sonando"] as const;
+const PASO_ACTUAL: Record<PedidoCliente["estado"], number> = {
+  en_revision: 0,
+  en_cola: 1,
+  sonando: 2,
+  ya_sono: 3,
+  no_entro: -1,
+};
+
+const ALTURAS_EQ = ["h-3", "h-4", "h-2.5", "h-3.5"] as const;
+
+/** Barritas de ecualizador: dicen "esto está sonando" sin leer. Quietas con movimiento reducido. */
+function Ecualizador() {
+  return (
+    <span className="inline-flex h-4 shrink-0 items-end gap-[3px]" aria-hidden="true">
+      {ALTURAS_EQ.map((alto, i) => (
+        <span
+          key={i}
+          className={`eq-bar w-[3px] rounded-full bg-[#8cff59] ${alto}`}
+          style={{ animationDelay: `${i * 0.13}s`, animationDuration: `${0.8 + i * 0.12}s` }}
+        />
+      ))}
+    </span>
+  );
+}
+
+function Spinner() {
+  return (
+    <span
+      className="h-[18px] w-[18px] shrink-0 rounded-full border-2 border-current border-t-transparent"
+      style={{ animation: "a51-spin 0.7s linear infinite" }}
+      aria-hidden="true"
+    />
+  );
+}
+
+/** Barra que se vacía mientras corre la espera para proponer otro tema. */
+function Espera({ segundos }: { segundos: number }) {
+  return (
+    <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-left" role="status">
+      <p className="text-sm text-amber-200">
+        Podés proponer otro tema en <span className="font-semibold tabular-nums">{formatCooldown(segundos)}</span>.
+      </p>
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-amber-500/15">
+        <div
+          className="h-full origin-left rounded-full bg-amber-300/70 transition-transform duration-1000 ease-linear"
+          style={{ transform: `scaleX(${Math.min(1, segundos / (COOLDOWN_MS / 1000))})` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function JukeboxClient() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -96,6 +150,8 @@ export default function JukeboxClient() {
   const [proposerName, setProposerName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Sube con cada error para re-disparar el "shake" aunque el texto sea el mismo.
+  const [intentoFallido, setIntentoFallido] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [autoApproved, setAutoApproved] = useState(false);
 
@@ -191,7 +247,7 @@ export default function JukeboxClient() {
 
   async function handlePropose() {
     if (!selected || !proposerName.trim()) return;
-    if (cooldownSecs > 0) return;
+    if (cooldownSecs > 0 || submitting) return;
 
     setSubmitting(true);
     setSubmitError(null);
@@ -222,15 +278,24 @@ export default function JukeboxClient() {
       setPedidosHechos((n) => n + 1);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "No se pudo enviar la propuesta.");
+      setIntentoFallido((n) => n + 1);
     } finally {
       setSubmitting(false);
     }
   }
 
   const sonando = ahora?.nowPlaying ? (
-    <section className="rounded-[22px] border border-[#8cff59]/25 bg-[#8cff59]/8 px-4 py-3" aria-live="polite">
-      <p className="eyebrow text-xs font-semibold text-[#8cff59]">Suena ahora</p>
-      <p className="mt-1 truncate text-sm font-semibold text-white">{ahora.nowPlaying.videoTitle}</p>
+    <section
+      className="jukebox-motion pop-in rounded-[22px] border border-[#8cff59]/25 bg-[#8cff59]/8 px-4 py-3"
+      aria-live="polite"
+    >
+      <div className="flex items-center gap-2">
+        <Ecualizador />
+        <p className="eyebrow text-xs font-semibold text-[#8cff59]">Suena ahora</p>
+      </div>
+      <p key={ahora.nowPlaying.videoTitle} className="pop-in mt-1.5 truncate text-sm font-semibold text-white">
+        {ahora.nowPlaying.videoTitle}
+      </p>
       {ahora.upcoming[0] ? (
         <p className="mt-0.5 truncate text-xs text-zinc-400">Sigue: {ahora.upcoming[0].videoTitle}</p>
       ) : null}
@@ -238,14 +303,48 @@ export default function JukeboxClient() {
   ) : null;
 
   const activo = miPedido?.estado === "en_cola" || miPedido?.estado === "sonando";
+  const paso = miPedido ? PASO_ACTUAL[miPedido.estado] : -1;
   const tuTema = miPedido ? (
-    <section className="panel-card rounded-[22px] px-4 py-3" aria-live="polite">
+    <section
+      className={`jukebox-motion pop-in panel-card rounded-[22px] px-4 py-4 ${
+        miPedido.estado === "sonando" ? "border-[#8cff59]/40 shadow-[0_0_32px_rgba(140,255,89,0.12)]" : ""
+      }`}
+      aria-live="polite"
+    >
       <p className="eyebrow text-sm font-semibold text-zinc-400">Tu tema</p>
       <p className="mt-1 truncate text-sm font-semibold text-white">{miPedido.videoTitle}</p>
-      <p className={`mt-1 flex items-center gap-2 text-sm ${activo ? "text-[#8cff59]" : "text-zinc-300"}`}>
-        <span className={`h-2 w-2 shrink-0 rounded-full ${PUNTO_PEDIDO[miPedido.estado]}`} aria-hidden="true" />
+      {/* key: al cambiar de estado (o de lugar) la línea entra de nuevo, así se nota el avance. */}
+      <p
+        key={`${miPedido.estado}-${miPedido.lugar ?? ""}`}
+        className={`pop-in mt-1.5 flex items-center gap-2 text-sm ${activo ? "text-[#8cff59]" : "text-zinc-300"}`}
+      >
+        {miPedido.estado === "sonando" ? (
+          <Ecualizador />
+        ) : (
+          <span className={`h-2 w-2 shrink-0 rounded-full ${PUNTO_PEDIDO[miPedido.estado]}`} aria-hidden="true" />
+        )}
         {textoPedido(miPedido)}
       </p>
+      {paso >= 0 ? (
+        <ol className="mt-3 grid grid-cols-3 gap-1.5" aria-label="Avance de tu tema">
+          {PASOS.map((nombre, i) => {
+            const hecho = i <= paso;
+            return (
+              <li key={nombre} className="min-w-0">
+                <div className="h-1 overflow-hidden rounded-full bg-zinc-800">
+                  <div
+                    className={`h-full origin-left rounded-full bg-[#8cff59] transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+                      hecho ? "scale-x-100" : "scale-x-0"
+                    }`}
+                    style={{ transitionDelay: `${i * 120}ms` }}
+                  />
+                </div>
+                <p className={`mt-1 truncate text-[11px] ${hecho ? "text-zinc-200" : "text-zinc-500"}`}>{nombre}</p>
+              </li>
+            );
+          })}
+        </ol>
+      ) : null}
     </section>
   ) : null;
 
@@ -254,11 +353,14 @@ export default function JukeboxClient() {
       <>
       {sonando}
       {tuTema}
-      <section className="panel-card rounded-[28px] p-6 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[#8cff59]/30 bg-[#8cff59]/10">
-          <svg viewBox="0 0 24 24" className="h-7 w-7 text-[#8cff59]" fill="none" stroke="currentColor" strokeWidth="1.9">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
+      <section className="jukebox-motion pop-in panel-card rounded-[28px] p-6 text-center">
+        <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center">
+          <span className="ring-pulse absolute inset-0 rounded-full border border-[#8cff59]/50" aria-hidden="true" />
+          <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[#8cff59]/30 bg-[#8cff59]/10">
+            <svg viewBox="0 0 24 24" className="h-7 w-7 text-[#8cff59]" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+              <path className="check-draw" strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </span>
         </div>
         <h2 className="font-display text-2xl font-semibold text-white">
           {autoApproved ? "Tu tema ya está en la cola" : "Propuesta enviada"}
@@ -281,9 +383,7 @@ export default function JukeboxClient() {
           </div>
         )}
         {cooldownSecs > 0 ? (
-          <p className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-            Podés proponer otro tema en {formatCooldown(cooldownSecs)}.
-          </p>
+          <Espera segundos={cooldownSecs} />
         ) : (
           <button
             type="button"
@@ -294,7 +394,7 @@ export default function JukeboxClient() {
               setResults([]);
               setQuery("");
             }}
-            className="ghost-button mt-5 w-full rounded-[20px] py-3 text-sm font-semibold"
+            className="ghost-button pop-in mt-5 min-h-12 w-full rounded-[20px] text-sm font-semibold active:scale-[0.98]"
           >
             Proponer otra
           </button>
@@ -308,7 +408,7 @@ export default function JukeboxClient() {
     <>
       {sonando}
       {tuTema}
-      <section className="panel-card rounded-[28px] p-5">
+      <section className="jukebox-motion panel-card rounded-[28px] p-5">
         <p className="eyebrow text-zinc-500">Jukebox</p>
         <h1 className="mt-2 font-display text-2xl font-semibold text-white">
           Pedí tu tema
@@ -323,8 +423,9 @@ export default function JukeboxClient() {
               key={genre}
               type="button"
               disabled={searching}
+              aria-pressed={query === genre}
               onClick={() => { setQuery(genre); handleSearch(genre); }}
-              className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+              className={`min-h-12 rounded-full border px-4 text-sm font-medium active:scale-[0.96] disabled:opacity-50 ${
                 query === genre
                   ? "border-[#8cff59]/60 bg-[#8cff59]/15 text-[#d8ffc7]"
                   : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white"
@@ -338,50 +439,82 @@ export default function JukeboxClient() {
         <form
           onSubmit={(e) => { e.preventDefault(); handleSearch(query); }}
           className="mt-4 flex gap-2"
+          role="search"
         >
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscá artista o canción..."
-            className="min-h-[48px] flex-1 rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#8cff59]/60"
+            aria-label="Artista o canción"
+            enterKeyHint="search"
+            className="min-h-12 min-w-0 flex-1 rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#8cff59]/60"
           />
           <button
             type="submit"
             disabled={searching}
-            className="neon-button rounded-[20px] px-5 text-sm font-semibold text-[#07130a] disabled:opacity-60"
+            className="neon-button inline-flex min-h-12 min-w-[96px] items-center justify-center gap-2 rounded-[20px] px-5 text-sm font-semibold text-[#07130a] active:scale-[0.97] disabled:opacity-70"
           >
-            {searching ? "..." : "Buscar"}
+            {searching ? (
+              <>
+                <Spinner />
+                <span className="sr-only">Buscando</span>
+              </>
+            ) : (
+              "Buscar"
+            )}
           </button>
         </form>
 
         {searchError && (
-          <p className="mt-3 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <p
+            role="alert"
+            className="pop-in mt-3 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200"
+          >
             {searchError}
           </p>
         )}
       </section>
 
-      {results.length > 0 && !selected && (
-        <section className="panel-card rounded-[28px] p-5">
-          <p className="eyebrow text-zinc-500">{results.length} resultados</p>
+      {searching && (
+        <section className="jukebox-motion panel-card rounded-[28px] p-5" aria-busy="true" aria-label="Buscando temas">
+          <div className="skeleton h-3 w-24 rounded-full" />
           <div className="mt-4 flex flex-col gap-2">
-            {results.map((r) => (
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
+                <div className="skeleton h-14 w-14 shrink-0 rounded-xl" />
+                <div className="flex-1 space-y-2">
+                  <div className="skeleton h-3 w-4/5 rounded-full" />
+                  <div className="skeleton h-3 w-2/5 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {results.length > 0 && !selected && (
+        <section className="jukebox-motion panel-card rounded-[28px] p-5">
+          <p className="eyebrow text-zinc-500">{results.length} resultados</p>
+          <p className="mt-1 text-xs text-zinc-500">Tocá el que querés pedir.</p>
+          <div className="mt-4 flex flex-col gap-2">
+            {results.map((r, i) => (
               <button
                 key={r.videoId}
                 type="button"
                 onClick={() => setSelected(r)}
-                className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3 text-left transition-colors hover:border-[#8cff59]/30 hover:bg-zinc-900"
+                className="pop-in flex min-h-12 items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3 text-left hover:border-[#8cff59]/30 hover:bg-zinc-900 active:scale-[0.98] active:border-[#8cff59]/50"
+                style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
               >
                 {r.thumbnailUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={r.thumbnailUrl} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
+                  <img src={r.thumbnailUrl} alt="" loading="lazy" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-2 text-sm font-semibold text-white">{r.title}</p>
                   <p className="mt-0.5 truncate text-xs text-zinc-400">{r.channelTitle}</p>
                 </div>
                 {r.durationSeconds && (
-                  <span className="shrink-0 text-xs text-zinc-500">
+                  <span className="shrink-0 text-xs tabular-nums text-zinc-500">
                     {formatDuration(r.durationSeconds)}
                   </span>
                 )}
@@ -392,21 +525,28 @@ export default function JukeboxClient() {
       )}
 
       {selected && (
-        <section className="panel-card rounded-[28px] p-5">
-          <div className="flex items-start gap-3">
+        <section className="jukebox-motion pop-in panel-card rounded-[28px] p-5">
+          <div className="flex items-start gap-2">
             <button
               type="button"
               onClick={() => setSelected(null)}
-              className="mt-0.5 shrink-0 text-zinc-500 hover:text-zinc-300"
+              aria-label="Volver a los resultados"
+              className="-ml-3 -mt-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-zinc-400 hover:bg-white/5 hover:text-white active:scale-[0.94]"
             >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5M12 5l-7 7 7 7" />
               </svg>
             </button>
-            <div className="min-w-0">
-              <p className="eyebrow text-zinc-500">Elegiste</p>
-              <p className="mt-1 text-base font-semibold text-white leading-tight">{selected.title}</p>
-              <p className="text-sm text-zinc-400">{selected.channelTitle}</p>
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              {selected.thumbnailUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={selected.thumbnailUrl} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
+              )}
+              <div className="min-w-0">
+                <p className="eyebrow text-zinc-500">Elegiste</p>
+                <p className="mt-1 line-clamp-2 text-base font-semibold leading-tight text-white">{selected.title}</p>
+                <p className="truncate text-sm text-zinc-400">{selected.channelTitle}</p>
+              </div>
             </div>
           </div>
 
@@ -419,30 +559,47 @@ export default function JukeboxClient() {
               ref={nameInputRef}
               value={proposerName}
               onChange={(e) => setProposerName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void handlePropose();
+                }
+              }}
               placeholder="¿Cómo te llamás?"
               maxLength={40}
-              className="mt-2 min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#8cff59]/60"
+              enterKeyHint="send"
+              autoComplete="nickname"
+              className="mt-2 min-h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#8cff59]/60"
             />
           </div>
 
           {submitError && (
-            <p className="mt-3 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            <p
+              key={intentoFallido}
+              role="alert"
+              className="shake mt-3 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200"
+            >
               {submitError}
             </p>
           )}
 
           {cooldownSecs > 0 ? (
-            <p className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-              Podés proponer otro tema en {formatCooldown(cooldownSecs)}.
-            </p>
+            <Espera segundos={cooldownSecs} />
           ) : (
             <button
               type="button"
               disabled={submitting || !proposerName.trim()}
               onClick={handlePropose}
-              className="neon-button mt-4 w-full rounded-[20px] py-3 text-sm font-semibold text-[#07130a] disabled:opacity-60"
+              className="neon-button mt-4 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-[20px] text-base font-semibold text-[#07130a] active:scale-[0.98] disabled:opacity-60"
             >
-              {submitting ? "Enviando..." : "Proponer tema"}
+              {submitting ? (
+                <>
+                  <Spinner />
+                  Enviando…
+                </>
+              ) : (
+                "Proponer tema"
+              )}
             </button>
           )}
         </section>

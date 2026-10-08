@@ -162,14 +162,25 @@ export default function PublicLandingHero({
                   Reservar turno
                 </Link>
               ) : (
-                <>
-                  <Link
-                    href="/torneo"
-                    className="neon-button inline-flex min-h-12 items-center justify-center whitespace-nowrap rounded-2xl px-7 text-base font-semibold"
+                <Link
+                  href="/torneo"
+                  data-cta-torneo=""
+                  className="cta-torneo neon-button group inline-flex min-h-14 items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-7 text-base font-semibold"
+                >
+                  Anotarme al torneo
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.9"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
                   >
-                    Anotarme al torneo
-                  </Link>
-                  </>
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </Link>
               )}
               {marcianoAbierto ? (
                 <Link
@@ -179,7 +190,7 @@ export default function PublicLandingHero({
                   Soy Marciano
                 </Link>
               ) : (
-                <MarcianoCerradoPill className="min-h-12 whitespace-nowrap px-7" etiqueta="Reservas y Club Marciano" />
+                <MarcianoCerradoPill className="min-h-12 justify-center px-5 sm:whitespace-nowrap sm:px-7" etiqueta="Reservas y Club Marciano" />
               )}
             </div>
 
