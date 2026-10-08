@@ -10,6 +10,7 @@ import {
   type Marcador,
   type PartidoCuadro,
 } from "@/lib/torneo";
+import { CATALOGO_CLUBES } from "@/lib/torneo-escudos";
 import type { DatosPantalla, TableroPublico } from "@/lib/torneo-juego";
 import { PantallaVista } from "../_Pantalla";
 
@@ -19,12 +20,8 @@ const NOMBRES = [
   "Santi", "Mati10", "ElTurco", "Nico_GOL", "Lucho", "Gonzo", "LaPulgaDeVillaCrespo", "Maxi.D",
   "Fede", "Agus", "Joaco", "Dami", "Bauti", "Pipe", "Lean", "Cris",
 ];
-// Los 16 del panel más uno sin PNG: casi siempre sale y así se ensaya también el escudo genérico.
-const EQUIPOS = [
-  "Real Madrid", "Barcelona", "Atlético de Madrid", "Manchester City", "Liverpool", "Arsenal", "Chelsea",
-  "Manchester United", "Tottenham", "Aston Villa", "Bayern Múnich", "Borussia Dortmund", "Inter",
-  "Inter Miami", "Roma", "PSG", "River Plate",
-];
+// Los 24 del catálogo más uno sin PNG: a veces sale y así se ensaya también el escudo genérico.
+const EQUIPOS = [...CATALOGO_CLUBES.map((c) => c.nombre), "River Plate"];
 
 function armarTablero(
   cuadro: PartidoCuadro[],

@@ -4,10 +4,10 @@ import { useState } from "react";
 import Image from "next/image";
 import { escudoDeEquipo, inicialesEquipo } from "@/lib/torneo-escudos";
 
-// Mismo margen interno que los PNG normalizados (8 %): el genérico ocupa el mismo lugar que un escudo real.
-const MARGEN = 0.08;
+// Mismo margen que un escudo redondo normalizado (~11 %): el genérico ocupa el mismo lugar que uno real.
+const MARGEN = 0.11;
 
-/** Escudo para un equipo sin PNG (Pinky puede cargar cualquier nombre): iniciales en un escudo neón. */
+/** Escudo para un equipo sin PNG (torneos viejos o el ensayo): iniciales en un escudo neón. */
 function EscudoGenerico({ equipo, tamano }: { equipo: string; tamano: number }) {
   const iniciales = inicialesEquipo(equipo);
   return (

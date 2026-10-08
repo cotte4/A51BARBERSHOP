@@ -1,17 +1,21 @@
 # Escudos de los equipos del torneo
 
 Escudos que muestra la tele del torneo (`/torneo/pantalla`) y el cuadro público (`/torneo`).
-Los usa `src/lib/torneo-escudos.ts`: si se agrega un archivo acá, hay que sumar su slug a la lista de ese archivo.
+El catálogo de clubes que se pueden elegir es `CATALOGO_CLUBES` en `src/lib/torneo-escudos.ts` (24 clubes, uno por archivo): para sumar un club hay que agregar el PNG acá y la fila al catálogo. El test `src/tests/integration/torneo-escudos.test.ts` verifica que cada club del catálogo tenga su archivo.
 
 **Son marcas registradas de sus clubes.** Se usan sin fines de lucro, solo para identificar el equipo de cada jugador en un torneo local de EA FC en la barbería. No son de A51 ni implican relación con los clubes.
 
 ## Formato
 
-Todos iguales para que se vean del mismo tamaño: PNG de 512x512, fondo transparente, el escudo recortado y centrado con 8 % de margen (lado mayor = 430 px), rasterizados con `sharp` desde el SVG a ~2000 px y achicados.
+PNG de 512x512, fondo transparente, el escudo recortado al borde y centrado, rasterizado con `sharp` desde el SVG a ~2000 px y achicado (lanczos3).
+
+**Tamaño óptico parejo** (desde 2026-10-08): con el mismo margen para todos, un escudo redondo y lleno (Bayern, Chelsea) se veía mucho más grande que uno alto y angosto (Tottenham, Liverpool). Ahora cada escudo se escala para que la media geométrica de su caja, `sqrt(ancho × alto)`, sea 400 px, con tope de 461 px en el lado mayor (5 % de margen mínimo). Resultado: los redondos miden 400x400 (~11 % de margen) y los altos llegan a 461 de alto. El escudo genérico (`src/components/torneo/Escudo.tsx`) usa el mismo 11 %.
+
+Para rehacer uno: bajar el SVG de la fuente de abajo, recortarlo con `trim()`, calcular `escala = min(461 / max(ancho, alto), 400 / sqrt(ancho × alto))`, redimensionar y componer centrado sobre un lienzo transparente de 512x512.
 
 ## Fuentes
 
-Bajados el 2026-10-08. Los de Wikipedia en inglés son archivos de uso legítimo (no libres) que no están en Commons.
+Bajados el 2026-10-08 (los 16 primeros se re-normalizaron ese día con el tamaño óptico; los 8 últimos se sumaron con el catálogo). Los de Wikipedia en inglés son archivos de uso legítimo (no libres) que no están en Commons.
 
 | Archivo | Equipo | Fuente |
 |---|---|---|
@@ -31,3 +35,11 @@ Bajados el 2026-10-08. Los de Wikipedia en inglés son archivos de uso legítimo
 | `inter-miami.png` | Inter Miami | https://en.wikipedia.org/wiki/File:Inter_Miami_CF_logo.svg |
 | `roma.png` | Roma | https://en.wikipedia.org/wiki/File:AS_Roma_logo_(2017).svg |
 | `psg.png` | PSG | https://en.wikipedia.org/wiki/File:Paris_Saint-Germain_F.C..svg |
+| `newcastle.png` | Newcastle | https://en.wikipedia.org/wiki/File:Newcastle_United_Logo.svg |
+| `bayer-leverkusen.png` | Bayer Leverkusen | https://en.wikipedia.org/wiki/File:Bayer_04_Leverkusen_logo.svg |
+| `milan.png` | Milan | https://commons.wikimedia.org/wiki/File:Logo_of_AC_Milan.svg |
+| `juventus.png` | Juventus | https://commons.wikimedia.org/wiki/File:Juventus_FC_-_logo_white_(Italy,_2017).svg (versión blanca oficial: la negra no se ve sobre el fondo oscuro de la tele) |
+| `napoli.png` | Napoli | https://commons.wikimedia.org/wiki/File:SSC_Napoli_2025_(white_and_azure).svg (la que usa Wikipedia en inglés) |
+| `benfica.png` | Benfica | https://en.wikipedia.org/wiki/File:SL_Benfica_logo.svg |
+| `porto.png` | Porto | https://en.wikipedia.org/wiki/File:FC_Porto.svg |
+| `ajax.png` | Ajax | https://en.wikipedia.org/wiki/File:Ajax_Amsterdam.svg |

@@ -12,6 +12,7 @@ import {
   user,
 } from "@/db/schema";
 import { normalizePhone } from "@/lib/phone";
+import { CATALOGO_CLUBES } from "@/lib/torneo-escudos";
 import {
   avanzarGanador,
   calcularPodio,
@@ -33,26 +34,6 @@ export type TorneoPartido = typeof torneoPartidos.$inferSelect;
 export const MAX_ANOTADOS = 51;
 /** Inscripciones aceptadas cada 10 min en total: holgado para el local, corta a un bot. */
 const MAX_ANOTADOS_POR_RAFAGA = 40;
-
-/** Placeholder editable: "los más grandes de cada liga". Se reemplaza con la lista real. */
-const EQUIPOS_PLACEHOLDER = [
-  "Real Madrid",
-  "Barcelona",
-  "Manchester City",
-  "Liverpool",
-  "Bayern Múnich",
-  "PSG",
-  "Arsenal",
-  "Chelsea",
-  "Manchester United",
-  "Tottenham",
-  "Inter",
-  "Roma",
-  "Atlético de Madrid",
-  "Borussia Dortmund",
-  "Aston Villa",
-  "Inter Miami",
-];
 
 // ————————————————————————————
 // Lectura
@@ -111,9 +92,10 @@ export async function asegurarTorneo(): Promise<Torneo> {
       .insert(torneos)
       .values({ nombre: "Torneo FIFA A51" })
       .returning();
+    // Arranca con los 24 del catálogo elegidos: Pinky saca los que no quiera.
     await tx
       .insert(torneoEquipos)
-      .values(EQUIPOS_PLACEHOLDER.map((nombre) => ({ torneoId: torneo.id, nombre })));
+      .values(CATALOGO_CLUBES.map((club) => ({ torneoId: torneo.id, nombre: club.nombre })));
     return torneo;
   });
 }

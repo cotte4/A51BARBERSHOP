@@ -31,7 +31,7 @@ async function main() {
     console.log("1. Torneo y equipos");
     const torneo = await datos.asegurarTorneo();
     torneoId = torneo.id;
-    afirmar((await datos.listarEquipos(torneo.id)).length === 16, "se crearon los 16 equipos placeholder");
+    afirmar((await datos.listarEquipos(torneo.id)).length === 24, "se crearon los 24 equipos del catálogo");
 
     console.log("2. Inscripción pública");
     for (let i = 1; i <= 17; i++) {

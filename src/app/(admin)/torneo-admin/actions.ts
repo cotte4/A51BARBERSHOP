@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdminSession } from "@/lib/admin-action";
 import { errorAlias, GOLES_MAX, limpiarAlias } from "@/lib/torneo";
+import { nombresDelCatalogo } from "@/lib/torneo-escudos";
 import {
   actualizarConfig,
   asegurarTorneo,
@@ -122,12 +123,12 @@ export async function guardarConfigAction(
   return { ok: true, mensaje: "Guardado." };
 }
 
-export async function guardarEquiposAction(
-  _prevState: TorneoAdminState,
-  formData: FormData,
-): Promise<TorneoAdminState> {
+/** Guarda los clubes elegidos en el panel. Solo valen los del catálogo (con escudo); el resto se descarta. */
+export async function guardarEquiposAction(entradas: unknown): Promise<TorneoAdminState> {
   const denegado = await exigirAdmin();
   if (denegado) return denegado;
+  const parsed = z.array(z.string().max(80)).max(64).safeParse(entradas);
+  if (!parsed.success) return { ok: false, mensaje: "Revisá los equipos elegidos." };
 
   const torneo = await getTorneoVigente();
   if (!torneo) return { ok: false, mensaje: "Todavía no hay torneo." };
@@ -135,15 +136,12 @@ export async function guardarEquiposAction(
     return { ok: false, mensaje: "El torneo ya se sorteó: no se pueden cambiar los equipos." };
   }
 
-  const nombres = String(formData.get("equipos") ?? "")
-    .split("\n")
-    .map((n) => n.trim())
-    .filter(Boolean);
-  if (nombres.length > 64) return { ok: false, mensaje: "Son demasiados equipos." };
+  const nombres = nombresDelCatalogo(parsed.data);
+  if (nombres.length < 2) return { ok: false, mensaje: "Elegí al menos 2 equipos." };
 
   await reemplazarEquipos(torneo.id, nombres);
   refrescar();
-  return { ok: true, mensaje: `Guardados ${new Set(nombres).size} equipos.` };
+  return { ok: true, mensaje: `Guardados: ${nombres.length} equipos.` };
 }
 
 export async function sortearAction(): Promise<TorneoAdminState> {

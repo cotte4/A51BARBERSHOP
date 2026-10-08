@@ -275,7 +275,8 @@ export default async function TorneoAdminPage() {
           <h2 className="font-display text-xl font-semibold text-white">Equipos del sorteo</h2>
           <div className="mt-4">
             <EquiposForm
-              equiposTexto={equiposTexto}
+              guardados={equipos.map((e) => e.nombre)}
+              minimo={Math.max(pagados, cupo)}
               bloqueado={torneo.estado !== "inscripcion"}
             />
           </div>
