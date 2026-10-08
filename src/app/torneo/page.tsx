@@ -61,7 +61,7 @@ export default async function TorneoPage() {
       {!torneo ? (
         <section className="torneo-hero flex flex-col items-center text-center">
           <EscenaOvni />
-          <p className="torneo-senal-hud torneo-hud sm:-mt-8">
+          <p className="torneo-senal-hud torneo-hud sm:mt-2">
             <i aria-hidden="true" />
             A51 · Señal interceptada
           </p>
@@ -70,8 +70,11 @@ export default async function TorneoPage() {
             retraso={350}
             className="mt-3 text-[3.4rem] font-extrabold text-white sm:text-8xl"
           />
-          <div className="mt-12 w-full sm:mt-16">
-            <Proximamente compacto />
+          <p className="torneo-hud mt-5 text-[0.62rem] text-[#cfd8cc] sm:text-[0.7rem]">
+            16 jugadores · $4.200 en el local
+          </p>
+          <div className="mt-8 w-full sm:mt-10">
+            <Proximamente />
           </div>
         </section>
       ) : (
@@ -175,7 +178,7 @@ async function TorneoContenido({
       </div>
 
       <div className="torneo-up mx-auto w-full max-w-xl" style={orden(5)}>
-        <Proximamente compacto />
+        <Proximamente />
       </div>
     </>
   );
