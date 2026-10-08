@@ -4,16 +4,21 @@ import dynamic from "next/dynamic";
 
 const PelotaAlien = dynamic(() => import("@/app/torneo/pantalla/_PelotaAlien"), { ssr: false });
 
-const datos = [
-  { label: "Juego", value: "EA FC 27 · PS4" },
-  { label: "Cupo", value: "16 jugadores" },
-  { label: "Formato", value: "Eliminación directa" },
-  { label: "Cuota", value: "$4.200 en el local" },
-  { label: "Fecha", value: "A confirmar", accent: true },
-] as const;
+export type TorneoDatosLanding = { cupo: number; cuota: string; fecha: string | null };
+
+function filas(torneo?: TorneoDatosLanding) {
+  return [
+    { label: "Juego", value: "EA FC 27 · PS4" },
+    { label: "Cupo", value: `${torneo?.cupo ?? 16} jugadores` },
+    { label: "Formato", value: "Eliminación directa" },
+    { label: "Cuota", value: `${torneo?.cuota ?? "$4.200"} en el local` },
+    { label: "Fecha", value: torneo?.fecha ?? "A confirmar", accent: !torneo?.fecha },
+  ] as const;
+}
 
 /** Tarjeta del hero cuando la reserva está cerrada: el torneo es lo único que se vende. */
-export default function TorneoHeroCard() {
+export default function TorneoHeroCard({ datos: torneo }: { datos?: TorneoDatosLanding }) {
+  const datos = filas(torneo);
   return (
     <div
       className="animate-scale-in-landing panel-card relative overflow-hidden rounded-[36px] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.32)] sm:p-5 lg:p-6"

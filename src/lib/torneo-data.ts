@@ -153,7 +153,7 @@ async function getUsuarioDueno(): Promise<string> {
  * Busca al cliente por email o teléfono (ya hay clientes importados de la planilla y
  * ambos campos son únicos); si no existe, lo crea. Nunca pisa datos de uno existente.
  */
-async function buscarOCrearCliente(datos: DatosInscripcion, telefonoNormalizado: string) {
+export async function buscarOCrearCliente(datos: DatosInscripcion, telefonoNormalizado: string) {
   const email = datos.email.trim().toLowerCase();
   const [existente] = await db
     .select({ id: clients.id })
@@ -227,6 +227,16 @@ export async function inscribirJugador(datos: DatosInscripcion): Promise<Resulta
       .from(torneoJugadores)
       .where(eq(torneoJugadores.torneoId, torneo.id));
     if (total >= MAX_ANOTADOS) return { ok: false, motivo: "lleno" } as const;
+
+    // Mismo teléfono (o email) con otro email: es la misma persona, no se anota dos veces.
+    if (clientId) {
+      const [repetido] = await tx
+        .select({ id: torneoJugadores.id })
+        .from(torneoJugadores)
+        .where(and(eq(torneoJugadores.torneoId, torneo.id), eq(torneoJugadores.clientId, clientId)))
+        .limit(1);
+      if (repetido) return { ok: false, motivo: "ya_anotado" } as const;
+    }
 
     const [insertado] = await tx
       .insert(torneoJugadores)

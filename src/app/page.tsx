@@ -6,11 +6,32 @@ import PublicLandingDetails from "@/components/landing/PublicLandingDetails";
 import PublicLandingHero from "@/components/landing/PublicLandingHero";
 import { auth } from "@/lib/auth";
 import { isPortalClienteAbierto } from "@/lib/launch-mode";
+import { getTorneoVigente } from "@/lib/torneo-data";
+
+const ZONA = "America/Argentina/Buenos_Aires";
+
+/** Datos reales del torneo para la tarjeta de la landing; si algo falla, la tarjeta usa sus valores por defecto. */
+async function datosTorneoLanding() {
+  try {
+    const torneo = await getTorneoVigente();
+    if (!torneo) return undefined;
+    return {
+      cupo: torneo.cupo,
+      cuota: new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(Number(torneo.cuotaArs)),
+      fecha: torneo.fecha
+        ? new Intl.DateTimeFormat("es-AR", { timeZone: ZONA, weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(torneo.fecha)
+        : null,
+    };
+  } catch {
+    return undefined;
+  }
+}
 
 export default async function RootPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const role = (session?.user as { role?: string } | undefined)?.role;
   const marcianoAbierto = isPortalClienteAbierto();
+  const torneoDatos = marcianoAbierto ? undefined : await datosTorneoLanding();
   const reserveHref = "/reservar";
   const loginHref = "/login";
   const marcianosHref = "/marciano/login";
@@ -39,6 +60,7 @@ export default async function RootPage() {
           marcianoAbierto={marcianoAbierto}
           reserveHref={reserveHref}
           marcianosHref={marcianosHref}
+          torneoDatos={torneoDatos}
         />
         <PublicLandingDetails
           marcianoAbierto={marcianoAbierto}

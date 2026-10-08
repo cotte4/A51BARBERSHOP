@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  nombresCortosUnicos,
   avanzarGanador,
   calcularPodio,
   resumenCupo,
@@ -218,5 +219,19 @@ describe("cupo", () => {
     lleno[3] = pendiente as never;
     expect(resumenCupo(lleno, 16).lleno).toBe(false);
     expect(siguienteOrdenPago(lleno, 16)).toBe(17);
+  });
+});
+
+describe("nombresCortosUnicos", () => {
+  it("deja el formato corto si no hay repetidos", () => {
+    expect(nombresCortosUnicos(["Juan Pérez", "Ana Gómez", "Lucas"])).toEqual(["Juan P.", "Ana G.", "Lucas"]);
+  });
+
+  it("suma letras del apellido cuando dos coinciden", () => {
+    expect(nombresCortosUnicos(["Juan Pérez", "Juan Paz"])).toEqual(["Juan Pé.", "Juan Pa."]);
+  });
+
+  it("numera a los idénticos", () => {
+    expect(nombresCortosUnicos(["Juan Pérez", "Juan Pérez"])).toEqual(["Juan Pérez (1)", "Juan Pérez (2)"]);
   });
 });

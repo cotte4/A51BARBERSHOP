@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import Image from "next/image";
 import { MAX_ANOTADOS, getResumenPublico, getTorneoVigente } from "@/lib/torneo-data";
+import CuadroPublico from "./_CuadroPublico";
 import EscenaOvni from "./_EscenaOvni";
 import InscripcionForm from "./_InscripcionForm";
 import Proximamente from "./_Proximamente";
@@ -181,6 +182,8 @@ async function TorneoContenido({
           <InscripcionForm listaEspera={resumen.lleno} />
         )}
       </div>
+
+      {torneo.estado !== "inscripcion" && <CuadroPublico />}
 
       <div className="torneo-up mx-auto w-full max-w-xl" style={orden(5)}>
         <Proximamente />

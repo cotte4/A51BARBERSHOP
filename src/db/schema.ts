@@ -1703,7 +1703,8 @@ export const torneoJugadores = pgTable(
     estadoPago: text("estado_pago")
       .notNull()
       .default("pendiente")
-      .$type<"pendiente" | "pagado">(),
+      // "baja": estaba sorteado, se bajó antes del primer partido y otro tomó su lugar.
+      .$type<"pendiente" | "pagado" | "baja">(),
     pagadoEn: timestamp("pagado_en", { withTimezone: true }),
     // Orden en que Pinky marcó "Pagó": define quién entra en el cupo.
     ordenPago: integer("orden_pago"),

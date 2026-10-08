@@ -17,6 +17,7 @@ import {
   reiniciarReveal,
   sortearYGuardar,
 } from "@/lib/torneo-juego";
+import { reemplazarJugador } from "@/lib/torneo-reemplazo";
 
 export type TorneoAdminState = {
   ok: boolean;
@@ -205,6 +206,51 @@ export async function cargarResultadoAction(
       no_existe: "Ese partido no existe.",
       sin_sorteo: "Primero hay que sortear.",
       invalido: resultado.detalle ?? "No se pudo cargar el resultado.",
+    } as const;
+    return { ok: false, mensaje: mensajes[resultado.motivo] };
+  }
+  refrescar();
+  return { ok: true, mensaje: null };
+}
+
+const reemplazoSchema = z.discriminatedUnion("tipo", [
+  z.object({ tipo: z.literal("espera"), jugadorId: z.string().uuid() }),
+  z.object({
+    tipo: z.literal("nuevo"),
+    nombre: z.string().trim().min(2).max(80),
+    email: z.string().trim().toLowerCase().email().max(120),
+    whatsapp: z
+      .string()
+      .trim()
+      .min(8)
+      .max(30)
+      .regex(/^[\d\s+()-]+$/),
+  }),
+]);
+
+export async function reemplazarJugadorAction(bajaId: string, input: unknown): Promise<TorneoAdminState> {
+  const denegado = await exigirAdmin();
+  if (denegado) return denegado;
+  if (!z.string().uuid().safeParse(bajaId).success) return { ok: false, mensaje: "Jugador inválido." };
+  const parsed = reemplazoSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, mensaje: "Revisá los datos del reemplazo." };
+
+  const datos = parsed.data;
+  const resultado = await reemplazarJugador(
+    bajaId,
+    datos.tipo === "espera"
+      ? { tipo: "espera", jugadorId: datos.jugadorId }
+      : { tipo: "nuevo", datos: { nombre: datos.nombre, email: datos.email, whatsapp: datos.whatsapp } },
+  );
+  if (!resultado.ok) {
+    const mensajes = {
+      no_existe: "Ese jugador ya no existe.",
+      sin_sorteo: "Todavía no hay sorteo: sacalo de la lista directamente.",
+      no_sorteado: "Ese jugador no está en el sorteo.",
+      ya_empezo: "Ya se jugó un partido: no se puede reemplazar a nadie.",
+      reemplazo_invalido: "Ese reemplazo ya no está disponible.",
+      ya_anotado: "Ese email ya está en el torneo.",
+      telefono_invalido: "Revisá el WhatsApp.",
     } as const;
     return { ok: false, mensaje: mensajes[resultado.motivo] };
   }

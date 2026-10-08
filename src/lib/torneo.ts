@@ -265,7 +265,7 @@ export function torneoTerminado(cuadro: readonly PartidoCuadro[]): boolean {
 // Cupo (el cupo lo ocupa quien Pinky marcó como pagado)
 // ————————————————————————————
 export type JugadorCupo = {
-  estadoPago: "pendiente" | "pagado";
+  estadoPago: "pendiente" | "pagado" | "baja";
   ordenPago: number | null;
 };
 
@@ -281,7 +281,7 @@ export type ResumenCupo = {
 export function resumenCupo(jugadores: readonly JugadorCupo[], cupo: number): ResumenCupo {
   const pagados = jugadores.filter((j) => j.estadoPago === "pagado").length;
   const lleno = pagados >= cupo;
-  const enEspera = lleno ? jugadores.length - pagados : 0;
+  const enEspera = lleno ? jugadores.filter((j) => j.estadoPago === "pendiente").length : 0;
   return { pagados, cupo, lugaresLibres: Math.max(0, cupo - pagados), lleno, enEspera };
 }
 
@@ -291,4 +291,41 @@ export function siguienteOrdenPago(jugadores: readonly JugadorCupo[], cupo: numb
   if (lleno) return null;
   const maximo = jugadores.reduce((m, j) => (j.ordenPago !== null && j.ordenPago > m ? j.ordenPago : m), 0);
   return maximo + 1;
+}
+
+/** "Juan Pérez" -> "Juan P." para no mostrar nombres completos en una pantalla pública. */
+export function nombreCorto(nombre: string): string {
+  const partes = nombre.trim().split(/\s+/);
+  if (partes.length < 2) return partes[0] ?? "";
+  return `${partes[0]} ${partes[1].charAt(0).toUpperCase()}.`;
+}
+
+/** "Juan Pérez" con más letras del apellido: 1 = "Juan P.", 2 = "Juan Pé.". */
+function conLetras(nombre: string, letras: number): string {
+  const partes = nombre.trim().split(/\s+/);
+  if (partes.length < 2) return partes[0] ?? "";
+  const apellido = partes[1];
+  const visible = apellido.slice(0, letras);
+  return `${partes[0]} ${visible.charAt(0).toUpperCase()}${visible.slice(1)}${apellido.length > letras ? "." : ""}`;
+}
+
+/** Nombres cortos para toda la lista; si dos coinciden, suma letras del apellido y, al final, un número. */
+export function nombresCortosUnicos(nombres: readonly string[]): string[] {
+  const resultado = nombres.map((n) => conLetras(n, 1));
+  for (let letras = 2; letras <= 6; letras++) {
+    const cuenta = new Map<string, number>();
+    for (const r of resultado) cuenta.set(r, (cuenta.get(r) ?? 0) + 1);
+    nombres.forEach((n, i) => {
+      if ((cuenta.get(resultado[i]) ?? 0) > 1) resultado[i] = conLetras(n, letras);
+    });
+  }
+  const cuenta = new Map<string, number>();
+  for (const r of resultado) cuenta.set(r, (cuenta.get(r) ?? 0) + 1);
+  const vistos = new Map<string, number>();
+  return resultado.map((r) => {
+    if ((cuenta.get(r) ?? 0) < 2) return r;
+    const k = (vistos.get(r) ?? 0) + 1;
+    vistos.set(r, k);
+    return `${r} (${k})`;
+  });
 }

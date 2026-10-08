@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import BrandMark from "@/components/BrandMark";
 import MarcianoCerradoPill from "@/components/landing/MarcianoCerradoPill";
-import TorneoHeroCard from "@/components/landing/TorneoHeroCard";
+import TorneoHeroCard, { type TorneoDatosLanding } from "@/components/landing/TorneoHeroCard";
 
 const infoTags = [
   "Mar del Plata",
@@ -26,12 +26,14 @@ type PublicLandingHeroProps = {
   marcianoAbierto: boolean;
   reserveHref: string;
   marcianosHref: string;
+  torneoDatos?: TorneoDatosLanding;
 };
 
 export default function PublicLandingHero({
   marcianoAbierto,
   reserveHref,
   marcianosHref,
+  torneoDatos,
 }: PublicLandingHeroProps) {
   return (
     <section className="app-shell relative isolate overflow-hidden">
@@ -199,7 +201,7 @@ export default function PublicLandingHero({
 
           {/* RIGHT — visual card */}
           {!marcianoAbierto ? (
-            <TorneoHeroCard />
+            <TorneoHeroCard datos={torneoDatos} />
           ) : (
           <div
             className="animate-scale-in-landing panel-card relative overflow-hidden rounded-[36px] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.32)] transition hover:-translate-y-1 sm:p-5 lg:p-6"

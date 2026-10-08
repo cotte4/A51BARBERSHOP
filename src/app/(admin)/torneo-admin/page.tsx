@@ -10,6 +10,8 @@ import ConfigForm from "./_ConfigForm";
 import EquiposForm from "./_EquiposForm";
 import Sorteo from "./_Sorteo";
 import Pantalla from "./_Pantalla";
+import Reemplazo from "./_Reemplazo";
+import AutoRefresco from "./_AutoRefresco";
 import Partidos, { type JugadorInfo, type PartidoVista } from "./_Partidos";
 
 export const dynamic = "force-dynamic";
@@ -105,6 +107,15 @@ export default async function TorneoAdminPage() {
     .sort((a, b) => (a.ordenPago ?? Infinity) - (b.ordenPago ?? Infinity));
   const pendientes = jugadores.filter((j) => j.estadoPago === "pendiente");
   const anotados = [...pagadosOrdenados, ...pendientes];
+  const bajas = jugadores.filter((j) => j.estadoPago === "baja");
+
+  // Reemplazo: solo con el sorteo hecho y antes de que se juegue el primer partido.
+  const sorteado = torneo.estado !== "inscripcion";
+  const empezo = partidos.some((p) => !p.esBye && p.ganadorId !== null);
+  const puedeReemplazar = sorteado && !empezo;
+  const esperaParaReemplazo = pendientes
+    .filter((j) => j.posicionSorteo === null)
+    .map((j) => ({ id: j.id, nombre: j.nombre }));
 
   const equiposTexto = equipos.map((e) => e.nombre).join("\n");
 
@@ -116,6 +127,7 @@ export default async function TorneoAdminPage() {
         </div>
       </header>
       <main className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-6 pb-24">
+        <AutoRefresco />
         {/* Resumen */}
         <section className="panel-card rounded-[28px] p-6">
           <p className="eyebrow text-xs font-semibold">Torneo</p>
@@ -181,8 +193,9 @@ export default async function TorneoAdminPage() {
                 return (
                   <li
                     key={jugador.id}
-                    className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4"
+                    className="flex flex-col rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4"
                   >
+                    <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-semibold text-white">{jugador.nombre}</p>
                       {enEspera ? (
@@ -193,10 +206,35 @@ export default async function TorneoAdminPage() {
                       <p className="mt-0.5 break-all text-xs text-zinc-400">{jugador.email}</p>
                       <p className="text-xs text-zinc-400">{jugador.whatsapp}</p>
                     </div>
-                    <PagoButton jugadorId={jugador.id} nombre={jugador.nombre} pagado={pagado} />
+                    <PagoButton
+                      jugadorId={jugador.id}
+                      nombre={jugador.nombre}
+                      pagado={pagado}
+                      disabled={sorteado}
+                    />
+                    </div>
+                    {pagado && puedeReemplazar && jugador.posicionSorteo !== null ? (
+                      <div className="mt-2 flex justify-end">
+                        <Reemplazo
+                          bajaId={jugador.id}
+                          nombre={jugador.nombre}
+                          espera={esperaParaReemplazo}
+                          cuota={formatARS(torneo.cuotaArs)}
+                        />
+                      </div>
+                    ) : null}
                   </li>
                 );
               })}
+              {bajas.map((jugador) => (
+                <li
+                  key={jugador.id}
+                  className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 opacity-70"
+                >
+                  <p className="font-semibold text-zinc-300 line-through">{jugador.nombre}</p>
+                  <p className="mt-0.5 text-xs font-semibold text-amber-300">Baja · se le devolvió la cuota</p>
+                </li>
+              ))}
             </ul>
           )}
         </section>

@@ -332,6 +332,11 @@ function Podio({ tablero, jugadores }: { tablero: TableroPublico; jugadores: Map
           </div>
         ))}
       </div>
+      {tablero.torneo.premiosTexto && (
+        <p className="torneo-hud mt-16 max-w-[1500px] whitespace-pre-line text-[24px] text-white/70">
+          {tablero.torneo.premiosTexto}
+        </p>
+      )}
     </div>
   );
 }

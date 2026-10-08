@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { torneoEquipos, torneoJugadores, torneoPartidos, torneos } from "@/db/schema";
 import {
   avanzarGanador,
+  nombresCortosUnicos,
   calcularPodio,
   sortearTorneo,
   torneoTerminado,
@@ -258,13 +259,6 @@ export type TableroPublico = {
   podio: Podio;
 };
 
-/** "Juan Pérez" -> "Juan P." para no mostrar nombres completos en una pantalla pública. */
-export function nombreCorto(nombre: string): string {
-  const partes = nombre.trim().split(/\s+/);
-  if (partes.length < 2) return partes[0] ?? "";
-  return `${partes[0]} ${partes[1].charAt(0).toUpperCase()}.`;
-}
-
 /** null mientras el torneo no se sorteó. */
 export async function getTableroPublico(): Promise<TableroPublico | null> {
   const torneo = await getTorneoVigente();
@@ -285,13 +279,15 @@ export async function getTableroPublico(): Promise<TableroPublico | null> {
       premiosTexto: torneo.premiosTexto,
       revealPaso: torneo.revealPaso,
     },
-    jugadores: jugadoresDb
-      .filter((j) => j.posicionSorteo !== null)
-      .map((j) => ({
+    jugadores: (() => {
+      const sorteados = jugadoresDb.filter((j) => j.posicionSorteo !== null);
+      const nombres = nombresCortosUnicos(sorteados.map((j) => j.nombre));
+      return sorteados.map((j, i) => ({
         id: j.id,
-        nombre: nombreCorto(j.nombre),
+        nombre: nombres[i],
         equipo: j.equipoId ? (nombreEquipo.get(j.equipoId) ?? null) : null,
-      })),
+      }));
+    })(),
     partidos: partidos.map((p) => ({
       id: p.id,
       ronda: p.ronda,
