@@ -356,15 +356,18 @@ function Podio({ tablero, jugadores }: { tablero: TableroPublico; jugadores: Map
 }
 
 // ————————————————————————————
-// Reveal de cruces: de a dos, uno por vez, a pantalla completa
+// Reveal de cruces: uno por toque de "Siguiente", a pantalla completa.
+// Si el staff toca varias veces seguidas, la escena trae varios y los pasa en orden.
 // ————————————————————————————
 function EscenaReveal({
   escena,
   jugadores,
+  total,
   alTerminar,
 }: {
   escena: Escena;
   jugadores: Map<string, Jugador>;
+  total: number;
   alTerminar: () => void;
 }) {
   const raiz = useRef<HTMLDivElement>(null);
@@ -381,7 +384,9 @@ function EscenaReveal({
         const a = par.querySelector(".lado-a");
         const b = par.querySelector(".lado-b");
         const vs = par.querySelector(".vs");
-        tl.set(par, { opacity: 1 })
+        const rotulo = par.querySelector(".rotulo");
+        tl.set(par, { opacity: 1, y: 0 })
+          .fromTo(rotulo, { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" })
           .fromTo(
             a,
             { x: -1500, skewX: -24, opacity: 0 },
@@ -395,7 +400,8 @@ function EscenaReveal({
           )
           .fromTo(vs, { scale: 5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(2.2)" }, "-=0.25")
           .fromTo(el, { x: -18, y: 8 }, { x: 0, y: 0, duration: 0.55, ease: "elastic.out(1.4, 0.25)" }, "<")
-          .to({}, { duration: 2.3 })
+          // Un par solo merece su momento: ~3 s quieto para leer nombres y equipos.
+          .to({}, { duration: 3 })
           .to(par, { opacity: 0, y: -70, duration: 0.45, ease: "power2.in" });
       });
       tl.to(q(".fondo"), { opacity: 0, duration: 0.4 });
@@ -411,6 +417,9 @@ function EscenaReveal({
         const b = c.jugadorBId ? jugadores.get(c.jugadorBId) : undefined;
         return (
           <div key={c.id} className="par absolute inset-0 flex items-center justify-center gap-16 px-24 opacity-0">
+            <p className="rotulo torneo-hud absolute left-1/2 top-[150px] -translate-x-1/2 text-[30px] text-[#8cff59]">
+              Cruce {c.posicion} de {total}
+            </p>
             <div className="lado-a flex-1">
               <Lado jugador={a} grande alinear="izq" />
             </div>
@@ -551,7 +560,7 @@ export function PantallaVista({ datos, sinConexion = false }: { datos: DatosPant
         {vista}
         {/* El QR grande solo donde hay lugar; en el sorteo y el cuadro va el chico del encabezado. */}
         {!escena && (!tablero || tablero.torneo.estado === "finalizado") && <QrJukebox />}
-        {escena && <EscenaReveal escena={escena} jugadores={jugadores} alTerminar={terminar} />}
+        {escena && <EscenaReveal escena={escena} jugadores={jugadores} total={cruces1.length} alTerminar={terminar} />}
         {/* Arriba al centro: no pisa el botón de pantalla completa ni ningún QR. */}
         {sinConexion && <AvisoSinConexion />}
       </div>

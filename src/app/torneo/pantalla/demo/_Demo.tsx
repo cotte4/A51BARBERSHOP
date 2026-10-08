@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   avanzarGanador,
   calcularPodio,
+  CRUCES_POR_PASO,
   sortearTorneo,
   torneoTerminado,
   type PartidoCuadro,
@@ -118,7 +119,7 @@ export default function Demo() {
               type="button"
               className={boton}
               disabled={revealPaso >= total}
-              onClick={() => setRevealPaso((p) => Math.min(total, p + 2))}
+              onClick={() => setRevealPaso((p) => Math.min(total, p + CRUCES_POR_PASO))}
             >
               Siguiente
             </button>

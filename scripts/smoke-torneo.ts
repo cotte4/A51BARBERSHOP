@@ -98,9 +98,10 @@ async function main() {
     afirmar(partidos.length === 15, "el cuadro tiene 15 partidos");
 
     console.log("5. Reveal");
-    for (let paso = 1; paso <= 4; paso++) {
+    // Un cruce por toque: el paso N deja N cruces a la vista.
+    for (let paso = 1; paso <= 8; paso++) {
       const r = await juego.avanzarReveal(torneo.id);
-      afirmar(r.ok && r.revelados === paso * 2, `reveal paso ${paso}: ${paso * 2} cruces`);
+      afirmar(r.ok && r.revelados === paso, `reveal paso ${paso}: ${paso} cruce(s)`);
     }
     const extra = await juego.avanzarReveal(torneo.id);
     afirmar(extra.ok && extra.revelados === 8, "el reveal no pasa de 8 cruces");

@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { torneoEquipos, torneoJugadores, torneoPartidos, torneos } from "@/db/schema";
 import {
   avanzarGanador,
+  CRUCES_POR_PASO,
   nombresCortosUnicos,
   calcularPodio,
   sortearTorneo,
@@ -113,12 +114,9 @@ export async function sortearYGuardar(torneoId: string): Promise<ResultadoSorteo
 // ————————————————————————————
 // Reveal en la pantalla
 // ————————————————————————————
-/** Cruces de la ronda 1 que se muestran por cada toque de "Siguiente". */
-export const CRUCES_POR_PASO = 2;
-
 export type ResultadoReveal = { ok: true; revelados: number; total: number } | { ok: false };
 
-/** Revela los próximos 2 cruces. Al revelar todos, el torneo pasa a "en juego". */
+/** Revela el próximo cruce (`CRUCES_POR_PASO`). Al revelar todos, el torneo pasa a "en juego". */
 export async function avanzarReveal(torneoId: string): Promise<ResultadoReveal> {
   return db.transaction(async (tx) => {
     const [torneo] = await tx

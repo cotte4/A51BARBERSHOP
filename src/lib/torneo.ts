@@ -3,6 +3,12 @@
 
 export type EstadoPartido = "pendiente" | "listo" | "jugado";
 
+/**
+ * Cruces de la ronda 1 que se revelan por cada toque de "Siguiente" en la tele.
+ * Uno solo: cada cruce tiene su momento a pantalla completa.
+ */
+export const CRUCES_POR_PASO = 1;
+
 export type PartidoCuadro = {
   ronda: number;
   posicion: number;
