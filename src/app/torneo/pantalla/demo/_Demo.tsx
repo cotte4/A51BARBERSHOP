@@ -17,10 +17,11 @@ const NOMBRES = [
   "Santi P.", "Mati R.", "Facu L.", "Nico G.", "Lucho M.", "Gonza S.", "Tomi A.", "Maxi D.",
   "Fede C.", "Agus B.", "Joaco V.", "Dami F.", "Bauti H.", "Pipe T.", "Lean O.", "Cris N.",
 ];
+// Los 16 del panel más uno sin PNG: casi siempre sale y así se ensaya también el escudo genérico.
 const EQUIPOS = [
-  "Real Madrid", "Barcelona", "Manchester City", "Liverpool", "Bayern Múnich", "PSG", "Juventus",
-  "Inter", "Milan", "Chelsea", "Arsenal", "Manchester United", "Atlético de Madrid",
-  "Borussia Dortmund", "Napoli", "Benfica", "Ajax", "River Plate", "Boca Juniors", "Flamengo",
+  "Real Madrid", "Barcelona", "Atlético de Madrid", "Manchester City", "Liverpool", "Arsenal", "Chelsea",
+  "Manchester United", "Tottenham", "Aston Villa", "Bayern Múnich", "Borussia Dortmund", "Inter",
+  "Inter Miami", "Roma", "PSG", "River Plate",
 ];
 
 function armarTablero(

@@ -1,4 +1,5 @@
 import { getTableroPublico } from "@/lib/torneo-juego";
+import Escudo from "@/components/torneo/Escudo";
 import Refrescar from "./_Refrescar";
 
 function nombreRonda(ronda: number, rondas: number): string {
@@ -48,10 +49,13 @@ export default async function CuadroPublico() {
                 const perdio = id !== null && p.ganadorId !== null && !gano;
                 return (
                   <div
-                    className={`flex items-baseline justify-between gap-3 ${perdio ? "text-white/35" : gano ? "text-[#8cff59]" : "text-white"}`}
+                    className={`flex min-h-7 items-center gap-2.5 ${perdio ? "text-white/35" : gano ? "text-[#8cff59]" : "text-white"}`}
                   >
+                    <Escudo equipo={j?.equipo ?? null} tamano={28} className={perdio ? "opacity-35" : ""} />
                     <span className="torneo-titulo text-xl font-extrabold italic">{j?.nombre ?? "—"}</span>
-                    {j?.equipo && <span className="torneo-hud truncate text-[0.6rem] opacity-80">{j.equipo}</span>}
+                    {j?.equipo && (
+                      <span className="torneo-hud ml-auto min-w-0 truncate text-[0.6rem] opacity-80">{j.equipo}</span>
+                    )}
                   </div>
                 );
               };

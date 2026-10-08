@@ -6,6 +6,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { QRCodeSVG } from "qrcode.react";
 import type { DatosPantalla, TableroPublico } from "@/lib/torneo-juego";
+import Escudo from "@/components/torneo/Escudo";
 
 gsap.registerPlugin(useGSAP);
 
@@ -89,37 +90,47 @@ function usarDatos(inicial: DatosPantalla): { datos: DatosPantalla; sinConexion:
 // ————————————————————————————
 // Piezas
 // ————————————————————————————
-function Lado({
-  jugador,
-  grande,
-  medio,
-  alinear,
-  estado,
-}: {
-  jugador: Jugador | undefined;
-  grande?: boolean;
-  medio?: boolean;
-  alinear: "izq" | "der";
-  estado?: "ganador" | "perdedor" | null;
-}) {
-  const color = estado === "perdedor" ? "text-white/35" : "text-white";
+/** Un lado de la tarjeta del sorteo: escudo hacia afuera, nombre y equipo hacia el VS. */
+function Lado({ jugador, alinear }: { jugador: Jugador | undefined; alinear: "izq" | "der" }) {
+  const der = alinear === "der";
+  const nombre = jugador?.nombre ?? "—";
   return (
-    <div className={`flex flex-col ${alinear === "der" ? "items-end text-right" : "items-start text-left"}`}>
-      <span
-        className={`torneo-titulo font-extrabold italic ${color} ${grande ? "text-[110px]" : medio ? "text-[56px]" : "text-[40px]"}`}
-        style={estado === "ganador" ? { color: VERDE } : undefined}
-      >
+    <div className={`flex min-w-0 flex-1 items-center gap-3.5 ${der ? "flex-row-reverse" : ""}`}>
+      <Escudo equipo={jugador?.equipo ?? null} tamano={76} />
+      <div className={`flex min-w-0 flex-col ${der ? "items-end text-right" : "items-start text-left"}`}>
+        {/* Un nombre largo ("Maximiliano G.") baja un poco el cuerpo en vez de cortarse. */}
+        <span
+          className={`torneo-titulo max-w-full truncate font-extrabold italic text-white ${nombre.length > 10 ? "text-[42px]" : "text-[50px]"}`}
+        >
+          {nombre}
+        </span>
+        {jugador?.equipo && (
+          // .torneo-hud fija el espaciado fuera de las capas de Tailwind: por eso va por style, no tracking-*.
+          <span
+            className="torneo-hud mt-1 max-w-full truncate text-[16px] text-[#8cff59]"
+            style={{ letterSpacing: "0.08em" }}
+          >
+            {jugador.equipo}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Un lado del enfrentamiento a pantalla completa: escudo grande arriba, nombre y equipo abajo. */
+function LadoGrande({ jugador, lado }: { jugador: Jugador | undefined; lado: "a" | "b" }) {
+  return (
+    <div className="flex min-w-0 flex-col items-center text-center">
+      {jugador?.equipo && (
+        <div className={`escudo-${lado} mb-8`}>
+          <Escudo equipo={jugador.equipo} tamano={240} />
+        </div>
+      )}
+      <span className="torneo-titulo max-w-full whitespace-nowrap text-[104px] font-extrabold italic text-white">
         {jugador?.nombre ?? "—"}
       </span>
-      {jugador?.equipo && (
-        <span
-          className={`torneo-hud ${grande ? "mt-3 text-[30px]" : medio ? "mt-1 text-[20px]" : "mt-1 text-[16px]"} ${
-            estado === "perdedor" ? "text-[#8cff59]/30" : "text-[#8cff59]"
-          }`}
-        >
-          {jugador.equipo}
-        </span>
-      )}
+      {jugador?.equipo && <span className="torneo-hud mt-4 text-[30px] text-[#8cff59]">{jugador.equipo}</span>}
     </div>
   );
 }
@@ -143,10 +154,10 @@ function TarjetaCruce({
   const a = partido.jugadorAId ? jugadores.get(partido.jugadorAId) : undefined;
   const b = partido.jugadorBId ? jugadores.get(partido.jugadorBId) : undefined;
   return (
-    <div className="flex h-[200px] items-center justify-between gap-6 border border-[#8cff59]/40 bg-[linear-gradient(120deg,rgba(140,255,89,0.12),rgba(0,0,0,0.55))] px-10 [clip-path:polygon(0_0,calc(100%-24px)_0,100%_24px,100%_100%,24px_100%,0_calc(100%-24px))]">
-      <Lado jugador={a} medio alinear="izq" />
-      <span className="torneo-hud text-[34px] text-[#ff3b4e]">{partido.esBye ? "Pase directo" : "VS"}</span>
-      {partido.esBye ? <div /> : <Lado jugador={b} medio alinear="der" />}
+    <div className="flex h-[200px] items-center justify-between gap-6 border border-[#8cff59]/40 bg-[linear-gradient(120deg,rgba(140,255,89,0.12),rgba(0,0,0,0.55))] px-7 [clip-path:polygon(0_0,calc(100%-24px)_0,100%_24px,100%_100%,24px_100%,0_calc(100%-24px))]">
+      <Lado jugador={a} alinear="izq" />
+      <span className="torneo-hud shrink-0 text-[34px] text-[#ff3b4e]">{partido.esBye ? "Pase directo" : "VS"}</span>
+      {partido.esBye ? <div className="flex-1" /> : <Lado jugador={b} alinear="der" />}
     </div>
   );
 }
@@ -235,7 +246,8 @@ function Fila({
 }) {
   const apagado = estado === "perdedor";
   return (
-    <div className="flex h-[42px] items-baseline justify-between gap-3 overflow-hidden">
+    <div className="flex h-[42px] items-center gap-2.5 overflow-hidden">
+      <Escudo equipo={jugador?.equipo ?? null} tamano={34} className={apagado ? "opacity-35" : ""} />
       <span
         className={`torneo-titulo whitespace-nowrap text-[32px] font-extrabold italic ${apagado ? "text-white/35" : "text-white"}`}
         style={estado === "ganador" ? { color: VERDE } : undefined}
@@ -243,7 +255,9 @@ function Fila({
         {jugador?.nombre ?? "—"}
       </span>
       {jugador?.equipo && (
-        <span className={`torneo-hud truncate text-[14px] ${apagado ? "text-[#8cff59]/30" : "text-[#8cff59]"}`}>
+        <span
+          className={`torneo-hud ml-auto min-w-0 truncate pl-1 text-[14px] ${apagado ? "text-[#8cff59]/30" : "text-[#8cff59]"}`}
+        >
           {jugador.equipo}
         </span>
       )}
@@ -318,33 +332,44 @@ function Cuadro({
 function Podio({ tablero, jugadores }: { tablero: TableroPublico; jugadores: Map<string, Jugador> }) {
   const { campeonId, subcampeonId, tercerosIds } = tablero.podio;
   const campeon = campeonId ? jugadores.get(campeonId) : undefined;
+  const subcampeon = subcampeonId ? jugadores.get(subcampeonId) : undefined;
   return (
     <div className="flex h-full flex-col items-center justify-center text-center">
+      {campeon?.equipo && (
+        <div className="mb-6 [filter:drop-shadow(0_0_40px_rgba(140,255,89,0.35))]">
+          <Escudo equipo={campeon.equipo} tamano={220} />
+        </div>
+      )}
       <p className="torneo-hud text-[34px] text-[#8cff59]">Campeón</p>
       <h1
-        className="torneo-titulo mt-6 text-[230px] font-extrabold italic"
+        className="torneo-titulo mt-4 text-[200px] font-extrabold italic"
         style={{ color: VERDE, textShadow: "0 0 80px rgba(140,255,89,0.55)" }}
       >
         {campeon?.nombre}
       </h1>
       {campeon?.equipo && <p className="torneo-hud mt-4 text-[44px] text-white">{campeon.equipo}</p>}
-      <div className="mt-20 flex gap-24">
-        {subcampeonId && (
+      <div className="mt-16 flex gap-24">
+        {subcampeon && (
           <div>
             <p className="torneo-hud text-[22px] text-[#8cff59]">Subcampeón</p>
-            <p className="torneo-titulo mt-2 text-[64px] font-extrabold italic text-white">
-              {jugadores.get(subcampeonId)?.nombre}
-            </p>
+            <div className="mt-2 flex items-center justify-center gap-4">
+              <Escudo equipo={subcampeon.equipo} tamano={56} />
+              <p className="torneo-titulo text-[64px] font-extrabold italic text-white">{subcampeon.nombre}</p>
+            </div>
           </div>
         )}
-        {tercerosIds.map((id) => (
-          <div key={id}>
-            <p className="torneo-hud text-[22px] text-[#8cff59]">Semifinalista</p>
-            <p className="torneo-titulo mt-2 text-[64px] font-extrabold italic text-white">
-              {jugadores.get(id)?.nombre}
-            </p>
-          </div>
-        ))}
+        {tercerosIds.map((id) => {
+          const tercero = jugadores.get(id);
+          return (
+            <div key={id}>
+              <p className="torneo-hud text-[22px] text-[#8cff59]">Semifinalista</p>
+              <div className="mt-2 flex items-center justify-center gap-4">
+                <Escudo equipo={tercero?.equipo ?? null} tamano={56} />
+                <p className="torneo-titulo text-[64px] font-extrabold italic text-white">{tercero?.nombre}</p>
+              </div>
+            </div>
+          );
+        })}
       </div>
       {tablero.torneo.premiosTexto && (
         <p className="torneo-hud mt-16 max-w-[1500px] whitespace-pre-line text-[24px] text-white/70">
@@ -385,6 +410,8 @@ function EscenaReveal({
         const b = par.querySelector(".lado-b");
         const vs = par.querySelector(".vs");
         const rotulo = par.querySelector(".rotulo");
+        // Los escudos viajan con su lado y al frenar dan un golpe de escala, como un sello.
+        const escudos = par.querySelectorAll(".escudo-a, .escudo-b");
         tl.set(par, { opacity: 1, y: 0 })
           .fromTo(rotulo, { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" })
           .fromTo(
@@ -398,7 +425,13 @@ function EscenaReveal({
             { x: 0, skewX: 0, opacity: 1, duration: 0.7, ease: "power4.out" },
             "<0.12",
           )
-          .fromTo(vs, { scale: 5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(2.2)" }, "-=0.25")
+          .fromTo(
+            escudos,
+            { scale: 0.7, rotate: (i: number) => (i === 0 ? -12 : 12) },
+            { scale: 1, rotate: 0, duration: 0.45, ease: "back.out(2.4)", stagger: 0.12 },
+            "-=0.4",
+          )
+          .fromTo(vs, { scale: 5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(2.2)" }, "-=0.3")
           .fromTo(el, { x: -18, y: 8 }, { x: 0, y: 0, duration: 0.55, ease: "elastic.out(1.4, 0.25)" }, "<")
           // Un par solo merece su momento: ~3 s quieto para leer nombres y equipos.
           .to({}, { duration: 3 })
@@ -416,19 +449,19 @@ function EscenaReveal({
         const a = c.jugadorAId ? jugadores.get(c.jugadorAId) : undefined;
         const b = c.jugadorBId ? jugadores.get(c.jugadorBId) : undefined;
         return (
-          <div key={c.id} className="par absolute inset-0 flex items-center justify-center gap-16 px-24 opacity-0">
+          <div key={c.id} className="par absolute inset-0 flex items-center justify-center gap-12 px-20 opacity-0">
             <p className="rotulo torneo-hud absolute left-1/2 top-[150px] -translate-x-1/2 text-[30px] text-[#8cff59]">
               Cruce {c.posicion} de {total}
             </p>
-            <div className="lado-a flex-1">
-              <Lado jugador={a} grande alinear="izq" />
+            <div className="lado-a flex min-w-0 flex-1 justify-center">
+              <LadoGrande jugador={a} lado="a" />
             </div>
-            <div className="vs torneo-hud text-[120px] text-[#ff3b4e]">{c.esBye ? "•" : "VS"}</div>
-            <div className="lado-b flex-1">
+            <div className="vs torneo-hud shrink-0 text-[120px] text-[#ff3b4e]">{c.esBye ? "•" : "VS"}</div>
+            <div className="lado-b flex min-w-0 flex-1 justify-center">
               {c.esBye ? (
-                <p className="torneo-hud text-right text-[60px] text-white/70">Pase directo</p>
+                <p className="torneo-hud text-[60px] text-white/70">Pase directo</p>
               ) : (
-                <Lado jugador={b} grande alinear="der" />
+                <LadoGrande jugador={b} lado="b" />
               )}
             </div>
           </div>
