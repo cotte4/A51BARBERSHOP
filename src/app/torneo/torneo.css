@@ -10,8 +10,7 @@
   overflow: hidden;
   isolation: isolate;
   background:
-    radial-gradient(120% 60% at 50% 0%, rgb(140 255 89 / 0.07), transparent 60%),
-    var(--t-bg);
+    radial-gradient(120% 60% at 50% 0%, rgb(140 255 89 / 0.07), transparent 60%), var(--t-bg);
   color: var(--t-text);
   font-family: var(--font-body), system-ui, sans-serif;
 }
@@ -63,31 +62,20 @@
 .torneo-hero {
   position: relative;
 }
-.torneo-beam {
-  position: absolute;
-  left: 50%;
-  top: 40px;
-  width: min(620px, 140%);
-  height: 440px;
-  transform: translateX(-50%);
-  pointer-events: none;
-  mix-blend-mode: screen;
-  z-index: 0;
-  background:
-    radial-gradient(60% 30% at 50% 100%, rgb(140 255 89 / 0.28), transparent 70%),
-    linear-gradient(to bottom, rgb(140 255 89 / 0.38), rgb(140 255 89 / 0.05) 85%, transparent);
-  clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
-  filter: blur(6px);
-  opacity: 0.8;
-}
-
 /* Score bug */
 .torneo-bug {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   background: linear-gradient(180deg, #111915, #0a0f0c);
   border: 1px solid var(--t-line);
-  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  clip-path: polygon(
+    0 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% 100%,
+    14px 100%,
+    0 calc(100% - 14px)
+  );
 }
 .torneo-bug > div {
   padding: 12px 12px 14px;
@@ -150,14 +138,28 @@
     rgb(140 255 89 / 0.15)
   );
   background-size: 250% 250%;
-  clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 26px 100%, 0 calc(100% - 26px));
+  clip-path: polygon(
+    0 0,
+    calc(100% - 26px) 0,
+    100% 26px,
+    100% 100%,
+    26px 100%,
+    0 calc(100% - 26px)
+  );
 }
 .torneo-ficha {
   background:
     radial-gradient(90% 50% at 100% 0%, rgb(140 255 89 / 0.1), transparent 60%),
     linear-gradient(180deg, #0f1612, #090d0b);
   padding: 22px 18px 20px;
-  clip-path: polygon(0 0, calc(100% - 25px) 0, 100% 25px, 100% 100%, 25px 100%, 0 calc(100% - 25px));
+  clip-path: polygon(
+    0 0,
+    calc(100% - 25px) 0,
+    100% 25px,
+    100% 100%,
+    25px 100%,
+    0 calc(100% - 25px)
+  );
 }
 @media (min-width: 640px) {
   .torneo-ficha {
@@ -208,7 +210,14 @@
   font-style: italic;
   background: var(--t-green);
   box-shadow: 0 0 26px rgb(140 255 89 / 0.45);
-  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  clip-path: polygon(
+    0 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% 100%,
+    14px 100%,
+    0 calc(100% - 14px)
+  );
   transition:
     box-shadow 0.2s,
     transform 0.1s;
@@ -260,12 +269,6 @@
     animation: torneo-up 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
     animation-delay: calc(var(--i, 0) * 110ms + 80ms);
   }
-  .torneo-beam {
-    animation: torneo-pulse 5s ease-in-out infinite;
-  }
-  .torneo-ovni {
-    animation: torneo-float 4s ease-in-out infinite;
-  }
   .torneo-ficha-borde {
     animation: torneo-holo 7s linear infinite;
   }
@@ -285,24 +288,6 @@
   to {
     opacity: 1;
     transform: none;
-  }
-}
-@keyframes torneo-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 0.95;
-  }
-}
-@keyframes torneo-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
   }
 }
 @keyframes torneo-holo {
@@ -362,5 +347,539 @@
   100% {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Escena de abducción (_EscenaOvni). Todo se mide en cqw (ancho de
+   la escena), igual que el shader: se ve idéntica a cualquier tamaño.
+   ───────────────────────────────────────────────────────────── */
+.torneo-theme {
+  --ease-salida: cubic-bezier(0.23, 1, 0.32, 1);
+}
+.torneo-escena {
+  --h: 100; /* alto en cqw: 1:1 en el celular */
+  --bola: 40;
+  --y0: 16.5; /* = GEO.yEmisor */
+  --piso: 10; /* = GEO.margenPiso */
+  --by: calc(var(--y0) + (var(--h) - var(--piso) - var(--y0)) * 0.5);
+  container-type: inline-size;
+  position: relative;
+  width: calc(100% + 2rem);
+  margin-inline: -1rem;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+@media (min-width: 640px) {
+  .torneo-escena {
+    --h: 83.333;
+    --bola: 34;
+    width: min(100%, 780px, calc(58svh * 1.2));
+    margin-inline: auto;
+    aspect-ratio: 6 / 5;
+  }
+}
+.torneo-escena--compacta {
+  --h: 66.667;
+  --bola: 27;
+  aspect-ratio: 3 / 2;
+}
+@media (min-width: 640px) {
+  .torneo-escena--compacta {
+    width: min(100%, 600px, calc(46svh * 1.5));
+  }
+}
+.torneo-escena .escena-entra {
+  opacity: 0; /* GSAP las revela; así no hay flash antes de hidratar */
+}
+.escena-capa {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+.escena-capa-rayo {
+  -webkit-mask-image: linear-gradient(to bottom, #000 90%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 90%, transparent 100%);
+}
+.torneo-escena-lava {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.escena-estrella {
+  position: absolute;
+  border-radius: 50%;
+  background: #dff5d4;
+  opacity: var(--o);
+}
+
+.escena-glow {
+  position: absolute;
+  left: 50%;
+  top: calc((var(--y0) - 14) * 1cqw);
+  width: 84cqw;
+  height: 30cqw;
+  margin-left: -42cqw;
+  background: radial-gradient(
+    closest-side,
+    rgb(140 255 89 / 0.26),
+    rgb(140 255 89 / 0.07) 55%,
+    transparent
+  );
+}
+.escena-nave {
+  position: absolute;
+  left: 50%;
+  top: 2cqw;
+  width: 46cqw;
+  margin-left: -23cqw;
+}
+.escena-nave-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 0.4cqw 2cqw rgb(140 255 89 / 0.32));
+}
+
+.escena-pelota,
+.escena-reticula {
+  position: absolute;
+  left: 50%;
+  width: calc(var(--bola) * 1cqw);
+  margin-left: calc(var(--bola) * -0.5cqw);
+  top: calc((var(--by) - var(--bola) / 2) * 1cqw);
+  aspect-ratio: 1;
+}
+.escena-pelota-flota,
+.torneo-escena-pelota-lienzo {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.torneo-escena-pelota-gl {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0;
+  transition: opacity 0.7s var(--ease-salida);
+}
+.torneo-escena-pelota-gl[data-listo] {
+  opacity: 1;
+}
+/* Retícula de seguimiento: va con la pelota, apenas retrasada. */
+.escena-reticula-flota {
+  position: absolute;
+  inset: 17%;
+}
+.escena-reticula-esquinas {
+  --c: rgb(140 255 89 / 0.7);
+  --l: 14%;
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(var(--c), var(--c)) top left / var(--l) 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) top left / 1px var(--l) no-repeat,
+    linear-gradient(var(--c), var(--c)) top right / var(--l) 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) top right / 1px var(--l) no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom left / var(--l) 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom left / 1px var(--l) no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom right / var(--l) 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom right / 1px var(--l) no-repeat;
+}
+.escena-reticula-tag {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  margin-bottom: 0.45em;
+  padding: 0.25em 0.6em;
+  font-size: clamp(0.46rem, 1.35cqw, 0.6rem);
+  letter-spacing: 0.16em;
+  color: var(--t-green);
+  white-space: nowrap;
+  background: rgb(7 9 10 / 0.55);
+  border-left: 1px solid var(--t-green);
+}
+.torneo-escena--compacta .escena-reticula-tag {
+  display: none;
+}
+
+.escena-bokeh {
+  position: absolute;
+  bottom: -6cqw;
+  width: calc(var(--s) * 1cqw);
+  margin-left: calc(var(--s) * -0.5cqw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(
+    circle,
+    rgb(214 255 194 / 0.55),
+    rgb(140 255 89 / 0.16) 45%,
+    transparent 70%
+  );
+}
+
+.escena-hud {
+  position: absolute;
+  inset: 3cqw;
+  font-size: clamp(0.46rem, 1.3cqw, 0.6rem);
+  letter-spacing: 0.22em;
+  color: rgb(207 216 204 / 0.62);
+}
+.escena-esquina {
+  position: absolute;
+  width: 4cqw;
+  height: 4cqw;
+  border: 0 solid rgb(140 255 89 / 0.45);
+}
+.escena-esquina[data-pos="tl"] {
+  top: 0;
+  left: 0;
+  border-top-width: 1px;
+  border-left-width: 1px;
+}
+.escena-esquina[data-pos="tr"] {
+  top: 0;
+  right: 0;
+  border-top-width: 1px;
+  border-right-width: 1px;
+}
+.escena-esquina[data-pos="bl"] {
+  bottom: 0;
+  left: 0;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+}
+.escena-esquina[data-pos="br"] {
+  bottom: 0;
+  right: 0;
+  border-bottom-width: 1px;
+  border-right-width: 1px;
+}
+.escena-rec,
+.escena-cam,
+.escena-coord {
+  position: absolute;
+  white-space: nowrap;
+}
+.escena-rec {
+  top: 1.4cqw;
+  left: 2.2cqw;
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  color: #ff8a95;
+}
+.escena-rec i {
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  background: var(--t-red);
+  box-shadow: 0 0 8px var(--t-red);
+}
+.escena-cam {
+  top: 1.4cqw;
+  right: 2.2cqw;
+}
+.escena-coord {
+  bottom: 1.4cqw;
+  left: 2.2cqw;
+}
+.torneo-escena--compacta .escena-coord {
+  display: none;
+}
+
+/* ── Título que entra por letras ── */
+.torneo-senal-hud {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7em;
+  font-size: 0.68rem;
+  color: var(--t-green);
+}
+.torneo-senal-hud i {
+  width: 0.62em;
+  height: 0.62em;
+  border-radius: 50%;
+  background: var(--t-red);
+  box-shadow: 0 0 10px var(--t-red);
+}
+.torneo-senal {
+  position: relative;
+  z-index: 1;
+  text-wrap: balance;
+}
+.torneo-senal-cuerpo {
+  position: relative;
+  display: inline-block;
+  font-style: italic;
+}
+.torneo-senal-palabra {
+  display: inline-block;
+  white-space: nowrap;
+}
+.torneo-senal-letra {
+  display: inline-block;
+}
+.torneo-senal-cuerpo::after {
+  content: attr(data-texto);
+  position: absolute;
+  inset: 0;
+  color: var(--t-green);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Próximamente compacto: chips inertes, centrados ── */
+.torneo-soon-compacto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: default;
+  user-select: none;
+}
+.torneo-soon-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  font-size: 0.56rem;
+  white-space: nowrap;
+  color: #cfd8cc;
+  text-align: center;
+}
+.torneo-soon-titulo::before,
+.torneo-soon-titulo::after {
+  content: "";
+  width: clamp(0.75rem, 5vw, 3.5rem);
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgb(140 255 89 / 0.5));
+}
+.torneo-soon-titulo::after {
+  background: linear-gradient(to left, transparent, rgb(140 255 89 / 0.5));
+}
+@media (min-width: 640px) {
+  .torneo-soon-titulo {
+    font-size: 0.62rem;
+    gap: 0.9em;
+  }
+}
+.torneo-soon-sep {
+  width: 4px;
+  height: 4px;
+  flex-shrink: 0;
+  background: var(--t-green);
+  transform: rotate(45deg);
+}
+.torneo-chips {
+  margin-top: 1.1rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.55rem;
+}
+.torneo-chip {
+  --corte: 9px;
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem 0.6rem 0.75rem;
+  background: linear-gradient(
+    135deg,
+    rgb(140 255 89 / 0.55),
+    rgb(140 255 89 / 0.14) 45%,
+    rgb(140 255 89 / 0.3)
+  );
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--corte)) 0,
+    100% var(--corte),
+    100% 100%,
+    var(--corte) 100%,
+    0 calc(100% - var(--corte))
+  );
+}
+.torneo-chip::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgb(140 255 89 / 0.1), transparent 60%),
+    linear-gradient(180deg, #0f1712, #090d0b);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--corte) + 0.5px) 0,
+    100% calc(var(--corte) - 0.5px),
+    100% 100%,
+    calc(var(--corte) - 0.5px) 100%,
+    0 calc(100% - var(--corte) + 0.5px)
+  );
+}
+.torneo-chip-icono {
+  display: flex;
+  color: var(--t-green);
+}
+.torneo-chip-icono svg {
+  width: 18px;
+  height: 18px;
+}
+.torneo-chip-texto {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+  color: rgb(244 247 242 / 0.92);
+}
+.torneo-chip-candado {
+  width: 12px;
+  height: 12px;
+  margin-left: 0.1rem;
+  fill: none;
+  stroke: rgb(207 216 204 / 0.4);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .escena-estrella {
+    animation: escena-titila var(--d) ease-in-out var(--w) infinite alternate;
+  }
+  .escena-bokeh {
+    animation: escena-bokeh var(--d) linear var(--w) infinite;
+  }
+  .escena-rec i,
+  .torneo-senal-hud i {
+    animation: escena-rec 1.4s steps(1) infinite;
+  }
+  .torneo-senal-hud {
+    animation: torneo-up 0.7s var(--ease-salida) 0.15s both;
+  }
+  .torneo-senal-letra {
+    animation: torneo-letra 1s var(--ease-salida) both;
+    animation-delay: calc(var(--retraso, 0ms) + var(--i) * 34ms);
+  }
+  /* Un glitch de ~0.3 s cada 7.5 s: se nota, no molesta. */
+  .torneo-senal-cuerpo {
+    animation: torneo-senal-glitch 7.5s steps(1) 3.4s infinite;
+  }
+  .torneo-senal-cuerpo::after {
+    animation: torneo-senal-corte 7.5s steps(1) 3.4s infinite;
+  }
+  .torneo-chip {
+    animation: torneo-up 0.7s var(--ease-salida) both;
+    animation-delay: calc(var(--i, 0) * 55ms + 1.2s);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .torneo-senal {
+    animation: torneo-fade 0.6s ease both;
+  }
+}
+@keyframes escena-titila {
+  to {
+    opacity: calc(var(--o) * 0.2);
+  }
+}
+@keyframes escena-bokeh {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0);
+  }
+  18% {
+    opacity: 0.75;
+  }
+  70% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -78cqw, 0);
+  }
+}
+@keyframes escena-rec {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  61%,
+  100% {
+    opacity: 0.18;
+  }
+}
+@keyframes torneo-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes torneo-letra {
+  from {
+    opacity: 0;
+    transform: translateY(0.42em) rotate(5deg);
+    filter: blur(10px);
+  }
+  55% {
+    filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+@keyframes torneo-senal-glitch {
+  0%,
+  5%,
+  100% {
+    text-shadow: none;
+    transform: none;
+  }
+  2% {
+    text-shadow:
+      3px 0 var(--t-red),
+      -3px 0 var(--t-green);
+    transform: translateX(2px) skewX(-5deg);
+  }
+  3% {
+    text-shadow:
+      -4px 0 var(--t-red),
+      4px 0 var(--t-green);
+    transform: translateX(-3px);
+  }
+  4% {
+    text-shadow:
+      2px 0 var(--t-red),
+      -2px 0 var(--t-green);
+    transform: translateX(1px);
+  }
+}
+@keyframes torneo-senal-corte {
+  0%,
+  5%,
+  100% {
+    opacity: 0;
+  }
+  2% {
+    opacity: 0.9;
+    clip-path: inset(16% 0 64% 0);
+    transform: translateX(-9px);
+  }
+  3% {
+    opacity: 0.9;
+    clip-path: inset(54% 0 30% 0);
+    transform: translateX(8px);
+  }
+  4% {
+    opacity: 0.9;
+    clip-path: inset(74% 0 8% 0);
+    transform: translateX(-4px);
   }
 }

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 const ICONO = {
   width: 22,
@@ -62,29 +62,39 @@ function Pill() {
 /** Todo lo de acá es INERTE: sin links, botones ni handlers. Es solo un adelanto. */
 export default function Proximamente({ compacto = false }: { compacto?: boolean }) {
   if (compacto) {
+    const chips: Teaser[] = [
+      {
+        titulo: "Crear mi cuenta",
+        icono: (
+          <svg {...ICONO}>
+            <rect x="4" y="3" width="16" height="18" rx="2" />
+            <path d="M8 8h8M8 12h8M8 16h5" />
+          </svg>
+        ),
+      },
+      ...TEASERS,
+    ];
     return (
-      <section aria-label="Lo que viene en la app A51" className="torneo-soon">
-        <p className="torneo-hud text-[0.65rem] text-[#8cff59]">
-          Sumate a la app A51 · Próximamente
+      <section aria-label="Lo que viene en la app A51" className="torneo-soon-compacto">
+        <p className="torneo-soon-titulo torneo-hud">
+          <span>Sumate a la app A51</span>
+          <span className="torneo-soon-sep" aria-hidden="true" />
+          <span className="text-[#8cff59]">Próximamente</span>
         </p>
-        <ul className="mt-3 flex flex-wrap gap-2">
-          <li className="torneo-soon-card flex items-center gap-2 px-3 py-2" aria-disabled="true">
-            <span className="text-[#8cff59]">
-              <svg {...ICONO} width={18} height={18}>
-                <rect x="4" y="3" width="16" height="18" rx="2" />
-                <path d="M8 8h8M8 12h8M8 16h5" />
-              </svg>
-            </span>
-            <span className="torneo-titulo text-lg font-bold text-white">Crear mi cuenta</span>
-          </li>
-          {TEASERS.map((t) => (
+        <ul className="torneo-chips">
+          {chips.map((t, i) => (
             <li
               key={t.titulo}
-              className="torneo-soon-card flex items-center gap-2 px-3 py-2"
+              className="torneo-chip"
               aria-disabled="true"
+              style={{ "--i": i } as CSSProperties}
             >
-              <span className="text-[#8cff59]">{t.icono}</span>
-              <span className="torneo-titulo text-lg font-bold text-white">{t.titulo}</span>
+              <span className="torneo-chip-icono">{t.icono}</span>
+              <span className="torneo-titulo torneo-chip-texto">{t.titulo}</span>
+              <svg className="torneo-chip-candado" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="5" y="11" width="14" height="10" rx="1.5" />
+                <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+              </svg>
             </li>
           ))}
         </ul>

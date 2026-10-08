@@ -1,8 +1,10 @@
 import type { CSSProperties, ReactNode } from "react";
 import Image from "next/image";
 import { getResumenPublico, getTorneoVigente } from "@/lib/torneo-data";
+import EscenaOvni from "./_EscenaOvni";
 import InscripcionForm from "./_InscripcionForm";
 import Proximamente from "./_Proximamente";
+import TituloSenal from "./_TituloSenal";
 
 export const dynamic = "force-dynamic";
 
@@ -32,30 +34,6 @@ function orden(i: number): CSSProperties {
   return { "--i": i } as CSSProperties;
 }
 
-function Ovni() {
-  return (
-    <svg
-      className="torneo-ovni"
-      width="72"
-      height="40"
-      viewBox="0 0 72 40"
-      fill="none"
-      aria-hidden="true"
-    >
-      <ellipse cx="36" cy="26" rx="34" ry="9" fill="#0d1210" stroke="#8cff59" strokeWidth="1.9" />
-      <path
-        d="M20 22c0-9 7-15 16-15s16 6 16 15"
-        fill="#0d1210"
-        stroke="#8cff59"
-        strokeWidth="1.9"
-      />
-      <circle cx="16" cy="27" r="1.8" fill="#8cff59" />
-      <circle cx="36" cy="30" r="1.8" fill="#8cff59" />
-      <circle cx="56" cy="27" r="1.8" fill="#8cff59" />
-    </svg>
-  );
-}
-
 function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 pb-12 sm:px-8">
@@ -81,18 +59,18 @@ export default async function TorneoPage() {
   return (
     <Shell>
       {!torneo ? (
-        <section className="torneo-hero pt-4 text-center sm:pt-8">
-          <div className="torneo-beam" aria-hidden="true" />
-          <div className="relative z-10 flex flex-col items-center">
-            <Ovni />
-            <p className="torneo-hud mt-20 text-[0.7rem] text-[#8cff59] sm:mt-24">
-              A51 · Señal interceptada
-            </p>
-            <h1 className="torneo-titulo mt-3 text-6xl font-extrabold text-white sm:text-8xl">
-              <span className="torneo-glitch inline-block italic">El torneo abre pronto</span>
-            </h1>
-          </div>
-          <div className="relative z-10 mx-auto mt-16 max-w-xl text-left">
+        <section className="torneo-hero flex flex-col items-center text-center">
+          <EscenaOvni />
+          <p className="torneo-senal-hud torneo-hud sm:-mt-8">
+            <i aria-hidden="true" />
+            A51 · Señal interceptada
+          </p>
+          <TituloSenal
+            texto="El torneo abre pronto"
+            retraso={350}
+            className="mt-3 text-[3.4rem] font-extrabold text-white sm:text-8xl"
+          />
+          <div className="mt-12 w-full sm:mt-16">
             <Proximamente compacto />
           </div>
         </section>
@@ -115,14 +93,10 @@ async function TorneoContenido({
 
   return (
     <>
-      <section className="torneo-hero pt-4 sm:pt-8">
-        <div className="torneo-beam" aria-hidden="true" />
+      <section className="torneo-hero">
         <div className="relative z-10 flex flex-col items-center text-center">
-          <Ovni />
-          <p
-            className="torneo-hud torneo-up mt-20 text-[0.7rem] text-[#8cff59] sm:mt-24"
-            style={orden(0)}
-          >
+          <EscenaOvni compacta />
+          <p className="torneo-hud torneo-up -mt-2 text-[0.7rem] text-[#8cff59]" style={orden(0)}>
             A51 · Señal interceptada
           </p>
           <h1
