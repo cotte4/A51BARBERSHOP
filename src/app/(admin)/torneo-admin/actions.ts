@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireOwnerSession } from "@/lib/admin-action";
+import { requireAdminSession } from "@/lib/admin-action";
 import {
   actualizarConfig,
   asegurarTorneo,
@@ -32,7 +32,7 @@ function refrescar() {
 }
 
 async function exigirAdmin(): Promise<TorneoAdminState | null> {
-  return (await requireOwnerSession()) ? null : { ok: false, mensaje: "No tenés permiso." };
+  return (await requireAdminSession()) ? null : { ok: false, mensaje: "No tenés permiso." };
 }
 
 export async function crearTorneoAction(): Promise<TorneoAdminState> {

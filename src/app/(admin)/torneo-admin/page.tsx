@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import BrandMark from "@/components/BrandMark";
-import { requireOwnerSession } from "@/lib/admin-action";
+import { requireAdminSession } from "@/lib/admin-action";
 import BorrarPrueba from "./_BorrarPrueba";
 import { esTorneoDePrueba, getTorneoVigente, listarEquipos, listarJugadores, listarPartidos } from "@/lib/torneo-data";
 import { resumenCupo } from "@/lib/torneo";
@@ -45,7 +45,7 @@ function fechaParaInput(fecha: Date | null): string {
 }
 
 export default async function TorneoAdminPage() {
-  if (!(await requireOwnerSession())) redirect("/hoy");
+  if (!(await requireAdminSession())) redirect("/hoy");
 
   const torneo = await getTorneoVigente();
 
