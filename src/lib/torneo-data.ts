@@ -46,16 +46,12 @@ const EQUIPOS_PLACEHOLDER = [
   "Chelsea",
   "Manchester United",
   "Tottenham",
-  "Juventus",
   "Inter",
-  "Milan",
-  "Napoli",
   "Roma",
   "Atlético de Madrid",
   "Borussia Dortmund",
-  "Bayer Leverkusen",
-  "Newcastle",
   "Aston Villa",
+  "Inter Miami",
 ];
 
 // ————————————————————————————
