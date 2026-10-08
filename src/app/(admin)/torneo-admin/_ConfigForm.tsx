@@ -12,7 +12,7 @@ type ConfigFormProps = {
 const ESTADO_INICIAL: TorneoAdminState = { ok: false, mensaje: null };
 
 const INPUT =
-  "w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-white placeholder:text-zinc-500 focus:border-[#8cff59]/60 focus:outline-none";
+  "min-h-12 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-white placeholder:text-zinc-500 focus:border-[#8cff59]/60 focus:outline-none";
 
 export default function ConfigForm({ nombre, fechaLocal, premiosTexto }: ConfigFormProps) {
   const [state, formAction, pendiente] = useActionState(guardarConfigAction, ESTADO_INICIAL);
@@ -57,9 +57,9 @@ export default function ConfigForm({ nombre, fechaLocal, premiosTexto }: ConfigF
         <button
           type="submit"
           disabled={pendiente}
-          className="neon-button min-h-11 w-full rounded-[20px] px-5 py-3 font-semibold disabled:opacity-60"
+          className="neon-button min-h-12 w-full rounded-[20px] px-5 py-3 font-semibold transition-transform duration-150 active:scale-[0.97] disabled:opacity-60"
         >
-          Guardar
+          {pendiente ? "Guardando…" : "Guardar"}
         </button>
         {state.mensaje ? (
           <p

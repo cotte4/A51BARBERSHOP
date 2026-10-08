@@ -18,19 +18,22 @@ export default function BorrarPrueba() {
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-sm text-zinc-400">
-        Este es un torneo de ensayo. Cuando termines de probar, borralo y creá el real.
-      </p>
+    <div className="flex flex-col gap-3">
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-red-300/80">Torneo de ensayo</p>
+        <p className="mt-1 text-sm leading-6 text-zinc-400">
+          Cuando termines de probar, borralo y creá el real.
+        </p>
+      </div>
       <button
         type="button"
         disabled={pendiente}
         onClick={alTocar}
-        className="ghost-button min-h-11 rounded-[20px] px-5 py-3 font-semibold text-red-300 disabled:opacity-60"
+        className="min-h-12 rounded-[18px] border border-red-500/40 bg-red-500/10 px-5 py-3 font-semibold text-red-300 transition-[transform,background-color] duration-150 hover:bg-red-500/15 active:scale-[0.98] disabled:opacity-60"
       >
         {pendiente ? "Borrando…" : "Borrar torneo de prueba"}
       </button>
-      {error ? <p className="text-sm text-red-300">{error}</p> : null}
+      {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
     </div>
   );
 }

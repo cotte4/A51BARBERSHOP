@@ -12,9 +12,9 @@ export default function CrearTorneo() {
         type="button"
         disabled={pendiente}
         onClick={() => startTransition(async () => { await crearTorneoAction(); })}
-        className="neon-button min-h-11 w-full rounded-[20px] px-5 py-3 font-semibold disabled:opacity-60"
+        className="neon-button min-h-14 w-full rounded-[20px] px-5 py-3 text-lg font-bold transition-transform duration-150 active:scale-[0.97] disabled:opacity-60 sm:w-auto sm:px-10"
       >
-        Crear torneo
+        {pendiente ? "Creando…" : "Crear torneo"}
       </button>
     </div>
   );
