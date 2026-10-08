@@ -39,7 +39,7 @@ export default function Reemplazo({ bajaId, nombre, espera, cuota }: ReemplazoPr
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        className="min-h-9 px-2 text-xs font-medium text-zinc-500 hover:text-amber-300"
+        className="min-h-11 self-start rounded-full border border-zinc-700 px-4 text-sm font-medium text-zinc-400 transition-[transform,color,border-color] duration-150 hover:border-amber-500/50 hover:text-amber-300 active:scale-[0.97]"
       >
         Se baja
       </button>
@@ -47,8 +47,8 @@ export default function Reemplazo({ bajaId, nombre, espera, cuota }: ReemplazoPr
   }
 
   return (
-    <div className="mt-3 flex w-full flex-col gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-3">
-      <p className="text-sm font-semibold text-white">¿Quién entra por {nombre}?</p>
+    <div className="flex w-full flex-col gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-3.5 motion-safe:animate-[a51-fade-up_0.3s_cubic-bezier(0.22,1,0.36,1)_both]">
+      <p className="font-display text-base font-semibold text-white">¿Quién entra por {nombre}?</p>
 
       {!nuevo ? (
         <>
@@ -62,7 +62,7 @@ export default function Reemplazo({ bajaId, nombre, espera, cuota }: ReemplazoPr
                     type="button"
                     disabled={pendiente}
                     onClick={() => enviar({ tipo: "espera", jugadorId: c.id }, c.alias)}
-                    className="ghost-button flex min-h-11 w-full flex-col items-start rounded-[20px] px-4 py-2 text-left disabled:opacity-60"
+                    className="ghost-button flex min-h-12 w-full flex-col items-start rounded-[18px] px-4 py-2 text-left transition-transform active:scale-[0.98] disabled:opacity-60"
                   >
                     <span className="text-base font-semibold">
                       {c.alias}
@@ -77,7 +77,7 @@ export default function Reemplazo({ bajaId, nombre, espera, cuota }: ReemplazoPr
           <button
             type="button"
             onClick={() => setNuevo(true)}
-            className="text-left text-sm text-zinc-400 hover:text-[#8cff59]"
+            className="min-h-11 text-left text-sm text-zinc-400 hover:text-[#8cff59]"
           >
             Es una persona que no está anotada
           </button>
@@ -119,11 +119,11 @@ export default function Reemplazo({ bajaId, nombre, espera, cuota }: ReemplazoPr
           <button
             type="submit"
             disabled={pendiente}
-            className="neon-button min-h-11 rounded-[20px] px-4 py-2 text-base font-semibold disabled:opacity-60"
+            className="neon-button min-h-12 rounded-[18px] px-4 py-2 text-base font-semibold transition-transform active:scale-[0.98] disabled:opacity-60"
           >
             {pendiente ? "Guardando…" : "Cobrar y reemplazar"}
           </button>
-          <button type="button" onClick={() => setNuevo(false)} className="text-left text-sm text-zinc-400">
+          <button type="button" onClick={() => setNuevo(false)} className="min-h-11 text-left text-sm text-zinc-400">
             Volver
           </button>
         </form>
@@ -132,7 +132,7 @@ export default function Reemplazo({ bajaId, nombre, espera, cuota }: ReemplazoPr
       {error ? (
         <p className="rounded-xl border border-red-500/35 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>
       ) : null}
-      <button type="button" onClick={() => setAbierto(false)} className="text-left text-sm text-zinc-500">
+      <button type="button" onClick={() => setAbierto(false)} className="min-h-11 text-left text-sm text-zinc-500 hover:text-zinc-300">
         Cancelar
       </button>
     </div>

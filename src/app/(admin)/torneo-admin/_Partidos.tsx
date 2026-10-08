@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { GOLES_MAX } from "@/lib/torneo";
+import Escudo from "@/components/torneo/Escudo";
 import { cargarResultadoAction } from "./actions";
 
 export type PartidoVista = {
@@ -51,9 +52,15 @@ export default function Partidos({ partidos, jugadores, finalizado }: PartidosPr
   return (
     <div className="flex flex-col gap-6">
       {campeon ? (
-        <div className="rounded-[22px] border border-[#8cff59]/25 bg-[#8cff59]/10 px-5 py-4">
-          <p className="font-display text-2xl font-bold text-white">
-            Campeón: <span className="text-[#8cff59]">{campeon.alias}</span>
+        <div className="relative overflow-hidden rounded-[24px] border border-[#8cff59]/35 bg-[radial-gradient(circle_at_top,rgba(140,255,89,0.22),rgba(9,9,11,0.9)_70%)] px-5 py-6 text-center shadow-[0_0_48px_rgba(140,255,89,0.12)] motion-safe:animate-[a51-scale-in_0.6s_cubic-bezier(0.22,1,0.36,1)_both]">
+          <p className="eyebrow text-[11px] font-semibold">Campeón</p>
+          {campeon.equipoNombre ? (
+            <div className="mt-3 flex justify-center">
+              <Escudo equipo={campeon.equipoNombre} tamano={72} />
+            </div>
+          ) : null}
+          <p className="font-display mt-3 text-4xl font-bold text-[#8cff59] [text-shadow:0_0_24px_rgba(140,255,89,0.45)]">
+            {campeon.alias}
           </p>
           <p className="mt-1 text-sm text-zinc-400">
             {campeon.nombre}
@@ -68,19 +75,26 @@ export default function Partidos({ partidos, jugadores, finalizado }: PartidosPr
         const jugados = jugables.filter((p) => p.estado === "jugado").length;
         return (
           <div key={ronda} className="flex flex-col gap-3">
-            <p className="eyebrow text-xs font-semibold">
-              {nombreRonda(ronda, maxRonda)}
-              {jugables.length > 1 ? ` · ${jugados} de ${jugables.length} jugados` : ""}
-            </p>
-            {deLaRonda.map((partido) => (
-              <PartidoCard
-                // Si el resultado cambia desde otro celular, la tarjeta arranca de nuevo con lo guardado.
-                key={`${partido.id}-${partido.ganadorId}-${partido.marcadorA}-${partido.marcadorB}`}
-                partido={partido}
-                jugadores={jugadores}
-                bloqueado={siguienteJugado(partido)}
-              />
-            ))}
+            <div className="flex items-center gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b6ff84]">{nombreRonda(ronda, maxRonda)}</p>
+              {jugables.length > 1 ? (
+                <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-xs font-semibold tabular-nums text-zinc-300">
+                  {jugados}/{jugables.length}
+                </span>
+              ) : null}
+              <span className="h-px flex-1 bg-gradient-to-r from-zinc-700/80 to-transparent" />
+            </div>
+            <div className={`grid grid-cols-1 gap-3 ${deLaRonda.length > 1 ? "sm:grid-cols-2" : ""}`}>
+              {deLaRonda.map((partido) => (
+                <PartidoCard
+                  // Si el resultado cambia desde otro celular, la tarjeta arranca de nuevo con lo guardado.
+                  key={`${partido.id}-${partido.ganadorId}-${partido.marcadorA}-${partido.marcadorB}`}
+                  partido={partido}
+                  jugadores={jugadores}
+                  bloqueado={siguienteJugado(partido)}
+                />
+              ))}
+            </div>
           </div>
         );
       })}
@@ -118,13 +132,17 @@ function PartidoCard({
     const id = partido.jugadorAId ?? partido.jugadorBId;
     const info = id ? jugadores.get(id) : undefined;
     if (!info) return null;
-    return <p className="px-1 text-sm text-zinc-500">{info.alias} pasa directo</p>;
+    return (
+      <p className="flex min-h-12 items-center rounded-[22px] border border-zinc-800/80 px-4 text-sm text-zinc-500">
+        {info.alias} pasa directo
+      </p>
+    );
   }
 
   const { jugadorAId, jugadorBId } = partido;
   if (!jugadorAId || !jugadorBId) {
     return (
-      <p className="rounded-[22px] border border-dashed border-zinc-800 px-4 py-3 text-sm text-zinc-500">
+      <p className="flex min-h-12 items-center rounded-[22px] border border-dashed border-zinc-800 px-4 py-3 text-sm text-zinc-500">
         Cruce {partido.posicion} · esperando rivales
       </p>
     );
@@ -165,16 +183,23 @@ function PartidoCard({
 
   return (
     <div
-      className={`flex flex-col gap-3 rounded-[22px] border p-3 ${
-        jugado ? "border-zinc-800 bg-zinc-950/60" : "border-[#8cff59]/30 bg-zinc-950/80"
+      className={`flex flex-col gap-3 rounded-[22px] border p-3.5 transition-colors duration-300 ${
+        jugado
+          ? "border-zinc-800 bg-zinc-950/60"
+          : "border-[#8cff59]/30 bg-[linear-gradient(160deg,rgba(140,255,89,0.07),rgba(9,9,11,0.85)_50%)]"
       }`}
     >
       <div className="flex items-center justify-between px-1">
         <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Cruce {partido.posicion}</p>
         {jugado ? (
-          <p className="text-xs font-semibold text-[#8cff59]">Jugado</p>
+          <p className="rounded-full border border-[#8cff59]/25 bg-[#8cff59]/10 px-2 py-0.5 text-[11px] font-semibold text-[#8cff59]">
+            Jugado
+          </p>
         ) : (
-          <p className="text-xs font-semibold text-amber-300">Por jugar</p>
+          <p className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-300 motion-safe:animate-pulse" />
+            Por jugar
+          </p>
         )}
       </div>
 
@@ -280,7 +305,8 @@ function LadoGoles({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <label htmlFor={id} className="min-w-0 flex-1 px-1">
+      {info?.equipoNombre ? <Escudo equipo={info.equipoNombre} tamano={36} /> : null}
+      <label htmlFor={id} className="min-w-0 flex-1">
         <span
           className={`block truncate font-semibold ${(info?.alias.length ?? 0) > 14 ? "text-base" : "text-lg"} ${gana ? "text-[#8cff59]" : "text-white"}`}
         >

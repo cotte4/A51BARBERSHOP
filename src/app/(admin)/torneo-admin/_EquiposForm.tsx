@@ -49,6 +49,32 @@ export default function EquiposForm({ guardados, minimo, bloqueado }: EquiposFor
     });
   }
 
+  if (bloqueado) {
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-zinc-400">
+          <span className="font-display text-2xl font-bold tabular-nums text-white">{guardados.length}</span> equipos · el
+          torneo ya se sorteó: no se pueden cambiar.
+        </p>
+        <ul className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+          {guardados.map((nombre) => (
+            <li
+              key={nombre}
+              className="flex flex-col items-center gap-1.5 rounded-2xl border border-zinc-800 bg-zinc-950/60 px-1 py-2.5"
+            >
+              <Escudo equipo={nombre} tamano={36} />
+              <span className="w-full truncate text-center text-[11px] font-medium leading-tight text-zinc-400">
+                {nombre}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  let indice = 0;
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -80,26 +106,24 @@ export default function EquiposForm({ guardados, minimo, bloqueado }: EquiposFor
         ) : null}
       </div>
 
-      {bloqueado ? (
-        <p className="text-sm text-zinc-400">El torneo ya se sorteó: los equipos no se pueden cambiar.</p>
-      ) : null}
-
       {LIGAS.map((liga) => (
         <div key={liga} className="flex flex-col gap-2">
-          <p className="eyebrow text-xs font-semibold">{liga}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">{liga}</p>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             {CATALOGO_CLUBES.filter((c) => c.liga === liga).map((club) => {
               const elegido = elegidos.has(club.slug);
+              const retraso = Math.min(indice++, 23) * 22;
               return (
                 <button
                   key={club.slug}
+                  style={{ animationDelay: `${retraso}ms` }}
                   type="button"
                   aria-pressed={elegido}
                   disabled={bloqueado || pendiente}
                   onClick={() => alternar(club.slug)}
-                  className={`relative flex min-h-[104px] flex-col items-center justify-center gap-2 rounded-2xl border px-1.5 py-3 transition-[transform,background-color,border-color] duration-150 ease-out active:scale-[0.97] disabled:cursor-default ${
+                  className={`relative flex min-h-[104px] flex-col items-center justify-center gap-2 rounded-2xl border px-1.5 py-3 transition-[transform,background-color,border-color,box-shadow] duration-150 ease-out active:scale-[0.95] disabled:cursor-default motion-safe:animate-[a51-scale-in_0.4s_cubic-bezier(0.22,1,0.36,1)_both] ${
                     elegido
-                      ? "border-[#8cff59]/70 bg-[#8cff59]/10"
+                      ? "border-[#8cff59]/70 bg-[#8cff59]/10 shadow-[0_0_18px_rgba(140,255,89,0.12)]"
                       : "border-zinc-800 bg-zinc-950/60 hover:border-zinc-600"
                   }`}
                 >
