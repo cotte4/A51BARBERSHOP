@@ -146,7 +146,7 @@ function TarjetaCruce({
 }) {
   if (!revelado) {
     return (
-      <div className="flex h-[200px] items-center justify-center border border-dashed border-[#8cff59]/20 bg-black/30 [clip-path:polygon(0_0,calc(100%-24px)_0,100%_24px,100%_100%,24px_100%,0_calc(100%-24px))]">
+      <div className="flex h-[184px] items-center justify-center border border-dashed border-[#8cff59]/20 bg-black/30 [clip-path:polygon(0_0,calc(100%-24px)_0,100%_24px,100%_100%,24px_100%,0_calc(100%-24px))]">
         <span className="torneo-hud text-[26px] text-[#8cff59]/30">Cruce {partido.posicion}</span>
       </div>
     );
@@ -154,7 +154,7 @@ function TarjetaCruce({
   const a = partido.jugadorAId ? jugadores.get(partido.jugadorAId) : undefined;
   const b = partido.jugadorBId ? jugadores.get(partido.jugadorBId) : undefined;
   return (
-    <div className="flex h-[200px] items-center justify-between gap-6 border border-[#8cff59]/40 bg-[linear-gradient(120deg,rgba(140,255,89,0.12),rgba(0,0,0,0.55))] px-7 [clip-path:polygon(0_0,calc(100%-24px)_0,100%_24px,100%_100%,24px_100%,0_calc(100%-24px))]">
+    <div className="flex h-[184px] items-center justify-between gap-6 border border-[#8cff59]/40 bg-[linear-gradient(120deg,rgba(140,255,89,0.12),rgba(0,0,0,0.55))] px-7 [clip-path:polygon(0_0,calc(100%-24px)_0,100%_24px,100%_100%,24px_100%,0_calc(100%-24px))]">
       <Lado jugador={a} alinear="izq" />
       <span className="torneo-hud shrink-0 text-[34px] text-[#ff3b4e]">{partido.esBye ? "Pase directo" : "VS"}</span>
       {partido.esBye ? <div className="flex-1" /> : <Lado jugador={b} alinear="der" />}
@@ -174,7 +174,7 @@ function Encabezado({
   qr?: boolean;
 }) {
   return (
-    <header className={`flex items-end justify-between px-24 ${compacto ? "pt-8" : "pt-14"}`}>
+    <header className={`flex items-end justify-between gap-12 px-24 ${compacto ? "pt-6" : "pt-14"}`}>
       <div>
         <p className="torneo-hud text-[22px] text-[#8cff59]">A51 · Señal interceptada</p>
         <h1
@@ -183,9 +183,13 @@ function Encabezado({
           {titulo}
         </h1>
       </div>
-      <div className="flex items-end gap-8">
-        <p className="torneo-hud pb-3 text-[24px] text-white/70">{detalle}</p>
-        {qr && <QrJukeboxMini compacto={compacto} />}
+      {/* El detalle arriba a la derecha y el QR al lado, aprovechando el alto del encabezado. */}
+      <div className="flex items-stretch gap-4">
+        <div className="flex flex-col items-end justify-between gap-3 text-right">
+          <p className="torneo-hud text-[24px] text-white/70">{detalle}</p>
+          {qr && <TextoJukebox />}
+        </div>
+        {qr && <QrJukeboxMini />}
       </div>
     </header>
   );
@@ -228,7 +232,7 @@ function GrillaSorteo({
   return (
     <div className="flex h-full flex-col">
       <Encabezado titulo="El sorteo" detalle={`${nombre} · ${revelados} de ${cruces.length} cruces`} qr />
-      <div className="grid flex-1 grid-cols-2 content-center gap-x-10 gap-y-6 px-24 pb-16">
+      <div className="grid flex-1 grid-cols-2 content-center gap-x-10 gap-y-5 px-24 pb-14">
         {cruces.map((c, i) => (
           <TarjetaCruce key={c.id} partido={c} jugadores={jugadores} revelado={i < revelados} />
         ))}
@@ -287,10 +291,10 @@ function Cuadro({
   return (
     <div className="flex h-full flex-col">
       <Encabezado titulo="El cuadro" detalle={tablero.torneo.nombre} compacto qr />
-      <div className="flex min-h-0 flex-1 gap-8 px-24 pb-10 pt-4">
+      <div className="flex min-h-0 flex-1 gap-8 px-24 pb-6 pt-4">
         {columnas.map((ronda) => (
           <div key={ronda} className="flex flex-1 flex-col">
-            <p className="torneo-hud mb-4 text-center text-[20px] text-[#8cff59]">{nombreRonda(ronda, rondas)}</p>
+            <p className="torneo-hud mb-3 text-center text-[20px] text-[#8cff59]">{nombreRonda(ronda, rondas)}</p>
             <div className="flex min-h-0 flex-1 flex-col justify-around">
               {tablero.partidos
                 .filter((p) => p.ronda === ronda)
@@ -477,36 +481,44 @@ function usarUrlJukebox(): string | null {
   return url;
 }
 
-/** QR chico en la esquina: los jugadores proponen canciones para el parlante desde el celular. */
+// Se escanea desde unos 3 m: margen blanco de 4 módulos (la "quiet zone" que el lector necesita
+// para encontrar el código) y corrección baja, que deja menos módulos y por lo tanto más grandes.
+const QR_MARGEN = 4;
+
+/**
+ * QR grande arriba a la derecha: los jugadores proponen canciones para el parlante desde el celular.
+ * Abajo pisaría la fila de semifinalistas del podio y el cupo de la espera; arriba no hay nada.
+ */
 function QrJukebox() {
   const url = usarUrlJukebox();
   if (!url) return null;
   return (
-    <div className="pointer-events-none absolute bottom-6 right-6 z-20 flex items-center gap-4 border border-[#8cff59]/40 bg-black/80 px-4 py-3">
+    <div className="pointer-events-none absolute right-8 top-8 z-20 flex items-center gap-8 border border-[#8cff59]/40 bg-black/80 p-5">
       <div className="text-right">
-        <p className="torneo-hud text-[11px] text-[#8cff59]">Poné tu tema</p>
-        <p className="mt-1 text-sm text-[#cfd8cc]">Escaneá y sumá tu canción</p>
+        <p className="torneo-hud text-[34px] leading-tight text-[#8cff59]">Poné tu tema</p>
+        <p className="mt-3 text-[28px] leading-tight text-[#cfd8cc]">Escaneá y sumá tu canción</p>
       </div>
-      <div className="bg-white p-1.5">
-        <QRCodeSVG value={url} size={96} />
-      </div>
+      <QRCodeSVG value={url} size={200} marginSize={QR_MARGEN} level="L" />
     </div>
   );
 }
 
-/** Versión de encabezado para el sorteo y el cuadro: no le saca lugar a los cruces. */
-function QrJukeboxMini({ compacto }: { compacto?: boolean }) {
-  const url = usarUrlJukebox();
-  if (!url) return null;
-  // En el cuadro va sin margen abajo: así no le suma ni un píxel al encabezado compacto.
+/** Texto del QR del encabezado: va a la izquierda del código, bien separado. */
+function TextoJukebox() {
   return (
-    <div className={`flex flex-col items-center gap-1.5 ${compacto ? "" : "pb-3"}`}>
-      <div className="border border-[#8cff59]/40 bg-white p-1">
-        <QRCodeSVG value={url} size={64} />
-      </div>
-      <p className="torneo-hud whitespace-nowrap text-[12px] leading-none text-[#8cff59]">Poné tu tema</p>
+    <div>
+      <p className="torneo-hud whitespace-nowrap text-[26px] leading-tight text-[#8cff59]">Poné tu tema</p>
+      <p className="mt-1 whitespace-nowrap text-[22px] leading-tight text-[#cfd8cc]">Escaneá y sumá tu canción</p>
     </div>
   );
+}
+
+/** QR del encabezado del sorteo y el cuadro: alto como el encabezado, no le saca lugar a los cruces. */
+function QrJukeboxMini() {
+  const url = usarUrlJukebox();
+  // El hueco reservado evita que el encabezado salte cuando aparece el QR (la URL se arma en el cliente).
+  if (!url) return <div className="h-[136px] w-[136px] shrink-0" aria-hidden="true" />;
+  return <QRCodeSVG value={url} size={136} marginSize={QR_MARGEN} level="L" className="shrink-0" />;
 }
 
 /** Se ve solo si la tele dejó de recibir el tablero: lo de pantalla puede estar viejo. */
