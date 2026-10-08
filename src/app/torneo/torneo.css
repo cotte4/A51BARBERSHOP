@@ -45,6 +45,10 @@
   width: 100%;
   height: 100%;
 }
+/* Con la escena del OVNI la cancha se ve como una línea suelta detrás de la nave. */
+.torneo-theme:has(.torneo-escena) .torneo-pitch {
+  display: none;
+}
 .torneo-scanlines {
   position: fixed;
   inset: 0;
