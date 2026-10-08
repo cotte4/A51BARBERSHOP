@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import Image from "next/image";
-import { getResumenPublico, getTorneoVigente } from "@/lib/torneo-data";
+import { MAX_ANOTADOS, getResumenPublico, getTorneoVigente } from "@/lib/torneo-data";
 import EscenaOvni from "./_EscenaOvni";
 import InscripcionForm from "./_InscripcionForm";
 import Proximamente from "./_Proximamente";
@@ -130,6 +130,11 @@ async function TorneoContenido({
               <p className="torneo-bug-valor torneo-titulo">
                 {resumen.pagados}/{resumen.cupo}
               </p>
+              {resumen.enEspera > 0 && (
+                <p className="torneo-hud mt-1 text-[0.6rem] text-[#cfd8cc]">
+                  {resumen.enEspera} en lista de espera
+                </p>
+              )}
               <div
                 className="torneo-progress"
                 role="progressbar"
@@ -163,17 +168,17 @@ async function TorneoContenido({
               </p>
             </div>
           </section>
-        ) : resumen.lleno ? (
+        ) : resumen.anotados >= MAX_ANOTADOS ? (
           <section className="torneo-ficha-borde">
             <div className="torneo-ficha">
               <p className="torneo-hud text-[0.65rem] text-[#8cff59]">Cupo completo</p>
               <p className="torneo-titulo mt-2 text-4xl font-extrabold italic text-white">
-                Se completaron los {resumen.cupo} lugares
+                Se completaron los lugares y la lista de espera
               </p>
             </div>
           </section>
         ) : (
-          <InscripcionForm />
+          <InscripcionForm listaEspera={resumen.lleno} />
         )}
       </div>
 

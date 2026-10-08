@@ -274,11 +274,15 @@ export type ResumenCupo = {
   cupo: number;
   lugaresLibres: number;
   lleno: boolean;
+  /** Anotados sin pagar cuando el cupo ya está lleno: la lista de espera. */
+  enEspera: number;
 };
 
 export function resumenCupo(jugadores: readonly JugadorCupo[], cupo: number): ResumenCupo {
   const pagados = jugadores.filter((j) => j.estadoPago === "pagado").length;
-  return { pagados, cupo, lugaresLibres: Math.max(0, cupo - pagados), lleno: pagados >= cupo };
+  const lleno = pagados >= cupo;
+  const enEspera = lleno ? jugadores.length - pagados : 0;
+  return { pagados, cupo, lugaresLibres: Math.max(0, cupo - pagados), lleno, enEspera };
 }
 
 /** Número de orden para el próximo "Pagó". null si el cupo ya está lleno. */

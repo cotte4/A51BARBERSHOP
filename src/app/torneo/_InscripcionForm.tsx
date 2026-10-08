@@ -6,7 +6,7 @@ import Proximamente from "./_Proximamente";
 
 const ESTADO_INICIAL: InscripcionState = { ok: false, mensaje: null };
 
-export default function InscripcionForm() {
+export default function InscripcionForm({ listaEspera = false }: { listaEspera?: boolean }) {
   const [state, formAction, pending] = useActionState(inscribirseAction, ESTADO_INICIAL);
 
   if (state.ok) {
@@ -20,7 +20,9 @@ export default function InscripcionForm() {
                 <span className="torneo-glitch inline-block italic">Jugador registrado</span>
               </h2>
               <p className="mt-4 text-base text-[#cfd8cc]">
-                Tu lugar se confirma cuando pagues la cuota en el local.
+                {state.puestoEspera
+                  ? `Los 16 lugares ya están ocupados: quedaste en lista de espera, puesto ${state.puestoEspera}. Si se libera un lugar, te avisamos.`
+                  : "Tu lugar se confirma cuando pagues la cuota en el local."}
               </p>
               <a
                 href="/jukebox"
@@ -47,7 +49,9 @@ export default function InscripcionForm() {
           Anotate
         </h2>
         <p className="mt-2 text-base text-[#cfd8cc]">
-          Pagás la cuota en el local y ahí se confirma tu lugar.
+          {listaEspera
+            ? "Los 16 lugares ya están ocupados. Podés anotarte en la lista de espera: si alguien se baja, te avisamos."
+            : "Pagás la cuota en el local y ahí se confirma tu lugar."}
         </p>
 
         <form action={formAction} className="mt-6 flex flex-col gap-5">
@@ -120,7 +124,7 @@ export default function InscripcionForm() {
           )}
 
           <button type="submit" disabled={pending} className="torneo-boton">
-            {pending ? "Registrando…" : "Entrar a la cancha"}
+            {pending ? "Registrando…" : listaEspera ? "Anotarme en la lista de espera" : "Entrar a la cancha"}
           </button>
         </form>
       </div>

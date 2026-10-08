@@ -29,8 +29,8 @@ export type TorneoJugador = typeof torneoJugadores.$inferSelect;
 export type TorneoEquipo = typeof torneoEquipos.$inferSelect;
 export type TorneoPartido = typeof torneoPartidos.$inferSelect;
 
-/** Tope de anotados sin pagar: frena a quien llene el formulario con basura. */
-const MAX_ANOTADOS = 250;
+/** Tope de anotados (16 con lugar + lista de espera): frena a quien llene el formulario con basura. */
+export const MAX_ANOTADOS = 51;
 /** Inscripciones aceptadas cada 10 min en total: holgado para el local, corta a un bot. */
 const MAX_ANOTADOS_POR_RAFAGA = 40;
 
@@ -132,7 +132,7 @@ export type DatosInscripcion = {
 };
 
 export type ResultadoInscripcion =
-  | { ok: true }
+  | { ok: true; puestoEspera: number | null }
   | {
       ok: false;
       motivo: "cerrado" | "ya_anotado" | "lleno" | "telefono_invalido" | "sin_torneo" | "demasiados";
@@ -241,7 +241,15 @@ export async function inscribirJugador(datos: DatosInscripcion): Promise<Resulta
       .onConflictDoNothing()
       .returning({ id: torneoJugadores.id });
 
-    return insertado ? ({ ok: true } as const) : ({ ok: false, motivo: "ya_anotado" } as const);
+    if (!insertado) return { ok: false, motivo: "ya_anotado" } as const;
+
+    // Con el cupo lleno, quien se anota queda en lista de espera: su puesto es por orden de llegada.
+    const todos = await tx
+      .select({ estadoPago: torneoJugadores.estadoPago, ordenPago: torneoJugadores.ordenPago })
+      .from(torneoJugadores)
+      .where(eq(torneoJugadores.torneoId, torneo.id));
+    const { lleno, enEspera } = resumenCupo(todos, torneo.cupo);
+    return { ok: true, puestoEspera: lleno ? enEspera : null } as const;
   });
 }
 

@@ -8,6 +8,8 @@ import { inscribirJugador } from "@/lib/torneo-data";
 export type InscripcionState = {
   ok: boolean;
   mensaje: string | null;
+  /** Puesto en la lista de espera (1 = el que sigue); null si entró al cupo. */
+  puestoEspera?: number | null;
 };
 
 const inscripcionSchema = z.object({
@@ -45,7 +47,7 @@ const MENSAJES: Record<string, string> = {
   demasiados: "Hay mucha gente anotándose. Probá de nuevo en unos minutos.",
   cerrado: "Las inscripciones están cerradas.",
   ya_anotado: "Ese email ya está anotado.",
-  lleno: "Se completó la lista de anotados.",
+  lleno: "Se completó también la lista de espera.",
   telefono_invalido: "Revisá el WhatsApp.",
   sin_torneo: "Todavía no abrió la inscripción.",
 };
@@ -84,5 +86,5 @@ export async function inscribirseAction(
 
   revalidatePath("/torneo");
   revalidatePath("/torneo-admin");
-  return { ok: true, mensaje: null };
+  return { ok: true, mensaje: null, puestoEspera: resultado.puestoEspera };
 }

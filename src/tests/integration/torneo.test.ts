@@ -196,9 +196,14 @@ describe("cupo", () => {
 
   it("cuenta solo los pagados y avisa cuando está lleno", () => {
     const quince = [...Array.from({ length: 15 }, (_, i) => pagado(i + 1)), pendiente, pendiente];
-    expect(resumenCupo(quince, 16)).toEqual({ pagados: 15, cupo: 16, lugaresLibres: 1, lleno: false });
+    expect(resumenCupo(quince, 16)).toEqual({ pagados: 15, cupo: 16, lugaresLibres: 1, lleno: false, enEspera: 0 });
     const dieciseis = [...quince, pagado(16)];
     expect(resumenCupo(dieciseis, 16).lleno).toBe(true);
+  });
+
+  it("con el cupo lleno, los que no pagaron son la lista de espera", () => {
+    const lleno = [...Array.from({ length: 16 }, (_, i) => pagado(i + 1)), pendiente, pendiente, pendiente];
+    expect(resumenCupo(lleno, 16).enEspera).toBe(3);
   });
 
   it("el próximo orden de pago sigue al máximo; null si está lleno", () => {

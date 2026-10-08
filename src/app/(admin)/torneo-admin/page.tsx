@@ -74,7 +74,7 @@ export default async function TorneoAdminPage() {
     listarEquipos(torneo.id),
     listarPartidos(torneo.id),
   ]);
-  const { pagados, cupo } = resumenCupo(jugadores, torneo.cupo);
+  const { pagados, cupo, lleno: resumenLleno } = resumenCupo(jugadores, torneo.cupo);
 
   const nombreEquipoPorId = new Map(equipos.map((e) => [e.id, e.nombre] as const));
   const infoJugadores = new Map<string, JugadorInfo>(
@@ -123,7 +123,7 @@ export default async function TorneoAdminPage() {
             {pagados} de {cupo} confirmados
           </p>
           <p className="mt-2 text-sm text-zinc-400">
-            {jugadores.length} anotados · cuota {formatARS(torneo.cuotaArs)}
+            {jugadores.length} anotados{resumenLleno ? ` · ${jugadores.length - pagados} en espera` : ""} · cuota {formatARS(torneo.cuotaArs)}
           </p>
           <Link
             href="/torneo"
@@ -176,6 +176,8 @@ export default async function TorneoAdminPage() {
             <ul className="mt-4 flex flex-col gap-3">
               {anotados.map((jugador) => {
                 const pagado = jugador.estadoPago === "pagado";
+                const puestoEspera = pagado ? 0 : pendientes.indexOf(jugador) + 1;
+                const enEspera = !pagado && resumenLleno;
                 return (
                   <li
                     key={jugador.id}
@@ -183,6 +185,11 @@ export default async function TorneoAdminPage() {
                   >
                     <div className="min-w-0">
                       <p className="font-semibold text-white">{jugador.nombre}</p>
+                      {enEspera ? (
+                        <p className="mt-0.5 text-xs font-semibold text-amber-300">
+                          {puestoEspera === 1 ? "El que sigue" : `En espera · puesto ${puestoEspera}`}
+                        </p>
+                      ) : null}
                       <p className="mt-0.5 break-all text-xs text-zinc-400">{jugador.email}</p>
                       <p className="text-xs text-zinc-400">{jugador.whatsapp}</p>
                     </div>
