@@ -5,7 +5,10 @@ import {
   CATALOGO_CLUBES,
   LIGAS,
   clubDelCatalogo,
+  coloresDeEquipo,
   escudoDeEquipo,
+  luminancia,
+  LUMINANCIA_VIVO,
   inicialesEquipo,
   nombresDelCatalogo,
   slugEquipo,
@@ -95,5 +98,30 @@ describe("inicialesEquipo", () => {
     expect(inicialesEquipo("Napoli")).toBe("NAP");
     expect(inicialesEquipo("Club Atlético de San Martín")).toBe("CAS");
     expect(inicialesEquipo("")).toBe("?");
+  });
+});
+
+describe("colores de los clubes", () => {
+  it("cada club del catálogo tiene primario y secundario en hex, distintos", () => {
+    for (const club of CATALOGO_CLUBES) {
+      const [primario, secundario] = club.colores;
+      expect(primario, club.nombre).toMatch(/^#[0-9A-F]{6}$/i);
+      expect(secundario, club.nombre).toMatch(/^#[0-9A-F]{6}$/i);
+      expect(primario.toLowerCase(), club.nombre).not.toBe(secundario.toLowerCase());
+    }
+  });
+
+  it("el color vivo se lee sobre negro: un primario muy oscuro cede al secundario", () => {
+    expect(coloresDeEquipo("Tottenham").vivo).toBe("#FFFFFF");
+    expect(coloresDeEquipo("Borussia Dortmund").vivo).toBe("#FDE100");
+    for (const club of CATALOGO_CLUBES) {
+      expect(luminancia(coloresDeEquipo(club.nombre).vivo), club.nombre).toBeGreaterThanOrEqual(LUMINANCIA_VIVO);
+    }
+  });
+
+  it("acepta variantes del nombre y cae al verde de la marca fuera del catálogo", () => {
+    expect(coloresDeEquipo("Man City").primario).toBe("#6CABDD");
+    expect(coloresDeEquipo("River Plate").vivo).toBe("#8cff59");
+    expect(coloresDeEquipo(null).primario).toBe("#8cff59");
   });
 });

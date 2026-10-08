@@ -12,34 +12,36 @@ export type ClubCatalogo = {
   /** Nombre canónico: es el que se guarda en torneo_equipos y se ve en la tele. */
   nombre: string;
   liga: Liga;
+  /** [primario, secundario] del club, en hex: los usa el reveal de la tele (fondos, destellos, nombre). */
+  colores: readonly [string, string];
 };
 
 /** Los 24 clubes que se pueden elegir para el sorteo, todos con escudo. */
 export const CATALOGO_CLUBES: readonly ClubCatalogo[] = [
-  { slug: "manchester-city", nombre: "Manchester City", liga: "Premier League" },
-  { slug: "liverpool", nombre: "Liverpool", liga: "Premier League" },
-  { slug: "arsenal", nombre: "Arsenal", liga: "Premier League" },
-  { slug: "chelsea", nombre: "Chelsea", liga: "Premier League" },
-  { slug: "manchester-united", nombre: "Manchester United", liga: "Premier League" },
-  { slug: "tottenham", nombre: "Tottenham", liga: "Premier League" },
-  { slug: "aston-villa", nombre: "Aston Villa", liga: "Premier League" },
-  { slug: "newcastle", nombre: "Newcastle", liga: "Premier League" },
-  { slug: "real-madrid", nombre: "Real Madrid", liga: "LaLiga" },
-  { slug: "barcelona", nombre: "Barcelona", liga: "LaLiga" },
-  { slug: "atletico-de-madrid", nombre: "Atlético de Madrid", liga: "LaLiga" },
-  { slug: "bayern-munich", nombre: "Bayern Múnich", liga: "Bundesliga" },
-  { slug: "borussia-dortmund", nombre: "Borussia Dortmund", liga: "Bundesliga" },
-  { slug: "bayer-leverkusen", nombre: "Bayer Leverkusen", liga: "Bundesliga" },
-  { slug: "inter", nombre: "Inter", liga: "Serie A" },
-  { slug: "milan", nombre: "Milan", liga: "Serie A" },
-  { slug: "juventus", nombre: "Juventus", liga: "Serie A" },
-  { slug: "napoli", nombre: "Napoli", liga: "Serie A" },
-  { slug: "roma", nombre: "Roma", liga: "Serie A" },
-  { slug: "psg", nombre: "PSG", liga: "Ligue 1" },
-  { slug: "inter-miami", nombre: "Inter Miami", liga: "MLS y otras" },
-  { slug: "benfica", nombre: "Benfica", liga: "MLS y otras" },
-  { slug: "porto", nombre: "Porto", liga: "MLS y otras" },
-  { slug: "ajax", nombre: "Ajax", liga: "MLS y otras" },
+  { slug: "manchester-city", nombre: "Manchester City", liga: "Premier League", colores: ["#6CABDD", "#1C2C5B"] },
+  { slug: "liverpool", nombre: "Liverpool", liga: "Premier League", colores: ["#C8102E", "#F6EB61"] },
+  { slug: "arsenal", nombre: "Arsenal", liga: "Premier League", colores: ["#EF0107", "#FFFFFF"] },
+  { slug: "chelsea", nombre: "Chelsea", liga: "Premier League", colores: ["#034694", "#DBA111"] },
+  { slug: "manchester-united", nombre: "Manchester United", liga: "Premier League", colores: ["#DA291C", "#FBE122"] },
+  { slug: "tottenham", nombre: "Tottenham", liga: "Premier League", colores: ["#132257", "#FFFFFF"] },
+  { slug: "aston-villa", nombre: "Aston Villa", liga: "Premier League", colores: ["#670E36", "#95BFE5"] },
+  { slug: "newcastle", nombre: "Newcastle", liga: "Premier League", colores: ["#241F20", "#FFFFFF"] },
+  { slug: "real-madrid", nombre: "Real Madrid", liga: "LaLiga", colores: ["#FFFFFF", "#FEBE10"] },
+  { slug: "barcelona", nombre: "Barcelona", liga: "LaLiga", colores: ["#A50044", "#004D98"] },
+  { slug: "atletico-de-madrid", nombre: "Atlético de Madrid", liga: "LaLiga", colores: ["#CB3524", "#272E61"] },
+  { slug: "bayern-munich", nombre: "Bayern Múnich", liga: "Bundesliga", colores: ["#DC052D", "#0066B2"] },
+  { slug: "borussia-dortmund", nombre: "Borussia Dortmund", liga: "Bundesliga", colores: ["#FDE100", "#000000"] },
+  { slug: "bayer-leverkusen", nombre: "Bayer Leverkusen", liga: "Bundesliga", colores: ["#E32221", "#000000"] },
+  { slug: "inter", nombre: "Inter", liga: "Serie A", colores: ["#0068A8", "#000000"] },
+  { slug: "milan", nombre: "Milan", liga: "Serie A", colores: ["#FB090B", "#000000"] },
+  { slug: "juventus", nombre: "Juventus", liga: "Serie A", colores: ["#FFFFFF", "#000000"] },
+  { slug: "napoli", nombre: "Napoli", liga: "Serie A", colores: ["#12A0D7", "#003C82"] },
+  { slug: "roma", nombre: "Roma", liga: "Serie A", colores: ["#8E1F2F", "#F0BC42"] },
+  { slug: "psg", nombre: "PSG", liga: "Ligue 1", colores: ["#004170", "#DA291C"] },
+  { slug: "inter-miami", nombre: "Inter Miami", liga: "MLS y otras", colores: ["#F7B5CD", "#231F20"] },
+  { slug: "benfica", nombre: "Benfica", liga: "MLS y otras", colores: ["#E20E0E", "#FFFFFF"] },
+  { slug: "porto", nombre: "Porto", liga: "MLS y otras", colores: ["#00428C", "#FFFFFF"] },
+  { slug: "ajax", nombre: "Ajax", liga: "MLS y otras", colores: ["#D2122E", "#FFFFFF"] },
 ];
 
 /** Slugs con archivo en public/equipos/<slug>.png. */
@@ -122,6 +124,48 @@ export function clubDelCatalogo(nombre: string): ClubCatalogo | undefined {
 export function nombresDelCatalogo(entradas: readonly string[]): string[] {
   const elegidos = new Set(entradas.map((e) => clubDelCatalogo(e)?.slug).filter(Boolean));
   return CATALOGO_CLUBES.filter((c) => elegidos.has(c.slug)).map((c) => c.nombre);
+}
+
+export type ColoresEquipo = {
+  primario: string;
+  secundario: string;
+  /** El más luminoso de los dos: el que se lee (y brilla) sobre el fondo negro de la tele. */
+  vivo: string;
+};
+
+/** Verde de la marca: los equipos fuera del catálogo (torneos viejos, el ensayo) se ven con él. */
+const COLORES_GENERICOS: readonly [string, string] = ["#8cff59", "#1f5c12"];
+
+/** Luminancia relativa (0 negro, 1 blanco) de un "#rrggbb". */
+export function luminancia(hex: string): number {
+  const canal = (i: number) => {
+    const c = parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * canal(0) + 0.7152 * canal(1) + 0.0722 * canal(2);
+}
+
+/** Mezcla un "#rrggbb" con blanco (t de 0 a 1). */
+function aclarar(hex: string, t: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const canal = (c: number) => Math.round(c + (255 - c) * t);
+  const r = canal((n >> 16) & 255);
+  const g = canal((n >> 8) & 255);
+  const b = canal(n & 255);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0").toUpperCase()}`;
+}
+
+/** Luminancia mínima del color vivo: debajo de esto, sobre el negro de la tele no se lee. */
+export const LUMINANCIA_VIVO = 0.12;
+
+/** Colores del club para la tele; los de fuera del catálogo caen al verde de la marca. */
+export function coloresDeEquipo(nombre: string | null): ColoresEquipo {
+  const [primario, secundario] = (nombre ? clubDelCatalogo(nombre)?.colores : undefined) ?? COLORES_GENERICOS;
+  // Un escudo azul marino sobre negro no se ve: si el primario es muy oscuro, brilla el secundario...
+  let vivo = luminancia(primario) >= 0.06 || luminancia(secundario) < luminancia(primario) ? primario : secundario;
+  // ...y si igual queda oscuro (Inter, Barcelona), se aclara de a poco hasta que se lea.
+  for (let t = 0.15; luminancia(vivo) < LUMINANCIA_VIVO && t <= 0.9; t += 0.15) vivo = aclarar(vivo, t);
+  return { primario, secundario, vivo };
 }
 
 /** Hasta 3 letras para el escudo genérico: "Boca Juniors" → "BJ", "Napoli" → "NAP". */
