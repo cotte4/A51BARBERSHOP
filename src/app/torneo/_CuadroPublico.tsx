@@ -17,8 +17,8 @@ export default async function CuadroPublico() {
   const tablero = await getTableroPublico();
   if (!tablero) return null;
 
-  const cruces1 = tablero.partidos.filter((p) => p.ronda === 1).length;
-  if (tablero.torneo.revealPaso < cruces1) return null;
+  // Recién al terminar las dos fases (ruleta de equipos y cruces): antes sería spoiler de la tele.
+  if (tablero.torneo.revealPaso < tablero.torneo.revealTotal) return null;
 
   const jugadores = new Map(tablero.jugadores.map((j) => [j.id, j] as const));
   const rondas = Math.max(...tablero.partidos.map((p) => p.ronda));

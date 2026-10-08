@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
 import { QRCodeSVG } from "qrcode.react";
 import type { DatosPantalla, TableroPublico } from "@/lib/torneo-juego";
-import { fueAPenales } from "@/lib/torneo";
+import { fueAPenales, ordenRuleta } from "@/lib/torneo";
+import { coloresDeEquipo } from "@/lib/torneo-escudos";
 import Escudo from "@/components/torneo/Escudo";
-
-gsap.registerPlugin(useGSAP);
+import { conAlfa, cuerpoPorLargo, VERDE, type Jugador, type Partido } from "./_comun";
+import { EscenaCruce, EscenaRuleta, PrecargaEscudos } from "./_Reveal";
 
 // Se diseña a 1920x1080 y se escala para entrar en cualquier tele o monitor.
 const ANCHO = 1920;
@@ -17,21 +16,6 @@ const ALTO = 1080;
 const POLL_MS = 3000;
 // Un fallo suelto es un parpadeo del Wi-Fi; tres seguidos (~9 s) ya es para avisar.
 const FALLOS_PARA_AVISAR = 3;
-
-type Partido = TableroPublico["partidos"][number];
-type Jugador = TableroPublico["jugadores"][number];
-type Escena = { cruces: Partido[]; hasta: number };
-
-const VERDE = "#8cff59";
-
-/**
- * Cuerpo de letra según el largo del alias (hasta 20 caracteres): el nombre se achica antes que cortarse.
- * `escalones` va de corto a largo: [hasta tantos caracteres, px].
- */
-function cuerpoPorLargo(largo: number, escalones: readonly [number, number][], minimo: number): number {
-  for (const [hasta, px] of escalones) if (largo <= hasta) return px;
-  return minimo;
-}
 
 function usarEscala(): number {
   const [escala, setEscala] = useState(1);
@@ -125,26 +109,6 @@ function Lado({ jugador, alinear }: { jugador: Jugador | undefined; alinear: "iz
           </span>
         )}
       </div>
-    </div>
-  );
-}
-
-/** Un lado del enfrentamiento a pantalla completa: escudo grande arriba, nombre y equipo abajo. */
-function LadoGrande({ jugador, lado }: { jugador: Jugador | undefined; lado: "a" | "b" }) {
-  return (
-    <div className="flex min-w-0 flex-col items-center text-center">
-      {jugador?.equipo && (
-        <div className={`escudo-${lado} mb-8`}>
-          <Escudo equipo={jugador.equipo} tamano={240} />
-        </div>
-      )}
-      <span
-        className="torneo-titulo max-w-full whitespace-nowrap font-extrabold italic text-white"
-        style={{ fontSize: cuerpoPorLargo(jugador?.nombre.length ?? 0, [[9, 104], [12, 86], [16, 68]], 56) }}
-      >
-        {jugador?.nombre ?? "—"}
-      </span>
-      {jugador?.equipo && <span className="torneo-hud mt-4 text-[30px] text-[#8cff59]">{jugador.equipo}</span>}
     </div>
   );
 }
@@ -250,6 +214,74 @@ function GrillaSorteo({
         {cruces.map((c, i) => (
           <TarjetaCruce key={c.id} partido={c} jugadores={jugadores} revelado={i < revelados} />
         ))}
+      </div>
+    </div>
+  );
+}
+
+/** Fase 1 de fondo: los jugadores en el orden del sorteo; cada uno muestra su equipo cuando salió en la ruleta. */
+function GrillaEquipos({
+  orden,
+  jugadores,
+  vistos,
+  nombre,
+}: {
+  orden: string[];
+  jugadores: Map<string, Jugador>;
+  vistos: number;
+  nombre: string;
+}) {
+  const filas = Math.ceil(orden.length / 4);
+  return (
+    <div className="flex h-full flex-col">
+      <Encabezado titulo="El sorteo" detalle={`${nombre} · ${vistos} de ${orden.length} equipos`} qr />
+      <div
+        className="grid flex-1 grid-cols-4 gap-x-6 gap-y-4 px-24 pb-14 pt-6"
+        style={{ gridTemplateRows: `repeat(${filas}, minmax(0, 1fr))` }}
+      >
+        {orden.map((id, i) => {
+          const jugador = jugadores.get(id);
+          if (i >= vistos) {
+            return (
+              <div
+                key={id}
+                className="flex items-center justify-center border border-dashed border-[#8cff59]/20 bg-black/30 [clip-path:polygon(0_0,calc(100%-18px)_0,100%_18px,100%_100%,18px_100%,0_calc(100%-18px))]"
+              >
+                <span className="torneo-hud text-[22px] text-[#8cff59]/30">Jugador {i + 1}</span>
+              </div>
+            );
+          }
+          const colores = coloresDeEquipo(jugador?.equipo ?? null);
+          const alias = jugador?.nombre ?? "—";
+          return (
+            <div
+              key={id}
+              className="flex min-w-0 items-center gap-4 border-l-[6px] px-5 [clip-path:polygon(0_0,calc(100%-18px)_0,100%_18px,100%_100%,18px_100%,0_calc(100%-18px))]"
+              style={{
+                borderColor: colores.vivo,
+                background: `linear-gradient(110deg, ${conAlfa(colores.primario, 0.32)}, ${conAlfa(colores.secundario, 0.12)} 60%, rgba(0,0,0,0.5))`,
+              }}
+            >
+              <Escudo equipo={jugador?.equipo ?? null} tamano={84} />
+              <div className="flex min-w-0 flex-col">
+                <span
+                  className="torneo-titulo max-w-full truncate font-extrabold italic text-white"
+                  style={{ fontSize: cuerpoPorLargo(alias.length, [[9, 40], [13, 32], [16, 26]], 22) }}
+                >
+                  {alias}
+                </span>
+                {jugador?.equipo && (
+                  <span
+                    className="torneo-hud mt-1.5 max-w-full truncate text-[15px]"
+                    style={{ color: colores.vivo, letterSpacing: "0.08em" }}
+                  >
+                    {jugador.equipo}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -471,97 +503,6 @@ function Podio({ tablero, jugadores }: { tablero: TableroPublico; jugadores: Map
   );
 }
 
-// ————————————————————————————
-// Reveal de cruces: uno por toque de "Siguiente", a pantalla completa.
-// Si el staff toca varias veces seguidas, la escena trae varios y los pasa en orden.
-// ————————————————————————————
-function EscenaReveal({
-  escena,
-  jugadores,
-  total,
-  alTerminar,
-}: {
-  escena: Escena;
-  jugadores: Map<string, Jugador>;
-  total: number;
-  alTerminar: () => void;
-}) {
-  const raiz = useRef<HTMLDivElement>(null);
-
-  useGSAP(
-    () => {
-      const el = raiz.current;
-      if (!el) return;
-      const q = gsap.utils.selector(el);
-      const tl = gsap.timeline({ onComplete: alTerminar });
-
-      tl.fromTo(q(".fondo"), { opacity: 0 }, { opacity: 1, duration: 0.4 });
-      q(".par").forEach((par) => {
-        const a = par.querySelector(".lado-a");
-        const b = par.querySelector(".lado-b");
-        const vs = par.querySelector(".vs");
-        const rotulo = par.querySelector(".rotulo");
-        // Los escudos viajan con su lado y al frenar dan un golpe de escala, como un sello.
-        const escudos = par.querySelectorAll(".escudo-a, .escudo-b");
-        tl.set(par, { opacity: 1, y: 0 })
-          .fromTo(rotulo, { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" })
-          .fromTo(
-            a,
-            { x: -1500, skewX: -24, opacity: 0 },
-            { x: 0, skewX: 0, opacity: 1, duration: 0.7, ease: "power4.out" },
-          )
-          .fromTo(
-            b,
-            { x: 1500, skewX: 24, opacity: 0 },
-            { x: 0, skewX: 0, opacity: 1, duration: 0.7, ease: "power4.out" },
-            "<0.12",
-          )
-          .fromTo(
-            escudos,
-            { scale: 0.7, rotate: (i: number) => (i === 0 ? -12 : 12) },
-            { scale: 1, rotate: 0, duration: 0.45, ease: "back.out(2.4)", stagger: 0.12 },
-            "-=0.4",
-          )
-          .fromTo(vs, { scale: 5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(2.2)" }, "-=0.3")
-          .fromTo(el, { x: -18, y: 8 }, { x: 0, y: 0, duration: 0.55, ease: "elastic.out(1.4, 0.25)" }, "<")
-          // Un par solo merece su momento: ~3 s quieto para leer nombres y equipos.
-          .to({}, { duration: 3 })
-          .to(par, { opacity: 0, y: -70, duration: 0.45, ease: "power2.in" });
-      });
-      tl.to(q(".fondo"), { opacity: 0, duration: 0.4 });
-    },
-    { scope: raiz, dependencies: [escena] },
-  );
-
-  return (
-    <div ref={raiz} className="absolute inset-0 z-30">
-      <div className="fondo absolute inset-0 bg-black/90" />
-      {escena.cruces.map((c) => {
-        const a = c.jugadorAId ? jugadores.get(c.jugadorAId) : undefined;
-        const b = c.jugadorBId ? jugadores.get(c.jugadorBId) : undefined;
-        return (
-          <div key={c.id} className="par absolute inset-0 flex items-center justify-center gap-12 px-20 opacity-0">
-            <p className="rotulo torneo-hud absolute left-1/2 top-[150px] -translate-x-1/2 text-[30px] text-[#8cff59]">
-              Cruce {c.posicion} de {total}
-            </p>
-            <div className="lado-a flex min-w-0 flex-1 justify-center">
-              <LadoGrande jugador={a} lado="a" />
-            </div>
-            <div className="vs torneo-hud shrink-0 text-[120px] text-[#ff3b4e]">{c.esBye ? "•" : "VS"}</div>
-            <div className="lado-b flex min-w-0 flex-1 justify-center">
-              {c.esBye ? (
-                <p className="torneo-hud text-[60px] text-white/70">Pase directo</p>
-              ) : (
-                <LadoGrande jugador={b} lado="b" />
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function usarUrlJukebox(): string | null {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => setUrl(`${window.location.origin}/jukebox`), []);
@@ -642,41 +583,91 @@ export function PantallaVista({ datos, sinConexion = false }: { datos: DatosPant
     [tablero],
   );
 
+  // Fase 1: un jugador por paso (orden del sorteo); fase 2: un cruce por paso.
+  const orden = useMemo(() => ordenRuleta(cruces1), [cruces1]);
+  const total = tablero?.torneo.revealTotal ?? 0;
   const objetivo = tablero?.torneo.revealPaso ?? 0;
-  // Al cargar la página (o recargarla) los cruces ya revelados se muestran sin animación.
+  // Al cargar la página (o recargarla) lo ya revelado se muestra sin animación.
   const [mostrado, setMostrado] = useState(datos.tablero?.torneo.revealPaso ?? 0);
-  const [escena, setEscena] = useState<Escena | null>(null);
+  // El paso (1..total) que se está animando; uno por vez, en orden.
+  const [escena, setEscena] = useState<number | null>(null);
+  const escenaActiva = tablero ? escena : null;
 
   useEffect(() => {
-    if (escena) return;
-    if (objetivo < mostrado) {
-      setMostrado(objetivo);
+    if (!tablero) {
+      // Sin sorteo (o el ensayo se reinició): nada que mostrar ni animar.
+      if (escena !== null) setEscena(null);
+      if (mostrado !== 0) setMostrado(0);
       return;
     }
-    if (objetivo > mostrado) {
-      const nuevos = cruces1.slice(mostrado, objetivo);
-      if (nuevos.length > 0) setEscena({ cruces: nuevos, hasta: objetivo });
-      else setMostrado(objetivo);
-    }
-  }, [objetivo, mostrado, escena, cruces1]);
+    if (escena !== null) return;
+    if (objetivo < mostrado) setMostrado(objetivo);
+    else if (objetivo > mostrado) setEscena(mostrado + 1);
+  }, [tablero, objetivo, mostrado, escena]);
 
-  const terminar = () => {
-    setMostrado(escena?.hasta ?? objetivo);
+  const terminar = useCallback((paso: number) => {
+    setMostrado(paso);
     setEscena(null);
-  };
+  }, []);
+
+  // Lo que se ve de fondo: hasta el paso anterior al que se está animando.
+  const fondo = escenaActiva !== null ? escenaActiva - 1 : mostrado;
+  const enCola = escenaActiva !== null ? Math.max(0, objetivo - escenaActiva) : 0;
 
   let vista: React.ReactNode;
   if (!tablero) {
     vista = <Espera previa={previa} />;
-  } else if (tablero.torneo.estado === "finalizado" && !escena) {
+  } else if (tablero.torneo.estado === "finalizado" && escenaActiva === null && mostrado >= total) {
     vista = <Podio tablero={tablero} jugadores={jugadores} />;
-  } else if (mostrado < cruces1.length || escena) {
+  } else if (escenaActiva !== null ? escenaActiva <= orden.length : fondo <= orden.length) {
+    // Terminada la ruleta, la grilla completa queda a la vista hasta que arranca el primer cruce.
     vista = (
-      <GrillaSorteo cruces={cruces1} jugadores={jugadores} revelados={mostrado} nombre={tablero.torneo.nombre} />
+      <GrillaEquipos orden={orden} jugadores={jugadores} vistos={Math.min(fondo, orden.length)} nombre={tablero.torneo.nombre} />
+    );
+  } else if (fondo < total || escenaActiva !== null) {
+    vista = (
+      <GrillaSorteo
+        cruces={cruces1}
+        jugadores={jugadores}
+        revelados={fondo - orden.length}
+        nombre={tablero.torneo.nombre}
+      />
     );
   } else {
     vista = <Cuadro tablero={tablero} jugadores={jugadores} />;
   }
+
+  let capa: React.ReactNode = null;
+  if (tablero && escenaActiva !== null) {
+    const paso = escenaActiva;
+    if (paso <= orden.length) {
+      capa = (
+        <EscenaRuleta
+          key={paso}
+          jugador={jugadores.get(orden[paso - 1])}
+          numero={paso}
+          total={orden.length}
+          enCola={enCola}
+          alTerminar={() => terminar(paso)}
+        />
+      );
+    } else {
+      const cruce = cruces1[paso - orden.length - 1];
+      capa = cruce ? (
+        <EscenaCruce
+          key={paso}
+          partido={cruce}
+          a={cruce.jugadorAId ? jugadores.get(cruce.jugadorAId) : undefined}
+          b={cruce.jugadorBId ? jugadores.get(cruce.jugadorBId) : undefined}
+          total={cruces1.length}
+          enCola={enCola}
+          alTerminar={() => terminar(paso)}
+        />
+      ) : null;
+    }
+  }
+  // Mientras falten ruletas, los escudos del catálogo quedan cargados de antemano.
+  const precargar = tablero !== null && mostrado < orden.length;
 
   const pantallaCompleta = () => {
     if (document.fullscreenElement) void document.exitFullscreen();
@@ -691,8 +682,9 @@ export function PantallaVista({ datos, sinConexion = false }: { datos: DatosPant
       >
         {vista}
         {/* El QR grande solo donde hay lugar; en el sorteo y el cuadro va el chico del encabezado. */}
-        {!escena && (!tablero || tablero.torneo.estado === "finalizado") && <QrJukebox />}
-        {escena && <EscenaReveal escena={escena} jugadores={jugadores} total={cruces1.length} alTerminar={terminar} />}
+        {escenaActiva === null && (!tablero || tablero.torneo.estado === "finalizado") && <QrJukebox />}
+        {precargar && <PrecargaEscudos />}
+        {capa}
         {/* Arriba al centro: no pisa el botón de pantalla completa ni ningún QR. */}
         {sinConexion && <AvisoSinConexion />}
       </div>

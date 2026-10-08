@@ -52,10 +52,13 @@ export default function Escudo({
   equipo,
   tamano,
   className = "",
+  cargaInmediata = false,
 }: {
   equipo: string | null;
   tamano: number;
   className?: string;
+  /** Carga el PNG ya, aunque esté fuera de cuadro (la ruleta de la tele no puede frenar en un hueco). */
+  cargaInmediata?: boolean;
 }) {
   const [fallo, setFallo] = useState(false);
   if (!equipo) return null;
@@ -73,6 +76,7 @@ export default function Escudo({
           alt=""
           width={tamano}
           height={tamano}
+          loading={cargaInmediata ? "eager" : undefined}
           onError={() => setFallo(true)}
           // Un borde claro casi invisible: los escudos oscuros (Tottenham, Inter) no se pierden en el negro.
           className="h-full w-full object-contain [filter:drop-shadow(0_0_1.5px_rgba(255,255,255,0.55))]"

@@ -6,14 +6,18 @@ import { db } from "@/db";
 import { torneoEquipos, torneoJugadores, torneoPartidos, torneos } from "@/db/schema";
 import {
   avanzarGanador,
-  CRUCES_POR_PASO,
+  leerReveal,
   nombresPublicos,
+  ordenRuleta,
+  SEMILLA_DOS_FASES,
+  topeRevealGuardado,
   calcularPodio,
   sortearTorneo,
   torneoTerminado,
   type Marcador,
   type PartidoCuadro,
   type Podio,
+  type Reveal,
 } from "@/lib/torneo";
 import {
   getResumenPublico,
@@ -89,7 +93,8 @@ export async function sortearYGuardar(torneoId: string): Promise<ResultadoSorteo
       .where(eq(torneoEquipos.torneoId, torneoId));
     if (equipos.length < pagados.length) return { ok: false, motivo: "faltan_equipos" } as const;
 
-    const semilla = randomUUID();
+    // El prefijo marca que el reveal va en dos fases (ruleta de equipos + cruces): ver leerReveal.
+    const semilla = `${SEMILLA_DOS_FASES}${randomUUID()}`;
     const resultado = sortearTorneo({
       jugadorIds: pagados.map((j) => j.id),
       equipoIds: equipos.map((e) => e.id),
@@ -114,9 +119,22 @@ export async function sortearYGuardar(torneoId: string): Promise<ResultadoSorteo
 // ————————————————————————————
 // Reveal en la pantalla
 // ————————————————————————————
-export type ResultadoReveal = { ok: true; revelados: number; total: number } | { ok: false };
+export type ResultadoReveal = { ok: true; reveal: Reveal } | { ok: false };
 
-/** Revela el próximo cruce (`CRUCES_POR_PASO`). Al revelar todos, el torneo pasa a "en juego". */
+/** El reveal de un torneo ya sorteado, en la escala de dos fases (sirve también para sorteos de antes). */
+export function progresoReveal(
+  torneo: Pick<Torneo, "revealPaso" | "sorteoSemilla">,
+  partidos: readonly Pick<TorneoPartido, "ronda" | "posicion" | "jugadorAId" | "jugadorBId">[],
+): Reveal {
+  const jugadores = ordenRuleta(partidos).length;
+  const cruces = partidos.filter((p) => p.ronda === 1).length;
+  return leerReveal(torneo.revealPaso, torneo.sorteoSemilla, jugadores, cruces);
+}
+
+/**
+ * Un toque de "Siguiente": el próximo equipo de la ruleta y, terminados los equipos, el próximo cruce.
+ * Al mostrar todo, el torneo pasa a "en juego".
+ */
 export async function avanzarReveal(torneoId: string): Promise<ResultadoReveal> {
   return db.transaction(async (tx) => {
     const [torneo] = await tx
@@ -127,21 +145,28 @@ export async function avanzarReveal(torneoId: string): Promise<ResultadoReveal> 
       .limit(1);
     if (!torneo || torneo.estado === "inscripcion") return { ok: false } as const;
 
-    const [{ total }] = await tx
-      .select({ total: sql<number>`count(*)::int` })
+    const ronda1 = await tx
+      .select({
+        ronda: torneoPartidos.ronda,
+        posicion: torneoPartidos.posicion,
+        jugadorAId: torneoPartidos.jugadorAId,
+        jugadorBId: torneoPartidos.jugadorBId,
+      })
       .from(torneoPartidos)
       .where(and(eq(torneoPartidos.torneoId, torneoId), eq(torneoPartidos.ronda, 1)));
 
-    const revelados = Math.min(total, torneo.revealPaso + CRUCES_POR_PASO);
+    const jugadores = ordenRuleta(ronda1).length;
+    const tope = topeRevealGuardado(torneo.sorteoSemilla, jugadores, ronda1.length);
+    const guardado = Math.min(tope, torneo.revealPaso + 1);
     await tx
       .update(torneos)
       .set({
-        revealPaso: revelados,
-        estado: revelados >= total && torneo.estado === "sorteado" ? "en_juego" : torneo.estado,
+        revealPaso: guardado,
+        estado: guardado >= tope && torneo.estado === "sorteado" ? "en_juego" : torneo.estado,
         updatedAt: new Date(),
       })
       .where(eq(torneos.id, torneoId));
-    return { ok: true, revelados, total } as const;
+    return { ok: true, reveal: progresoReveal({ ...torneo, revealPaso: guardado }, ronda1) } as const;
   });
 }
 
@@ -239,7 +264,10 @@ export type TableroPublico = {
     estado: Torneo["estado"];
     fecha: string | null;
     premiosTexto: string | null;
+    /** Pasos del reveal ya mostrados, en la escala de dos fases (equipos y después cruces). */
     revealPaso: number;
+    /** Jugadores + cruces de la ronda 1: con `revealPaso` igual a esto, el sorteo está todo a la vista. */
+    revealTotal: number;
   };
   /** `nombre` es el nombre público: el alias (o el nombre corto en filas de antes del alias). */
   jugadores: { id: string; nombre: string; equipo: string | null }[];
@@ -269,6 +297,7 @@ export async function getTableroPublico(): Promise<TableroPublico | null> {
     listarPartidos(torneo.id),
   ]);
   const nombreEquipo = new Map(equipos.map((e) => [e.id, e.nombre]));
+  const reveal = progresoReveal(torneo, partidos);
 
   return {
     torneo: {
@@ -276,7 +305,8 @@ export async function getTableroPublico(): Promise<TableroPublico | null> {
       estado: torneo.estado,
       fecha: torneo.fecha ? torneo.fecha.toISOString() : null,
       premiosTexto: torneo.premiosTexto,
-      revealPaso: torneo.revealPaso,
+      revealPaso: reveal.paso,
+      revealTotal: reveal.total,
     },
     jugadores: (() => {
       const sorteados = jugadoresDb.filter((j) => j.posicionSorteo !== null);

@@ -3,11 +3,85 @@
 
 export type EstadoPartido = "pendiente" | "listo" | "jugado";
 
+// ————————————————————————————
+// Reveal del sorteo en la tele: un toque de "Siguiente" = un paso.
+// Fase 1, ruleta de equipos: un paso por jugador, en el orden en que salió en el sorteo.
+// Fase 2, cruces: un paso por cruce de la ronda 1.
+// ————————————————————————————
+
 /**
- * Cruces de la ronda 1 que se revelan por cada toque de "Siguiente" en la tele.
- * Uno solo: cada cruce tiene su momento a pantalla completa.
+ * Prefijo de la semilla de los sorteos hechos con el reveal en dos fases.
+ * Los sorteos de antes (semilla sin prefijo) guardaban en `revealPaso` solo los cruces mostrados:
+ * se siguen leyendo así, con la ruleta de equipos dada por vista (los equipos ya salían en los cruces).
  */
-export const CRUCES_POR_PASO = 1;
+export const SEMILLA_DOS_FASES = "2f:";
+
+export type FaseReveal = "equipos" | "cruces" | "completo";
+
+export type Reveal = {
+  /** Pasos ya mostrados, en la escala de dos fases (0..total). */
+  paso: number;
+  /** jugadores + cruces. */
+  total: number;
+  /** Jugadores de la ronda 1 (los pasos de la ruleta). */
+  jugadores: number;
+  /** Cruces de la ronda 1. */
+  cruces: number;
+  /** Jugadores con el equipo ya a la vista. */
+  equiposVistos: number;
+  /** Cruces ya a la vista. */
+  crucesVistos: number;
+  fase: FaseReveal;
+  completo: boolean;
+};
+
+export function esSorteoDosFases(semilla: string | null): boolean {
+  return semilla?.startsWith(SEMILLA_DOS_FASES) ?? false;
+}
+
+/** Jugadores de la ronda 1 en el orden en que los muestra la ruleta: cruce por cruce, A y después B. */
+export function ordenRuleta(
+  partidos: readonly Pick<PartidoCuadro, "ronda" | "posicion" | "jugadorAId" | "jugadorBId">[],
+): string[] {
+  return partidos
+    .filter((p) => p.ronda === 1)
+    .sort((x, y) => x.posicion - y.posicion)
+    .flatMap((p) => [p.jugadorAId, p.jugadorBId])
+    .filter((id): id is string => id !== null);
+}
+
+/** El reveal a partir de un paso ya en la escala de dos fases. */
+export function revealDesdePaso(paso: number, jugadores: number, cruces: number): Reveal {
+  const total = jugadores + cruces;
+  const p = Math.max(0, Math.min(total, Math.floor(paso)));
+  const fase: FaseReveal = p >= total ? "completo" : p < jugadores ? "equipos" : "cruces";
+  return {
+    paso: p,
+    total,
+    jugadores,
+    cruces,
+    equiposVistos: Math.min(p, jugadores),
+    crucesVistos: Math.max(0, p - jugadores),
+    fase,
+    completo: fase === "completo",
+  };
+}
+
+/** Lee el `revealPaso` guardado en la DB (de un sorteo nuevo o de uno de antes) en la escala de dos fases. */
+export function leerReveal(
+  guardado: number,
+  semilla: string | null,
+  jugadores: number,
+  cruces: number,
+): Reveal {
+  if (esSorteoDosFases(semilla)) return revealDesdePaso(guardado, jugadores, cruces);
+  return revealDesdePaso(jugadores + Math.min(Math.max(0, guardado), cruces), jugadores, cruces);
+}
+
+/** El máximo `revealPaso` que se guarda: en un sorteo de antes eran solo los cruces. */
+export function topeRevealGuardado(semilla: string | null, jugadores: number, cruces: number): number {
+  return esSorteoDosFases(semilla) ? jugadores + cruces : cruces;
+}
 
 export type PartidoCuadro = {
   ronda: number;

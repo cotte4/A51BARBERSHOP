@@ -101,13 +101,20 @@ async function main() {
     afirmar(partidos.length === 15, "el cuadro tiene 15 partidos");
 
     console.log("5. Reveal");
-    // Un cruce por toque: el paso N deja N cruces a la vista.
-    for (let paso = 1; paso <= 8; paso++) {
+    // Dos fases: un toque por jugador (ruleta de equipos) y después un toque por cruce. 16 + 8 = 24.
+    for (let paso = 1; paso <= 24; paso++) {
       const r = await juego.avanzarReveal(torneo.id);
-      afirmar(r.ok && r.revelados === paso, `reveal paso ${paso}: ${paso} cruce(s)`);
+      const esperado = paso <= 16 ? { equipos: paso, cruces: 0 } : { equipos: 16, cruces: paso - 16 };
+      afirmar(
+        r.ok && r.reveal.paso === paso && r.reveal.equiposVistos === esperado.equipos && r.reveal.crucesVistos === esperado.cruces,
+        `reveal paso ${paso}: ${esperado.equipos} equipo(s), ${esperado.cruces} cruce(s)`,
+      );
+      if (paso === 16) {
+        afirmar((await datos.getTorneoVigente())?.estado === "sorteado", "terminada la ruleta, sigue sorteado (faltan los cruces)");
+      }
     }
     const extra = await juego.avanzarReveal(torneo.id);
-    afirmar(extra.ok && extra.revelados === 8, "el reveal no pasa de 8 cruces");
+    afirmar(extra.ok && extra.reveal.paso === 24 && extra.reveal.completo, "el reveal no pasa de 24 pasos");
     afirmar((await datos.getTorneoVigente())?.estado === "en_juego", "el torneo pasó a en_juego");
 
     console.log("5b. Reemplazo antes del primer partido");

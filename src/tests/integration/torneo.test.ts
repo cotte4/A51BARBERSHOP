@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   errorAlias,
   fueAPenales,
+  leerReveal,
+  ordenRuleta,
+  revealDesdePaso,
+  SEMILLA_DOS_FASES,
+  topeRevealGuardado,
   limpiarAlias,
   nombresCortosUnicos,
   nombresPublicos,
@@ -349,5 +354,48 @@ describe("nombresPublicos", () => {
         { nombre: "Otro", alias: "juan p." },
       ]),
     ).toEqual(["Juan P.", "juan p. (2)"]);
+  });
+});
+
+describe("reveal en dos fases", () => {
+  const r16 = sortearTorneo({ jugadorIds: ids("j", 16), equipoIds: ids("e", 24), semilla: "x" });
+  const r13 = sortearTorneo({ jugadorIds: ids("j", 13), equipoIds: ids("e", 24), semilla: "x" });
+  const nueva = `${SEMILLA_DOS_FASES}abc`;
+
+  it("la ruleta muestra a los jugadores en el orden del sorteo, que es el de los cruces", () => {
+    const orden = ordenRuleta(r16.partidos);
+    expect(orden).toHaveLength(16);
+    const porSorteo = [...r16.asignaciones].sort((a, b) => a.posicionSorteo - b.posicionSorteo).map((a) => a.jugadorId);
+    expect(orden).toEqual(porSorteo);
+    // Con byes, el cruce de pase directo aporta un solo jugador.
+    expect(ordenRuleta(r13.partidos)).toHaveLength(13);
+  });
+
+  it("16 jugadores: 16 pasos de equipos y 8 de cruces, total 24", () => {
+    expect(revealDesdePaso(0, 16, 8)).toMatchObject({ total: 24, fase: "equipos", equiposVistos: 0, crucesVistos: 0 });
+    expect(revealDesdePaso(5, 16, 8)).toMatchObject({ fase: "equipos", equiposVistos: 5, crucesVistos: 0 });
+    expect(revealDesdePaso(16, 16, 8)).toMatchObject({ fase: "cruces", equiposVistos: 16, crucesVistos: 0 });
+    expect(revealDesdePaso(19, 16, 8)).toMatchObject({ fase: "cruces", equiposVistos: 16, crucesVistos: 3 });
+    expect(revealDesdePaso(24, 16, 8)).toMatchObject({ fase: "completo", completo: true, crucesVistos: 8 });
+    expect(revealDesdePaso(99, 16, 8).paso).toBe(24);
+    expect(revealDesdePaso(-3, 16, 8).paso).toBe(0);
+  });
+
+  it("un sorteo nuevo guarda pasos de dos fases y se completa en jugadores + cruces", () => {
+    expect(topeRevealGuardado(nueva, 16, 8)).toBe(24);
+    expect(leerReveal(10, nueva, 16, 8)).toMatchObject({ paso: 10, fase: "equipos" });
+    expect(leerReveal(24, nueva, 16, 8).completo).toBe(true);
+    expect(leerReveal(8, nueva, 16, 8).completo).toBe(false);
+  });
+
+  it("un sorteo de antes (semilla sin prefijo) contaba solo cruces: los equipos se dan por vistos", () => {
+    const vieja = "5f0c6d7e-0000-4000-8000-000000000000";
+    expect(topeRevealGuardado(vieja, 16, 8)).toBe(8);
+    expect(topeRevealGuardado(null, 16, 8)).toBe(8);
+    // Ya revelado del todo con la regla vieja: sigue completo, el cuadro no se esconde.
+    expect(leerReveal(8, vieja, 16, 8)).toMatchObject({ paso: 24, completo: true });
+    // A medio revelar: quedan los cruces que faltaban, sin ruleta.
+    expect(leerReveal(3, vieja, 16, 8)).toMatchObject({ paso: 19, fase: "cruces", crucesVistos: 3 });
+    expect(leerReveal(0, vieja, 16, 8)).toMatchObject({ paso: 16, fase: "cruces", crucesVistos: 0 });
   });
 });

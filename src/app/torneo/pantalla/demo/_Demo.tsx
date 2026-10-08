@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import {
   avanzarGanador,
   calcularPodio,
-  CRUCES_POR_PASO,
+  ordenRuleta,
+  revealDesdePaso,
   sortearTorneo,
   torneoTerminado,
   type Marcador,
@@ -23,6 +24,11 @@ const NOMBRES = [
 // Los 24 del catálogo más uno sin PNG: a veces sale y así se ensaya también el escudo genérico.
 const EQUIPOS = [...CATALOGO_CLUBES.map((c) => c.nombre), "River Plate"];
 
+/** El reveal del ensayo en dos fases, igual que el de verdad: un paso por jugador y uno por cruce. */
+function pasosDelEnsayo(cuadro: PartidoCuadro[], paso: number) {
+  return revealDesdePaso(paso, ordenRuleta(cuadro).length, cuadro.filter((p) => p.ronda === 1).length);
+}
+
 function armarTablero(
   cuadro: PartidoCuadro[],
   asignaciones: { jugadorId: string; equipoId: string }[],
@@ -30,13 +36,15 @@ function armarTablero(
 ): TableroPublico {
   const equipoDe = new Map(asignaciones.map((a) => [a.jugadorId, a.equipoId] as const));
   const terminado = torneoTerminado(cuadro);
+  const reveal = pasosDelEnsayo(cuadro, revealPaso);
   return {
     torneo: {
       nombre: "Torneo FIFA A51 (ensayo)",
-      estado: terminado ? "finalizado" : revealPaso >= cuadro.filter((p) => p.ronda === 1).length ? "en_juego" : "sorteado",
+      estado: terminado ? "finalizado" : reveal.completo ? "en_juego" : "sorteado",
       fecha: null,
       premiosTexto: null,
-      revealPaso,
+      revealPaso: reveal.paso,
+      revealTotal: reveal.total,
     },
     jugadores: NOMBRES.map((nombre, i) => ({ id: `j${i + 1}`, nombre, equipo: equipoDe.get(`j${i + 1}`) ?? null })),
     partidos: cuadro.map((p) => ({
@@ -97,7 +105,8 @@ export default function Demo() {
     [cuadro, empezo, revealPaso, sorteo],
   );
 
-  const total = cuadro.filter((p) => p.ronda === 1).length;
+  const reveal = pasosDelEnsayo(cuadro, revealPaso);
+  const total = reveal.total;
   const siguientePartido = cuadro.find((p) => p.estado === "listo");
 
   function simularResultado() {
@@ -134,9 +143,13 @@ export default function Demo() {
               type="button"
               className={boton}
               disabled={revealPaso >= total}
-              onClick={() => setRevealPaso((p) => Math.min(total, p + CRUCES_POR_PASO))}
+              onClick={() => setRevealPaso((p) => Math.min(total, p + 1))}
             >
-              Siguiente
+              {reveal.completo
+                ? "Sorteo completo"
+                : reveal.fase === "equipos"
+                  ? `Siguiente equipo (${reveal.equiposVistos + 1} de ${reveal.jugadores})`
+                  : `Siguiente cruce (${reveal.crucesVistos + 1} de ${reveal.cruces})`}
             </button>
             <button
               type="button"
