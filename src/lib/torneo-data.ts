@@ -369,3 +369,21 @@ export async function reemplazarEquipos(torneoId: string, nombres: string[]): Pr
     }
   });
 }
+
+// ————————————————————————————
+// Torneo de ensayo
+// ————————————————————————————
+/** Prefijo que marca a un torneo como de prueba: solo esos se pueden borrar desde el panel. */
+export const PREFIJO_TORNEO_PRUEBA = "Prueba";
+
+export function esTorneoDePrueba(nombre: string): boolean {
+  return nombre.trim().toLowerCase().startsWith(PREFIJO_TORNEO_PRUEBA.toLowerCase());
+}
+
+/** Borra un torneo de ensayo con todo lo suyo. Un torneo real (sin el prefijo) nunca se borra. */
+export async function borrarTorneoDePrueba(torneoId: string): Promise<{ ok: boolean }> {
+  const [torneo] = await db.select().from(torneos).where(eq(torneos.id, torneoId)).limit(1);
+  if (!torneo || !esTorneoDePrueba(torneo.nombre)) return { ok: false };
+  await db.delete(torneos).where(eq(torneos.id, torneoId));
+  return { ok: true };
+}

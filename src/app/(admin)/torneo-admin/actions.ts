@@ -6,6 +6,7 @@ import { requireOwnerSession } from "@/lib/admin-action";
 import {
   actualizarConfig,
   asegurarTorneo,
+  borrarTorneoDePrueba,
   eliminarJugador,
   getTorneoVigente,
   marcarPago,
@@ -254,6 +255,17 @@ export async function reemplazarJugadorAction(bajaId: string, input: unknown): P
     } as const;
     return { ok: false, mensaje: mensajes[resultado.motivo] };
   }
+  refrescar();
+  return { ok: true, mensaje: null };
+}
+
+export async function borrarTorneoPruebaAction(): Promise<TorneoAdminState> {
+  const denegado = await exigirAdmin();
+  if (denegado) return denegado;
+  const torneo = await getTorneoVigente();
+  if (!torneo) return { ok: false, mensaje: "No hay torneo." };
+  const resultado = await borrarTorneoDePrueba(torneo.id);
+  if (!resultado.ok) return { ok: false, mensaje: "Solo se borran torneos cuyo nombre empieza con Prueba." };
   refrescar();
   return { ok: true, mensaje: null };
 }

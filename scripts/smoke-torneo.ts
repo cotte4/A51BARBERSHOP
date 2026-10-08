@@ -19,6 +19,7 @@ async function main() {
   const { clients, torneos, torneoJugadores } = await import("@/db/schema");
   const datos = await import("@/lib/torneo-data");
   const juego = await import("@/lib/torneo-juego");
+  const reemplazo = await import("@/lib/torneo-reemplazo");
 
   const [{ n: existentes }] = await db.select({ n: sql<number>`count(*)::int` }).from(torneos);
   if (existentes > 0) {
@@ -105,6 +106,28 @@ async function main() {
     afirmar(extra.ok && extra.revelados === 8, "el reveal no pasa de 8 cruces");
     afirmar((await datos.getTorneoVigente())?.estado === "en_juego", "el torneo pasó a en_juego");
 
+    console.log("5b. Reemplazo antes del primer partido");
+    const todosJ = await datos.listarJugadores(torneo.id);
+    const enEspera = todosJ.find((j) => j.posicionSorteo === null)!;
+    const baja1 = todosJ.find((j) => j.posicionSorteo !== null)!;
+    const r1 = await reemplazo.reemplazarJugador(baja1.id, { tipo: "espera", jugadorId: enEspera.id });
+    afirmar(r1.ok, "el de la lista de espera reemplaza al que se baja");
+    const trasR1 = await datos.listarJugadores(torneo.id);
+    const nuevo1 = trasR1.find((j) => j.id === enEspera.id)!;
+    afirmar(nuevo1.equipoId === baja1.equipoId && nuevo1.posicionSorteo === baja1.posicionSorteo, "hereda equipo y lugar del sorteo");
+    afirmar(nuevo1.estadoPago === "pagado", "el reemplazo queda como pagado");
+    afirmar(trasR1.find((j) => j.id === baja1.id)?.estadoPago === "baja", "el que se baja queda como baja");
+    const enCuadro = (await datos.listarPartidos(torneo.id)).flatMap((q) => [q.jugadorAId, q.jugadorBId, q.ganadorId]);
+    afirmar(!enCuadro.includes(baja1.id) && enCuadro.includes(enEspera.id), "el cuadro tiene al reemplazo y ya no a la baja");
+    const baja2 = trasR1.find((j) => j.posicionSorteo !== null && j.id !== enEspera.id)!;
+    const r2 = await reemplazo.reemplazarJugador(baja2.id, {
+      tipo: "nuevo",
+      datos: { nombre: "Persona Nueva", email: `torneo-smoke-nuevo@${DOMINIO}`, whatsapp: "223 000 9500" },
+    });
+    afirmar(r2.ok, "una persona nueva reemplaza a otro");
+    const repetidoR = await reemplazo.reemplazarJugador(baja1.id, { tipo: "espera", jugadorId: baja2.id });
+    afirmar(!repetidoR.ok, "no se reemplaza a quien ya se bajó");
+
     console.log("6. Resultados");
     const antes = await juego.getTableroPublico();
     afirmar(
@@ -119,6 +142,9 @@ async function main() {
         afirmar(r.ok, `ronda ${ronda} cruce ${p.posicion} cargado`);
       }
     }
+    const bajaTarde = (await datos.listarJugadores(torneo.id)).find((j) => j.posicionSorteo !== null)!;
+    const tarde = await reemplazo.reemplazarJugador(bajaTarde.id, { tipo: "espera", jugadorId: bajaTarde.id });
+    afirmar(!tarde.ok && tarde.motivo === "ya_empezo", "con un partido jugado ya no se reemplaza");
     const final = await juego.getTableroPublico();
     afirmar(final?.torneo.estado === "finalizado", "el torneo quedó finalizado");
     afirmar(!!final?.podio.campeonId && !!final.podio.subcampeonId, "hay campeón y subcampeón");

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import BrandMark from "@/components/BrandMark";
 import { requireOwnerSession } from "@/lib/admin-action";
-import { getTorneoVigente, listarEquipos, listarJugadores, listarPartidos } from "@/lib/torneo-data";
+import BorrarPrueba from "./_BorrarPrueba";
+import { esTorneoDePrueba, getTorneoVigente, listarEquipos, listarJugadores, listarPartidos } from "@/lib/torneo-data";
 import { resumenCupo } from "@/lib/torneo";
 import CrearTorneo from "./_CrearTorneo";
 import PagoButton from "./_PagoButton";
@@ -250,6 +251,12 @@ export default async function TorneoAdminPage() {
             />
           </div>
         </section>
+
+        {esTorneoDePrueba(torneo.nombre) ? (
+          <section className="panel-card rounded-[28px] border border-red-500/20 p-5">
+            <BorrarPrueba />
+          </section>
+        ) : null}
 
         {/* Equipos */}
         <section className="panel-card rounded-[28px] p-5">
