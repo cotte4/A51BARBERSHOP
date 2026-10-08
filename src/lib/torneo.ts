@@ -197,10 +197,31 @@ export function sortearTorneo({ jugadorIds, equipoIds, semilla }: EntradaSorteo)
 // ————————————————————————————
 // Resultados
 // ————————————————————————————
+export const GOLES_MAX = 99;
+
+/**
+ * El marcador tiene que cerrar con el ganador: con goles distintos gana el que hizo más;
+ * empatado, se definió por penales y el ganador puede ser cualquiera de los dos.
+ * Devuelve el mensaje de error, o null si está bien.
+ */
+export function errorMarcador(marcador: Marcador, ganador: "a" | "b"): string | null {
+  const valido = (g: number) => Number.isInteger(g) && g >= 0 && g <= GOLES_MAX;
+  if (!valido(marcador.a) || !valido(marcador.b)) return `Los goles van de 0 a ${GOLES_MAX}.`;
+  if (marcador.a === marcador.b) return null;
+  const gano = marcador.a > marcador.b ? "a" : "b";
+  return gano === ganador ? null : "El ganador tiene que ser el que hizo más goles.";
+}
+
+/** true si el partido terminó empatado y se definió por penales. */
+export function fueAPenales(p: { ganadorId: string | null; marcadorA: number | null; marcadorB: number | null }): boolean {
+  return p.ganadorId !== null && p.marcadorA !== null && p.marcadorA === p.marcadorB;
+}
+
 /**
  * Registra (o corrige) el ganador de un partido y lo propaga a la ronda siguiente.
  * Devuelve una copia nueva; no modifica el cuadro recibido.
- * Corregir es posible solo mientras el partido siguiente no se haya jugado.
+ * Corregir (otro marcador u otro ganador) es posible solo mientras el partido siguiente no se haya jugado:
+ * si cambia el ganador, el nuevo ocupa su lugar en la ronda siguiente.
  */
 export function avanzarGanador(
   cuadro: readonly PartidoCuadro[],
@@ -219,7 +240,10 @@ export function avanzarGanador(
   if (ganadorId !== partido.jugadorAId && ganadorId !== partido.jugadorBId) {
     throw new Error("El ganador tiene que ser uno de los dos jugadores del partido.");
   }
-  // El marcador puede quedar empatado (se definió por penales): no se valida contra el ganador.
+  if (marcador) {
+    const error = errorMarcador(marcador, ganadorId === partido.jugadorAId ? "a" : "b");
+    if (error) throw new Error(error);
+  }
 
   const siguiente = buscar(partidos, ronda + 1, Math.ceil(posicion / 2));
   if (siguiente && siguiente.estado === "jugado") {

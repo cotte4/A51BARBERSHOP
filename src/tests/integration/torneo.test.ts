@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   errorAlias,
+  fueAPenales,
   limpiarAlias,
   nombresCortosUnicos,
   nombresPublicos,
@@ -155,6 +156,55 @@ describe("avanzarGanador", () => {
     c = avanzarGanador(c, 1, 2, b.jugadorAId!);
     c = avanzarGanador(c, 2, 1, a.jugadorAId!);
     expect(() => avanzarGanador(c, 1, 1, a.jugadorBId!)).toThrow(/ya se jugó/);
+  });
+
+  it("guarda el marcador; empatado vale cualquiera de los dos (penales)", () => {
+    const p1 = base.find((p) => p.ronda === 1 && p.posicion === 1)!;
+    const c = avanzarGanador(base, 1, 1, p1.jugadorBId!, { a: 1, b: 1 });
+    const jugado = c.find((p) => p.ronda === 1 && p.posicion === 1)!;
+    expect([jugado.marcadorA, jugado.marcadorB, jugado.ganadorId]).toEqual([1, 1, p1.jugadorBId]);
+    expect(fueAPenales(jugado)).toBe(true);
+    const sinEmpate = avanzarGanador(base, 1, 1, p1.jugadorAId!, { a: 3, b: 0 });
+    expect(fueAPenales(sinEmpate.find((p) => p.ronda === 1 && p.posicion === 1)!)).toBe(false);
+  });
+
+  it("rechaza un marcador que no cierra con el ganador o fuera de rango", () => {
+    const p1 = base.find((p) => p.ronda === 1 && p.posicion === 1)!;
+    expect(() => avanzarGanador(base, 1, 1, p1.jugadorAId!, { a: 0, b: 2 })).toThrow(/más goles/);
+    expect(() => avanzarGanador(base, 1, 1, p1.jugadorBId!, { a: 4, b: 3 })).toThrow(/más goles/);
+    expect(() => avanzarGanador(base, 1, 1, p1.jugadorAId!, { a: -1, b: 0 })).toThrow(/de 0 a 99/);
+    expect(() => avanzarGanador(base, 1, 1, p1.jugadorAId!, { a: 100, b: 0 })).toThrow(/de 0 a 99/);
+    expect(() => avanzarGanador(base, 1, 1, p1.jugadorAId!, { a: 1.5, b: 0 })).toThrow(/de 0 a 99/);
+  });
+
+  it("re-cargar el mismo partido con otro marcador lo pisa sin mover a nadie", () => {
+    const p1 = base.find((p) => p.ronda === 1 && p.posicion === 1)!;
+    let c = avanzarGanador(base, 1, 1, p1.jugadorAId!, { a: 2, b: 1 });
+    c = avanzarGanador(c, 1, 1, p1.jugadorAId!, { a: 5, b: 4 });
+    const jugado = c.find((p) => p.ronda === 1 && p.posicion === 1)!;
+    expect([jugado.marcadorA, jugado.marcadorB]).toEqual([5, 4]);
+    expect(c.find((p) => p.ronda === 2 && p.posicion === 1)!.jugadorAId).toBe(p1.jugadorAId);
+  });
+
+  it("corregir el ganador con la ronda siguiente 'lista' (sin jugar) cambia quién pasa", () => {
+    const a = base.find((p) => p.ronda === 1 && p.posicion === 1)!;
+    const b = base.find((p) => p.ronda === 1 && p.posicion === 2)!;
+    let c = avanzarGanador(base, 1, 1, a.jugadorAId!, { a: 1, b: 0 });
+    c = avanzarGanador(c, 1, 2, b.jugadorAId!, { a: 2, b: 0 });
+    expect(c.find((p) => p.ronda === 2 && p.posicion === 1)!.estado).toBe("listo");
+    c = avanzarGanador(c, 1, 1, a.jugadorBId!, { a: 1, b: 3 });
+    const r2 = c.find((p) => p.ronda === 2 && p.posicion === 1)!;
+    expect(r2.jugadorAId).toBe(a.jugadorBId);
+    expect(r2.jugadorBId).toBe(b.jugadorAId);
+    expect(r2.estado).toBe("listo");
+  });
+
+  it("la final se puede corregir (no hay ronda siguiente)", () => {
+    const { partidos } = sortearTorneo({ jugadorIds: ["a", "b"], equipoIds: ["e1", "e2"], semilla: "z" });
+    const f = partidos[0];
+    let c = avanzarGanador(partidos, 1, 1, f.jugadorAId!, { a: 2, b: 1 });
+    c = avanzarGanador(c, 1, 1, f.jugadorBId!, { a: 2, b: 2 });
+    expect(calcularPodio(c).campeonId).toBe(f.jugadorBId);
   });
 
   it("rechaza ganador ajeno, partido sin definir y bye", () => {

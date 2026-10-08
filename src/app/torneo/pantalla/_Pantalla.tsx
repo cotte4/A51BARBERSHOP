@@ -6,6 +6,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { QRCodeSVG } from "qrcode.react";
 import type { DatosPantalla, TableroPublico } from "@/lib/torneo-juego";
+import { fueAPenales } from "@/lib/torneo";
 import Escudo from "@/components/torneo/Escudo";
 
 gsap.registerPlugin(useGSAP);
@@ -22,6 +23,15 @@ type Jugador = TableroPublico["jugadores"][number];
 type Escena = { cruces: Partido[]; hasta: number };
 
 const VERDE = "#8cff59";
+
+/**
+ * Cuerpo de letra según el largo del alias (hasta 20 caracteres): el nombre se achica antes que cortarse.
+ * `escalones` va de corto a largo: [hasta tantos caracteres, px].
+ */
+function cuerpoPorLargo(largo: number, escalones: readonly [number, number][], minimo: number): number {
+  for (const [hasta, px] of escalones) if (largo <= hasta) return px;
+  return minimo;
+}
 
 function usarEscala(): number {
   const [escala, setEscala] = useState(1);
@@ -98,9 +108,10 @@ function Lado({ jugador, alinear }: { jugador: Jugador | undefined; alinear: "iz
     <div className={`flex min-w-0 flex-1 items-center gap-3.5 ${der ? "flex-row-reverse" : ""}`}>
       <Escudo equipo={jugador?.equipo ?? null} tamano={76} />
       <div className={`flex min-w-0 flex-col ${der ? "items-end text-right" : "items-start text-left"}`}>
-        {/* Un nombre largo ("Maximiliano G.") baja un poco el cuerpo en vez de cortarse. */}
+        {/* Un alias largo baja el cuerpo en vez de cortarse. */}
         <span
-          className={`torneo-titulo max-w-full truncate font-extrabold italic text-white ${nombre.length > 10 ? "text-[42px]" : "text-[50px]"}`}
+          className="torneo-titulo max-w-full truncate font-extrabold italic text-white"
+          style={{ fontSize: cuerpoPorLargo(nombre.length, [[10, 50], [14, 40]], 32) }}
         >
           {nombre}
         </span>
@@ -127,7 +138,10 @@ function LadoGrande({ jugador, lado }: { jugador: Jugador | undefined; lado: "a"
           <Escudo equipo={jugador.equipo} tamano={240} />
         </div>
       )}
-      <span className="torneo-titulo max-w-full whitespace-nowrap text-[104px] font-extrabold italic text-white">
+      <span
+        className="torneo-titulo max-w-full whitespace-nowrap font-extrabold italic text-white"
+        style={{ fontSize: cuerpoPorLargo(jugador?.nombre.length ?? 0, [[9, 104], [12, 86], [16, 68]], 56) }}
+      >
         {jugador?.nombre ?? "—"}
       </span>
       {jugador?.equipo && <span className="torneo-hud mt-4 text-[30px] text-[#8cff59]">{jugador.equipo}</span>}
@@ -244,25 +258,47 @@ function GrillaSorteo({
 function Fila({
   jugador,
   estado,
+  goles,
+  penales,
 }: {
   jugador: Jugador | undefined;
   estado: "ganador" | "perdedor" | null;
+  /** null mientras no se jugó (o en resultados cargados antes del marcador). */
+  goles: number | null;
+  /** Ganó en los penales: lleva la marca "pen." al lado de los goles. */
+  penales: boolean;
 }) {
   const apagado = estado === "perdedor";
+  const nombre = jugador?.nombre ?? "—";
   return (
     <div className="flex h-[42px] items-center gap-2.5 overflow-hidden">
       <Escudo equipo={jugador?.equipo ?? null} tamano={34} className={apagado ? "opacity-35" : ""} />
       <span
-        className={`torneo-titulo whitespace-nowrap text-[32px] font-extrabold italic ${apagado ? "text-white/35" : "text-white"}`}
-        style={estado === "ganador" ? { color: VERDE } : undefined}
+        className={`torneo-titulo min-w-0 max-w-[64%] shrink-0 truncate font-extrabold italic ${apagado ? "text-white/35" : "text-white"}`}
+        style={{
+          fontSize: cuerpoPorLargo(nombre.length, [[12, 32], [16, 27]], 23),
+          ...(estado === "ganador" ? { color: VERDE } : {}),
+        }}
       >
-        {jugador?.nombre ?? "—"}
+        {nombre}
       </span>
+      {/* El alias no se corta; el equipo es lo que cede (el escudo ya lo dice). */}
       {jugador?.equipo && (
         <span
-          className={`torneo-hud ml-auto min-w-0 truncate pl-1 text-[14px] ${apagado ? "text-[#8cff59]/30" : "text-[#8cff59]"}`}
+          className={`torneo-hud min-w-0 flex-1 truncate pl-1 text-right text-[14px] ${apagado ? "text-[#8cff59]/30" : "text-[#8cff59]"}`}
         >
           {jugador.equipo}
+        </span>
+      )}
+      {goles !== null && (
+        <span className={`flex shrink-0 items-baseline gap-1.5 ${jugador?.equipo ? "" : "ml-auto"}`}>
+          {penales && <span className="torneo-hud text-[12px] text-[#8cff59]">pen.</span>}
+          <span
+            className={`torneo-titulo w-[34px] text-right text-[34px] font-extrabold tabular-nums ${apagado ? "text-white/35" : "text-white"}`}
+            style={estado === "ganador" ? { color: VERDE } : undefined}
+          >
+            {goles}
+          </span>
         </span>
       )}
     </div>
@@ -293,7 +329,8 @@ function Cuadro({
       <Encabezado titulo="El cuadro" detalle={tablero.torneo.nombre} compacto qr />
       <div className="flex min-h-0 flex-1 gap-8 px-24 pb-6 pt-4">
         {columnas.map((ronda) => (
-          <div key={ronda} className="flex flex-1 flex-col">
+          // min-w-0: las cuatro columnas miden lo mismo aunque un alias largo pida más.
+          <div key={ronda} className="flex min-w-0 flex-1 flex-col">
             <p className="torneo-hud mb-3 text-center text-[20px] text-[#8cff59]">{nombreRonda(ronda, rondas)}</p>
             <div className="flex min-h-0 flex-1 flex-col justify-around">
               {tablero.partidos
@@ -304,6 +341,7 @@ function Cuadro({
                   const b = p.jugadorBId ? jugadores.get(p.jugadorBId) : undefined;
                   const estadoDe = (id: string | null) =>
                     p.ganadorId && id ? (p.ganadorId === id ? "ganador" : "perdedor") : null;
+                  const conPenales = fueAPenales(p);
                   return (
                     <div
                       key={p.id}
@@ -313,14 +351,24 @@ function Cuadro({
                           : "border-white/10"
                       }`}
                     >
-                      <Fila jugador={a} estado={estadoDe(p.jugadorAId)} />
+                      <Fila
+                        jugador={a}
+                        estado={estadoDe(p.jugadorAId)}
+                        goles={p.ganadorId ? p.marcadorA : null}
+                        penales={conPenales && p.ganadorId === p.jugadorAId}
+                      />
                       <div className="h-px bg-white/10" />
                       {p.esBye ? (
                         <div className="flex h-[42px] items-center">
                           <span className="torneo-hud text-[14px] text-white/40">Pase directo</span>
                         </div>
                       ) : (
-                        <Fila jugador={b} estado={estadoDe(p.jugadorBId)} />
+                        <Fila
+                          jugador={b}
+                          estado={estadoDe(p.jugadorBId)}
+                          goles={p.ganadorId ? p.marcadorB : null}
+                          penales={conPenales && p.ganadorId === p.jugadorBId}
+                        />
                       )}
                     </div>
                   );
@@ -337,6 +385,20 @@ function Podio({ tablero, jugadores }: { tablero: TableroPublico; jugadores: Map
   const { campeonId, subcampeonId, tercerosIds } = tablero.podio;
   const campeon = campeonId ? jugadores.get(campeonId) : undefined;
   const subcampeon = subcampeonId ? jugadores.get(subcampeonId) : undefined;
+  const rondas = Math.max(...tablero.partidos.map((p) => p.ronda));
+  const final = tablero.partidos.find((p) => p.ronda === rondas);
+  // Los goles de la final, siempre desde el lado del campeón: "3 – 1".
+  const golesFinal =
+    final && final.marcadorA !== null && final.marcadorB !== null
+      ? final.ganadorId === final.jugadorAId
+        ? [final.marcadorA, final.marcadorB]
+        : [final.marcadorB, final.marcadorA]
+      : null;
+  const nombreCampeon = campeon?.nombre ?? "";
+  // Debajo del campeón entran tres nombres en fila: si alguno es largo, bajan los tres juntos.
+  const segundos = [subcampeon, ...tercerosIds.map((id) => jugadores.get(id))];
+  const largoMayor = Math.max(0, ...segundos.map((j) => j?.nombre.length ?? 0));
+  const cuerpoSegundos = cuerpoPorLargo(largoMayor, [[10, 64], [14, 52]], 42);
   return (
     <div className="flex h-full flex-col items-center justify-center text-center">
       {campeon?.equipo && (
@@ -346,19 +408,39 @@ function Podio({ tablero, jugadores }: { tablero: TableroPublico; jugadores: Map
       )}
       <p className="torneo-hud text-[34px] text-[#8cff59]">Campeón</p>
       <h1
-        className="torneo-titulo mt-4 text-[200px] font-extrabold italic"
-        style={{ color: VERDE, textShadow: "0 0 80px rgba(140,255,89,0.55)" }}
+        className="torneo-titulo mt-4 whitespace-nowrap font-extrabold italic"
+        style={{
+          color: VERDE,
+          textShadow: "0 0 80px rgba(140,255,89,0.55)",
+          fontSize: cuerpoPorLargo(nombreCampeon.length, [[10, 200], [14, 160]], 128),
+        }}
       >
-        {campeon?.nombre}
+        {nombreCampeon}
       </h1>
       {campeon?.equipo && <p className="torneo-hud mt-4 text-[44px] text-white">{campeon.equipo}</p>}
-      <div className="mt-16 flex gap-24">
+      {golesFinal && subcampeon && (
+        <p className="torneo-hud mt-8 flex items-baseline justify-center gap-5 text-[30px] text-white/80">
+          <span className="text-[#8cff59]">Final</span>
+          <span className="torneo-titulo text-[56px] font-extrabold tabular-nums text-white">
+            {golesFinal[0]} – {golesFinal[1]}
+          </span>
+          {final && fueAPenales(final) ? <span className="text-[#8cff59]">pen.</span> : null}
+          <span>vs</span>
+          <span className="torneo-titulo text-[44px] font-extrabold italic text-white">{subcampeon.nombre}</span>
+        </p>
+      )}
+      <div className="mt-14 flex gap-24">
         {subcampeon && (
           <div>
             <p className="torneo-hud text-[22px] text-[#8cff59]">Subcampeón</p>
             <div className="mt-2 flex items-center justify-center gap-4">
               <Escudo equipo={subcampeon.equipo} tamano={56} />
-              <p className="torneo-titulo text-[64px] font-extrabold italic text-white">{subcampeon.nombre}</p>
+              <p
+                className="torneo-titulo whitespace-nowrap font-extrabold italic text-white"
+                style={{ fontSize: cuerpoSegundos }}
+              >
+                {subcampeon.nombre}
+              </p>
             </div>
           </div>
         )}
@@ -369,14 +451,19 @@ function Podio({ tablero, jugadores }: { tablero: TableroPublico; jugadores: Map
               <p className="torneo-hud text-[22px] text-[#8cff59]">Semifinalista</p>
               <div className="mt-2 flex items-center justify-center gap-4">
                 <Escudo equipo={tercero?.equipo ?? null} tamano={56} />
-                <p className="torneo-titulo text-[64px] font-extrabold italic text-white">{tercero?.nombre}</p>
+                <p
+                  className="torneo-titulo whitespace-nowrap font-extrabold italic text-white"
+                  style={{ fontSize: cuerpoSegundos }}
+                >
+                  {tercero?.nombre}
+                </p>
               </div>
             </div>
           );
         })}
       </div>
       {tablero.torneo.premiosTexto && (
-        <p className="torneo-hud mt-16 max-w-[1500px] whitespace-pre-line text-[24px] text-white/70">
+        <p className="torneo-hud mt-14 max-w-[1500px] whitespace-pre-line text-[24px] text-white/70">
           {tablero.torneo.premiosTexto}
         </p>
       )}

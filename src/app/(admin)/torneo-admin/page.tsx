@@ -96,6 +96,7 @@ export default async function TorneoAdminPage() {
   const partidosVista: PartidoVista[] = partidos.map((p) => ({
     id: p.id,
     ronda: p.ronda,
+    posicion: p.posicion,
     jugadorAId: p.jugadorAId,
     jugadorBId: p.jugadorBId,
     ganadorId: p.ganadorId,

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdminSession } from "@/lib/admin-action";
-import { errorAlias, limpiarAlias } from "@/lib/torneo";
+import { errorAlias, GOLES_MAX, limpiarAlias } from "@/lib/torneo";
 import {
   actualizarConfig,
   asegurarTorneo,
@@ -192,17 +192,25 @@ export async function reiniciarRevealAction(): Promise<TorneoAdminState> {
   return { ok: true, mensaje: null };
 }
 
-export async function cargarResultadoAction(
-  partidoId: string,
-  ganadorId: string,
-): Promise<TorneoAdminState> {
+const resultadoSchema = z.object({
+  partidoId: z.string().uuid(),
+  ganadorId: z.string().uuid(),
+  marcadorA: z.number().int().min(0).max(GOLES_MAX),
+  marcadorB: z.number().int().min(0).max(GOLES_MAX),
+});
+
+/**
+ * Carga (o corrige) el marcador de un cruce. Con goles distintos el ganador tiene que ser el que
+ * hizo más; empatados, `ganadorId` es quien ganó los penales. Lo valida `avanzarGanador`.
+ */
+export async function cargarResultadoAction(input: unknown): Promise<TorneoAdminState> {
   const denegado = await exigirAdmin();
   if (denegado) return denegado;
-  if (!z.string().uuid().safeParse(partidoId).success || !z.string().uuid().safeParse(ganadorId).success) {
-    return { ok: false, mensaje: "Datos inválidos." };
-  }
+  const parsed = resultadoSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, mensaje: `Revisá los goles: van de 0 a ${GOLES_MAX}.` };
 
-  const resultado = await cargarResultado(partidoId, ganadorId);
+  const { partidoId, ganadorId, marcadorA, marcadorB } = parsed.data;
+  const resultado = await cargarResultado(partidoId, ganadorId, { a: marcadorA, b: marcadorB });
   if (!resultado.ok) {
     const mensajes = {
       no_existe: "Ese partido no existe.",

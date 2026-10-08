@@ -7,6 +7,7 @@ import {
   CRUCES_POR_PASO,
   sortearTorneo,
   torneoTerminado,
+  type Marcador,
   type PartidoCuadro,
 } from "@/lib/torneo";
 import type { DatosPantalla, TableroPublico } from "@/lib/torneo-juego";
@@ -57,6 +58,18 @@ function armarTablero(
   };
 }
 
+/** Un resultado de FIFA creíble: casi siempre 1 a 4 goles del que gana, y a veces empate y penales. */
+function marcadorDeMentira(ganaA: boolean): Marcador {
+  const azar = (max: number) => Math.floor(Math.random() * (max + 1));
+  if (Math.random() < 0.2) {
+    const goles = azar(3);
+    return { a: goles, b: goles };
+  }
+  const ganador = 1 + azar(3);
+  const perdedor = azar(ganador - 1);
+  return ganaA ? { a: ganador, b: perdedor } : { a: perdedor, b: ganador };
+}
+
 function nuevoSorteo() {
   const semilla = String(Math.random());
   const r = sortearTorneo({
@@ -92,8 +105,11 @@ export default function Demo() {
 
   function simularResultado() {
     if (!siguientePartido?.jugadorAId || !siguientePartido.jugadorBId) return;
-    const gana = Math.random() < 0.5 ? siguientePartido.jugadorAId : siguientePartido.jugadorBId;
-    setCuadro(avanzarGanador(cuadro, siguientePartido.ronda, siguientePartido.posicion, gana));
+    const ganaA = Math.random() < 0.5;
+    const gana = ganaA ? siguientePartido.jugadorAId : siguientePartido.jugadorBId;
+    // Si salió empate, gana por penales el que ya habíamos elegido.
+    const marcador = marcadorDeMentira(ganaA);
+    setCuadro(avanzarGanador(cuadro, siguientePartido.ronda, siguientePartido.posicion, gana, marcador));
   }
 
   function reiniciar() {

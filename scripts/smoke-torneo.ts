@@ -151,10 +151,18 @@ async function main() {
       partidos = await datos.listarPartidos(torneo.id);
       for (const p of partidos.filter((x) => x.ronda === ronda)) {
         afirmar(!!p.jugadorAId && !!p.jugadorBId, `ronda ${ronda} cruce ${p.posicion} tiene los dos jugadores`);
-        const r = await juego.cargarResultado(p.id, p.jugadorAId!);
-        afirmar(r.ok, `ronda ${ronda} cruce ${p.posicion} cargado`);
+        // El cruce 1 de cada ronda empata y se define por penales; el resto gana A 2 a 1.
+        const marcador = p.posicion === 1 ? { a: 1, b: 1 } : { a: 2, b: 1 };
+        const r = await juego.cargarResultado(p.id, p.jugadorAId!, marcador);
+        afirmar(r.ok, `ronda ${ronda} cruce ${p.posicion} cargado ${marcador.a}-${marcador.b}`);
       }
     }
+    const incoherente = await juego.cargarResultado(
+      (await datos.listarPartidos(torneo.id)).find((p) => p.ronda === 4)!.id,
+      (await datos.listarPartidos(torneo.id)).find((p) => p.ronda === 4)!.jugadorBId!,
+      { a: 3, b: 0 },
+    );
+    afirmar(!incoherente.ok && incoherente.motivo === "invalido", "un marcador que no cierra con el ganador se rechaza");
     const bajaTarde = (await datos.listarJugadores(torneo.id)).find((j) => j.posicionSorteo !== null)!;
     const tarde = await reemplazo.reemplazarJugador(bajaTarde.id, { tipo: "espera", jugadorId: bajaTarde.id });
     afirmar(!tarde.ok && tarde.motivo === "ya_empezo", "con un partido jugado ya no se reemplaza");
