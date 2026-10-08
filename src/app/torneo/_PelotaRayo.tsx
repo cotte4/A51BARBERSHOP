@@ -2,60 +2,16 @@
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { ConvexGeometry } from "three/examples/jsm/geometries/ConvexGeometry.js";
 import type { RefObject } from "react";
 import type { Energia } from "./_escena";
-
-const VERDE = 0x8cff59;
-const FI = (1 + Math.sqrt(5)) / 2;
-
-/** Pelota de fútbol (icosaedro truncado): 12 pentágonos y 20 hexágonos. */
-function crearPelota() {
-  const base: THREE.Vector3[] = [];
-  for (const a of [-1, 1]) {
-    for (const b of [-FI, FI]) {
-      base.push(new THREE.Vector3(0, a, b), new THREE.Vector3(a, b, 0), new THREE.Vector3(b, 0, a));
-    }
-  }
-  const puntos: THREE.Vector3[] = [];
-  for (let i = 0; i < base.length; i++) {
-    for (let j = i + 1; j < base.length; j++) {
-      if (Math.abs(base[i].distanceTo(base[j]) - 2) > 1e-3) continue;
-      puntos.push(base[i].clone().lerp(base[j], 1 / 3), base[i].clone().lerp(base[j], 2 / 3));
-    }
-  }
-  const radio = puntos[0].length();
-  for (const p of puntos) p.multiplyScalar(1 / radio);
-
-  const casco = new ConvexGeometry(puntos);
-  const pos = casco.getAttribute("position");
-  const direcciones = base.map((v) => v.clone().normalize());
-  const pentagonos: number[] = [];
-  const hexagonos: number[] = [];
-  const a = new THREE.Vector3();
-  const b = new THREE.Vector3();
-  const c = new THREE.Vector3();
-  for (let i = 0; i < pos.count; i += 3) {
-    a.fromBufferAttribute(pos, i);
-    b.fromBufferAttribute(pos, i + 1);
-    c.fromBufferAttribute(pos, i + 2);
-    const normal = b.clone().sub(a).cross(c.clone().sub(a)).normalize();
-    const esPentagono = direcciones.some((d) => Math.abs(d.dot(normal)) > 0.99);
-    (esPentagono ? pentagonos : hexagonos).push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
-  }
-  const armar = (datos: number[]) => {
-    const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.Float32BufferAttribute(datos, 3));
-    g.computeVertexNormals();
-    return g;
-  };
-  return { casco, pentagonos: armar(pentagonos), hexagonos: armar(hexagonos) };
-}
+import { crearLimitador60 } from "./_movimiento";
+import { crearAnillo, crearPelota, liberarEscena, ROJO_3D, VERDE_3D } from "./_pelota3d";
 
 /**
  * La pelota alien de la escena, iluminada por el rayo: la luz verde de arriba y el rebote de la
  * lava de abajo siguen la intensidad del rayo (energia.current.haz), así cuando el rayo parpadea o pega
- * un pico, la pelota lo acusa. Se pausa fuera de pantalla y con la pestaña oculta.
+ * un pico, la pelota lo acusa. Tope de 60 fps; se pausa fuera de pantalla y con la pestaña oculta.
+ * Con movimiento reducido dibuja un solo cuadro quieto.
  */
 export default function PelotaRayo({
   energia,
@@ -90,48 +46,22 @@ export default function PelotaRayo({
     camara.position.set(0, 0.25, 6.2);
     camara.lookAt(0, 0, 0);
 
-    const { casco, pentagonos, hexagonos } = crearPelota();
-    const grupo = new THREE.Group();
-    const matPentagono = new THREE.MeshStandardMaterial({
-      color: 0x0c1f08,
-      emissive: VERDE,
-      emissiveIntensity: 0.9,
-      roughness: 0.35,
-      flatShading: true,
-    });
-    const matHexagono = new THREE.MeshStandardMaterial({
-      color: 0x22332a,
-      roughness: 0.32,
-      metalness: 0.6,
-      flatShading: true,
-    });
-    grupo.add(new THREE.Mesh(pentagonos, matPentagono), new THREE.Mesh(hexagonos, matHexagono));
-    const matCostura = new THREE.LineBasicMaterial({
-      color: VERDE,
-      transparent: true,
-      opacity: 0.5,
-    });
-    grupo.add(new THREE.LineSegments(new THREE.EdgesGeometry(casco, 1), matCostura));
+    const { grupo, matPentagono, matCostura } = crearPelota();
     escena.add(grupo);
 
-    const matAnillo = new THREE.MeshBasicMaterial({
-      color: VERDE,
-      transparent: true,
-      opacity: 0.6,
-    });
-    const anillo = new THREE.Mesh(new THREE.TorusGeometry(1.42, 0.01, 6, 160), matAnillo);
+    const { anillo, material: matAnillo } = crearAnillo(1.42, 0.01);
     anillo.rotation.x = Math.PI / 2.25;
     escena.add(anillo);
 
     // El rayo viene de arriba; la lava rebota desde abajo; el rojo es la alarma de la base.
-    const luzRayo = new THREE.SpotLight(VERDE, 0, 14, Math.PI / 7, 0.6, 1.2);
+    const luzRayo = new THREE.SpotLight(VERDE_3D, 0, 14, Math.PI / 7, 0.6, 1.2);
     luzRayo.position.set(0, 6, 1.2);
     luzRayo.target.position.set(0, 0, 0);
-    const luzLava = new THREE.PointLight(VERDE, 0, 9, 1.6);
+    const luzLava = new THREE.PointLight(VERDE_3D, 0, 9, 1.6);
     luzLava.position.set(0, -2.6, 1.4);
     const luzContra = new THREE.DirectionalLight(0xd6ffc2, 0);
     luzContra.position.set(-1.5, 1.2, -3);
-    const luzAlarma = new THREE.PointLight(0xff3b4e, 6, 10, 1.6);
+    const luzAlarma = new THREE.PointLight(ROJO_3D, 6, 10, 1.6);
     luzAlarma.position.set(3, -1.2, 2.4);
     escena.add(luzRayo, luzRayo.target, luzLava, luzContra, luzAlarma);
     escena.add(new THREE.AmbientLight(0x5f7f58, 0.55));
@@ -178,12 +108,10 @@ export default function PelotaRayo({
       });
       io.observe(el);
       const inicio = performance.now();
-      let ultimo = 0;
+      const toca = crearLimitador60();
       const bucle = (ahora: number) => {
         cuadro = requestAnimationFrame(bucle);
-        if (document.hidden || !enPantalla) return;
-        if (ahora - ultimo < 15.5) return;
-        ultimo = ahora;
+        if (document.hidden || !enPantalla || !toca(ahora)) return;
         dibujar((ahora - inicio) / 1000);
       };
       cuadro = requestAnimationFrame(bucle);
@@ -193,17 +121,7 @@ export default function PelotaRayo({
       cancelAnimationFrame(cuadro);
       observador.disconnect();
       io?.disconnect();
-      escena.traverse((obj) => {
-        const malla = obj as THREE.Mesh;
-        malla.geometry?.dispose();
-        const mat = malla.material as THREE.Material | THREE.Material[] | undefined;
-        if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
-        else mat?.dispose();
-      });
-      casco.dispose();
-      renderer.dispose();
-      renderer.forceContextLoss();
-      lienzo.remove();
+      liberarEscena(escena, renderer);
     };
   }, [energia, quieto]);
 

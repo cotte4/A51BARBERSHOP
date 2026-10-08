@@ -792,3 +792,147 @@
     transform: translateX(-4px);
   }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Tele del torneo (/torneo/pantalla): la espera previa al sorteo.
+   El lienzo de la tele mide 1920x1080 fijos y se escala entero,
+   así que acá se mide en px y no en función del viewport.
+   ───────────────────────────────────────────────────────────── */
+.torneo-escena.torneo-escena--tele {
+  --h: 83.333;
+  --bola: 34;
+  width: 880px;
+  margin-inline: 0;
+  aspect-ratio: 6 / 5;
+}
+/* El HUD de la cámara se lee a 3 m. */
+.torneo-escena--tele .escena-hud {
+  font-size: 15px;
+}
+.torneo-escena--tele .escena-reticula-tag {
+  font-size: 14px;
+}
+
+.tele-cupo {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--columnas), minmax(0, 1fr));
+  gap: 8px;
+  overflow: hidden;
+}
+.tele-slot {
+  height: 46px;
+  background: rgb(140 255 89 / 0.08);
+  clip-path: polygon(9px 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+}
+.tele-slot--lleno {
+  background: linear-gradient(180deg, #c6ff9f, var(--t-green) 55%, #4fb52a);
+}
+/* Un brillo que pasa por los casilleros: solo aclara los encendidos (overlay sobre negro = negro). */
+.tele-cupo-barrido {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 180px;
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.95), transparent);
+}
+
+.tele-puntos {
+  display: inline-flex;
+  margin-left: 0.1em;
+}
+.tele-puntos i {
+  font-style: normal;
+}
+.tele-escaneo {
+  position: relative;
+  width: 520px;
+  height: 3px;
+  overflow: hidden;
+  background: rgb(140 255 89 / 0.16);
+}
+.tele-escaneo i {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, var(--t-green), #eaffdc, transparent);
+  transform: translateX(-100%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tele-slot--lleno {
+    animation: tele-slot-entra 0.55s var(--ease-salida) both;
+    animation-delay: calc(var(--i, 0) * 55ms + 500ms);
+  }
+  /* El último que pagó late: es el que acaba de entrar. */
+  .tele-slot--lleno.tele-slot--ultimo {
+    animation:
+      tele-slot-entra 0.55s var(--ease-salida) calc(var(--i, 0) * 55ms + 500ms) both,
+      tele-slot-late 1.6s ease-in-out calc(var(--i, 0) * 55ms + 1100ms) infinite;
+  }
+  .tele-cupo-barrido {
+    animation: tele-barrido 4.2s cubic-bezier(0.45, 0, 0.55, 1) 2.2s infinite;
+  }
+  .tele-puntos i {
+    animation: tele-punto 1.4s steps(1) infinite;
+  }
+  .tele-puntos i:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  .tele-puntos i:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  .tele-escaneo i {
+    animation: tele-escaneo 2.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+}
+@keyframes tele-slot-entra {
+  from {
+    opacity: 0;
+    transform: scaleY(0.2);
+  }
+  55% {
+    opacity: 1;
+    transform: scaleY(1.3);
+    filter: brightness(1.8);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes tele-slot-late {
+  50% {
+    opacity: 0.45;
+  }
+}
+@keyframes tele-barrido {
+  0% {
+    opacity: 1;
+    transform: translateX(-200px);
+  }
+  55%,
+  100% {
+    opacity: 1;
+    transform: translateX(1000px);
+  }
+}
+@keyframes tele-punto {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+@keyframes tele-escaneo {
+  to {
+    transform: translateX(340%);
+  }
+}

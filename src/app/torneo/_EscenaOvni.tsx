@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useSyncExternalStore, type CSSProperties } from "react";
+import { useRef, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import RayoLava from "./_RayoLava";
 import { azar, bezier, type Energia } from "./_escena";
+import { usarMovimientoReducido } from "./_movimiento";
 
 gsap.registerPlugin(useGSAP);
 
@@ -45,15 +46,6 @@ const LUCES = Array.from({ length: 11 }, (_, i) => {
   };
 });
 
-const MOVIMIENTO_REDUCIDO = "(prefers-reduced-motion: reduce)";
-function suscribirMovimiento(avisar: () => void) {
-  const mq = window.matchMedia(MOVIMIENTO_REDUCIDO);
-  mq.addEventListener("change", avisar);
-  return () => mq.removeEventListener("change", avisar);
-}
-const leerMovimiento = () => window.matchMedia(MOVIMIENTO_REDUCIDO).matches;
-const leerMovimientoServidor = () => false;
-
 function v(nombre: string, valor: string): CSSProperties {
   return { [nombre]: valor } as CSSProperties;
 }
@@ -62,12 +54,13 @@ function v(nombre: string, valor: string): CSSProperties {
  * Escena de abducción: la nave baja, el rayo se enciende con un parpadeo, la lava de luz empieza
  * a subir por el haz y la pelota alien levita adentro. Capas con parallax del mouse (solo con
  * puntero fino). Decorativa: aria-hidden, respeta prefers-reduced-motion y se pausa con la
- * pestaña oculta.
+ * pestaña oculta. `tele`: tamaño fijo para el lienzo de 1920x1080 de la pantalla del torneo
+ * (sin depender del viewport) y el HUD legible a distancia.
  */
-export default function EscenaOvni({ compacta = false }: { compacta?: boolean }) {
+export default function EscenaOvni({ compacta = false, tele = false }: { compacta?: boolean; tele?: boolean }) {
   const raiz = useRef<HTMLDivElement>(null);
   const energia = useRef<Energia>({ haz: 0, alcance: 0 });
-  const quieto = useSyncExternalStore(suscribirMovimiento, leerMovimiento, leerMovimientoServidor);
+  const quieto = usarMovimientoReducido();
 
   useGSAP(
     () => {
@@ -262,7 +255,7 @@ export default function EscenaOvni({ compacta = false }: { compacta?: boolean })
     <div
       ref={raiz}
       aria-hidden="true"
-      className={`torneo-escena${compacta ? " torneo-escena--compacta" : ""}`}
+      className={`torneo-escena${compacta ? " torneo-escena--compacta" : ""}${tele ? " torneo-escena--tele" : ""}`}
     >
       <div className="escena-capa escena-capa-lejos">
         {ESTRELLAS.map((s, i) => (

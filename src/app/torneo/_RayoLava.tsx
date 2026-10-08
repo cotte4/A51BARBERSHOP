@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
 import { GEO, type Energia } from "./_escena";
+import { crearLimitador60 } from "./_movimiento";
 
 const VERTEX = `
 attribute vec2 aPos;
@@ -255,12 +256,11 @@ export default function RayoLava({
     io.observe(canvas);
 
     let cuadro = 0;
-    let ultimo = 0;
+    // Tope de 60 fps también en pantallas de 120/144 Hz (es luz difusa: más cuadros no se notan).
+    const toca = crearLimitador60();
     const bucle = (ahora: number) => {
       cuadro = requestAnimationFrame(bucle);
-      if (document.hidden || !enPantalla) return;
-      if (ahora - ultimo < 15.5) return; // tope de 60 fps en pantallas de 120 Hz
-      ultimo = ahora;
+      if (document.hidden || !enPantalla || !toca(ahora)) return;
       t = desfase + (ahora - inicio) / 1000;
       dibujar();
     };

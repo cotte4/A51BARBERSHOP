@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import dynamic from "next/dynamic";
 import { QRCodeSVG } from "qrcode.react";
 import type { DatosPantalla, TableroPublico } from "@/lib/torneo-juego";
 import { fueAPenales, ordenRuleta } from "@/lib/torneo";
 import { coloresDeEquipo } from "@/lib/torneo-escudos";
 import Escudo from "@/components/torneo/Escudo";
 import { conAlfa, cuerpoPorLargo, VERDE, type Jugador, type Partido } from "./_comun";
+import { Podio } from "./_Campeon";
+import Espera from "./_Espera";
 import { EscenaCruce, EscenaRuleta, PrecargaEscudos } from "./_Reveal";
 
 // Se diseña a 1920x1080 y se escala para entrar en cualquier tele o monitor.
@@ -170,29 +171,6 @@ function Encabezado({
         {qr && <QrJukeboxMini />}
       </div>
     </header>
-  );
-}
-
-// Three.js solo se descarga en la espera, y nunca en el servidor.
-const PelotaAlien = dynamic(() => import("./_PelotaAlien"), { ssr: false });
-
-function Espera({ previa }: { previa: DatosPantalla["previa"] }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center text-center">
-      <div className="-mb-12 -mt-16">
-        <PelotaAlien tamano={440} />
-      </div>
-      <p className="torneo-hud text-[28px] text-[#8cff59]">A51 · Señal interceptada</p>
-      <h1 className="torneo-titulo mt-6 text-[170px] font-extrabold italic text-white">
-        {previa ? previa.nombre : "El torneo abre pronto"}
-      </h1>
-      {previa && (
-        <p className="torneo-hud mt-10 text-[34px] text-white/80">
-          {previa.pagados} de {previa.cupo} lugares confirmados
-        </p>
-      )}
-      <p className="torneo-hud mt-16 animate-pulse text-[26px] text-[#8cff59]">Esperando el sorteo</p>
-    </div>
   );
 }
 
@@ -409,96 +387,6 @@ function Cuadro({
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function Podio({ tablero, jugadores }: { tablero: TableroPublico; jugadores: Map<string, Jugador> }) {
-  const { campeonId, subcampeonId, tercerosIds } = tablero.podio;
-  const campeon = campeonId ? jugadores.get(campeonId) : undefined;
-  const subcampeon = subcampeonId ? jugadores.get(subcampeonId) : undefined;
-  const rondas = Math.max(...tablero.partidos.map((p) => p.ronda));
-  const final = tablero.partidos.find((p) => p.ronda === rondas);
-  // Los goles de la final, siempre desde el lado del campeón: "3 – 1".
-  const golesFinal =
-    final && final.marcadorA !== null && final.marcadorB !== null
-      ? final.ganadorId === final.jugadorAId
-        ? [final.marcadorA, final.marcadorB]
-        : [final.marcadorB, final.marcadorA]
-      : null;
-  const nombreCampeon = campeon?.nombre ?? "";
-  // Debajo del campeón entran tres nombres en fila: si alguno es largo, bajan los tres juntos.
-  const segundos = [subcampeon, ...tercerosIds.map((id) => jugadores.get(id))];
-  const largoMayor = Math.max(0, ...segundos.map((j) => j?.nombre.length ?? 0));
-  const cuerpoSegundos = cuerpoPorLargo(largoMayor, [[10, 64], [14, 52]], 42);
-  return (
-    <div className="flex h-full flex-col items-center justify-center text-center">
-      {campeon?.equipo && (
-        <div className="mb-6 [filter:drop-shadow(0_0_40px_rgba(140,255,89,0.35))]">
-          <Escudo equipo={campeon.equipo} tamano={220} />
-        </div>
-      )}
-      <p className="torneo-hud text-[34px] text-[#8cff59]">Campeón</p>
-      <h1
-        className="torneo-titulo mt-4 whitespace-nowrap font-extrabold italic"
-        style={{
-          color: VERDE,
-          textShadow: "0 0 80px rgba(140,255,89,0.55)",
-          fontSize: cuerpoPorLargo(nombreCampeon.length, [[10, 200], [14, 160]], 128),
-        }}
-      >
-        {nombreCampeon}
-      </h1>
-      {campeon?.equipo && <p className="torneo-hud mt-4 text-[44px] text-white">{campeon.equipo}</p>}
-      {golesFinal && subcampeon && (
-        <p className="torneo-hud mt-8 flex items-baseline justify-center gap-5 text-[30px] text-white/80">
-          <span className="text-[#8cff59]">Final</span>
-          <span className="torneo-titulo text-[56px] font-extrabold tabular-nums text-white">
-            {golesFinal[0]} – {golesFinal[1]}
-          </span>
-          {final && fueAPenales(final) ? <span className="text-[#8cff59]">pen.</span> : null}
-          <span>vs</span>
-          <span className="torneo-titulo text-[44px] font-extrabold italic text-white">{subcampeon.nombre}</span>
-        </p>
-      )}
-      <div className="mt-14 flex gap-24">
-        {subcampeon && (
-          <div>
-            <p className="torneo-hud text-[22px] text-[#8cff59]">Subcampeón</p>
-            <div className="mt-2 flex items-center justify-center gap-4">
-              <Escudo equipo={subcampeon.equipo} tamano={56} />
-              <p
-                className="torneo-titulo whitespace-nowrap font-extrabold italic text-white"
-                style={{ fontSize: cuerpoSegundos }}
-              >
-                {subcampeon.nombre}
-              </p>
-            </div>
-          </div>
-        )}
-        {tercerosIds.map((id) => {
-          const tercero = jugadores.get(id);
-          return (
-            <div key={id}>
-              <p className="torneo-hud text-[22px] text-[#8cff59]">Semifinalista</p>
-              <div className="mt-2 flex items-center justify-center gap-4">
-                <Escudo equipo={tercero?.equipo ?? null} tamano={56} />
-                <p
-                  className="torneo-titulo whitespace-nowrap font-extrabold italic text-white"
-                  style={{ fontSize: cuerpoSegundos }}
-                >
-                  {tercero?.nombre}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      {tablero.torneo.premiosTexto && (
-        <p className="torneo-hud mt-14 max-w-[1500px] whitespace-pre-line text-[24px] text-white/70">
-          {tablero.torneo.premiosTexto}
-        </p>
-      )}
     </div>
   );
 }
