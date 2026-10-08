@@ -37,6 +37,7 @@ async function main() {
     for (let i = 1; i <= 17; i++) {
       const r = await datos.inscribirJugador({
         nombre: `Jugador Prueba ${i}`,
+        alias: `Smoke${i}`,
         email: `torneo-smoke-${i}@${DOMINIO}`,
         whatsapp: `223 000 ${String(9000 + i)}`,
       });
@@ -44,6 +45,7 @@ async function main() {
     }
     const repetido = await datos.inscribirJugador({
       nombre: "Repetido",
+      alias: "Repetido",
       email: `torneo-smoke-1@${DOMINIO}`,
       whatsapp: "223 000 9999",
     });
@@ -55,6 +57,7 @@ async function main() {
     console.log("2b. Sacar a un anotado");
     const extra18 = await datos.inscribirJugador({
       nombre: "Jugador Prueba 18",
+      alias: "Smoke18",
       email: `torneo-smoke-18@${DOMINIO}`,
       whatsapp: "223 000 9018",
     });
@@ -123,7 +126,12 @@ async function main() {
     const baja2 = trasR1.find((j) => j.posicionSorteo !== null && j.id !== enEspera.id)!;
     const r2 = await reemplazo.reemplazarJugador(baja2.id, {
       tipo: "nuevo",
-      datos: { nombre: "Persona Nueva", email: `torneo-smoke-nuevo@${DOMINIO}`, whatsapp: "223 000 9500" },
+      datos: {
+        nombre: "Persona Nueva",
+        alias: "LaNueva",
+        email: `torneo-smoke-nuevo@${DOMINIO}`,
+        whatsapp: "223 000 9500",
+      },
     });
     afirmar(r2.ok, "una persona nueva reemplaza a otro");
     const repetidoR = await reemplazo.reemplazarJugador(baja1.id, { tipo: "espera", jugadorId: baja2.id });
@@ -134,6 +142,10 @@ async function main() {
     afirmar(
       !JSON.stringify(antes).includes(DOMINIO) && !JSON.stringify(antes).includes("223 000"),
       "el tablero público no expone email ni WhatsApp",
+    );
+    afirmar(
+      !JSON.stringify(antes).includes("Jugador Prueba") && !!antes?.jugadores.some((j) => j.nombre === "LaNueva"),
+      "el tablero público muestra el alias, no el nombre completo",
     );
     for (let ronda = 1; ronda <= 4; ronda++) {
       partidos = await datos.listarPartidos(torneo.id);

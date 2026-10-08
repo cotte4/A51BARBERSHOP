@@ -7,7 +7,7 @@ import { torneoEquipos, torneoJugadores, torneoPartidos, torneos } from "@/db/sc
 import {
   avanzarGanador,
   CRUCES_POR_PASO,
-  nombresCortosUnicos,
+  nombresPublicos,
   calcularPodio,
   sortearTorneo,
   torneoTerminado,
@@ -241,6 +241,7 @@ export type TableroPublico = {
     premiosTexto: string | null;
     revealPaso: number;
   };
+  /** `nombre` es el nombre público: el alias (o el nombre corto en filas de antes del alias). */
   jugadores: { id: string; nombre: string; equipo: string | null }[];
   partidos: {
     id: string;
@@ -279,7 +280,8 @@ export async function getTableroPublico(): Promise<TableroPublico | null> {
     },
     jugadores: (() => {
       const sorteados = jugadoresDb.filter((j) => j.posicionSorteo !== null);
-      const nombres = nombresCortosUnicos(sorteados.map((j) => j.nombre));
+      // En público va el alias, nunca el nombre completo.
+      const nombres = nombresPublicos(sorteados);
       return sorteados.map((j, i) => ({
         id: j.id,
         nombre: nombres[i],

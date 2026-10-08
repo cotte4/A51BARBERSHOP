@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  errorAlias,
+  limpiarAlias,
   nombresCortosUnicos,
+  nombresPublicos,
   avanzarGanador,
   calcularPodio,
   resumenCupo,
@@ -233,5 +236,68 @@ describe("nombresCortosUnicos", () => {
 
   it("numera a los idénticos", () => {
     expect(nombresCortosUnicos(["Juan Pérez", "Juan Pérez"])).toEqual(["Juan Pérez (1)", "Juan Pérez (2)"]);
+  });
+});
+
+describe("alias", () => {
+  it("limpia espacios de los bordes y repetidos", () => {
+    expect(limpiarAlias("  El   Turco ")).toBe("El Turco");
+  });
+
+  it("acepta letras con acentos, números, espacio y . _ -", () => {
+    for (const ok of ["Pipe", "Mati10", "El Turco", "Ñoño", "José_7", "agus.9", "Eze-M", "ab"]) {
+      expect(errorAlias(ok), ok).toBeNull();
+    }
+  });
+
+  it("rechaza vacío, muy corto, muy largo y caracteres raros", () => {
+    expect(errorAlias("")).toMatch(/al menos 2/);
+    expect(errorAlias("P")).toMatch(/al menos 2/);
+    expect(errorAlias("a".repeat(21))).toMatch(/hasta 20/);
+    expect(errorAlias("a".repeat(20))).toBeNull();
+    for (const malo of ["<script>", "pipe@mail", "http://x", "Pipe 😎", "Pipe!"]) {
+      expect(errorAlias(malo), malo).toMatch(/solo puede llevar/);
+    }
+  });
+});
+
+describe("nombresPublicos", () => {
+  it("usa el alias y nunca el nombre completo", () => {
+    expect(
+      nombresPublicos([
+        { nombre: "Juan Pérez", alias: "Pipe" },
+        { nombre: "Ana Gómez", alias: " Anita  G " },
+      ]),
+    ).toEqual(["Pipe", "Anita G"]);
+  });
+
+  it("sin alias (filas viejas) cae al nombre corto, desambiguado entre ellos", () => {
+    expect(
+      nombresPublicos([
+        { nombre: "Juan Pérez", alias: null },
+        { nombre: "Juan Paz", alias: "" },
+        { nombre: "Lucas Gómez", alias: "Lucky" },
+      ]),
+    ).toEqual(["Juan Pé.", "Juan Pa.", "Lucky"]);
+  });
+
+  it("dos alias iguales sin mirar mayúsculas: el segundo lleva (2), el tercero (3)", () => {
+    expect(
+      nombresPublicos([
+        { nombre: "A A", alias: "Pipe" },
+        { nombre: "B B", alias: "pipe" },
+        { nombre: "C C", alias: "Mati" },
+        { nombre: "D D", alias: "PIPE" },
+      ]),
+    ).toEqual(["Pipe", "pipe (2)", "Mati", "PIPE (3)"]);
+  });
+
+  it("un alias que coincide con el nombre corto de una fila vieja también se desambigua", () => {
+    expect(
+      nombresPublicos([
+        { nombre: "Juan Pérez", alias: null },
+        { nombre: "Otro", alias: "juan p." },
+      ]),
+    ).toEqual(["Juan P.", "juan p. (2)"]);
   });
 });

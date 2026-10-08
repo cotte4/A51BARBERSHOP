@@ -315,6 +315,51 @@ function conLetras(nombre: string, letras: number): string {
   return `${partes[0]} ${visible.charAt(0).toUpperCase()}${visible.slice(1)}${apellido.length > letras ? "." : ""}`;
 }
 
+// ————————————————————————————
+// Alias: lo que se ve en la tele y en los celulares (el nombre completo queda en el panel)
+// ————————————————————————————
+export const ALIAS_MIN = 2;
+export const ALIAS_MAX = 20;
+// Letras (con acentos y ñ), números, espacio y . _ -: nada que rompa la tele ni parezca un link.
+const ALIAS_PERMITIDO = /^[\p{L}\p{N} ._-]+$/u;
+
+/** Saca espacios de los bordes y junta los repetidos: "  El   Turco " -> "El Turco". */
+export function limpiarAlias(alias: string): string {
+  return alias.trim().replace(/\s+/g, " ");
+}
+
+/** Mensaje para el formulario si el alias (ya limpio) no sirve; null si está bien. */
+export function errorAlias(alias: string): string | null {
+  if (alias.length < ALIAS_MIN) return "Poné un alias de al menos 2 letras.";
+  if (alias.length > ALIAS_MAX) return `El alias puede tener hasta ${ALIAS_MAX} caracteres.`;
+  if (!ALIAS_PERMITIDO.test(alias)) return "El alias solo puede llevar letras, números, espacios y . _ -";
+  return null;
+}
+
+/**
+ * El nombre público de cada jugador: su alias o, en filas de antes del alias, el nombre corto.
+ * Si dos coinciden (sin mirar mayúsculas), el primero queda igual y los demás llevan " (2)", " (3)"...
+ */
+export function nombresPublicos(jugadores: readonly { nombre: string; alias: string | null }[]): string[] {
+  const sinAlias = jugadores.filter((j) => !j.alias?.trim());
+  const cortos = nombresCortosUnicos(sinAlias.map((j) => j.nombre));
+  let k = 0;
+  const base = jugadores.map((j) => (j.alias?.trim() ? limpiarAlias(j.alias) : cortos[k++]));
+
+  const usados = new Set(base.map((b) => b.toLowerCase()));
+  const vistos = new Map<string, number>();
+  return base.map((nombre) => {
+    const clave = nombre.toLowerCase();
+    const veces = (vistos.get(clave) ?? 0) + 1;
+    vistos.set(clave, veces);
+    if (veces === 1) return nombre;
+    let n = veces;
+    while (usados.has(`${clave} (${n})`)) n++;
+    usados.add(`${clave} (${n})`);
+    return `${nombre} (${n})`;
+  });
+}
+
 /** Nombres cortos para toda la lista; si dos coinciden, suma letras del apellido y, al final, un número. */
 export function nombresCortosUnicos(nombres: readonly string[]): string[] {
   const resultado = nombres.map((n) => conLetras(n, 1));

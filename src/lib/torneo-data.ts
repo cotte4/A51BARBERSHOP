@@ -123,6 +123,8 @@ export async function asegurarTorneo(): Promise<Torneo> {
 // ————————————————————————————
 export type DatosInscripcion = {
   nombre: string;
+  /** Ya validado y limpio (ver `limpiarAlias`): es lo que se ve en la tele. */
+  alias: string;
   email: string;
   whatsapp: string;
 };
@@ -240,6 +242,7 @@ export async function inscribirJugador(datos: DatosInscripcion): Promise<Resulta
         torneoId: torneo.id,
         clientId,
         nombre: datos.nombre,
+        alias: datos.alias,
         email,
         whatsapp: datos.whatsapp,
         consentimiento: true,

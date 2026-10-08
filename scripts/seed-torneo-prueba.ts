@@ -11,6 +11,11 @@ const NOMBRES = [
   "Ezequiel Medina", "Facundo Sosa", "Lautaro Vega", "Thiago Ríos", "Gonzalo Peña",
   "Valentín Cruz", "Emiliano Luna", "Ramiro Castro",
 ];
+// Uno por nombre, en el mismo orden. "Juancito" y "juancito" ensayan la desambiguación (2).
+const ALIAS = [
+  "Juancito", "juancito", "Lucky", "Mati10", "ElTurco", "Pipe", "Nico_GOL", "Agus.9", "Brunardo",
+  "Santi Crack", "Joaco", "Eze-Medina", "Facu", "Lauti", "Thiaguito", "Gonzo", "Valen", "Emi", "Rama",
+];
 
 async function main() {
   const { sql } = await import("drizzle-orm");
@@ -34,6 +39,7 @@ async function main() {
       torneoId: torneo.id,
       clientId: null,
       nombre,
+      alias: ALIAS[i],
       email: `prueba-${i + 1}@example.invalid`,
       whatsapp: `223 000 ${String(1000 + i)}`,
       consentimiento: true,

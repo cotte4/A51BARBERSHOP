@@ -12,10 +12,11 @@ import {
 import type { DatosPantalla, TableroPublico } from "@/lib/torneo-juego";
 import { PantallaVista } from "../_Pantalla";
 
-// Ensayo para probar la tele y el reveal: jugadores inventados, sin tocar la base de datos.
+// Ensayo para probar la tele y el reveal: alias inventados, sin tocar la base de datos.
+// Uno de 20 caracteres (el máximo) para ver que los nombres largos entran en todas las escenas.
 const NOMBRES = [
-  "Santi P.", "Mati R.", "Facu L.", "Nico G.", "Lucho M.", "Gonza S.", "Tomi A.", "Maxi D.",
-  "Fede C.", "Agus B.", "Joaco V.", "Dami F.", "Bauti H.", "Pipe T.", "Lean O.", "Cris N.",
+  "Santi", "Mati10", "ElTurco", "Nico_GOL", "Lucho", "Gonzo", "LaPulgaDeVillaCrespo", "Maxi.D",
+  "Fede", "Agus", "Joaco", "Dami", "Bauti", "Pipe", "Lean", "Cris",
 ];
 // Los 16 del panel más uno sin PNG: casi siempre sale y así se ensaya también el escudo genérico.
 const EQUIPOS = [

@@ -9,11 +9,14 @@ export type PartidoVista = {
   jugadorAId: string | null;
   jugadorBId: string | null;
   ganadorId: string | null;
+  marcadorA: number | null;
+  marcadorB: number | null;
   esBye: boolean;
   estado: "pendiente" | "listo" | "jugado";
 };
 
-export type JugadorInfo = { nombre: string; equipoNombre: string | null };
+/** `alias` es lo que se ve en la tele; `nombre` (completo) solo se ve acá. */
+export type JugadorInfo = { alias: string; nombre: string; equipoNombre: string | null };
 
 type PartidosProps = {
   partidos: PartidoVista[];
@@ -42,7 +45,7 @@ export default function Partidos({ partidos, jugadores, finalizado }: PartidosPr
       {campeon ? (
         <div className="rounded-[22px] border border-[#8cff59]/25 bg-[#8cff59]/10 px-5 py-4">
           <p className="font-display text-2xl font-bold text-white">
-            Campeón: <span className="text-[#8cff59]">{campeon.nombre}</span>
+            Campeón: <span className="text-[#8cff59]">{campeon.alias}</span>
           </p>
           {campeon.equipoNombre ? (
             <p className="mt-1 text-sm text-zinc-400">{campeon.equipoNombre}</p>
@@ -78,7 +81,7 @@ function PartidoCard({
     const id = partido.jugadorAId ?? partido.jugadorBId;
     const info = id ? jugadores.get(id) : undefined;
     if (!info) return null;
-    return <p className="px-1 text-sm text-zinc-500">{info.nombre} pasa directo</p>;
+    return <p className="px-1 text-sm text-zinc-500">{info.alias} pasa directo</p>;
   }
 
   const { jugadorAId, jugadorBId, ganadorId } = partido;
@@ -87,7 +90,7 @@ function PartidoCard({
   }
 
   function tocar(jugadorId: string) {
-    const nombre = jugadores.get(jugadorId)?.nombre ?? "";
+    const nombre = jugadores.get(jugadorId)?.alias ?? "";
     const pregunta = ganadorId ? `¿Corregir? Pasa a ganar ${nombre}` : `¿Ganó ${nombre}?`;
     if (!window.confirm(pregunta)) return;
     setError(null);
@@ -150,9 +153,12 @@ function BotonJugador({
     >
       <span className="text-lg font-semibold">
         {esGanador ? "✓ " : ""}
-        {info?.nombre ?? "—"}
+        {info?.alias ?? "—"}
       </span>
-      {info?.equipoNombre ? <span className="text-xs opacity-80">{info.equipoNombre}</span> : null}
+      <span className="text-xs opacity-80">
+        {info?.nombre}
+        {info?.equipoNombre ? ` · ${info.equipoNombre}` : ""}
+      </span>
     </button>
   );
 }

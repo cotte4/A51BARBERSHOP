@@ -1696,6 +1696,9 @@ export const torneoJugadores = pgTable(
       .references(() => torneos.id, { onDelete: "cascade" }),
     clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
     nombre: text("nombre").notNull(),
+    // Lo que se ve en la tele y en los celulares. Nullable solo por las filas anteriores al alias;
+    // la inscripción y el reemplazo lo exigen.
+    alias: text("alias"),
     // Siempre en minúsculas y sin espacios (se normaliza antes de insertar).
     email: text("email").notNull(),
     whatsapp: text("whatsapp").notNull(),

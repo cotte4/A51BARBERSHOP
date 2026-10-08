@@ -302,6 +302,13 @@
       "when": 1791408554705,
       "tag": "0042_regular_blizzard",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1791441529740,
+      "tag": "0043_massive_sinister_six",
+      "breakpoints": true
     }
   ]
 }

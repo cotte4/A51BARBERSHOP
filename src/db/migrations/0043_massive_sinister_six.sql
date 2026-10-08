@@ -1,0 +1,1 @@
+ALTER TABLE "torneo_jugadores" ADD COLUMN "alias" text;

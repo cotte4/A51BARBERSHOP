@@ -4,7 +4,7 @@ import BrandMark from "@/components/BrandMark";
 import { requireAdminSession } from "@/lib/admin-action";
 import BorrarPrueba from "./_BorrarPrueba";
 import { esTorneoDePrueba, getTorneoVigente, listarEquipos, listarJugadores, listarPartidos } from "@/lib/torneo-data";
-import { resumenCupo } from "@/lib/torneo";
+import { nombresPublicos, resumenCupo } from "@/lib/torneo";
 import CrearTorneo from "./_CrearTorneo";
 import PagoButton from "./_PagoButton";
 import ConfigForm from "./_ConfigForm";
@@ -80,10 +80,17 @@ export default async function TorneoAdminPage() {
   const { pagados, cupo, lleno: resumenLleno } = resumenCupo(jugadores, torneo.cupo);
 
   const nombreEquipoPorId = new Map(equipos.map((e) => [e.id, e.nombre] as const));
+  // El alias es como lo conoce todo el mundo en el local; el nombre completo va debajo, más chico.
+  const aliasPorId = new Map(nombresPublicos(jugadores).map((alias, i) => [jugadores[i].id, alias] as const));
+  const aliasDe = (id: string) => aliasPorId.get(id) ?? "";
   const infoJugadores = new Map<string, JugadorInfo>(
     jugadores.map((j) => [
       j.id,
-      { nombre: j.nombre, equipoNombre: j.equipoId ? (nombreEquipoPorId.get(j.equipoId) ?? null) : null },
+      {
+        alias: aliasDe(j.id),
+        nombre: j.nombre,
+        equipoNombre: j.equipoId ? (nombreEquipoPorId.get(j.equipoId) ?? null) : null,
+      },
     ]),
   );
   const partidosVista: PartidoVista[] = partidos.map((p) => ({
@@ -92,6 +99,8 @@ export default async function TorneoAdminPage() {
     jugadorAId: p.jugadorAId,
     jugadorBId: p.jugadorBId,
     ganadorId: p.ganadorId,
+    marcadorA: p.marcadorA,
+    marcadorB: p.marcadorB,
     esBye: p.esBye,
     estado: p.estado,
   }));
@@ -116,7 +125,7 @@ export default async function TorneoAdminPage() {
   const puedeReemplazar = sorteado && !empezo;
   const esperaParaReemplazo = pendientes
     .filter((j) => j.posicionSorteo === null)
-    .map((j) => ({ id: j.id, nombre: j.nombre }));
+    .map((j) => ({ id: j.id, alias: aliasDe(j.id), nombre: j.nombre }));
 
   const equiposTexto = equipos.map((e) => e.nombre).join("\n");
 
@@ -198,7 +207,8 @@ export default async function TorneoAdminPage() {
                   >
                     <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-semibold text-white">{jugador.nombre}</p>
+                      <p className="font-semibold text-white">{aliasDe(jugador.id)}</p>
+                      <p className="text-sm text-zinc-300">{jugador.nombre}</p>
                       {enEspera ? (
                         <p className="mt-0.5 text-xs font-semibold text-amber-300">
                           {puestoEspera === 1 ? "El que sigue" : `En espera · puesto ${puestoEspera}`}
@@ -218,7 +228,7 @@ export default async function TorneoAdminPage() {
                       <div className="mt-2 flex justify-end">
                         <Reemplazo
                           bajaId={jugador.id}
-                          nombre={jugador.nombre}
+                          nombre={aliasDe(jugador.id)}
                           espera={esperaParaReemplazo}
                           cuota={formatARS(torneo.cuotaArs)}
                         />
@@ -232,7 +242,8 @@ export default async function TorneoAdminPage() {
                   key={jugador.id}
                   className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 opacity-70"
                 >
-                  <p className="font-semibold text-zinc-300 line-through">{jugador.nombre}</p>
+                  <p className="font-semibold text-zinc-300 line-through">{aliasDe(jugador.id)}</p>
+                  <p className="text-sm text-zinc-500">{jugador.nombre}</p>
                   <p className="mt-0.5 text-xs font-semibold text-amber-300">Baja · se le devolvió la cuota</p>
                 </li>
               ))}

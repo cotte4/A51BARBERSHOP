@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdminSession } from "@/lib/admin-action";
+import { errorAlias, limpiarAlias } from "@/lib/torneo";
 import {
   actualizarConfig,
   asegurarTorneo,
@@ -219,6 +220,13 @@ const reemplazoSchema = z.discriminatedUnion("tipo", [
   z.object({
     tipo: z.literal("nuevo"),
     nombre: z.string().trim().min(2).max(80),
+    alias: z
+      .string()
+      .transform(limpiarAlias)
+      .superRefine((alias, ctx) => {
+        const error = errorAlias(alias);
+        if (error) ctx.addIssue({ code: "custom", message: error });
+      }),
     email: z.string().trim().toLowerCase().email().max(120),
     whatsapp: z
       .string()
@@ -234,14 +242,21 @@ export async function reemplazarJugadorAction(bajaId: string, input: unknown): P
   if (denegado) return denegado;
   if (!z.string().uuid().safeParse(bajaId).success) return { ok: false, mensaje: "Jugador inválido." };
   const parsed = reemplazoSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, mensaje: "Revisá los datos del reemplazo." };
+  if (!parsed.success) {
+    // El error del alias se explica solo; el resto de los campos ya lo valida el navegador.
+    const delAlias = parsed.error.issues.find((i) => i.path[0] === "alias");
+    return { ok: false, mensaje: delAlias?.message ?? "Revisá los datos del reemplazo." };
+  }
 
   const datos = parsed.data;
   const resultado = await reemplazarJugador(
     bajaId,
     datos.tipo === "espera"
       ? { tipo: "espera", jugadorId: datos.jugadorId }
-      : { tipo: "nuevo", datos: { nombre: datos.nombre, email: datos.email, whatsapp: datos.whatsapp } },
+      : {
+          tipo: "nuevo",
+          datos: { nombre: datos.nombre, alias: datos.alias, email: datos.email, whatsapp: datos.whatsapp },
+        },
   );
   if (!resultado.ok) {
     const mensajes = {

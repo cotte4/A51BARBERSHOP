@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
+import { errorAlias, limpiarAlias } from "@/lib/torneo";
 import { inscribirJugador } from "@/lib/torneo-data";
 
 export type InscripcionState = {
@@ -14,6 +15,13 @@ export type InscripcionState = {
 
 const inscripcionSchema = z.object({
   nombre: z.string().trim().min(2, "Poné tu nombre.").max(80, "El nombre es muy largo."),
+  alias: z
+    .string({ message: "Poné tu alias." })
+    .transform(limpiarAlias)
+    .superRefine((alias, ctx) => {
+      const error = errorAlias(alias);
+      if (error) ctx.addIssue({ code: "custom", message: error });
+    }),
   email: z.string().trim().toLowerCase().email("Revisá el email.").max(120),
   whatsapp: z
     .string()
@@ -70,6 +78,7 @@ export async function inscribirseAction(
 
   const parsed = inscripcionSchema.safeParse({
     nombre: formData.get("nombre"),
+    alias: formData.get("alias"),
     email: formData.get("email"),
     whatsapp: formData.get("whatsapp"),
     consentimiento: formData.get("consentimiento"),

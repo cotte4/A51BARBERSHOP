@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { ALIAS_MAX, ALIAS_MIN } from "@/lib/torneo";
 import { inscribirseAction, type InscripcionState } from "./actions";
 import Proximamente from "./_Proximamente";
 
@@ -67,6 +68,28 @@ export default function InscripcionForm({ listaEspera = false }: { listaEspera?:
               required
               className="torneo-input"
             />
+          </div>
+          <div>
+            <label htmlFor="t-alias" className="torneo-label torneo-hud">
+              Alias
+            </label>
+            <input
+              id="t-alias"
+              name="alias"
+              type="text"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              required
+              minLength={ALIAS_MIN}
+              maxLength={ALIAS_MAX}
+              placeholder="ElTurco, Mati10…"
+              aria-describedby="t-alias-ayuda"
+              className="torneo-input"
+            />
+            <p id="t-alias-ayuda" className="mt-1.5 text-sm text-[#9aa595]">
+              Así te vamos a ver en la tele.
+            </p>
           </div>
           <div>
             <label htmlFor="t-email" className="torneo-label torneo-hud">

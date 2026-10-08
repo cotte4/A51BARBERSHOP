@@ -110,7 +110,11 @@ export async function reemplazarJugador(
         .where(eq(torneoJugadores.id, baja.id));
 
       if (entraId) {
-        await tx.update(torneoJugadores).set(heredado).where(eq(torneoJugadores.id, entraId));
+        // Si la persona nueva ya estaba anotada (mismo email), vale el alias que dio ahora.
+        await tx
+          .update(torneoJugadores)
+          .set(nuevo ? { ...heredado, alias: nuevo.alias } : heredado)
+          .where(eq(torneoJugadores.id, entraId));
       } else if (nuevo) {
         const [creado] = await tx
           .insert(torneoJugadores)
@@ -118,6 +122,7 @@ export async function reemplazarJugador(
             torneoId: torneo.id,
             clientId,
             nombre: nuevo.nombre,
+            alias: nuevo.alias,
             email: nuevo.email,
             whatsapp: nuevo.whatsapp,
             consentimiento: true,

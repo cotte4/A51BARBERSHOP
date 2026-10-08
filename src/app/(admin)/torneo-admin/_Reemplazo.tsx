@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { ALIAS_MAX, ALIAS_MIN } from "@/lib/torneo";
 import { reemplazarJugadorAction } from "./actions";
 
-type Candidato = { id: string; nombre: string };
+type Candidato = { id: string; alias: string; nombre: string };
 
 type ReemplazoProps = {
   bajaId: string;
@@ -60,11 +61,14 @@ export default function Reemplazo({ bajaId, nombre, espera, cuota }: ReemplazoPr
                   <button
                     type="button"
                     disabled={pendiente}
-                    onClick={() => enviar({ tipo: "espera", jugadorId: c.id }, c.nombre)}
-                    className="ghost-button min-h-11 w-full rounded-[20px] px-4 py-2 text-left text-base font-semibold disabled:opacity-60"
+                    onClick={() => enviar({ tipo: "espera", jugadorId: c.id }, c.alias)}
+                    className="ghost-button flex min-h-11 w-full flex-col items-start rounded-[20px] px-4 py-2 text-left disabled:opacity-60"
                   >
-                    {c.nombre}
-                    {i === 0 ? <span className="ml-2 text-xs text-amber-300">el que sigue</span> : null}
+                    <span className="text-base font-semibold">
+                      {c.alias}
+                      {i === 0 ? <span className="ml-2 text-xs text-amber-300">el que sigue</span> : null}
+                    </span>
+                    <span className="text-xs opacity-75">{c.nombre}</span>
                   </button>
                 </li>
               ))}
@@ -85,18 +89,31 @@ export default function Reemplazo({ bajaId, nombre, espera, cuota }: ReemplazoPr
             e.preventDefault();
             const datos = new FormData(e.currentTarget);
             const nombreNuevo = String(datos.get("nombre") ?? "");
+            const aliasNuevo = String(datos.get("alias") ?? "").trim();
             enviar(
               {
                 tipo: "nuevo",
                 nombre: nombreNuevo,
+                alias: String(datos.get("alias") ?? ""),
                 email: String(datos.get("email") ?? ""),
                 whatsapp: String(datos.get("whatsapp") ?? ""),
               },
-              nombreNuevo,
+              aliasNuevo || nombreNuevo,
             );
           }}
         >
-          <input name="nombre" required placeholder="Nombre" autoComplete="off" className={campo} />
+          <input name="nombre" required placeholder="Nombre y apellido" autoComplete="off" className={campo} />
+          <input
+            name="alias"
+            required
+            minLength={ALIAS_MIN}
+            maxLength={ALIAS_MAX}
+            placeholder="Alias (así se ve en la tele)"
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            className={campo}
+          />
           <input name="email" type="email" required placeholder="Email" autoComplete="off" className={campo} />
           <input name="whatsapp" type="tel" required placeholder="WhatsApp" autoComplete="off" className={campo} />
           <button
