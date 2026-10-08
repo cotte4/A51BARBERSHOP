@@ -13,6 +13,8 @@ gsap.registerPlugin(useGSAP);
 const ANCHO = 1920;
 const ALTO = 1080;
 const POLL_MS = 3000;
+// Un fallo suelto es un parpadeo del Wi-Fi; tres seguidos (~9 s) ya es para avisar.
+const FALLOS_PARA_AVISAR = 3;
 
 type Partido = TableroPublico["partidos"][number];
 type Jugador = TableroPublico["jugadores"][number];
@@ -54,18 +56,25 @@ function usarPantallaEncendida() {
   }, []);
 }
 
-function usarDatos(inicial: DatosPantalla): DatosPantalla {
+function usarDatos(inicial: DatosPantalla): { datos: DatosPantalla; sinConexion: boolean } {
   const [datos, setDatos] = useState(inicial);
+  const [sinConexion, setSinConexion] = useState(false);
   useEffect(() => {
     let vivo = true;
+    let fallos = 0;
     const consultar = async () => {
       try {
         const respuesta = await fetch("/api/torneo/tablero", { cache: "no-store" });
-        if (!respuesta.ok) return;
+        if (!respuesta.ok) throw new Error(`tablero ${respuesta.status}`);
         const nuevos = (await respuesta.json()) as DatosPantalla;
-        if (vivo) setDatos(nuevos);
+        if (!vivo) return;
+        fallos = 0;
+        setDatos(nuevos);
+        setSinConexion(false);
       } catch {
-        // Sin conexión un instante: se queda lo último que se vio.
+        // Se queda lo último que se vio; solo se avisa si la caída dura.
+        fallos += 1;
+        if (vivo && fallos >= FALLOS_PARA_AVISAR) setSinConexion(true);
       }
     };
     const timer = setInterval(consultar, POLL_MS);
@@ -74,7 +83,7 @@ function usarDatos(inicial: DatosPantalla): DatosPantalla {
       clearInterval(timer);
     };
   }, []);
-  return datos;
+  return { datos, sinConexion };
 }
 
 // ————————————————————————————
@@ -146,10 +155,12 @@ function Encabezado({
   titulo,
   detalle,
   compacto,
+  qr,
 }: {
   titulo: string;
   detalle: string;
   compacto?: boolean;
+  qr?: boolean;
 }) {
   return (
     <header className={`flex items-end justify-between px-24 ${compacto ? "pt-8" : "pt-14"}`}>
@@ -161,7 +172,10 @@ function Encabezado({
           {titulo}
         </h1>
       </div>
-      <p className="torneo-hud pb-3 text-[24px] text-white/70">{detalle}</p>
+      <div className="flex items-end gap-8">
+        <p className="torneo-hud pb-3 text-[24px] text-white/70">{detalle}</p>
+        {qr && <QrJukeboxMini compacto={compacto} />}
+      </div>
     </header>
   );
 }
@@ -202,7 +216,7 @@ function GrillaSorteo({
 }) {
   return (
     <div className="flex h-full flex-col">
-      <Encabezado titulo="El sorteo" detalle={`${nombre} · ${revelados} de ${cruces.length} cruces`} />
+      <Encabezado titulo="El sorteo" detalle={`${nombre} · ${revelados} de ${cruces.length} cruces`} qr />
       <div className="grid flex-1 grid-cols-2 content-center gap-x-10 gap-y-6 px-24 pb-16">
         {cruces.map((c, i) => (
           <TarjetaCruce key={c.id} partido={c} jugadores={jugadores} revelado={i < revelados} />
@@ -258,7 +272,7 @@ function Cuadro({
 
   return (
     <div className="flex h-full flex-col">
-      <Encabezado titulo="El cuadro" detalle={tablero.torneo.nombre} compacto />
+      <Encabezado titulo="El cuadro" detalle={tablero.torneo.nombre} compacto qr />
       <div className="flex min-h-0 flex-1 gap-8 px-24 pb-10 pt-4">
         {columnas.map((ronda) => (
           <div key={ronda} className="flex flex-1 flex-col">
@@ -415,10 +429,15 @@ function EscenaReveal({
   );
 }
 
-/** QR chico en la esquina: los jugadores proponen canciones para el parlante desde el celular. */
-function QrJukebox() {
+function usarUrlJukebox(): string | null {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => setUrl(`${window.location.origin}/jukebox`), []);
+  return url;
+}
+
+/** QR chico en la esquina: los jugadores proponen canciones para el parlante desde el celular. */
+function QrJukebox() {
+  const url = usarUrlJukebox();
   if (!url) return null;
   return (
     <div className="pointer-events-none absolute bottom-6 right-6 z-20 flex items-center gap-4 border border-[#8cff59]/40 bg-black/80 px-4 py-3">
@@ -433,11 +452,39 @@ function QrJukebox() {
   );
 }
 
+/** Versión de encabezado para el sorteo y el cuadro: no le saca lugar a los cruces. */
+function QrJukeboxMini({ compacto }: { compacto?: boolean }) {
+  const url = usarUrlJukebox();
+  if (!url) return null;
+  // En el cuadro va sin margen abajo: así no le suma ni un píxel al encabezado compacto.
+  return (
+    <div className={`flex flex-col items-center gap-1.5 ${compacto ? "" : "pb-3"}`}>
+      <div className="border border-[#8cff59]/40 bg-white p-1">
+        <QRCodeSVG value={url} size={64} />
+      </div>
+      <p className="torneo-hud whitespace-nowrap text-[12px] leading-none text-[#8cff59]">Poné tu tema</p>
+    </div>
+  );
+}
+
+/** Se ve solo si la tele dejó de recibir el tablero: lo de pantalla puede estar viejo. */
+function AvisoSinConexion() {
+  return (
+    <div
+      role="status"
+      className="torneo-hud absolute left-1/2 top-4 z-40 flex -translate-x-1/2 items-center gap-3 border border-[#ff3b4e]/60 bg-black/85 px-4 py-2 text-[16px] text-[#ff3b4e]"
+    >
+      <span className="h-2 w-2 animate-pulse bg-[#ff3b4e]" aria-hidden="true" />
+      Sin conexión · reintentando
+    </div>
+  );
+}
+
 // ————————————————————————————
 // Pantalla
 // ————————————————————————————
-/** La vista pura: recibe los datos ya resueltos (la usa también el modo demo). */
-export function PantallaVista({ datos }: { datos: DatosPantalla }) {
+/** La vista pura: recibe los datos ya resueltos (la usa también el modo demo, sin polling). */
+export function PantallaVista({ datos, sinConexion = false }: { datos: DatosPantalla; sinConexion?: boolean }) {
   const escala = usarEscala();
   usarPantallaEncendida();
 
@@ -502,9 +549,11 @@ export function PantallaVista({ datos }: { datos: DatosPantalla }) {
         style={{ width: ANCHO, height: ALTO, transform: `scale(${escala})` }}
       >
         {vista}
-        {/* Solo donde hay lugar: la grilla del sorteo y el cuadro ocupan los 1080 px. */}
+        {/* El QR grande solo donde hay lugar; en el sorteo y el cuadro va el chico del encabezado. */}
         {!escena && (!tablero || tablero.torneo.estado === "finalizado") && <QrJukebox />}
         {escena && <EscenaReveal escena={escena} jugadores={jugadores} alTerminar={terminar} />}
+        {/* Arriba al centro: no pisa el botón de pantalla completa ni ningún QR. */}
+        {sinConexion && <AvisoSinConexion />}
       </div>
       <button
         type="button"
@@ -518,5 +567,6 @@ export function PantallaVista({ datos }: { datos: DatosPantalla }) {
 }
 
 export default function Pantalla({ inicial }: { inicial: DatosPantalla }) {
-  return <PantallaVista datos={usarDatos(inicial)} />;
+  const { datos, sinConexion } = usarDatos(inicial);
+  return <PantallaVista datos={datos} sinConexion={sinConexion} />;
 }
