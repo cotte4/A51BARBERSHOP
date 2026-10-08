@@ -15,6 +15,15 @@ type SearchResult = {
   durationSeconds: number | null;
 };
 
+type AhoraSonando = {
+  nowPlaying: { videoTitle: string; proposedByName: string } | null;
+  upcoming: { videoTitle: string }[];
+};
+
+function formatCooldown(secs: number): string {
+  return `${Math.floor(secs / 60)}:${(secs % 60).toString().padStart(2, "0")}`;
+}
+
 function formatDuration(secs: number | null): string {
   if (!secs) return "";
   const m = Math.floor(secs / 60);
@@ -62,10 +71,29 @@ export default function JukeboxClient() {
   const [autoApproved, setAutoApproved] = useState(false);
 
   const [cooldownSecs, setCooldownSecs] = useState(0);
+  const [ahora, setAhora] = useState<AhoraSonando | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isInCooldown()) setCooldownSecs(cooldownRemaining());
+  }, []);
+
+  useEffect(() => {
+    let vivo = true;
+    const consultar = async () => {
+      try {
+        const res = await fetch("/api/jukebox/now", { cache: "no-store" });
+        if (res.ok && vivo) setAhora((await res.json()) as AhoraSonando);
+      } catch {
+        // sin conexión un momento: queda lo último que se vio
+      }
+    };
+    void consultar();
+    const timer = setInterval(consultar, 10_000);
+    return () => {
+      vivo = false;
+      clearInterval(timer);
+    };
   }, []);
 
   useEffect(() => {
@@ -143,8 +171,20 @@ export default function JukeboxClient() {
     }
   }
 
+  const sonando = ahora?.nowPlaying ? (
+    <section className="rounded-[22px] border border-[#8cff59]/25 bg-[#8cff59]/8 px-4 py-3" aria-live="polite">
+      <p className="eyebrow text-xs font-semibold text-[#8cff59]">Suena ahora</p>
+      <p className="mt-1 truncate text-sm font-semibold text-white">{ahora.nowPlaying.videoTitle}</p>
+      {ahora.upcoming[0] ? (
+        <p className="mt-0.5 truncate text-xs text-zinc-400">Sigue: {ahora.upcoming[0].videoTitle}</p>
+      ) : null}
+    </section>
+  ) : null;
+
   if (submitted) {
     return (
+      <>
+      {sonando}
       <section className="panel-card rounded-[28px] p-6 text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[#8cff59]/30 bg-[#8cff59]/10">
           <svg viewBox="0 0 24 24" className="h-7 w-7 text-[#8cff59]" fill="none" stroke="currentColor" strokeWidth="1.9">
@@ -171,25 +211,33 @@ export default function JukeboxClient() {
             </div>
           </div>
         )}
-        <button
-          type="button"
-          onClick={() => {
-            setSubmitted(false);
-            setSelected(null);
-            setProposerName("");
-            setResults([]);
-            setQuery("");
-          }}
-          className="ghost-button mt-5 w-full rounded-[20px] py-3 text-sm font-semibold"
-        >
-          Proponer otra
-        </button>
+        {cooldownSecs > 0 ? (
+          <p className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            Podés proponer otro tema en {formatCooldown(cooldownSecs)}.
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setSubmitted(false);
+              setSelected(null);
+              setProposerName("");
+              setResults([]);
+              setQuery("");
+            }}
+            className="ghost-button mt-5 w-full rounded-[20px] py-3 text-sm font-semibold"
+          >
+            Proponer otra
+          </button>
+        )}
       </section>
+      </>
     );
   }
 
   return (
     <>
+      {sonando}
       <section className="panel-card rounded-[28px] p-5">
         <p className="eyebrow text-zinc-500">Jukebox</p>
         <h1 className="mt-2 font-display text-2xl font-semibold text-white">
@@ -315,7 +363,7 @@ export default function JukeboxClient() {
 
           {cooldownSecs > 0 ? (
             <p className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-              Esperá {cooldownSecs}s antes de proponer otro tema.
+              Podés proponer otro tema en {formatCooldown(cooldownSecs)}.
             </p>
           ) : (
             <button

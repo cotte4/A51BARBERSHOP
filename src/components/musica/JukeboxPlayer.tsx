@@ -6,6 +6,7 @@ const POLL_INTERVAL_MS = 3000;
 const PLAYER_ORIGIN = "https://www.youtube.com";
 const FALLBACK_DURATION_SECONDS = 6 * 60;
 const FALLBACK_MARGIN_SECONDS = 5;
+const RETRY_CHECK_MS = 5000;
 
 type NowPlayingResponse = {
   nowPlaying: {
@@ -19,6 +20,9 @@ type NowPlayingResponse = {
 
 export default function JukeboxPlayer() {
   const [nowPlaying, setNowPlaying] = useState<NowPlayingResponse["nowPlaying"]>(null);
+  // El navegador no deja sonar un video sin un toque de la persona: hasta entonces no se avanza la cola.
+  const [armado, setArmado] = useState(false);
+  const deadlineRef = useRef<{ id: string; at: number } | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const currentIdRef = useRef<string | null>(null);
   const advancingRef = useRef(false);
@@ -28,12 +32,15 @@ export default function JukeboxPlayer() {
     advancingRef.current = true;
     try {
       // Se manda el id del tema para que un aviso tardío (evento + temporizador) no salte el siguiente.
-      await fetch("/api/jukebox/next", {
+      const res = await fetch("/api/jukebox/next", {
         method: "POST",
         cache: "no-store",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ queueItemId: currentIdRef.current }),
       });
+      if (!res.ok) throw new Error("next");
+    } catch {
+      // Sin red o sin sesión: el control de abajo vuelve a intentar en unos segundos.
     } finally {
       advancingRef.current = false;
     }
@@ -90,14 +97,20 @@ export default function JukeboxPlayer() {
   }, [advance]);
 
   // Respaldo: si YouTube no avisa el fin, avanzamos cuando se cumple la duración (+ margen).
+  // Se revisa cada pocos segundos: si avanzar falla (red, sesión), se reintenta solo.
   const nowPlayingId = nowPlaying?.id ?? null;
   const nowPlayingDuration = nowPlaying?.durationSeconds ?? null;
   useEffect(() => {
-    if (!nowPlayingId) return;
-    const seconds = (nowPlayingDuration ?? FALLBACK_DURATION_SECONDS) + FALLBACK_MARGIN_SECONDS;
-    const timer = window.setTimeout(advance, seconds * 1000);
-    return () => window.clearTimeout(timer);
-  }, [nowPlayingId, nowPlayingDuration, advance]);
+    if (!nowPlayingId || !armado) return;
+    if (deadlineRef.current?.id !== nowPlayingId) {
+      const seconds = (nowPlayingDuration ?? FALLBACK_DURATION_SECONDS) + FALLBACK_MARGIN_SECONDS;
+      deadlineRef.current = { id: nowPlayingId, at: Date.now() + seconds * 1000 };
+    }
+    const timer = window.setInterval(() => {
+      if (deadlineRef.current && Date.now() >= deadlineRef.current.at) void advance();
+    }, RETRY_CHECK_MS);
+    return () => window.clearInterval(timer);
+  }, [nowPlayingId, nowPlayingDuration, armado, advance]);
 
   // Handshake: sin este mensaje el iframe no emite infoDelivery (playerState 0 = terminó).
   function handleIframeLoad() {
@@ -128,8 +141,17 @@ export default function JukeboxPlayer() {
           Sonando
         </span>
       </div>
-      <div className="mt-4 overflow-hidden rounded-2xl">
-        <iframe
+      {!armado ? (
+        <button
+          type="button"
+          onClick={() => setArmado(true)}
+          className="neon-button mt-4 min-h-14 w-full rounded-[20px] px-5 py-4 text-base font-semibold text-[#07130a]"
+        >
+          Tocá para empezar la música
+        </button>
+      ) : null}
+      <div className={`mt-4 overflow-hidden rounded-2xl ${armado ? "" : "hidden"}`}>
+        {armado ? <iframe
           key={nowPlaying.id}
           ref={iframeRef}
           src={embedUrl}
@@ -137,7 +159,7 @@ export default function JukeboxPlayer() {
           allow="autoplay; encrypted-media"
           allowFullScreen
           className="aspect-video w-full"
-        />
+        /> : null}
       </div>
     </section>
   );

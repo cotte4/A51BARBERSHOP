@@ -8,6 +8,7 @@ type Props = {
   autoApproveEnabled: boolean;
   pendingAction: string | null;
   onSkip: () => void;
+  onRemove: (queueItemId: string) => void;
   onToggleAutoApprove: (enabled: boolean) => void;
 };
 
@@ -16,6 +17,7 @@ export default function JukeboxQueueSection({
   autoApproveEnabled,
   pendingAction,
   onSkip,
+  onRemove,
   onToggleAutoApprove,
 }: Props) {
   const nowPlaying = queue.find((i) => i.state === "playing") ?? null;
@@ -119,6 +121,14 @@ export default function JukeboxQueueSection({
                 {item.channelTitle} · {item.proposedByName}
               </p>
             </div>
+            <ActionButton
+              actionId={`jukebox-remove-${item.id}`}
+              pendingAction={pendingAction}
+              onClick={() => onRemove(item.id)}
+              className="shrink-0 rounded-2xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 disabled:opacity-50"
+            >
+              Quitar
+            </ActionButton>
           </div>
         ))}
       </div>

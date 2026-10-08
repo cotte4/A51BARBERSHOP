@@ -9,6 +9,8 @@ const IP_LIMIT_MAX_PROPOSALS = 25; // el Wi-Fi del local comparte una sola IP
 const GLOBAL_CAP_PER_HOUR = 60;
 export const MAX_DURATION_SECONDS = 6 * 60;
 const QUEUE_LOCK_ID = 51_000_001;
+/** Temas esperando (cola + propuestas sin resolver): evita que alguien llene el parlante. */
+export const MAX_WAITING = 10;
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -98,6 +100,34 @@ export async function isGlobalCapReached(): Promise<boolean> {
     .from(jukeboxProposals)
     .where(gt(jukeboxProposals.createdAt, windowStart));
   return (row?.count ?? 0) >= GLOBAL_CAP_PER_HOUR;
+}
+
+/** Un tema que ya está esperando no se repite, y la espera tiene tope. null = se puede proponer. */
+export async function waitingBlock(videoId: string): Promise<"repetido" | "llena" | null> {
+  const enCola = await db
+    .select({ videoId: jukeboxProposals.youtubeVideoId })
+    .from(jukeboxQueue)
+    .innerJoin(jukeboxProposals, eq(jukeboxQueue.proposalId, jukeboxProposals.id))
+    .where(sql`${jukeboxQueue.state} in ('queued', 'playing')`);
+  const pendientes = await db
+    .select({ videoId: jukeboxProposals.youtubeVideoId })
+    .from(jukeboxProposals)
+    .where(eq(jukeboxProposals.status, "pending"));
+  const todos = [...enCola, ...pendientes];
+  if (todos.some((t) => t.videoId === videoId)) return "repetido";
+  if (todos.length >= MAX_WAITING) return "llena";
+  return null;
+}
+
+/** Saca un tema que todavía no empezó a sonar (Pinky modera la cola auto-aprobada). */
+export async function removeQueued(queueItemId: string): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${QUEUE_LOCK_ID})`);
+    await tx
+      .update(jukeboxQueue)
+      .set({ state: "skipped", endedAt: new Date() })
+      .where(and(eq(jukeboxQueue.id, queueItemId), eq(jukeboxQueue.state, "queued")));
+  });
 }
 
 export async function listPendingProposals(): Promise<JukeboxProposalSummary[]> {

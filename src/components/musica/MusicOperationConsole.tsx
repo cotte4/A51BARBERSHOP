@@ -16,6 +16,7 @@ import {
   queueTrackAction,
   resumeMusicAction,
   setAutoModeAction,
+  removeJukeboxQueuedAction,
   skipJukeboxAction,
   skipMusicAction,
   syncMusicDashboardAction,
@@ -106,8 +107,13 @@ export default function MusicOperationConsole({
     const next = !jukeboxActive;
     setJukeboxActive(next);
     localStorage.setItem(JUKEBOX_ACTIVE_KEY, next ? "1" : "0");
-    if (next) setFeedback("Jukebox activado — el audio corre en cualquier tab.");
-    else setFeedback("Jukebox apagado.");
+    if (next) {
+      // Un solo parlante: el jukebox suena en este dispositivo, así que se pausa Spotify para no pisarse.
+      void pauseMusicAction().catch(() => undefined);
+      setFeedback("Jukebox activado. Dejá esta pantalla abierta y prendida: si salís de acá, la música se corta.");
+    } else {
+      setFeedback("Jukebox apagado. Spotify no se reanuda solo.");
+    }
   }
   const [searchResults, setSearchResults] = useState<SearchTrackResult[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -304,6 +310,13 @@ export default function MusicOperationConsole({
             pendingAction={pendingAction}
             onSkip={() =>
               runMutation(() => skipJukeboxAction(), "Tema saltado.", "jukebox-skip")
+            }
+            onRemove={(queueItemId) =>
+              runMutation(
+                () => removeJukeboxQueuedAction(queueItemId),
+                "Tema quitado de la cola.",
+                `jukebox-remove-${queueItemId}`,
+              )
             }
             onToggleAutoApprove={(enabled) =>
               runMutation(

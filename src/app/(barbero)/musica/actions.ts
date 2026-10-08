@@ -339,6 +339,7 @@ export async function deleteScheduleRuleAction(ruleId: string): Promise<ActionRe
 import {
   approveJukeboxProposal,
   dismissJukeboxProposal,
+  removeJukeboxQueued,
   skipJukeboxCurrent,
   setJukeboxAutoApprove,
 } from "@/lib/jukebox-admin";
@@ -362,6 +363,17 @@ export async function dismissJukeboxProposalAction(proposalId: string): Promise<
     return { ok: true };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "No pude rechazar la propuesta." };
+  }
+}
+
+export async function removeJukeboxQueuedAction(queueItemId: string): Promise<ActionResult> {
+  try {
+    await requireMusicActor();
+    await removeJukeboxQueued(queueItemId);
+    revalidatePath("/musica");
+    return { ok: true };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No pude quitar el tema." };
   }
 }
 

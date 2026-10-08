@@ -13,6 +13,7 @@ import {
   isIpWithinLimit,
   isJukeboxEnabled,
   parseIsoDuration,
+  waitingBlock,
 } from "@/lib/jukebox";
 
 export const dynamic = "force-dynamic";
@@ -78,6 +79,14 @@ export async function POST(request: Request) {
     );
   }
 
+  const bloqueo = await waitingBlock(videoId);
+  if (bloqueo === "repetido") {
+    return Response.json({ error: "Ese tema ya está en la cola." }, { status: 409 });
+  }
+  if (bloqueo === "llena") {
+    return Response.json({ error: "La cola está llena. Probá en unos minutos." }, { status: 429 });
+  }
+
   const apiKey = process.env.YOUTUBE_API_KEY ?? process.env.YOUTUBE_API_KEY_BEATS;
   if (!apiKey) {
     return Response.json({ error: "YouTube API no configurada." }, { status: 500 });
@@ -108,7 +117,10 @@ export async function POST(request: Request) {
   }
 
   const durationSeconds = parseIsoDuration(details.contentDetails?.duration ?? "");
-  if (!durationSeconds || durationSeconds > MAX_DURATION_SECONDS) {
+  if (!durationSeconds) {
+    return Response.json({ error: "No se puede pasar un video en vivo." }, { status: 400 });
+  }
+  if (durationSeconds > MAX_DURATION_SECONDS) {
     return Response.json({ error: "El tema dura más de 6 minutos." }, { status: 400 });
   }
 
