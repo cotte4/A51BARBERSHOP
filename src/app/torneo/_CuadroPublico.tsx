@@ -68,7 +68,7 @@ export default async function CuadroPublico() {
                     className={`flex min-h-7 items-center gap-2.5 ${perdio ? "text-white/35" : gano ? "text-[#8cff59]" : "text-white"}`}
                   >
                     <Escudo equipo={j?.equipo ?? null} tamano={28} className={perdio ? "opacity-35" : ""} />
-                    <span className="torneo-titulo min-w-0 max-w-[62%] shrink-0 truncate text-xl font-extrabold italic">{j?.nombre ?? "—"}</span>
+                    <span className="torneo-titulo min-w-0 max-w-[62%] shrink-0 truncate pr-1 text-xl font-extrabold italic">{j?.nombre ?? "—"}</span>
                     {j?.equipo && (
                       <span className="torneo-hud min-w-0 flex-1 truncate text-right text-[0.6rem] opacity-80">
                         {j.equipo}

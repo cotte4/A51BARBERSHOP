@@ -111,7 +111,7 @@ function Lado({ jugador, alinear }: { jugador: Jugador | undefined; alinear: "iz
         {/* Un alias largo baja el cuerpo en vez de cortarse. */}
         <span
           className="torneo-titulo max-w-full truncate font-extrabold italic text-white"
-          style={{ fontSize: cuerpoPorLargo(nombre.length, [[10, 50], [14, 40]], 32) }}
+          style={{ fontSize: cuerpoPorLargo(nombre.length, [[10, 50], [14, 40], [17, 30]], 23) }}
         >
           {nombre}
         </span>
@@ -274,7 +274,7 @@ function Fila({
     <div className="flex h-[42px] items-center gap-2.5 overflow-hidden">
       <Escudo equipo={jugador?.equipo ?? null} tamano={34} className={apagado ? "opacity-35" : ""} />
       <span
-        className={`torneo-titulo min-w-0 max-w-[64%] shrink-0 truncate font-extrabold italic ${apagado ? "text-white/35" : "text-white"}`}
+        className={`torneo-titulo min-w-0 max-w-[64%] shrink-0 truncate pr-1 font-extrabold italic ${apagado ? "text-white/35" : "text-white"}`}
         style={{
           fontSize: cuerpoPorLargo(nombre.length, [[12, 32], [16, 27]], 23),
           ...(estado === "ganador" ? { color: VERDE } : {}),
