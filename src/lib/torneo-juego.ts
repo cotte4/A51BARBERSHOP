@@ -97,7 +97,7 @@ export async function sortearYGuardar(torneoId: string): Promise<ResultadoSorteo
 
     // El prefijo marca que el reveal va en dos fases (ruleta de equipos + cruces): ver leerReveal.
     const semilla = `${SEMILLA_DOS_FASES}${randomUUID()}`;
-    // Los "tochos" (Bayern, Real Madrid, Barcelona, PSG) salen 1,5% por giro: ver TOCHOS en torneo-escudos.ts.
+    // Los "tochos" (Bayern, Real Madrid, Barcelona, PSG, City) salen 1,2% cada uno por giro: ver TOCHOS en torneo-escudos.ts.
     const nombrePorEquipo = new Map(equipos.map((e) => [e.id, e.nombre]));
     const resultado = sortearTorneo({
       jugadorIds: pagados.map((j) => j.id),

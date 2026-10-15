@@ -1,7 +1,7 @@
 # Escudos de los equipos del torneo
 
 Escudos que muestra la tele del torneo (`/torneo/pantalla`) y el cuadro público (`/torneo`).
-El catálogo de clubes que se pueden elegir es `CATALOGO_CLUBES` en `src/lib/torneo-escudos.ts` (24 clubes, uno por archivo): para sumar un club hay que agregar el PNG acá y la fila al catálogo. El test `src/tests/integration/torneo-escudos.test.ts` verifica que cada club del catálogo tenga su archivo.
+El catálogo de clubes que se pueden elegir es `CATALOGO_CLUBES` en `src/lib/torneo-escudos.ts` (27 clubes, uno por archivo): para sumar un club hay que agregar el PNG acá y la fila al catálogo. El test `src/tests/integration/torneo-escudos.test.ts` verifica que cada club del catálogo tenga su archivo.
 
 **Son marcas registradas de sus clubes.** Se usan sin fines de lucro, solo para identificar el equipo de cada jugador en un torneo local de EA FC en la barbería. No son de A51 ni implican relación con los clubes.
 
@@ -43,3 +43,6 @@ Bajados el 2026-10-08 (los 16 primeros se re-normalizaron ese día con el tamañ
 | `benfica.png` | Benfica | https://en.wikipedia.org/wiki/File:SL_Benfica_logo.svg |
 | `porto.png` | Porto | https://en.wikipedia.org/wiki/File:FC_Porto.svg |
 | `ajax.png` | Ajax | https://en.wikipedia.org/wiki/File:Ajax_Amsterdam.svg |
+| `galatasaray.png` | Galatasaray | https://commons.wikimedia.org/wiki/File:Galatasaray_S.K._Logo_2026_5-stars.svg (bajado el 2026-10-15) |
+| `athletic-club.png` | Athletic Club | https://en.wikipedia.org/wiki/File:Club_Athletic_Bilbao_logo.svg (bajado el 2026-10-15) |
+| `como.png` | Como | https://commons.wikimedia.org/wiki/File:Calcio_Como_-_logo_(Italy,_2019-).svg (bajado el 2026-10-15) |

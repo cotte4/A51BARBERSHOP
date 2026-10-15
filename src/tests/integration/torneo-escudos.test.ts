@@ -14,18 +14,18 @@ import {
   slugEquipo,
 } from "@/lib/torneo-escudos";
 
-const LOS_24 = [
+const LOS_27 = [
   "Real Madrid", "Barcelona", "Atlético de Madrid", "Manchester City", "Liverpool", "Arsenal", "Chelsea",
   "Manchester United", "Tottenham", "Aston Villa", "Newcastle", "Bayern Múnich", "Borussia Dortmund",
   "Bayer Leverkusen", "PSG", "Inter", "Milan", "Juventus", "Napoli", "Roma", "Inter Miami", "Benfica",
-  "Porto", "Ajax",
+  "Porto", "Ajax", "Galatasaray", "Athletic Club", "Como",
 ];
 
 describe("catálogo de clubes", () => {
-  it("son los 24 pedidos, sin repetidos, cada uno en una liga conocida", () => {
-    expect(CATALOGO_CLUBES).toHaveLength(24);
-    expect(new Set(CATALOGO_CLUBES.map((c) => c.nombre))).toEqual(new Set(LOS_24));
-    expect(new Set(CATALOGO_CLUBES.map((c) => c.slug)).size).toBe(24);
+  it("son los 27 pedidos, sin repetidos, cada uno en una liga conocida", () => {
+    expect(CATALOGO_CLUBES).toHaveLength(27);
+    expect(new Set(CATALOGO_CLUBES.map((c) => c.nombre))).toEqual(new Set(LOS_27));
+    expect(new Set(CATALOGO_CLUBES.map((c) => c.slug)).size).toBe(27);
     for (const club of CATALOGO_CLUBES) expect(LIGAS, club.nombre).toContain(club.liga);
   });
 
@@ -72,8 +72,8 @@ describe("slugEquipo", () => {
 });
 
 describe("escudoDeEquipo", () => {
-  it("resuelve los 24 del catálogo a un PNG existente", () => {
-    for (const equipo of LOS_24) {
+  it("resuelve los 27 del catálogo a un PNG existente", () => {
+    for (const equipo of LOS_27) {
       const ruta = escudoDeEquipo(equipo);
       expect(ruta, equipo).not.toBeNull();
       expect(existsSync(path.join(process.cwd(), "public", ruta!)), ruta!).toBe(true);

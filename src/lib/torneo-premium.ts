@@ -93,7 +93,7 @@ export async function cambiarEquipoPremium(jugadorId: string, pedido: PedidoCamb
         if (!elegido) throw new Rechazo("equipo_ocupado");
         nuevo = elegido;
       } else {
-        // Mismas reglas que la ruleta: los tochos salen 1,5% cada uno.
+        // Mismas reglas que la ruleta: los tochos salen con PROBABILIDAD_TOCHO cada uno.
         const nombre = new Map(libres.map((e) => [e.id, e.nombre]));
         const id = elegirEquipo(
           libres.map((e) => e.id),

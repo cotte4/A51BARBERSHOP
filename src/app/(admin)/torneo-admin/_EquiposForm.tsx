@@ -17,7 +17,7 @@ function slugsDe(nombres: readonly string[]): Set<string> {
   return new Set(nombres.map((n) => clubDelCatalogo(n)?.slug).filter((s): s is string => Boolean(s)));
 }
 
-/** Grilla de los 24 clubes del catálogo: se toca para elegir o sacar. Lo que se guarda es el nombre canónico. */
+/** Grilla de los clubes del catálogo: se toca para elegir o sacar. Lo que se guarda es el nombre canónico. */
 export default function EquiposForm({ guardados, minimo, bloqueado }: EquiposFormProps) {
   const [elegidos, setElegidos] = useState<Set<string>>(() => slugsDe(guardados));
   const [pendiente, startTransition] = useTransition();

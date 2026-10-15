@@ -16,7 +16,7 @@ function azarFijo(...valores: number[]): () => number {
 
 describe("configuración de los tochos", () => {
   it("son los cuatro que eligió Was, con el nombre exacto del catálogo", () => {
-    expect([...TOCHOS].sort()).toEqual(["Barcelona", "Bayern Múnich", "PSG", "Real Madrid"]);
+    expect([...TOCHOS].sort()).toEqual(["Barcelona", "Bayern Múnich", "Manchester City", "PSG", "Real Madrid"]);
     for (const t of TOCHOS) expect(CATALOGO_CLUBES.some((c) => c.nombre === t)).toBe(true);
   });
 

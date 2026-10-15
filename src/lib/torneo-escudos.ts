@@ -16,7 +16,7 @@ export type ClubCatalogo = {
   colores: readonly [string, string];
 };
 
-/** Los 24 clubes que se pueden elegir para el sorteo, todos con escudo. */
+/** Los 27 clubes que se pueden elegir para el sorteo, todos con escudo. */
 export const CATALOGO_CLUBES: readonly ClubCatalogo[] = [
   { slug: "manchester-city", nombre: "Manchester City", liga: "Premier League", colores: ["#6CABDD", "#1C2C5B"] },
   { slug: "liverpool", nombre: "Liverpool", liga: "Premier League", colores: ["#C8102E", "#F6EB61"] },
@@ -29,6 +29,7 @@ export const CATALOGO_CLUBES: readonly ClubCatalogo[] = [
   { slug: "real-madrid", nombre: "Real Madrid", liga: "LaLiga", colores: ["#FFFFFF", "#FEBE10"] },
   { slug: "barcelona", nombre: "Barcelona", liga: "LaLiga", colores: ["#A50044", "#004D98"] },
   { slug: "atletico-de-madrid", nombre: "Atlético de Madrid", liga: "LaLiga", colores: ["#CB3524", "#272E61"] },
+  { slug: "athletic-club", nombre: "Athletic Club", liga: "LaLiga", colores: ["#EE2523", "#FFFFFF"] },
   { slug: "bayern-munich", nombre: "Bayern Múnich", liga: "Bundesliga", colores: ["#DC052D", "#0066B2"] },
   { slug: "borussia-dortmund", nombre: "Borussia Dortmund", liga: "Bundesliga", colores: ["#FDE100", "#000000"] },
   { slug: "bayer-leverkusen", nombre: "Bayer Leverkusen", liga: "Bundesliga", colores: ["#E32221", "#000000"] },
@@ -37,11 +38,13 @@ export const CATALOGO_CLUBES: readonly ClubCatalogo[] = [
   { slug: "juventus", nombre: "Juventus", liga: "Serie A", colores: ["#FFFFFF", "#000000"] },
   { slug: "napoli", nombre: "Napoli", liga: "Serie A", colores: ["#12A0D7", "#003C82"] },
   { slug: "roma", nombre: "Roma", liga: "Serie A", colores: ["#8E1F2F", "#F0BC42"] },
+  { slug: "como", nombre: "Como", liga: "Serie A", colores: ["#1A4A7A", "#FFFFFF"] },
   { slug: "psg", nombre: "PSG", liga: "Ligue 1", colores: ["#004170", "#DA291C"] },
   { slug: "inter-miami", nombre: "Inter Miami", liga: "MLS y otras", colores: ["#F7B5CD", "#231F20"] },
   { slug: "benfica", nombre: "Benfica", liga: "MLS y otras", colores: ["#E20E0E", "#FFFFFF"] },
   { slug: "porto", nombre: "Porto", liga: "MLS y otras", colores: ["#00428C", "#FFFFFF"] },
   { slug: "ajax", nombre: "Ajax", liga: "MLS y otras", colores: ["#D2122E", "#FFFFFF"] },
+  { slug: "galatasaray", nombre: "Galatasaray", liga: "MLS y otras", colores: ["#A90432", "#FDB912"] },
 ];
 
 // ————————————————————————————
@@ -49,14 +52,14 @@ export const CATALOGO_CLUBES: readonly ClubCatalogo[] = [
 // ————————————————————————————
 
 /** Nombres canónicos (los de CATALOGO_CLUBES) de los equipos fuertes. Editá esta lista para sumar o sacar. */
-export const TOCHOS: readonly string[] = ["Bayern Múnich", "Real Madrid", "Barcelona", "PSG"];
+export const TOCHOS: readonly string[] = ["Bayern Múnich", "Real Madrid", "Barcelona", "PSG", "Manchester City"];
 
 /**
- * Chance de que CADA tocho salga en un giro (0.015 = 1,5%), fija aunque se vayan acabando los normales.
- * Con 4 tochos: 6% por giro de que salga alguno. En un torneo de 16, ~1 de cada 3 torneos no sale ninguno
- * y lo normal es que salga uno.
+ * Chance de que CADA tocho salga en un giro (0.012 = 1,2%), fija aunque se vayan acabando los normales.
+ * Con 5 tochos: 6% por giro de que salga alguno (lo mismo que con 4 a 1,5%). En un torneo de 16,
+ * ~1 de cada 3 torneos no sale ninguno y lo normal es que salga uno.
  */
-export const PROBABILIDAD_TOCHO = 0.015;
+export const PROBABILIDAD_TOCHO = 0.012;
 
 /** Slugs de los tochos (con los alias que ya entiende slugEquipo, definido más abajo). */
 function slugsTochos(): Set<string> {
@@ -115,6 +118,12 @@ const ALIAS: Record<string, string> = {
   "sl-benfica": "benfica",
   "fc-porto": "porto",
   "ajax-amsterdam": "ajax",
+  "galatasaray-sk": "galatasaray",
+  "athletic-bilbao": "athletic-club",
+  "athletic-club-bilbao": "athletic-club",
+  "athletic": "athletic-club",
+  "como-1907": "como",
+  "calcio-como": "como",
   "afc-ajax": "ajax",
 };
 

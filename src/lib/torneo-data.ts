@@ -92,7 +92,7 @@ export async function asegurarTorneo(): Promise<Torneo> {
       .insert(torneos)
       .values({ nombre: "Torneo FIFA A51" })
       .returning();
-    // Arranca con los 24 del catálogo elegidos: Pinky saca los que no quiera.
+    // Arranca con todos los del catálogo elegidos: Pinky saca los que no quiera.
     await tx
       .insert(torneoEquipos)
       .values(CATALOGO_CLUBES.map((club) => ({ torneoId: torneo.id, nombre: club.nombre })));

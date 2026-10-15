@@ -167,7 +167,7 @@ function mezclar<T>(items: readonly T[], azar: () => number): T[] {
 
 /**
  * Regla de los "tochos" (los equipos fuertes): en CADA giro, cada tocho libre tiene `probabilidad`
- * fija de salir (1,5% = 0.015), sin importar cuántos normales queden. Si no sale un tocho, sale un
+ * fija de salir (PROBABILIDAD_TOCHO), sin importar cuántos normales queden. Si no sale un tocho, sale un
  * normal libre, todos parejos. Así en un torneo de 16 con 20–24 equipos sale un tocho o ninguno.
  * Solo si ya no quedan normales salen los tochos que falten.
  */
