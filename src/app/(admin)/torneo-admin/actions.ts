@@ -21,6 +21,7 @@ import {
   sortearYGuardar,
 } from "@/lib/torneo-juego";
 import { reemplazarJugador } from "@/lib/torneo-reemplazo";
+import { abrirVentanaPremium, cambiarEquipoPremium, cerrarVentanaPremium } from "@/lib/torneo-premium";
 
 export type TorneoAdminState = {
   ok: boolean;
@@ -173,7 +174,12 @@ export async function siguienteRevealAction(): Promise<TorneoAdminState> {
   if (!torneo) return { ok: false, mensaje: "Todavía no hay torneo." };
 
   const resultado = await avanzarReveal(torneo.id);
-  if (!resultado.ok) return { ok: false, mensaje: "Primero hay que sortear." };
+  if (!resultado.ok) {
+    return {
+      ok: false,
+      mensaje: resultado.motivo === "ventana_abierta" ? "Primero cerrá la ventana premium." : "Primero hay que sortear.",
+    };
+  }
   refrescar();
   return { ok: true, mensaje: null };
 }
@@ -188,6 +194,62 @@ export async function reiniciarRevealAction(): Promise<TorneoAdminState> {
   await reiniciarReveal(torneo.id);
   refrescar();
   return { ok: true, mensaje: null };
+}
+
+// ————————————————————————————
+// Ventana premium (entre la ruleta de equipos y los cruces)
+// ————————————————————————————
+export async function abrirVentanaPremiumAction(): Promise<TorneoAdminState> {
+  const denegado = await exigirAdmin();
+  if (denegado) return denegado;
+  const torneo = await getTorneoVigente();
+  if (!torneo) return { ok: false, mensaje: "Todavía no hay torneo." };
+
+  const resultado = await abrirVentanaPremium(torneo.id);
+  if (!resultado.ok) return { ok: false, mensaje: "La ventana se abre cuando todos tienen equipo y antes de los cruces." };
+  refrescar();
+  return { ok: true, mensaje: null };
+}
+
+export async function cerrarVentanaPremiumAction(): Promise<TorneoAdminState> {
+  const denegado = await exigirAdmin();
+  if (denegado) return denegado;
+  const torneo = await getTorneoVigente();
+  if (!torneo) return { ok: false, mensaje: "Todavía no hay torneo." };
+
+  await cerrarVentanaPremium(torneo.id);
+  refrescar();
+  return { ok: true, mensaje: null };
+}
+
+const cambioSchema = z.discriminatedUnion("tipo", [
+  z.object({ jugadorId: z.string().uuid(), tipo: z.literal("reroll") }),
+  z.object({ jugadorId: z.string().uuid(), tipo: z.literal("elegir"), equipoId: z.string().uuid() }),
+]);
+
+export type CambioPremiumState = TorneoAdminState & { equipo?: string };
+
+export async function cambiarEquipoPremiumAction(entrada: z.input<typeof cambioSchema>): Promise<CambioPremiumState> {
+  const denegado = await exigirAdmin();
+  if (denegado) return denegado;
+  const datos = cambioSchema.safeParse(entrada);
+  if (!datos.success) return { ok: false, mensaje: "Pedido inválido." };
+
+  const { jugadorId, ...pedido } = datos.data;
+  const resultado = await cambiarEquipoPremium(jugadorId, pedido);
+  if (!resultado.ok) {
+    const mensajes = {
+      no_existe: "Ese jugador ya no existe.",
+      fuera_de_momento: "Ya no es el momento de cambiar equipos.",
+      cerrada: "La ventana premium está cerrada.",
+      no_sorteado: "Ese jugador no entró al sorteo.",
+      sin_libres: "No quedan equipos libres.",
+      equipo_ocupado: "Ese equipo ya lo tiene otro. Elegí uno libre.",
+    } as const;
+    return { ok: false, mensaje: mensajes[resultado.motivo] };
+  }
+  refrescar();
+  return { ok: true, mensaje: null, equipo: resultado.equipo };
 }
 
 const resultadoSchema = z.object({

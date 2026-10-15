@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import BrandMark from "@/components/BrandMark";
 import Escudo from "@/components/torneo/Escudo";
+import type { MomentoPremium } from "@/lib/torneo";
 import AutoRefresco from "./_AutoRefresco";
 import BorrarPrueba from "./_BorrarPrueba";
 import ConfigForm from "./_ConfigForm";
@@ -33,7 +34,16 @@ export type JugadorPanel = {
  * Pasos del sorteo en la tele. `pasosEquipos` son los primeros pasos (ruleta de equipos, uno por
  * jugador); el resto son cruces. Con 0, todos los pasos son cruces.
  */
-export type RevealPanel = { paso: number; total: number; pasosEquipos: number };
+export type RevealPanel = {
+  paso: number;
+  total: number;
+  pasosEquipos: number;
+  /** Alias del jugador al que le gira la ruleta en el próximo toque (null fuera de la ruleta). */
+  proximo: string | null;
+  momentoPremium: MomentoPremium;
+  sorteados: { id: string; alias: string; equipo: string | null }[];
+  libres: { id: string; nombre: string }[];
+};
 
 export type PanelDatos = {
   torneo: {
@@ -348,7 +358,7 @@ export default function Panel({ datos }: { datos: PanelDatos }) {
           <p className="eyebrow text-[11px] font-semibold">En la tele</p>
           <h2 className="font-display mt-1 text-2xl font-semibold text-white sm:text-3xl">La pantalla</h2>
           <div className="mt-5">
-            <Pantalla paso={reveal.paso} total={reveal.total} pasosEquipos={reveal.pasosEquipos} />
+            <Pantalla reveal={reveal} />
           </div>
         </section>
       )}

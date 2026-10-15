@@ -1671,6 +1671,9 @@ export const torneos = pgTable("torneos", {
   // Cuántos cruces de la ronda 1 ya se revelaron en la pantalla (reveal reanudable).
   revealPaso: integer("reveal_paso").notNull().default(0),
   sorteoSemilla: text("sorteo_semilla"),
+  // Ventana premium (entre la ruleta de equipos y los cruces): null = nunca se abrió.
+  // Mientras está "abierta", los cruces esperan y Pinky puede cambiarle el equipo a quien pagó.
+  ventanaPremium: text("ventana_premium").$type<"abierta" | "cerrada">(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -1719,6 +1722,26 @@ export const torneoJugadores = pgTable(
     uniqueIndex("torneo_jugadores_email_idx").on(table.torneoId, table.email),
     index("torneo_jugadores_pago_idx").on(table.torneoId, table.estadoPago, table.ordenPago),
   ]
+);
+
+// Cambios de equipo de la ventana premium: quién, de qué equipo a cuál y por qué (la plata no se registra).
+export const torneoCambiosEquipo = pgTable(
+  "torneo_cambios_equipo",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    torneoId: uuid("torneo_id")
+      .notNull()
+      .references(() => torneos.id, { onDelete: "cascade" }),
+    jugadorId: uuid("jugador_id")
+      .notNull()
+      .references(() => torneoJugadores.id, { onDelete: "cascade" }),
+    equipoAnteriorId: uuid("equipo_anterior_id").references(() => torneoEquipos.id, { onDelete: "set null" }),
+    equipoNuevoId: uuid("equipo_nuevo_id").references(() => torneoEquipos.id, { onDelete: "set null" }),
+    // "reroll" = pagó volver a girar; "elegir" = pagó elegir el equipo.
+    tipo: text("tipo").notNull().$type<"reroll" | "elegir">(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("torneo_cambios_equipo_torneo_idx").on(table.torneoId, table.createdAt)]
 );
 
 export const torneoPartidos = pgTable(

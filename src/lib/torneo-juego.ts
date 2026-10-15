@@ -20,6 +20,7 @@ import {
   type Reveal,
 } from "@/lib/torneo";
 import { esTocho, PROBABILIDAD_TOCHO } from "@/lib/torneo-escudos";
+import { ultimoCambioPremium, type CambioPremium } from "@/lib/torneo-premium";
 import {
   getResumenPublico,
   getTorneoVigente,
@@ -123,7 +124,7 @@ export async function sortearYGuardar(torneoId: string): Promise<ResultadoSorteo
 // ————————————————————————————
 // Reveal en la pantalla
 // ————————————————————————————
-export type ResultadoReveal = { ok: true; reveal: Reveal } | { ok: false };
+export type ResultadoReveal = { ok: true; reveal: Reveal } | { ok: false; motivo: "sin_sorteo" | "ventana_abierta" };
 
 /** El reveal de un torneo ya sorteado, en la escala de dos fases (sirve también para sorteos de antes). */
 export function progresoReveal(
@@ -147,7 +148,9 @@ export async function avanzarReveal(torneoId: string): Promise<ResultadoReveal> 
       .where(eq(torneos.id, torneoId))
       .for("update")
       .limit(1);
-    if (!torneo || torneo.estado === "inscripcion") return { ok: false } as const;
+    if (!torneo || torneo.estado === "inscripcion") return { ok: false, motivo: "sin_sorteo" } as const;
+    // Con la ventana premium abierta los cruces esperan: Pinky la cierra y sigue.
+    if (torneo.ventanaPremium === "abierta") return { ok: false, motivo: "ventana_abierta" } as const;
 
     const ronda1 = await tx
       .select({
@@ -174,11 +177,14 @@ export async function avanzarReveal(torneoId: string): Promise<ResultadoReveal> 
   });
 }
 
-/** Vuelve el reveal al principio (para repetir el momento en pantalla; el sorteo no cambia). */
+/**
+ * Vuelve el reveal al principio (para repetir el momento en pantalla; el sorteo no cambia).
+ * La ventana premium se puede volver a ofrecer; los cambios de equipo ya hechos quedan.
+ */
 export async function reiniciarReveal(torneoId: string): Promise<void> {
   await db
     .update(torneos)
-    .set({ revealPaso: 0, updatedAt: new Date() })
+    .set({ revealPaso: 0, ventanaPremium: null, updatedAt: new Date() })
     .where(and(eq(torneos.id, torneoId), ne(torneos.estado, "inscripcion")));
 }
 
@@ -272,7 +278,11 @@ export type TableroPublico = {
     revealPaso: number;
     /** Jugadores + cruces de la ronda 1: con `revealPaso` igual a esto, el sorteo está todo a la vista. */
     revealTotal: number;
+    /** "abierta": la tele muestra la ventana premium entre la ruleta y los cruces. */
+    ventanaPremium: Torneo["ventanaPremium"];
   };
+  /** El último cambio de equipo premium: la tele anima la ruleta cuando aparece uno nuevo. */
+  ultimoCambio: CambioPremium | null;
   /** `nombre` es el nombre público: el alias (o el nombre corto en filas de antes del alias). */
   jugadores: { id: string; nombre: string; equipo: string | null }[];
   partidos: {
@@ -295,10 +305,11 @@ export async function getTableroPublico(): Promise<TableroPublico | null> {
   const torneo = await getTorneoVigente();
   if (!torneo || torneo.estado === "inscripcion") return null;
 
-  const [jugadoresDb, equipos, partidos] = await Promise.all([
+  const [jugadoresDb, equipos, partidos, ultimoCambio] = await Promise.all([
     listarJugadores(torneo.id),
     listarEquipos(torneo.id),
     listarPartidos(torneo.id),
+    ultimoCambioPremium(torneo.id),
   ]);
   const nombreEquipo = new Map(equipos.map((e) => [e.id, e.nombre]));
   const reveal = progresoReveal(torneo, partidos);
@@ -311,7 +322,9 @@ export async function getTableroPublico(): Promise<TableroPublico | null> {
       premiosTexto: torneo.premiosTexto,
       revealPaso: reveal.paso,
       revealTotal: reveal.total,
+      ventanaPremium: torneo.ventanaPremium,
     },
+    ultimoCambio,
     jugadores: (() => {
       const sorteados = jugadoresDb.filter((j) => j.posicionSorteo !== null);
       // En público va el alias, nunca el nombre completo.

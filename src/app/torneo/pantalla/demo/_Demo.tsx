@@ -45,7 +45,9 @@ function armarTablero(
       premiosTexto: null,
       revealPaso: reveal.paso,
       revealTotal: reveal.total,
+      ventanaPremium: null,
     },
+    ultimoCambio: null,
     jugadores: NOMBRES.map((nombre, i) => ({ id: `j${i + 1}`, nombre, equipo: equipoDe.get(`j${i + 1}`) ?? null })),
     partidos: cuadro.map((p) => ({
       id: `p-${p.ronda}-${p.posicion}`,

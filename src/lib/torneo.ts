@@ -83,6 +83,25 @@ export function topeRevealGuardado(semilla: string | null, jugadores: number, cr
   return esSorteoDosFases(semilla) ? jugadores + cruces : cruces;
 }
 
+// ————————————————————————————
+// Ventana premium: entre la ruleta de equipos y los cruces, Pinky puede cambiarle el equipo
+// a quien pagó (reroll o elegir). Solo si la abre; si nadie quiere, nunca aparece.
+// ————————————————————————————
+export type VentanaPremium = "abierta" | "cerrada" | null;
+
+/**
+ * "todavia": falta terminar la ruleta de equipos. "disponible": ruleta terminada, ningún cruce a la
+ * vista; Pinky puede abrirla. "abierta": los cruces esperan. "paso": ya arrancaron los cruces.
+ */
+export type MomentoPremium = "todavia" | "disponible" | "abierta" | "paso";
+
+export function momentoPremium(reveal: Reveal, ventana: VentanaPremium): MomentoPremium {
+  if (ventana === "abierta") return "abierta";
+  if (reveal.paso < reveal.jugadores) return "todavia";
+  if (reveal.crucesVistos === 0 && !reveal.completo) return "disponible";
+  return "paso";
+}
+
 export type PartidoCuadro = {
   ronda: number;
   posicion: number;

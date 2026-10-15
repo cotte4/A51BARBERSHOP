@@ -72,11 +72,14 @@ export function EscenaRuleta({
   total,
   enCola,
   alTerminar,
+  rotulo,
 }: {
   jugador: Jugador | undefined;
-  /** 1..total: qué jugador del sorteo es. */
+  /** 1..total: qué jugador del sorteo es (también arma la tira de escudos). */
   numero: number;
   total: number;
+  /** Texto de arriba; por defecto "Jugador N de T". La ventana premium pone el suyo. */
+  rotulo?: string;
   enCola: number;
   alTerminar: () => void;
 }) {
@@ -171,7 +174,7 @@ export function EscenaRuleta({
 
       <div className="temblor absolute inset-0">
         <p className="rotulo torneo-hud absolute inset-x-0 top-[70px] text-center text-[30px]" style={{ color: VERDE }}>
-          Jugador {numero} de {total}
+          {rotulo ?? `Jugador ${numero} de ${total}`}
         </p>
         <div className="alias absolute inset-x-0 top-[120px] flex h-[190px] items-center justify-center">
           <span

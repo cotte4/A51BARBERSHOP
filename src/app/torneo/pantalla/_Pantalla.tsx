@@ -203,16 +203,39 @@ function GrillaEquipos({
   jugadores,
   vistos,
   nombre,
+  premium = false,
 }: {
   orden: string[];
   jugadores: Map<string, Jugador>;
   vistos: number;
   nombre: string;
+  /** Ventana premium abierta: la misma grilla, con el cartel de precios. */
+  premium?: boolean;
 }) {
   const filas = Math.ceil(orden.length / 4);
   return (
-    <div className="flex h-full flex-col">
-      <Encabezado titulo="El sorteo" detalle={`${nombre} · ${vistos} de ${orden.length} equipos`} qr />
+    <div className="relative flex h-full flex-col">
+      {premium ? (
+        <>
+          {/* Marco que late: la señal cambió, ahora se puede comprar. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-3 border-2 border-[#8cff59]/60 shadow-[0_0_60px_rgba(140,255,89,0.35),inset_0_0_60px_rgba(140,255,89,0.15)] motion-safe:animate-pulse"
+          />
+          <Encabezado titulo="Ventana premium" detalle="¿No te gusta tu equipo?" qr />
+          <div className="mx-24 mt-5 flex items-center justify-center gap-10 border border-[#8cff59]/50 bg-[#8cff59]/10 py-4">
+            <p className="torneo-titulo text-[46px] font-extrabold italic text-white">
+              <span className="text-[#8cff59]">$5.000</span> volvés a girar
+            </p>
+            <span className="h-10 w-px bg-[#8cff59]/40" aria-hidden="true" />
+            <p className="torneo-titulo text-[46px] font-extrabold italic text-white">
+              <span className="text-[#8cff59]">$10.000</span> elegís tu equipo
+            </p>
+          </div>
+        </>
+      ) : (
+        <Encabezado titulo="El sorteo" detalle={`${nombre} · ${vistos} de ${orden.length} equipos`} qr />
+      )}
       <div
         className="grid flex-1 grid-cols-4 gap-x-6 gap-y-4 px-24 pb-14 pt-6"
         style={{ gridTemplateRows: `repeat(${filas}, minmax(0, 1fr))` }}
@@ -471,6 +494,11 @@ export function PantallaVista({ datos, sinConexion = false }: { datos: DatosPant
     [tablero],
   );
 
+  // Ventana premium: cada cambio nuevo (reroll o elegir) se anima con la ruleta, uno por vez.
+  // Al cargar la página, el último cambio ya hecho no se repite.
+  const ultimoCambio = tablero?.ultimoCambio ?? null;
+  const [cambioVisto, setCambioVisto] = useState<string | null>(datos.tablero?.ultimoCambio?.id ?? null);
+
   // Fase 1: un jugador por paso (orden del sorteo); fase 2: un cruce por paso.
   const orden = useMemo(() => ordenRuleta(cruces1), [cruces1]);
   const total = tablero?.torneo.revealTotal ?? 0;
@@ -498,6 +526,9 @@ export function PantallaVista({ datos, sinConexion = false }: { datos: DatosPant
     setEscena(null);
   }, []);
 
+  // El cambio se anima solo con la tele en reposo (sin otra escena corriendo).
+  const cambioPendiente = escenaActiva === null && ultimoCambio && ultimoCambio.id !== cambioVisto ? ultimoCambio : null;
+
   // Lo que se ve de fondo: hasta el paso anterior al que se está animando.
   const fondo = escenaActiva !== null ? escenaActiva - 1 : mostrado;
   const enCola = escenaActiva !== null ? Math.max(0, objetivo - escenaActiva) : 0;
@@ -510,7 +541,13 @@ export function PantallaVista({ datos, sinConexion = false }: { datos: DatosPant
   } else if (escenaActiva !== null ? escenaActiva <= orden.length : fondo <= orden.length) {
     // Terminada la ruleta, la grilla completa queda a la vista hasta que arranca el primer cruce.
     vista = (
-      <GrillaEquipos orden={orden} jugadores={jugadores} vistos={Math.min(fondo, orden.length)} nombre={tablero.torneo.nombre} />
+      <GrillaEquipos
+        orden={orden}
+        jugadores={jugadores}
+        vistos={Math.min(fondo, orden.length)}
+        nombre={tablero.torneo.nombre}
+        premium={tablero.torneo.ventanaPremium === "abierta" && escenaActiva === null}
+      />
     );
   } else if (fondo < total || escenaActiva !== null) {
     vista = (
@@ -526,7 +563,21 @@ export function PantallaVista({ datos, sinConexion = false }: { datos: DatosPant
   }
 
   let capa: React.ReactNode = null;
-  if (tablero && escenaActiva !== null) {
+  if (tablero && cambioPendiente) {
+    const posicion = orden.indexOf(cambioPendiente.jugadorId);
+    capa = (
+      <EscenaRuleta
+        key={`cambio-${cambioPendiente.id}`}
+        jugador={jugadores.get(cambioPendiente.jugadorId)}
+        // La tira de escudos sale distinta en cada cambio.
+        numero={100 + posicion + orden.length * (cambioPendiente.id.charCodeAt(0) % 7)}
+        total={orden.length}
+        rotulo={cambioPendiente.tipo === "reroll" ? "Ventana premium · vuelve a girar" : "Ventana premium · eligió su equipo"}
+        enCola={0}
+        alTerminar={() => setCambioVisto(cambioPendiente.id)}
+      />
+    );
+  } else if (tablero && escenaActiva !== null) {
     const paso = escenaActiva;
     if (paso <= orden.length) {
       capa = (

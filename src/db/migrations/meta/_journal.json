@@ -309,6 +309,13 @@
       "when": 1791441529740,
       "tag": "0043_massive_sinister_six",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1792087369950,
+      "tag": "0044_wise_captain_marvel",
+      "breakpoints": true
     }
   ]
 }

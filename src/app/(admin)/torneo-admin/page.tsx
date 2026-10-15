@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/lib/admin-action";
 import { esTorneoDePrueba, getTorneoVigente, listarEquipos, listarJugadores, listarPartidos } from "@/lib/torneo-data";
-import { nombresPublicos } from "@/lib/torneo";
+import { momentoPremium, nombresPublicos, ordenRuleta } from "@/lib/torneo";
 import { progresoReveal } from "@/lib/torneo-juego";
 import Panel, { PanelSinTorneo, type JugadorPanel, type PanelDatos } from "./_Panel";
 import type { PartidoVista } from "./_Partidos";
@@ -101,7 +101,24 @@ export default async function TorneoAdminPage() {
     // Dos fases: un paso por jugador (ruleta de equipos) y uno por cruce. Los sorteos de antes, solo cruces.
     reveal: (() => {
       const r = progresoReveal(torneo, partidos);
-      return { paso: r.paso, total: r.total, pasosEquipos: r.jugadores };
+      const orden = ordenRuleta(partidos);
+      const aliasDe = new Map(jugadoresPanel.map((j) => [j.id, j] as const));
+      const proximoId = r.paso < r.jugadores ? orden[r.paso] : undefined;
+      const usados = new Set(jugadores.map((j) => j.equipoId).filter((id): id is string => id !== null));
+      return {
+        paso: r.paso,
+        total: r.total,
+        pasosEquipos: r.jugadores,
+        // A quién le gira la ruleta en el próximo toque: el botón dice su nombre.
+        proximo: proximoId ? (aliasDe.get(proximoId)?.alias ?? null) : null,
+        momentoPremium: r.jugadores > 0 ? momentoPremium(r, torneo.ventanaPremium) : "todavia",
+        // Para la ventana premium: los sorteados en el orden de la ruleta y los equipos que nadie tiene.
+        sorteados: orden.flatMap((id) => {
+          const j = aliasDe.get(id);
+          return j ? [{ id: j.id, alias: j.alias, equipo: j.equipoNombre }] : [];
+        }),
+        libres: equipos.filter((e) => !usados.has(e.id)).map((e) => ({ id: e.id, nombre: e.nombre })),
+      };
     })(),
     jugadores: jugadoresPanel,
     equipos: equipos.map((e) => e.nombre),
