@@ -214,6 +214,28 @@ export async function listQueue(): Promise<JukeboxQueueItem[]> {
   }));
 }
 
+/** Todo lo que necesita la pantalla del staff en una sola lectura (la consulta el sondeo cada 3 s). */
+export type JukeboxStaffState = {
+  nowPlaying: JukeboxQueueItem | null;
+  queue: JukeboxQueueItem[];
+  proposals: JukeboxProposalSummary[];
+  autoApprove: boolean;
+};
+
+export async function getJukeboxStaffState(): Promise<JukeboxStaffState> {
+  const [queue, proposals, autoApprove] = await Promise.all([
+    listQueue(),
+    listPendingProposals(),
+    isAutoApproveEnabled(),
+  ]);
+  return {
+    nowPlaying: queue.find((item) => item.state === "playing") ?? null,
+    queue,
+    proposals,
+    autoApprove,
+  };
+}
+
 export async function getNowPlaying(): Promise<JukeboxQueueItem | null> {
   const [row] = await db
     .select({

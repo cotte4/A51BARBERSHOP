@@ -3,7 +3,6 @@ import MusicStateBadge from "@/components/musica/MusicStateBadge";
 import { getMusicDashboardState } from "@/lib/music-engine";
 import MusicOperationConsole from "@/components/musica/MusicOperationConsole";
 import { getTurnosActorContext } from "@/lib/turnos-access";
-import { isAutoApproveEnabled, listPendingProposals, listQueue } from "@/lib/jukebox";
 
 export const dynamic = "force-dynamic";
 
@@ -36,12 +35,7 @@ export default async function MusicaPage() {
     );
   }
 
-  const [state, jukeboxProposals, jukeboxQueue, jukeboxAutoApprove] = await Promise.all([
-    getMusicDashboardState({ sync: true }),
-    listPendingProposals(),
-    listQueue(),
-    isAutoApproveEnabled(),
-  ]);
+  const state = await getMusicDashboardState({ sync: true });
 
   return (
     <main className="public-shell min-h-screen pb-28 text-white">
@@ -59,7 +53,7 @@ export default async function MusicaPage() {
                     Musica del local
                   </h1>
                   <p className="mt-3 max-w-2xl text-sm text-zinc-300 sm:text-base">
-                    Aca manejas Auto, Soy DJ, Jam y la cola compartida desde un solo panel legible.
+                    Aca manejas Auto, Soy DJ, Jam y la cola compartida (Spotify) desde un solo panel legible.
                     Primero ves el estado, despues los controles y al final el detalle fino.
                   </p>
                 </div>
@@ -76,13 +70,24 @@ export default async function MusicaPage() {
             </div>
           </section>
 
+          <Link
+            href="/musica/jukebox"
+            className="panel-soft mt-6 flex items-center justify-between gap-4 rounded-[28px] p-5 transition hover:-translate-y-0.5"
+          >
+            <div>
+              <p className="eyebrow text-[#8cff59]">Jukebox del local</p>
+              <p className="mt-2 text-lg font-semibold text-white">Temas del público y cola</p>
+              <p className="mt-1 text-sm text-zinc-400">
+                Activar el jukebox, aprobar propuestas, quitar y saltar temas. Tiene su propia pantalla.
+              </p>
+            </div>
+            <span aria-hidden className="text-2xl text-zinc-400">→</span>
+          </Link>
+
           <div className="mt-6">
             <MusicOperationConsole
               state={state}
               viewerBarberoId={actor.barberoId}
-              jukeboxProposals={jukeboxProposals}
-              jukeboxQueue={jukeboxQueue}
-              jukeboxAutoApprove={jukeboxAutoApprove}
             />
           </div>
         </div>

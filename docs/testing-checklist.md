@@ -94,6 +94,8 @@ Fecha: May 2026. Run through every surface before handing off to the designer. L
 - [ ] Skip works
 - [ ] Estado del runtime/provider/player shows accurate state
 - [ ] NOTE: Auto playback on "cliente llegó" is NOT expected to work yet — log as known gap, not a bug
+- [ ] Tarjeta "Jukebox del local" lleva a `/musica/jukebox`; "← Música" vuelve
+- [ ] `/musica/jukebox`: Activar Jukebox pausa Spotify y suena el tema en aire; salir y volver atrás muestra la cola actual (no la vieja) y queda apagado
 
 ---
 

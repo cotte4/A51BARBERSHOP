@@ -203,6 +203,10 @@ La app no es una sola interfaz. Hoy está partida en 5 superficies principales:
   - `src/components/musica/MusicStateBadge.tsx`
   - `src/components/musica/BeatsStudio.tsx`
   Acciones: `src/app/(barbero)/musica/actions.ts`
+- Jukebox del local (staff), ruta propia
+  Ruta: `src/app/(barbero)/musica/jukebox/page.tsx` (cliente `_JukeboxStaff.tsx`, acciones `jukebox/actions.ts`)
+  Estado vivo: sondeo cada 3 s a `GET /api/jukebox/staff`; reproductor `src/components/musica/JukeboxPlayer.tsx`.
+  Se llega desde la tarjeta "Jukebox del local" en `/musica`.
   Soporte: `src/lib/music-engine.ts`, `src/lib/spotify-server.ts`, `src/lib/spotify-api.ts`, `src/lib/music-provider.ts`
   Estado: implementado pero no totalmente cerrado.
   Lo que sí existe:

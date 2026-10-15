@@ -6,8 +6,6 @@ import {
   acceptMusicProposalAction,
   activateDjModeAction,
   activateJamModeAction,
-  approveJukeboxProposalAction,
-  dismissJukeboxProposalAction,
   dismissMusicProposalAction,
   joinJamSessionAction,
   pauseMusicAction,
@@ -16,16 +14,10 @@ import {
   queueTrackAction,
   resumeMusicAction,
   setAutoModeAction,
-  removeJukeboxQueuedAction,
-  skipJukeboxAction,
   skipMusicAction,
   syncMusicDashboardAction,
-  toggleJukeboxAutoApproveAction,
 } from "@/app/(barbero)/musica/actions";
 import BeatsStudio from "@/components/musica/BeatsStudio";
-import JukeboxPlayer from "@/components/musica/JukeboxPlayer";
-import JukeboxProposalsSection from "@/components/musica/JukeboxProposalsSection";
-import JukeboxQueueSection from "@/components/musica/JukeboxQueueSection";
 import {
   ActionButton,
   MusicOverviewSection,
@@ -33,12 +25,9 @@ import {
   MusicProposalsSection,
   MusicQueueSection,
 } from "@/components/musica/MusicOperationConsoleSections";
-import type { JukeboxProposalSummary, JukeboxQueueItem } from "@/lib/jukebox";
 import type { MusicDashboardState } from "@/lib/music-types";
 
-type MusicTab = "spotify" | "beats" | "jukebox";
-
-const JUKEBOX_ACTIVE_KEY = "a51-jukebox-active";
+type MusicTab = "spotify" | "beats";
 
 type SearchTrackResult = {
   id: string;
@@ -52,9 +41,6 @@ type SearchTrackResult = {
 type OperationConsoleProps = {
   state: MusicDashboardState;
   viewerBarberoId: string | null;
-  jukeboxProposals: JukeboxProposalSummary[];
-  jukeboxQueue: JukeboxQueueItem[];
-  jukeboxAutoApprove: boolean;
 };
 
 function modeLabel(mode: MusicDashboardState["mode"]["activeMode"]) {
@@ -88,33 +74,13 @@ function FeedbackToast({ message, onDismiss }: { message: string; onDismiss: () 
 export default function MusicOperationConsole({
   state,
   viewerBarberoId,
-  jukeboxProposals,
-  jukeboxQueue,
-  jukeboxAutoApprove,
 }: OperationConsoleProps) {
   const router = useRouter();
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<MusicTab>("spotify");
-  const [jukeboxActive, setJukeboxActive] = useState(false);
   const [query, setQuery] = useState("");
 
-  useEffect(() => {
-    setJukeboxActive(localStorage.getItem(JUKEBOX_ACTIVE_KEY) === "1");
-  }, []);
-
-  function toggleJukebox() {
-    const next = !jukeboxActive;
-    setJukeboxActive(next);
-    localStorage.setItem(JUKEBOX_ACTIVE_KEY, next ? "1" : "0");
-    if (next) {
-      // Un solo parlante: el jukebox suena en este dispositivo, así que se pausa Spotify para no pisarse.
-      void pauseMusicAction().catch(() => undefined);
-      setFeedback("Jukebox activado. Dejá esta pantalla abierta y prendida: si salís de acá, la música se corta.");
-    } else {
-      setFeedback("Jukebox apagado. Spotify no se reanuda solo.");
-    }
-  }
   const [searchResults, setSearchResults] = useState<SearchTrackResult[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
@@ -211,9 +177,6 @@ export default function MusicOperationConsole({
         <FeedbackToast message={feedback} onDismiss={() => setFeedback(null)} />
       )}
 
-      {/* JukeboxPlayer siempre montado cuando está activo — corre en cualquier tab */}
-      {jukeboxActive ? <JukeboxPlayer /> : null}
-
       <div className="flex gap-2 rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-2">
         <button
           type="button"
@@ -233,99 +196,11 @@ export default function MusicOperationConsole({
         >
           Beats
         </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("jukebox")}
-          className={`relative flex-1 rounded-[20px] px-4 py-3 text-sm font-semibold transition-colors ${
-            activeTab === "jukebox" ? "bg-[#8cff59] text-[#07130a]" : "text-zinc-400 hover:text-white"
-          }`}
-        >
-          Jukebox
-          {jukeboxProposals.length > 0 && activeTab !== "jukebox" && (
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-amber-400" />
-          )}
-        </button>
       </div>
 
       {activeTab === "beats" ? (
         <div className="space-y-6">
           <BeatsStudio />
-        </div>
-      ) : null}
-
-      {activeTab === "jukebox" ? (
-        <div className="space-y-6">
-          {/* Activar / Apagar Jukebox */}
-          <section className="rounded-[30px] border border-zinc-800 bg-zinc-900/80 p-5">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Modo</p>
-                <h3 className="mt-2 text-xl font-semibold text-white">Jukebox social</h3>
-                <p className="mt-1 text-sm text-zinc-400">
-                  {jukeboxActive
-                    ? "El audio corre en cualquier tab. Apagalo cuando terminés el turno."
-                    : "Activalo para que el local empiece a reproducir las propuestas del público."}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={toggleJukebox}
-                className={`rounded-2xl px-5 py-3 text-sm font-semibold transition-colors ${
-                  jukeboxActive
-                    ? "border border-red-400/30 bg-red-500/10 text-red-200 hover:bg-red-500/20"
-                    : "bg-[#8cff59] text-[#07130a] hover:bg-[#b6ff84]"
-                }`}
-              >
-                {jukeboxActive ? "Apagar Jukebox" : "Activar Jukebox"}
-              </button>
-            </div>
-            {jukeboxActive && (
-              <p className="mt-3 rounded-2xl border border-[#8cff59]/20 bg-[#8cff59]/8 px-4 py-2.5 text-sm text-[#d8ffc7]">
-                Jukebox activo — reproduciendo en este browser.
-              </p>
-            )}
-          </section>
-
-          <JukeboxProposalsSection
-            proposals={jukeboxProposals}
-            pendingAction={pendingAction}
-            onApprove={(id) =>
-              runMutation(
-                () => approveJukeboxProposalAction(id),
-                "Propuesta aprobada — a la cola.",
-                `jukebox-approve-${id}`,
-              )
-            }
-            onDismiss={(id) =>
-              runMutation(
-                () => dismissJukeboxProposalAction(id),
-                "Propuesta rechazada.",
-                `jukebox-dismiss-${id}`,
-              )
-            }
-          />
-          <JukeboxQueueSection
-            queue={jukeboxQueue}
-            autoApproveEnabled={jukeboxAutoApprove}
-            pendingAction={pendingAction}
-            onSkip={() =>
-              runMutation(() => skipJukeboxAction(), "Tema saltado.", "jukebox-skip")
-            }
-            onRemove={(queueItemId) =>
-              runMutation(
-                () => removeJukeboxQueuedAction(queueItemId),
-                "Tema quitado de la cola.",
-                `jukebox-remove-${queueItemId}`,
-              )
-            }
-            onToggleAutoApprove={(enabled) =>
-              runMutation(
-                () => toggleJukeboxAutoApproveAction(enabled),
-                enabled ? "Auto-aprobar activado." : "Auto-aprobar desactivado.",
-                "jukebox-auto-toggle",
-              )
-            }
-          />
         </div>
       ) : null}
 
