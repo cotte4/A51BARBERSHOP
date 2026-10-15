@@ -147,32 +147,33 @@ function mezclar<T>(items: readonly T[], azar: () => number): T[] {
 }
 
 /**
- * Elige UN equipo entre los libres, con probabilidad proporcional a su peso (peso 1 para todos = parejo).
- * Lo usa el sorteo (un pick por jugador, sin reposición) y lo va a reusar el "volver a sortear" de un
- * jugador: la misma regla de pesos, con un `azar` nuevo. Los pesos son relativos, no hace falta que sumen 1.
+ * Regla de los "tochos" (los equipos fuertes): en CADA giro, cada tocho libre tiene `probabilidad`
+ * fija de salir (1,5% = 0.015), sin importar cuántos normales queden. Si no sale un tocho, sale un
+ * normal libre, todos parejos. Así en un torneo de 16 con 20–24 equipos sale un tocho o ninguno.
+ * Solo si ya no quedan normales salen los tochos que falten.
  */
-export function elegirEquipoPonderado(
-  libres: readonly string[],
-  peso: (equipoId: string) => number,
-  azar: () => number,
-): string {
-  if (libres.length === 0) throw new Error("No quedan equipos para elegir.");
-  const pesos = libres.map((id) => {
-    const p = peso(id);
-    if (!Number.isFinite(p) || p < 0) throw new Error(`Peso inválido para el equipo ${id}.`);
-    return p;
-  });
-  const total = pesos.reduce((suma, p) => suma + p, 0);
-  if (total <= 0) throw new Error("Todos los equipos libres tienen peso 0.");
+export type ReglaTochos = {
+  esTocho: (equipoId: string) => boolean;
+  probabilidad: number;
+};
 
-  let punto = azar() * total;
-  for (let i = 0; i < libres.length; i++) {
-    punto -= pesos[i];
-    if (punto < 0) return libres[i];
-  }
-  // Por redondeo del float puede sobrar un poco: el último con peso positivo.
-  for (let i = libres.length - 1; i >= 0; i--) if (pesos[i] > 0) return libres[i];
-  return libres[libres.length - 1];
+/**
+ * Elige UN equipo entre los libres con la regla de los tochos (sin regla, todos parejos).
+ * Lo usa el sorteo (un giro por jugador, sin repetir) y lo reusa el reroll de la ventana premium.
+ */
+export function elegirEquipo(libres: readonly string[], azar: () => number, regla?: ReglaTochos): string {
+  if (libres.length === 0) throw new Error("No quedan equipos para elegir.");
+  const alAzar = (lista: readonly string[]) => lista[Math.min(lista.length - 1, Math.floor(azar() * lista.length))];
+  if (!regla) return alAzar(libres);
+  if (!(regla.probabilidad >= 0)) throw new Error("La probabilidad de los tochos no es válida.");
+
+  const tochos = libres.filter((id) => regla.esTocho(id));
+  const normales = libres.filter((id) => !regla.esTocho(id));
+  if (normales.length === 0) return alAzar(tochos);
+  if (tochos.length === 0) return alAzar(normales);
+
+  const chanceTocho = Math.min(1, tochos.length * regla.probabilidad);
+  return azar() < chanceTocho ? alAzar(tochos) : alAzar(normales);
 }
 
 /** Menor potencia de 2 que alcanza para n jugadores (mínimo 2). */
@@ -232,19 +233,19 @@ export type EntradaSorteo = {
   equipoIds: readonly string[];
   semilla: string;
   /**
-   * Peso relativo de cada equipo en el sorteo (más peso = sale más seguido). Sin esto, todos valen igual.
-   * La función pura no sabe de nombres ni de "tochos": quien la llama traduce el equipo a su peso.
+   * Los tochos salen con probabilidad fija por giro (ver ReglaTochos). Sin esto, todos parejos.
+   * La función pura no sabe de nombres: quien la llama dice qué id es tocho.
    */
-  pesoDeEquipo?: (equipoId: string) => number;
+  tochos?: ReglaTochos;
 };
 
 /**
  * Sortea equipos (uno único por jugador) y arma el cuadro completo.
- * Los equipos salen de a uno por jugador, sin reposición, con probabilidad proporcional a `pesoDeEquipo`.
+ * Los equipos salen de a uno por jugador, sin repetir, con la regla de los tochos si viene.
  * Con menos jugadores que el tamaño del cuadro, los "byes" (pase directo) caen en
  * cruces distintos, elegidos al azar; el jugador con bye ya avanza a la ronda 2.
  */
-export function sortearTorneo({ jugadorIds, equipoIds, semilla, pesoDeEquipo }: EntradaSorteo): ResultadoSorteo {
+export function sortearTorneo({ jugadorIds, equipoIds, semilla, tochos }: EntradaSorteo): ResultadoSorteo {
   const n = jugadorIds.length;
   if (n < 2) throw new Error("Hacen falta al menos 2 jugadores para sortear.");
   if (new Set(jugadorIds).size !== n) throw new Error("Hay jugadores repetidos.");
@@ -255,11 +256,10 @@ export function sortearTorneo({ jugadorIds, equipoIds, semilla, pesoDeEquipo }: 
 
   const azar = crearAzar(semilla);
   const jugadores = mezclar(jugadorIds, azar);
-  const peso = pesoDeEquipo ?? (() => 1);
   const libres = [...equipoIds];
   const equipos: string[] = [];
   for (let i = 0; i < n; i++) {
-    const elegido = elegirEquipoPonderado(libres, peso, azar);
+    const elegido = elegirEquipo(libres, azar, tochos);
     equipos.push(elegido);
     libres.splice(libres.indexOf(elegido), 1);
   }

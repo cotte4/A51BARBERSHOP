@@ -51,41 +51,21 @@ export const CATALOGO_CLUBES: readonly ClubCatalogo[] = [
 /** Nombres canónicos (los de CATALOGO_CLUBES) de los equipos fuertes. Editá esta lista para sumar o sacar. */
 export const TOCHOS: readonly string[] = ["Bayern Múnich", "Real Madrid", "Barcelona", "PSG"];
 
-/** Chance de que UN tocho salga en un lugar del sorteo (0.015 = 1,5%), con el catálogo completo. */
-export const PROBABILIDAD_TOCHO = 0.015;
-
-/** Peso de un equipo normal: la vara contra la que se mide el resto (los pesos son relativos). */
-export const PESO_NORMAL = 1;
-
 /**
- * Peso de un tocho para que, en el primer lugar del sorteo y con los N clubes del catálogo, cada uno
- * tenga exactamente PROBABILIDAD_TOCHO: peso / (T * peso + (N - T)) = p  =>  peso = p * (N - T) / (1 - T * p).
- * Con N = 24, T = 4 y p = 1,5%: 0,3 / 0,94 = ~0,319 (un normal queda en 1 / 21,28 = ~4,7%).
+ * Chance de que CADA tocho salga en un giro (0.015 = 1,5%), fija aunque se vayan acabando los normales.
+ * Con 4 tochos: 6% por giro de que salga alguno. En un torneo de 16, ~1 de cada 3 torneos no sale ninguno
+ * y lo normal es que salga uno.
  */
-export function pesoTochoPara(clubes: number, tochos: number, probabilidad: number): number {
-  if (tochos * probabilidad >= 1) throw new Error("Los tochos no pueden sumar 100% o más.");
-  return (PESO_NORMAL * probabilidad * (clubes - tochos)) / (1 - tochos * probabilidad);
-}
+export const PROBABILIDAD_TOCHO = 0.015;
 
 /** Slugs de los tochos (con los alias que ya entiende slugEquipo, definido más abajo). */
 function slugsTochos(): Set<string> {
   return new Set(TOCHOS.map((t) => slugEquipo(t)));
 }
 
-export const PESO_TOCHO: number = pesoTochoPara(
-  CATALOGO_CLUBES.length,
-  TOCHOS.length,
-  PROBABILIDAD_TOCHO,
-);
-
 /** true si el nombre es de un tocho (acepta variantes: "FC Barcelona", "Bayern"...). */
 export function esTocho(nombre: string): boolean {
   return slugsTochos().has(slugEquipo(nombre));
-}
-
-/** Peso en el sorteo: los tochos pesan menos; todo lo demás (incluido lo fuera del catálogo) vale normal. */
-export function pesoDeEquipoPorNombre(nombre: string): number {
-  return esTocho(nombre) ? PESO_TOCHO : PESO_NORMAL;
 }
 
 /** Slugs con archivo en public/equipos/<slug>.png. */

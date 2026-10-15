@@ -19,7 +19,7 @@ import {
   type Podio,
   type Reveal,
 } from "@/lib/torneo";
-import { pesoDeEquipoPorNombre } from "@/lib/torneo-escudos";
+import { esTocho, PROBABILIDAD_TOCHO } from "@/lib/torneo-escudos";
 import {
   getResumenPublico,
   getTorneoVigente,
@@ -96,13 +96,13 @@ export async function sortearYGuardar(torneoId: string): Promise<ResultadoSorteo
 
     // El prefijo marca que el reveal va en dos fases (ruleta de equipos + cruces): ver leerReveal.
     const semilla = `${SEMILLA_DOS_FASES}${randomUUID()}`;
-    // Los "tochos" (Bayern, Real Madrid, Barcelona, PSG) pesan menos: ver TOCHOS en torneo-escudos.ts.
+    // Los "tochos" (Bayern, Real Madrid, Barcelona, PSG) salen 1,5% por giro: ver TOCHOS en torneo-escudos.ts.
     const nombrePorEquipo = new Map(equipos.map((e) => [e.id, e.nombre]));
     const resultado = sortearTorneo({
       jugadorIds: pagados.map((j) => j.id),
       equipoIds: equipos.map((e) => e.id),
       semilla,
-      pesoDeEquipo: (equipoId) => pesoDeEquipoPorNombre(nombrePorEquipo.get(equipoId) ?? ""),
+      tochos: { esTocho: (equipoId) => esTocho(nombrePorEquipo.get(equipoId) ?? ""), probabilidad: PROBABILIDAD_TOCHO },
     });
 
     for (const a of resultado.asignaciones) {
