@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Escudo from "@/components/torneo/Escudo";
-import { CATALOGO_CLUBES, clubDelCatalogo, coloresDeEquipo } from "@/lib/torneo-escudos";
+import { CATALOGO_CLUBES, TOCHOS, clubDelCatalogo, coloresDeEquipo } from "@/lib/torneo-escudos";
 import { conAlfa, cuerpoPorLargo, VERDE, type Jugador, type Partido } from "./_comun";
 
 gsap.registerPlugin(useGSAP);
@@ -44,6 +44,23 @@ function azarDesde(semilla: number): () => number {
     s = (Math.imul(s ^ (s >>> 15), 2246822519) + 0x9e3779b9) >>> 0;
     return s / 4294967296;
   };
+}
+
+/** Chance de que la ruleta amague: frena en un tocho y a último momento salta al de verdad. */
+const CHANCE_AMAGUE = 0.3;
+
+/**
+ * La ruleta de cada escena: los escudos que giran y si amaga. Con amague, el escudo de antes del
+ * ganador es un tocho (Bayern, Real Madrid...): parece que te toca y se pasa al siguiente.
+ */
+function armarRuleta(equipo: string, semilla: number): { tira: string[]; amague: boolean } {
+  const tira = armarTira(equipo, semilla);
+  const azar = azarDesde(semilla + 7919);
+  const canonico = clubDelCatalogo(equipo)?.nombre ?? equipo;
+  const tochos = TOCHOS.filter((t) => t !== canonico);
+  const amague = tochos.length > 0 && azar() < CHANCE_AMAGUE;
+  if (amague) tira[DESTINO - 1] = tochos[Math.floor(azar() * tochos.length)];
+  return { tira, amague };
 }
 
 /** Los escudos que giran: el catálogo mezclado, sin el equipo ganador, que cae en DESTINO. */
@@ -88,7 +105,7 @@ export function EscenaRuleta({
   const equipo = jugador?.equipo ?? "";
   const nombre = jugador?.nombre ?? "—";
   const colores = coloresDeEquipo(equipo || null);
-  const tira = useMemo(() => armarTira(equipo, numero), [equipo, numero]);
+  const { tira, amague } = useMemo(() => armarRuleta(equipo, numero), [equipo, numero]);
 
   useGSAP(
     () => {
@@ -133,11 +150,28 @@ export function EscenaRuleta({
           "<0.1",
         )
         .fromTo(q(".ventana"), { opacity: 0, scaleY: 0.2 }, { opacity: 1, scaleY: 1, duration: 0.4, ease: "power3.out" }, "<0.2")
-        // Gira rápido y desacelera hasta quedar a medio escudo...
-        .to(pos, { x: xDe(DESTINO) + CELDA * 0.62, duration: 2.5, ease: "power2.out", onUpdate: pintar }, "<0.1")
+        // Gira rápido y desacelera (~6 s en total: tiempo para la expectativa)...
+        .to(
+          pos,
+          {
+            x: amague ? xDe(DESTINO - 1) + CELDA * 0.7 : xDe(DESTINO) + CELDA * 0.62,
+            duration: 4.2,
+            ease: "power2.out",
+            onUpdate: pintar,
+          },
+          "<0.1",
+        );
+      if (amague) {
+        // ...frena casi entero en un tocho, se queda un instante ("¡le tocó el Real!")...
+        t.to(pos, { x: xDe(DESTINO - 1) + CELDA * 0.06, duration: 1.4, ease: "power1.out", onUpdate: pintar })
+          .to({}, { duration: 0.55 })
+          // ...y a último momento se pasa al de verdad.
+          .to(pos, { x: xDe(DESTINO), duration: 0.5, ease: "back.out(1.6)", onUpdate: pintar });
+      } else {
         // ...y se arrastra el último tramo: la tensión de si entra o no.
-        .to(pos, { x: xDe(DESTINO), duration: 0.95, ease: "power1.inOut", onUpdate: pintar })
-        .addLabel("frena")
+        t.to(pos, { x: xDe(DESTINO), duration: 1.6, ease: "power1.inOut", onUpdate: pintar });
+      }
+      t.addLabel("frena")
         .fromTo(q(".destello"), { opacity: 0.95 }, { opacity: 0, immediateRender: false, duration: 0.7, ease: "power2.out" }, "frena")
         .fromTo(q(".temblor"), { x: -18, y: 10 }, { x: 0, y: 0, immediateRender: false, duration: 0.7, ease: "elastic.out(1.3, 0.25)" }, "frena")
         .to(q(".ventana"), { opacity: 0, duration: 0.25 }, "frena")
