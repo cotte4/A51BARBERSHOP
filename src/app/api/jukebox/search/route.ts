@@ -132,8 +132,8 @@ export async function GET(request: Request) {
 
     const results = items.map((item) => ({
       videoId: item.id.videoId,
-      title: item.snippet.title,
-      channelTitle: item.snippet.channelTitle,
+      title: decodificarEntidades(item.snippet.title),
+      channelTitle: decodificarEntidades(item.snippet.channelTitle),
       thumbnailUrl:
         item.snippet.thumbnails.medium?.url ??
         item.snippet.thumbnails.default?.url ??
@@ -148,4 +148,18 @@ export async function GET(request: Request) {
   } catch {
     return Response.json({ error: "No pude buscar en YouTube." }, { status: 500 });
   }
+}
+
+// La búsqueda de YouTube devuelve los textos escapados para HTML ("&quot;OZUNA&quot;"); React ya escapa
+// al mostrar, así que sin esto el cliente vería las entidades crudas (y quedarían guardadas en la cola).
+const ENTIDADES: Record<string, string> = { amp: "&", quot: '"', apos: "'", lt: "<", gt: ">" };
+
+function decodificarEntidades(texto: string): string {
+  return texto.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (entera, cuerpo: string) => {
+    if (cuerpo[0] === "#") {
+      const codigo = cuerpo[1] === "x" || cuerpo[1] === "X" ? parseInt(cuerpo.slice(2), 16) : parseInt(cuerpo.slice(1), 10);
+      return Number.isFinite(codigo) ? String.fromCodePoint(codigo) : entera;
+    }
+    return ENTIDADES[cuerpo.toLowerCase()] ?? entera;
+  });
 }

@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import type { PedidoCliente } from "@/lib/jukebox-pedido";
+import { usarMovimientoReducido } from "../torneo/_movimiento";
+import Disco from "./_Disco";
+
+gsap.registerPlugin(useGSAP);
 
 const GENRES = ["Reggaeton", "Trap", "Rock", "Cumbia", "Pop", "Hip Hop", "Electrónica", "Salsa"];
 const DEVICE_KEY_STORAGE = "a51-jukebox-device-key";
@@ -17,7 +23,7 @@ type SearchResult = {
 };
 
 type AhoraSonando = {
-  nowPlaying: { videoTitle: string; proposedByName: string } | null;
+  nowPlaying: { videoTitle: string; proposedByName: string; thumbnailUrl: string | null } | null;
   upcoming: { videoTitle: string }[];
 };
 
@@ -147,6 +153,8 @@ export default function JukeboxClient() {
   const [searchError, setSearchError] = useState<string | null>(null);
 
   const [selected, setSelected] = useState<SearchResult | null>(null);
+  // El código de tecla ("B3") del tema elegido: lo acompaña hasta la pantalla de "puesto".
+  const [codigo, setCodigo] = useState<string | null>(null);
   const [proposerName, setProposerName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -225,6 +233,7 @@ export default function JukeboxClient() {
     setSearchError(null);
     setResults([]);
     setSelected(null);
+    setCodigo(null);
 
     try {
       const deviceKey = getOrCreateDeviceKey();
@@ -284,204 +293,120 @@ export default function JukeboxClient() {
     }
   }
 
-  const sonando = ahora?.nowPlaying ? (
-    <section
-      className="jukebox-motion pop-in rounded-[22px] border border-[#8cff59]/25 bg-[#8cff59]/8 px-4 py-3"
-      aria-live="polite"
-    >
-      <div className="flex items-center gap-2">
-        <Ecualizador />
-        <p className="eyebrow text-xs font-semibold text-[#8cff59]">Suena ahora</p>
-      </div>
-      <p key={ahora.nowPlaying.videoTitle} className="pop-in mt-1.5 truncate text-sm font-semibold text-white">
-        {ahora.nowPlaying.videoTitle}
-      </p>
-      {ahora.upcoming[0] ? (
-        <p className="mt-0.5 truncate text-xs text-zinc-400">Sigue: {ahora.upcoming[0].videoTitle}</p>
-      ) : null}
-    </section>
-  ) : null;
-
-  const activo = miPedido?.estado === "en_cola" || miPedido?.estado === "sonando";
-  const paso = miPedido ? PASO_ACTUAL[miPedido.estado] : -1;
-  const tuTema = miPedido ? (
-    <section
-      className={`jukebox-motion pop-in panel-card rounded-[22px] px-4 py-4 ${
-        miPedido.estado === "sonando" ? "border-[#8cff59]/40 shadow-[0_0_32px_rgba(140,255,89,0.12)]" : ""
-      }`}
-      aria-live="polite"
-    >
-      <p className="eyebrow text-sm font-semibold text-zinc-400">Tu tema</p>
-      <p className="mt-1 truncate text-sm font-semibold text-white">{miPedido.videoTitle}</p>
-      {/* key: al cambiar de estado (o de lugar) la línea entra de nuevo, así se nota el avance. */}
-      <p
-        key={`${miPedido.estado}-${miPedido.lugar ?? ""}`}
-        className={`pop-in mt-1.5 flex items-center gap-2 text-sm ${activo ? "text-[#8cff59]" : "text-zinc-300"}`}
-      >
-        {miPedido.estado === "sonando" ? (
-          <Ecualizador />
-        ) : (
-          <span className={`h-2 w-2 shrink-0 rounded-full ${PUNTO_PEDIDO[miPedido.estado]}`} aria-hidden="true" />
-        )}
-        {textoPedido(miPedido)}
-      </p>
-      {paso >= 0 ? (
-        <ol className="mt-3 grid grid-cols-3 gap-1.5" aria-label="Avance de tu tema">
-          {PASOS.map((nombre, i) => {
-            const hecho = i <= paso;
-            return (
-              <li key={nombre} className="min-w-0">
-                <div className="h-1 overflow-hidden rounded-full bg-zinc-800">
-                  <div
-                    className={`h-full origin-left rounded-full bg-[#8cff59] transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
-                      hecho ? "scale-x-100" : "scale-x-0"
-                    }`}
-                    style={{ transitionDelay: `${i * 120}ms` }}
-                  />
-                </div>
-                <p className={`mt-1 truncate text-[11px] ${hecho ? "text-zinc-200" : "text-zinc-500"}`}>{nombre}</p>
-              </li>
-            );
-          })}
-        </ol>
-      ) : null}
-    </section>
-  ) : null;
+  const tuTema = miPedido ? <TuTema pedido={miPedido} /> : null;
 
   if (submitted) {
     return (
       <>
-      {sonando}
-      {tuTema}
-      <section className="jukebox-motion pop-in panel-card rounded-[28px] p-6 text-center">
-        <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center">
-          <span className="ring-pulse absolute inset-0 rounded-full border border-[#8cff59]/50" aria-hidden="true" />
-          <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[#8cff59]/30 bg-[#8cff59]/10">
-            <svg viewBox="0 0 24 24" className="h-7 w-7 text-[#8cff59]" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
-              <path className="check-draw" strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </span>
-        </div>
-        <h2 className="font-display text-2xl font-semibold text-white">
-          {autoApproved ? "Tu tema ya está en la cola" : "Propuesta enviada"}
-        </h2>
-        <p className="mt-3 text-sm text-zinc-400">
-          {autoApproved
-            ? "Está en la lista y va a sonar pronto. Gracias."
-            : "Si la aprueban, va a sonar pronto. Gracias por participar."}
-        </p>
-        {selected && (
-          <div className="mt-5 flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3 text-left">
-            {selected.thumbnailUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={selected.thumbnailUrl} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
-            )}
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">{selected.title}</p>
-              <p className="truncate text-xs text-zinc-400">{selected.channelTitle}</p>
-            </div>
-          </div>
-        )}
-        {cooldownSecs > 0 ? (
-          <Espera segundos={cooldownSecs} />
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              setSubmitted(false);
-              setSelected(null);
-              setProposerName("");
-              setResults([]);
-              setQuery("");
-            }}
-            className="ghost-button pop-in mt-5 min-h-12 w-full rounded-[20px] text-sm font-semibold active:scale-[0.98]"
-          >
-            Proponer otra
-          </button>
-        )}
-      </section>
+        <Puesto tema={selected} codigo={codigo} autoAprobado={autoApproved} />
+        {tuTema}
+        <section className="jukebox-motion">
+          {cooldownSecs > 0 ? (
+            <Espera segundos={cooldownSecs} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setSubmitted(false);
+                setSelected(null);
+                setCodigo(null);
+                setProposerName("");
+                setResults([]);
+                setQuery("");
+              }}
+              className="ghost-button pop-in min-h-12 w-full rounded-[20px] text-sm font-semibold active:scale-[0.98]"
+            >
+              Poner otro tema
+            </button>
+          )}
+        </section>
       </>
     );
   }
 
   return (
     <>
-      {sonando}
+      <Maquina ahora={ahora} />
       {tuTema}
-      <section className="jukebox-motion panel-card rounded-[28px] p-5">
-        <p className="eyebrow text-zinc-500">Jukebox</p>
-        <h1 className="mt-2 font-display text-2xl font-semibold text-white">
-          Pedí tu tema
-        </h1>
-        <p className="mt-2 text-sm text-zinc-400">
-          Buscá una canción y proponesela al local. Si la aprueban, suena.
-        </p>
 
-        <div className="mt-5 flex flex-wrap gap-2">
-          {GENRES.map((genre) => (
+      {!selected ? (
+        <section className="jukebox-motion panel-card rounded-[28px] p-5">
+          <h1 className="font-display text-2xl font-semibold text-white">Elegí tu tema</h1>
+          <p className="mt-1.5 text-sm text-zinc-400">Buscalo y pedilo. Si lo aprueban, suena en el local.</p>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSearch(query);
+            }}
+            className="mt-4 flex gap-2"
+            role="search"
+          >
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Artista o canción"
+              aria-label="Artista o canción"
+              enterKeyHint="search"
+              className="min-h-12 min-w-0 flex-1 rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-base text-white outline-none placeholder:text-zinc-500 focus:border-[#8cff59]/60"
+            />
             <button
-              key={genre}
-              type="button"
+              type="submit"
               disabled={searching}
-              aria-pressed={query === genre}
-              onClick={() => { setQuery(genre); handleSearch(genre); }}
-              className={`min-h-12 rounded-full border px-4 text-sm font-medium active:scale-[0.96] disabled:opacity-50 ${
-                query === genre
-                  ? "border-[#8cff59]/60 bg-[#8cff59]/15 text-[#d8ffc7]"
-                  : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white"
-              }`}
+              className="neon-button inline-flex min-h-12 min-w-[96px] items-center justify-center gap-2 rounded-[20px] px-5 text-sm font-semibold text-[#07130a] active:scale-[0.97] disabled:opacity-70"
             >
-              {genre}
+              {searching ? (
+                <>
+                  <Spinner />
+                  <span className="sr-only">Buscando</span>
+                </>
+              ) : (
+                "Buscar"
+              )}
             </button>
-          ))}
-        </div>
+          </form>
 
-        <form
-          onSubmit={(e) => { e.preventDefault(); handleSearch(query); }}
-          className="mt-4 flex gap-2"
-          role="search"
-        >
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscá artista o canción..."
-            aria-label="Artista o canción"
-            enterKeyHint="search"
-            className="min-h-12 min-w-0 flex-1 rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#8cff59]/60"
-          />
-          <button
-            type="submit"
-            disabled={searching}
-            className="neon-button inline-flex min-h-12 min-w-[96px] items-center justify-center gap-2 rounded-[20px] px-5 text-sm font-semibold text-[#07130a] active:scale-[0.97] disabled:opacity-70"
-          >
-            {searching ? (
-              <>
-                <Spinner />
-                <span className="sr-only">Buscando</span>
-              </>
-            ) : (
-              "Buscar"
-            )}
-          </button>
-        </form>
+          {/* Las teclas de la máquina: un toque busca el género. */}
+          <div className="mt-4 grid grid-cols-4 gap-1.5">
+            {GENRES.map((genre) => (
+              <button
+                key={genre}
+                type="button"
+                disabled={searching}
+                aria-pressed={query === genre}
+                onClick={() => {
+                  setQuery(genre);
+                  handleSearch(genre);
+                }}
+                className={`min-h-12 truncate rounded-xl border px-0.5 text-xs font-semibold transition-[transform,background-color,border-color] duration-150 ease-out active:scale-[0.95] disabled:opacity-50 ${
+                  query === genre
+                    ? "border-[#8cff59]/70 bg-[#8cff59]/15 text-[#d8ffc7] shadow-[inset_0_-3px_0_rgba(140,255,89,0.35)]"
+                    : "border-zinc-800 bg-zinc-900/80 text-zinc-300 shadow-[inset_0_-3px_0_rgba(0,0,0,0.45)]"
+                }`}
+              >
+                {genre === "Electrónica" ? "Electro" : genre}
+              </button>
+            ))}
+          </div>
 
-        {searchError && (
-          <p
-            role="alert"
-            className="pop-in mt-3 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200"
-          >
-            {searchError}
-          </p>
-        )}
-      </section>
+          {searchError && (
+            <p
+              role="alert"
+              className="pop-in mt-3 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200"
+            >
+              {searchError}
+            </p>
+          )}
+        </section>
+      ) : null}
 
       {searching && (
-        <section className="jukebox-motion panel-card rounded-[28px] p-5" aria-busy="true" aria-label="Buscando temas">
-          <div className="skeleton h-3 w-24 rounded-full" />
-          <div className="mt-4 flex flex-col gap-2">
+        <section className="jukebox-motion panel-card rounded-[28px] p-4" aria-busy="true" aria-label="Buscando temas">
+          <div className="flex flex-col gap-2">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
-                <div className="skeleton h-14 w-14 shrink-0 rounded-xl" />
+              <div key={i} className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 p-2.5">
+                <div className="skeleton h-6 w-8 shrink-0 rounded-md" />
+                <div className="skeleton h-12 w-12 shrink-0 rounded-lg" />
                 <div className="flex-1 space-y-2">
                   <div className="skeleton h-3 w-4/5 rounded-full" />
                   <div className="skeleton h-3 w-2/5 rounded-full" />
@@ -493,66 +418,72 @@ export default function JukeboxClient() {
       )}
 
       {results.length > 0 && !selected && (
-        <section className="jukebox-motion panel-card rounded-[28px] p-5">
-          <p className="eyebrow text-zinc-500">{results.length} resultados</p>
-          <p className="mt-1 text-xs text-zinc-500">Tocá el que querés pedir.</p>
-          <div className="mt-4 flex flex-col gap-2">
+        <section className="jukebox-motion panel-card rounded-[28px] p-4">
+          <p className="px-1 text-sm text-zinc-400">Tocá el tuyo.</p>
+          <ul className="mt-3 flex flex-col gap-2">
             {results.map((r, i) => (
-              <button
-                key={r.videoId}
-                type="button"
-                onClick={() => setSelected(r)}
-                className="pop-in flex min-h-12 items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3 text-left hover:border-[#8cff59]/30 hover:bg-zinc-900 active:scale-[0.98] active:border-[#8cff59]/50"
-                style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
-              >
-                {r.thumbnailUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={r.thumbnailUrl} alt="" loading="lazy" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="line-clamp-2 text-sm font-semibold text-white">{r.title}</p>
-                  <p className="mt-0.5 truncate text-xs text-zinc-400">{r.channelTitle}</p>
-                </div>
-                {r.durationSeconds && (
-                  <span className="shrink-0 text-xs tabular-nums text-zinc-500">
-                    {formatDuration(r.durationSeconds)}
+              <li key={r.videoId}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelected(r);
+                    setCodigo(codigoDe(i));
+                  }}
+                  className="pop-in flex min-h-16 w-full items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-2.5 text-left transition-[transform,border-color] duration-150 ease-out active:scale-[0.98] active:border-[#8cff59]/50"
+                  style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+                >
+                  <span className="w-8 shrink-0 text-center font-mono text-sm font-bold text-[#8cff59]">{codigoDe(i)}</span>
+                  {r.thumbnailUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={r.thumbnailUrl} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="line-clamp-2 text-sm font-semibold leading-snug text-white">{r.title}</span>
+                    <span className="mt-0.5 block truncate text-xs text-zinc-500">{r.channelTitle}</span>
                   </span>
-                )}
-              </button>
+                  {r.durationSeconds && (
+                    <span className="shrink-0 text-xs tabular-nums text-zinc-500">{formatDuration(r.durationSeconds)}</span>
+                  )}
+                </button>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       )}
 
       {selected && (
         <section className="jukebox-motion pop-in panel-card rounded-[28px] p-5">
-          <div className="flex items-start gap-2">
-            <button
-              type="button"
-              onClick={() => setSelected(null)}
-              aria-label="Volver a los resultados"
-              className="-ml-3 -mt-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-zinc-400 hover:bg-white/5 hover:text-white active:scale-[0.94]"
-            >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5M12 5l-7 7 7 7" />
-              </svg>
-            </button>
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              {selected.thumbnailUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={selected.thumbnailUrl} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
-              )}
-              <div className="min-w-0">
-                <p className="eyebrow text-zinc-500">Elegiste</p>
-                <p className="mt-1 line-clamp-2 text-base font-semibold leading-tight text-white">{selected.title}</p>
-                <p className="truncate text-sm text-zinc-400">{selected.channelTitle}</p>
-              </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSelected(null);
+              setCodigo(null);
+            }}
+            className="-ml-2 -mt-1 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-sm text-zinc-400 hover:text-white active:scale-[0.97]"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5M12 5l-7 7 7 7" />
+            </svg>
+            Elegir otro
+          </button>
+
+          {/* La tapa con el disco asomando: lo que va a entrar a la máquina. */}
+          <div className="mt-2 flex justify-center">
+            <div className="relative h-[150px] w-[230px]">
+              <Disco tamano={140} etiqueta={selected.thumbnailUrl || null} className="absolute left-[85px] top-[5px]" />
+              <Tapa url={selected.thumbnailUrl} className="absolute left-0 top-0 h-[150px] w-[150px]" />
             </div>
+          </div>
+
+          <div className="mt-4 text-center">
+            {codigo ? <p className="font-mono text-xs font-bold tracking-[0.25em] text-[#8cff59]">{codigo}</p> : null}
+            <p className="mt-1 line-clamp-2 text-base font-semibold leading-tight text-white">{selected.title}</p>
+            <p className="mt-0.5 truncate text-sm text-zinc-400">{selected.channelTitle}</p>
           </div>
 
           <div className="mt-5">
             <label className="text-sm font-medium text-zinc-300" htmlFor="proposer-name">
-              Tu nombre (o apodo)
+              Tu nombre o apodo
             </label>
             <input
               id="proposer-name"
@@ -569,7 +500,7 @@ export default function JukeboxClient() {
               maxLength={40}
               enterKeyHint="send"
               autoComplete="nickname"
-              className="mt-2 min-h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#8cff59]/60"
+              className="mt-2 min-h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-base text-white outline-none placeholder:text-zinc-500 focus:border-[#8cff59]/60"
             />
           </div>
 
@@ -595,15 +526,212 @@ export default function JukeboxClient() {
               {submitting ? (
                 <>
                   <Spinner />
-                  Enviando…
+                  Poniendo…
                 </>
               ) : (
-                "Proponer tema"
+                "Poner mi tema"
               )}
             </button>
           )}
         </section>
       )}
     </>
+  );
+}
+
+/** "A1", "A2"… como las teclas de una jukebox: 4 por letra. */
+function codigoDe(indice: number): string {
+  return `${"ABCDEFGHIJ"[Math.floor(indice / 4)] ?? "Z"}${(indice % 4) + 1}`;
+}
+
+/** La tapa del disco: la miniatura del video, o un cuadrado verde si no hay. */
+function Tapa({ url, className = "" }: { url: string | null; className?: string }) {
+  return (
+    <div className={`overflow-hidden rounded-md border border-white/10 bg-[#8cff59] shadow-[0_14px_30px_rgba(0,0,0,0.6)] ${className}`}>
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <span className="font-display flex h-full w-full items-center justify-center text-3xl font-bold text-[#07130a]">A51</span>
+      )}
+    </div>
+  );
+}
+
+/** Arriba de todo: la máquina con lo que suena. El disco gira y el brazo baja solo si hay un tema sonando. */
+function Maquina({ ahora }: { ahora: AhoraSonando | null }) {
+  const suena = ahora?.nowPlaying ?? null;
+  return (
+    <section
+      className="jukebox-motion relative overflow-hidden rounded-b-[28px] rounded-t-[180px] border border-[#8cff59]/30 px-5 pb-5 pt-12 shadow-[0_0_60px_rgba(140,255,89,0.08)]"
+      style={{ background: "radial-gradient(90% 70% at 50% 30%, rgba(140,255,89,0.10), rgba(9,9,11,0.95) 70%)" }}
+      aria-live="polite"
+    >
+      {/* El arco de neón de adentro: es lo que hace que se lea como una jukebox y no como una tarjeta. */}
+      <span
+        className="pointer-events-none absolute inset-x-3 top-3 bottom-[45%] rounded-t-[170px] border border-b-0 border-[#8cff59]/20"
+        aria-hidden="true"
+      />
+      <div className="flex justify-center">
+        <Disco tamano={196} etiqueta={suena?.thumbnailUrl ?? null} girando={!!suena} brazoAbajo={!!suena} />
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-zinc-800 bg-black/70 px-4 py-3 shadow-[inset_0_0_20px_rgba(140,255,89,0.06)]">
+        {ahora === null ? (
+          <div className="space-y-2" aria-busy="true">
+            <div className="skeleton h-3 w-24 rounded-full" />
+            <div className="skeleton h-3 w-4/5 rounded-full" />
+          </div>
+        ) : suena ? (
+          <>
+            <div className="flex items-center gap-2">
+              <Ecualizador />
+              <p className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-[#8cff59]">Suena ahora</p>
+            </div>
+            <p key={suena.videoTitle} className="pop-in mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-white">
+              {suena.videoTitle}
+            </p>
+            {ahora.upcoming[0] ? <p className="mt-1 truncate text-xs text-zinc-500">Sigue: {ahora.upcoming[0].videoTitle}</p> : null}
+          </>
+        ) : (
+          <>
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-zinc-500">En silencio</p>
+            <p className="mt-1.5 text-sm font-semibold text-white">Poné el primer tema.</p>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * La mística: el disco sale de la tapa, la tapa se va, el disco queda solo, baja la aguja y arranca a girar.
+ * Se ve una vez por pedido, así que puede durar (~2,5 s). Con movimiento reducido aparece ya puesto.
+ */
+function Puesto({ tema, codigo, autoAprobado }: { tema: SearchResult | null; codigo: string | null; autoAprobado: boolean }) {
+  const raiz = useRef<HTMLDivElement>(null);
+  const quieto = usarMovimientoReducido();
+  const [agujaAbajo, setAgujaAbajo] = useState(false);
+
+  useGSAP(
+    () => {
+      const q = gsap.utils.selector(raiz);
+      if (quieto) {
+        gsap.set(q(".tapa"), { autoAlpha: 0 });
+        gsap.set(q(".texto"), { autoAlpha: 1 });
+        setAgujaAbajo(true);
+        return;
+      }
+      const vinilo = q(".vinilo");
+      const giro = gsap.to(vinilo, { rotation: "+=360", duration: 1.8, ease: "none", repeat: -1, paused: true });
+
+      gsap
+        .timeline({ delay: 0.25 })
+        .fromTo(q(".tapa"), { autoAlpha: 0, y: 30, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.45, ease: "power3.out" })
+        .fromTo(q(".disco"), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.01 }, "<")
+        // Sale de la tapa hacia la derecha…
+        .to(q(".disco"), { x: 64, duration: 0.6, ease: "power2.out" }, "+=0.15")
+        // …la tapa se va y el disco vuelve al centro, solo.
+        .to(q(".tapa"), { x: -70, autoAlpha: 0, rotation: -8, duration: 0.45, ease: "power2.in" }, "+=0.05")
+        .to(q(".disco"), { x: 0, scale: 1.08, duration: 0.6, ease: "power3.inOut" }, "<0.1")
+        .call(() => setAgujaAbajo(true), [], "+=0.05")
+        // La aguja tarda 0,7 s en bajar (transición del brazo): recién ahí arranca, acelerando como un plato.
+        .call(
+          () => {
+            giro.play();
+            gsap.fromTo(giro, { timeScale: 0 }, { timeScale: 1, duration: 1.2, ease: "power2.in" });
+          },
+          [],
+          "+=0.6",
+        )
+        .fromTo(q(".halo"), { autoAlpha: 0, scale: 0.85 }, { autoAlpha: 1, scale: 1, duration: 0.8, ease: "power3.out" }, "<")
+        .fromTo(q(".texto"), { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.45, stagger: 0.08, ease: "power3.out" }, "<0.2");
+
+      return () => giro.kill();
+    },
+    { scope: raiz, dependencies: [quieto] },
+  );
+
+  const etiqueta = tema?.thumbnailUrl || null;
+  return (
+    <section
+      ref={raiz}
+      className="jukebox-motion relative overflow-hidden rounded-[28px] border border-[#8cff59]/30 px-5 pb-6 pt-8 text-center"
+      style={{ background: "radial-gradient(80% 60% at 50% 35%, rgba(140,255,89,0.12), rgba(9,9,11,0.96) 70%)" }}
+      aria-live="polite"
+    >
+      <div className="relative mx-auto h-[220px] w-[220px]">
+        <span
+          className="halo pointer-events-none absolute -inset-6 rounded-full opacity-0"
+          style={{ background: "radial-gradient(circle, rgba(140,255,89,0.28), transparent 65%)" }}
+          aria-hidden="true"
+        />
+        <div className="disco absolute inset-[10px] opacity-0">
+          <Disco tamano={200} etiqueta={etiqueta} brazoAbajo={agujaAbajo} />
+        </div>
+        <Tapa url={tema?.thumbnailUrl ?? null} className="tapa absolute inset-[10px] opacity-0" />
+      </div>
+
+      <p className="texto mt-5 font-mono text-xs font-bold tracking-[0.25em] text-[#8cff59] opacity-0">
+        {codigo ? `${codigo} · ` : ""}
+        {autoAprobado ? "En la cola" : "Pedido"}
+      </p>
+      <h2 className="texto font-display mt-2 text-2xl font-semibold text-white opacity-0">
+        {autoAprobado ? "Tu tema ya está en la cola" : "Tu tema está pedido"}
+      </h2>
+      {tema ? <p className="texto mt-2 line-clamp-2 text-sm text-zinc-300 opacity-0">{tema.title}</p> : null}
+      <p className="texto mt-2 text-sm text-zinc-500 opacity-0">
+        {autoAprobado ? "Va a sonar pronto." : "Si lo aprueban, suena pronto."}
+      </p>
+    </section>
+  );
+}
+
+/** Seguimiento del pedido: en revisión → en la cola → sonando. */
+function TuTema({ pedido }: { pedido: PedidoCliente }) {
+  const activo = pedido.estado === "en_cola" || pedido.estado === "sonando";
+  const paso = PASO_ACTUAL[pedido.estado];
+  return (
+    <section
+      className={`jukebox-motion pop-in panel-card rounded-[22px] px-4 py-4 ${
+        pedido.estado === "sonando" ? "border-[#8cff59]/40 shadow-[0_0_32px_rgba(140,255,89,0.12)]" : ""
+      }`}
+      aria-live="polite"
+    >
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Tu tema</p>
+      <p className="mt-1 truncate text-sm font-semibold text-white">{pedido.videoTitle}</p>
+      {/* key: al cambiar de estado (o de lugar) la línea entra de nuevo, así se nota el avance. */}
+      <p
+        key={`${pedido.estado}-${pedido.lugar ?? ""}`}
+        className={`pop-in mt-1.5 flex items-center gap-2 text-sm ${activo ? "text-[#8cff59]" : "text-zinc-300"}`}
+      >
+        {pedido.estado === "sonando" ? (
+          <Ecualizador />
+        ) : (
+          <span className={`h-2 w-2 shrink-0 rounded-full ${PUNTO_PEDIDO[pedido.estado]}`} aria-hidden="true" />
+        )}
+        {textoPedido(pedido)}
+      </p>
+      {paso >= 0 ? (
+        <ol className="mt-3 grid grid-cols-3 gap-1.5" aria-label="Avance de tu tema">
+          {PASOS.map((nombre, i) => {
+            const hecho = i <= paso;
+            return (
+              <li key={nombre} className="min-w-0">
+                <div className="h-1 overflow-hidden rounded-full bg-zinc-800">
+                  <div
+                    className={`h-full origin-left rounded-full bg-[#8cff59] transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+                      hecho ? "scale-x-100" : "scale-x-0"
+                    }`}
+                    style={{ transitionDelay: `${i * 120}ms` }}
+                  />
+                </div>
+                <p className={`mt-1 truncate text-[11px] ${hecho ? "text-zinc-200" : "text-zinc-500"}`}>{nombre}</p>
+              </li>
+            );
+          })}
+        </ol>
+      ) : null}
+    </section>
   );
 }
