@@ -113,7 +113,7 @@ export default function Pantalla({ reveal }: { reveal: RevealPanel }) {
           ) : null}
           {accion ? (
             <span className="flex min-w-0 flex-col items-center leading-tight">
-              <span className="max-w-full truncate text-xl">{accion.texto}</span>
+              <span className="max-w-full break-words text-center text-xl">{accion.texto}</span>
               <span className="mt-0.5 text-xs font-semibold opacity-70">{accion.detalle}</span>
             </span>
           ) : (
@@ -169,12 +169,12 @@ export default function Pantalla({ reveal }: { reveal: RevealPanel }) {
 function LineaEtapas({ etapa }: { etapa: Etapa }) {
   const actual = etapa === "listo" ? ETAPAS.length : ETAPAS.findIndex((e) => e.id === etapa);
   return (
-    <ol className="flex items-center gap-2" aria-label="Etapas del sorteo">
+    <ol className="flex items-center justify-between gap-2" aria-label="Etapas del sorteo">
       {ETAPAS.map((e, i) => {
         const hecha = i < actual;
         const ahora = i === actual;
         return (
-          <li key={e.id} className="flex min-w-0 flex-1 items-center gap-2">
+          <li key={e.id} className="flex min-w-0 items-center gap-1.5">
             <span
               className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
                 hecha
@@ -188,12 +188,11 @@ function LineaEtapas({ etapa }: { etapa: Etapa }) {
               {hecha ? "✓" : i + 1}
             </span>
             <span
-              className={`truncate text-sm ${ahora ? "font-semibold text-white" : hecha ? "text-zinc-400" : "text-zinc-500"}`}
+              className={`text-sm ${ahora ? "font-semibold text-white" : hecha ? "text-zinc-400" : "text-zinc-500"}`}
             >
               {e.titulo}
               {ahora ? <span className="sr-only"> (ahora)</span> : null}
             </span>
-            {i < ETAPAS.length - 1 ? <span className="h-px min-w-3 flex-1 bg-zinc-800" aria-hidden="true" /> : null}
           </li>
         );
       })}

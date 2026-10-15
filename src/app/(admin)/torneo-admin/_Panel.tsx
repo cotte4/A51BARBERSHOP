@@ -263,78 +263,101 @@ export default function Panel({ datos }: { datos: PanelDatos }) {
     <Marco estado={torneo.estado}>
       <AutoRefresco />
 
-      {/* ── Resumen ── */}
-      <section
-        className={`panel-card relative overflow-hidden rounded-[32px] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.32)] sm:p-7 ${ENTRA}`}
-        style={demora(0)}
-      >
-        <Brillo />
-        <div className="relative">
-          <EtiquetaSenal derecha={torneo.fechaTexto ?? "Fecha a confirmar"} />
-          <h1 className="font-display mt-4 text-2xl font-semibold leading-tight text-white sm:text-3xl">
-            {torneo.nombre}
-          </h1>
-
-          <div className="mt-5 flex items-end justify-between gap-4">
-            <div>
-              <p className="eyebrow text-[11px] font-semibold">Pagaron</p>
-              <p className="font-display mt-1 flex items-baseline gap-1.5 font-bold leading-none tabular-nums">
-                <Contador valor={pagados.length} retraso={0.2} className="text-7xl text-white sm:text-8xl" />
-                <span className="text-3xl text-zinc-500 sm:text-4xl">/{cupo}</span>
-              </p>
-            </div>
-            {lleno ? (
-              <span className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[#8cff59]/30 bg-[#8cff59]/12 px-3 py-1.5 text-xs font-semibold text-[#8cff59]">
-                <IconoCheck className="h-3.5 w-3.5" />
-                Cupo completo
-              </span>
-            ) : (
-              <p className="mb-1 text-right text-sm leading-tight text-zinc-400">
-                <span className="font-display block text-3xl font-bold tabular-nums text-white">
-                  {cupo - pagados.length}
-                </span>
-                {cupo - pagados.length === 1 ? "lugar libre" : "lugares libres"}
-              </p>
-            )}
-          </div>
-
-          <BarraCupo pagados={pagados.length} cupo={cupo} />
-
-          <div className="mt-5 grid grid-cols-3 gap-2">
-            <Dato titulo="Anotados">
-              <Contador valor={pagados.length + pendientes.length} retraso={0.35} />
-            </Dato>
-            <Dato
-              titulo={enEspera ? "En espera" : "Sin pagar"}
-              tono={enEspera && pendientes.length > 0 ? "ambar" : "normal"}
-            >
-              <Contador valor={pendientes.length} retraso={0.4} />
-            </Dato>
-            {mostrarPartidos ? (
-              <Dato titulo="Jugados">
-                <span className="tabular-nums">
-                  {jugados}
-                  <span className="text-base text-zinc-500">/{jugables.length}</span>
-                </span>
-              </Dato>
-            ) : (
-              <Dato titulo="Cuota">
-                <span className="text-lg sm:text-2xl">{torneo.cuota}</span>
-              </Dato>
-            )}
-          </div>
-
-          <Link
-            href="/torneo"
-            className="mt-5 inline-flex min-h-11 items-center gap-1.5 text-sm text-zinc-400 hover:text-[#8cff59]"
+      {/* ── Resumen: el cupo importa hasta el sorteo; después, solo el nombre y cuántos partidos van. ── */}
+      {inscripcion ? (
+        <>
+          <section
+            className={`panel-card relative overflow-hidden rounded-[32px] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.32)] sm:p-7 ${ENTRA}`}
+            style={demora(0)}
           >
-            Ver la página pública
-            <IconoFlecha />
-          </Link>
-        </div>
-      </section>
+            <Brillo />
+            <div className="relative">
+              <EtiquetaSenal derecha={torneo.fechaTexto ?? "Fecha a confirmar"} />
+              <h1 className="font-display mt-4 text-2xl font-semibold leading-tight text-white sm:text-3xl">
+                {torneo.nombre}
+              </h1>
 
-      {/* ── La acción de esta etapa ── */}
+              <div className="mt-5 flex items-end justify-between gap-4">
+                <div>
+                  <p className="eyebrow text-[11px] font-semibold">Pagaron</p>
+                  <p className="font-display mt-1 flex items-baseline gap-1.5 font-bold leading-none tabular-nums">
+                    <Contador valor={pagados.length} retraso={0.2} className="text-7xl text-white sm:text-8xl" />
+                    <span className="text-3xl text-zinc-500 sm:text-4xl">/{cupo}</span>
+                  </p>
+                </div>
+                {lleno ? (
+                  <span className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[#8cff59]/30 bg-[#8cff59]/12 px-3 py-1.5 text-xs font-semibold text-[#8cff59]">
+                    <IconoCheck className="h-3.5 w-3.5" />
+                    Cupo completo
+                  </span>
+                ) : (
+                  <p className="mb-1 text-right text-sm leading-tight text-zinc-400">
+                    <span className="font-display block text-3xl font-bold tabular-nums text-white">
+                      {cupo - pagados.length}
+                    </span>
+                    {cupo - pagados.length === 1 ? "lugar libre" : "lugares libres"}
+                  </p>
+                )}
+              </div>
+
+              <BarraCupo pagados={pagados.length} cupo={cupo} />
+
+              <div className="mt-5 grid grid-cols-3 gap-2">
+                <Dato titulo="Anotados">
+                  <Contador valor={pagados.length + pendientes.length} retraso={0.35} />
+                </Dato>
+                <Dato
+                  titulo={enEspera ? "En espera" : "Sin pagar"}
+                  tono={enEspera && pendientes.length > 0 ? "ambar" : "normal"}
+                >
+                  <Contador valor={pendientes.length} retraso={0.4} />
+                </Dato>
+                {mostrarPartidos ? (
+                  <Dato titulo="Jugados">
+                    <span className="tabular-nums">
+                      {jugados}
+                      <span className="text-base text-zinc-500">/{jugables.length}</span>
+                    </span>
+                  </Dato>
+                ) : (
+                  <Dato titulo="Cuota">
+                    <span className="text-lg sm:text-2xl">{torneo.cuota}</span>
+                  </Dato>
+                )}
+              </div>
+
+              <Link
+                href="/torneo"
+                className="mt-5 inline-flex min-h-11 items-center gap-1.5 text-sm text-zinc-400 hover:text-[#8cff59]"
+              >
+                Ver la página pública
+                <IconoFlecha />
+              </Link>
+            </div>
+          </section>
+        </>
+      ) : (
+        <section className={`panel-card relative overflow-hidden rounded-[28px] p-5 sm:p-6 ${ENTRA}`} style={demora(0)}>
+          <Brillo />
+          <div className="relative flex items-end justify-between gap-4">
+            <div className="min-w-0">
+              <EtiquetaSenal derecha={torneo.fechaTexto ?? "Fecha a confirmar"} />
+              <h1 className="font-display mt-3 truncate text-2xl font-semibold text-white">{torneo.nombre}</h1>
+            </div>
+            {mostrarPartidos ? (
+              <p className="shrink-0 text-right text-sm text-zinc-400">
+                <span className="font-display block text-3xl font-bold tabular-nums text-white">
+                  {jugados}
+                  <span className="text-lg text-zinc-500">/{jugables.length}</span>
+                </span>
+                jugados
+              </p>
+            ) : null}
+          </div>
+        </section>
+      )}
+
+      {/* ── Lo de esta etapa va arriba; lo que ya se usó, plegado abajo. ── */}
       {inscripcion ? (
         <section
           id="sorteo"
@@ -350,7 +373,7 @@ export default function Panel({ datos }: { datos: PanelDatos }) {
             </div>
           </div>
         </section>
-      ) : (
+      ) : sorteoCompleto ? null : (
         <section
           className={`relative overflow-hidden rounded-[28px] border border-[#8cff59]/25 bg-[linear-gradient(160deg,rgba(140,255,89,0.12),rgba(24,24,27,0.97)_42%,rgba(18,18,20,0.98))] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.3)] sm:p-6 ${ENTRA}`}
           style={demora(120)}
@@ -374,51 +397,72 @@ export default function Panel({ datos }: { datos: PanelDatos }) {
         </Seccion>
       ) : null}
 
-      {/* ── Jugadores ── */}
-      <Seccion
-        id="jugadores"
-        eyebrow={inscripcion ? "Tocá cuando te pague" : "Anotados"}
-        titulo="Jugadores"
-        retraso={200}
-      >
-        {jugadores.length === 0 ? (
-          <div className="rounded-[22px] border border-dashed border-zinc-800 px-4 py-8 text-center">
-            <p className="text-sm text-zinc-400">Todavía nadie se anotó.</p>
-            <p className="mt-1 text-xs text-zinc-500">Aparecen solos acá cuando se anotan desde la página.</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-6">
-            {/* Mientras hay lugar, lo que Pinky tiene que tocar va arriba. */}
-            {pendientesPrimero ? grupoPendientes : grupoPagados}
-            {pendientesPrimero ? grupoPagados : grupoPendientes}
-            {bajas.length > 0 ? (
-              <Grupo titulo="Bajas" cantidad={bajas.length} tono="gris">
-                {bajas.map((j) => (
-                  <li
-                    key={j.id}
-                    className={`rounded-[22px] border border-zinc-800/80 bg-zinc-950/40 p-4 ${ENTRA}`}
-                    style={demora(siguienteDemora())}
-                  >
-                    <p className="font-semibold text-zinc-400 line-through decoration-zinc-600">{j.alias}</p>
-                    <p className="text-sm text-zinc-500">{j.nombre}</p>
-                    <p className="mt-1.5 text-xs font-semibold text-amber-300/90">Baja · se le devolvió la cuota</p>
-                  </li>
-                ))}
-              </Grupo>
-            ) : null}
-          </div>
-        )}
-      </Seccion>
 
-      {/* ── Equipos ── */}
-      <Seccion
-        id="equipos"
-        eyebrow={inscripcion ? "Los que entran al sorteo" : "Ya sorteados"}
-        titulo="Equipos"
-        retraso={260}
-      >
-        <EquiposForm guardados={equipos} minimo={Math.max(pagados.length, cupo)} bloqueado={!inscripcion} />
-      </Seccion>
+      {/* Terminado el sorteo, la tele se maneja poco (repetir, abrir): plegada. */}
+      {!inscripcion && sorteoCompleto ? (
+        <Plegado eyebrow="Abrir o repetir el sorteo" titulo="La tele" retraso={240}>
+          <Pantalla reveal={reveal} />
+        </Plegado>
+      ) : null}
+
+      {inscripcion ? (
+        <>
+          <Seccion
+            id="jugadores"
+            eyebrow={inscripcion ? "Tocá cuando te pague" : "Anotados"}
+            titulo="Jugadores"
+            retraso={200}
+          >
+            {jugadores.length === 0 ? (
+              <div className="rounded-[22px] border border-dashed border-zinc-800 px-4 py-8 text-center">
+                <p className="text-sm text-zinc-400">Todavía nadie se anotó.</p>
+                <p className="mt-1 text-xs text-zinc-500">Aparecen solos acá cuando se anotan desde la página.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-6">
+                {/* Mientras hay lugar, lo que Pinky tiene que tocar va arriba. */}
+                {pendientesPrimero ? grupoPendientes : grupoPagados}
+                {pendientesPrimero ? grupoPagados : grupoPendientes}
+                {bajas.length > 0 ? (
+                  <Grupo titulo="Bajas" cantidad={bajas.length} tono="gris">
+                    {bajas.map((j) => (
+                      <li
+                        key={j.id}
+                        className={`rounded-[22px] border border-zinc-800/80 bg-zinc-950/40 p-4 ${ENTRA}`}
+                        style={demora(siguienteDemora())}
+                      >
+                        <p className="font-semibold text-zinc-400 line-through decoration-zinc-600">{j.alias}</p>
+                        <p className="text-sm text-zinc-500">{j.nombre}</p>
+                        <p className="mt-1.5 text-xs font-semibold text-amber-300/90">Baja · se le devolvió la cuota</p>
+                      </li>
+                    ))}
+                  </Grupo>
+                ) : null}
+              </div>
+            )}
+          </Seccion>
+          <Seccion
+            id="equipos"
+            eyebrow={inscripcion ? "Los que entran al sorteo" : "Ya sorteados"}
+            titulo="Equipos"
+            retraso={260}
+          >
+            <EquiposForm guardados={equipos} minimo={Math.max(pagados.length, cupo)} bloqueado={!inscripcion} />
+          </Seccion>
+        </>
+      ) : (
+        // Ya sorteados: la lista sirve solo para un reemplazo (antes del primer partido) o para consultar.
+        <Plegado
+          eyebrow={puedeReemplazar ? "Ver o reemplazar a alguien" : "Ya sorteados"}
+          titulo={`Jugadores (${pagados.length})`}
+          retraso={260}
+        >
+          <div className="flex flex-col gap-6">
+            {grupoPagados}
+            {grupoPendientes}
+          </div>
+        </Plegado>
+      )}
 
       {/* ── Datos del torneo (se tocan poco: plegados) ── */}
       <details className={`group panel-card rounded-[28px] ${ENTRA}`} style={demora(300)}>
@@ -451,6 +495,36 @@ export default function Panel({ datos }: { datos: PanelDatos }) {
 }
 
 /* ── Piezas ────────────────────────────────────────────────────────── */
+
+/** Sección que ya se usó: queda a mano pero cerrada, para que no ocupe pantalla. */
+function Plegado({
+  eyebrow,
+  titulo,
+  retraso,
+  children,
+}: {
+  eyebrow: string;
+  titulo: string;
+  retraso: number;
+  children: ReactNode;
+}) {
+  return (
+    <details className={`group panel-card rounded-[28px] ${ENTRA}`} style={demora(retraso)}>
+      <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 rounded-[28px] px-5 py-4 sm:px-6 [&::-webkit-details-marker]:hidden">
+        <span>
+          <span className="eyebrow block text-[11px] font-semibold">{eyebrow}</span>
+          <span className="font-display mt-0.5 block text-lg font-semibold text-white">{titulo}</span>
+        </span>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-zinc-700 text-zinc-400 transition-transform duration-200 group-open:rotate-180">
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
+            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </summary>
+      <div className="px-5 pb-5 sm:px-6 sm:pb-6">{children}</div>
+    </details>
+  );
+}
 
 function Brillo() {
   return (
