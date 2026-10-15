@@ -146,6 +146,35 @@ function mezclar<T>(items: readonly T[], azar: () => number): T[] {
   return copia;
 }
 
+/**
+ * Elige UN equipo entre los libres, con probabilidad proporcional a su peso (peso 1 para todos = parejo).
+ * Lo usa el sorteo (un pick por jugador, sin reposición) y lo va a reusar el "volver a sortear" de un
+ * jugador: la misma regla de pesos, con un `azar` nuevo. Los pesos son relativos, no hace falta que sumen 1.
+ */
+export function elegirEquipoPonderado(
+  libres: readonly string[],
+  peso: (equipoId: string) => number,
+  azar: () => number,
+): string {
+  if (libres.length === 0) throw new Error("No quedan equipos para elegir.");
+  const pesos = libres.map((id) => {
+    const p = peso(id);
+    if (!Number.isFinite(p) || p < 0) throw new Error(`Peso inválido para el equipo ${id}.`);
+    return p;
+  });
+  const total = pesos.reduce((suma, p) => suma + p, 0);
+  if (total <= 0) throw new Error("Todos los equipos libres tienen peso 0.");
+
+  let punto = azar() * total;
+  for (let i = 0; i < libres.length; i++) {
+    punto -= pesos[i];
+    if (punto < 0) return libres[i];
+  }
+  // Por redondeo del float puede sobrar un poco: el último con peso positivo.
+  for (let i = libres.length - 1; i >= 0; i--) if (pesos[i] > 0) return libres[i];
+  return libres[libres.length - 1];
+}
+
 /** Menor potencia de 2 que alcanza para n jugadores (mínimo 2). */
 export function tamanoCuadro(n: number): number {
   let tamano = 2;
@@ -202,14 +231,20 @@ export type EntradaSorteo = {
   jugadorIds: readonly string[];
   equipoIds: readonly string[];
   semilla: string;
+  /**
+   * Peso relativo de cada equipo en el sorteo (más peso = sale más seguido). Sin esto, todos valen igual.
+   * La función pura no sabe de nombres ni de "tochos": quien la llama traduce el equipo a su peso.
+   */
+  pesoDeEquipo?: (equipoId: string) => number;
 };
 
 /**
  * Sortea equipos (uno único por jugador) y arma el cuadro completo.
+ * Los equipos salen de a uno por jugador, sin reposición, con probabilidad proporcional a `pesoDeEquipo`.
  * Con menos jugadores que el tamaño del cuadro, los "byes" (pase directo) caen en
  * cruces distintos, elegidos al azar; el jugador con bye ya avanza a la ronda 2.
  */
-export function sortearTorneo({ jugadorIds, equipoIds, semilla }: EntradaSorteo): ResultadoSorteo {
+export function sortearTorneo({ jugadorIds, equipoIds, semilla, pesoDeEquipo }: EntradaSorteo): ResultadoSorteo {
   const n = jugadorIds.length;
   if (n < 2) throw new Error("Hacen falta al menos 2 jugadores para sortear.");
   if (new Set(jugadorIds).size !== n) throw new Error("Hay jugadores repetidos.");
@@ -220,7 +255,14 @@ export function sortearTorneo({ jugadorIds, equipoIds, semilla }: EntradaSorteo)
 
   const azar = crearAzar(semilla);
   const jugadores = mezclar(jugadorIds, azar);
-  const equipos = mezclar(equipoIds, azar).slice(0, n);
+  const peso = pesoDeEquipo ?? (() => 1);
+  const libres = [...equipoIds];
+  const equipos: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const elegido = elegirEquipoPonderado(libres, peso, azar);
+    equipos.push(elegido);
+    libres.splice(libres.indexOf(elegido), 1);
+  }
 
   const asignaciones: AsignacionSorteo[] = jugadores.map((jugadorId, i) => ({
     jugadorId,

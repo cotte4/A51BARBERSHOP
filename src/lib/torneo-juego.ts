@@ -19,6 +19,7 @@ import {
   type Podio,
   type Reveal,
 } from "@/lib/torneo";
+import { pesoDeEquipoPorNombre } from "@/lib/torneo-escudos";
 import {
   getResumenPublico,
   getTorneoVigente,
@@ -88,17 +89,20 @@ export async function sortearYGuardar(torneoId: string): Promise<ResultadoSorteo
     if (pagados.length < 2) return { ok: false, motivo: "pocos_pagados" } as const;
 
     const equipos = await tx
-      .select({ id: torneoEquipos.id })
+      .select({ id: torneoEquipos.id, nombre: torneoEquipos.nombre })
       .from(torneoEquipos)
       .where(eq(torneoEquipos.torneoId, torneoId));
     if (equipos.length < pagados.length) return { ok: false, motivo: "faltan_equipos" } as const;
 
     // El prefijo marca que el reveal va en dos fases (ruleta de equipos + cruces): ver leerReveal.
     const semilla = `${SEMILLA_DOS_FASES}${randomUUID()}`;
+    // Los "tochos" (Bayern, Real Madrid, Barcelona, PSG) pesan menos: ver TOCHOS en torneo-escudos.ts.
+    const nombrePorEquipo = new Map(equipos.map((e) => [e.id, e.nombre]));
     const resultado = sortearTorneo({
       jugadorIds: pagados.map((j) => j.id),
       equipoIds: equipos.map((e) => e.id),
       semilla,
+      pesoDeEquipo: (equipoId) => pesoDeEquipoPorNombre(nombrePorEquipo.get(equipoId) ?? ""),
     });
 
     for (const a of resultado.asignaciones) {
