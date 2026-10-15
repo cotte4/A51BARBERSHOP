@@ -15,6 +15,7 @@ import {
   rechazarTurnoAction,
 } from "@/app/(admin)/turnos/actions";
 import { getDefaultsCobroRecientes } from "@/lib/dashboard-queries";
+import { getTorneoActivoParaHoy } from "@/lib/hoy-torneo";
 import { getTurnosActorContext } from "@/lib/turnos-access";
 import { getTurnosVisibleList } from "@/lib/turnos";
 import HoyDashboard from "./_HoyDashboard";
@@ -62,6 +63,7 @@ export default async function HoyPage() {
     serviciosList,
     turnosHoy,
     marcianosTurnosHoy,
+    torneoActivo,
   ] = await Promise.all([
     actor.barberoId
       ? db
@@ -117,6 +119,8 @@ export default async function HoyPage() {
         )
       )
       .orderBy(turnosTable.horaInicio),
+    // El panel del torneo es solo del dueño: al barbero ni se le consulta.
+    actor.isAdmin ? getTorneoActivoParaHoy() : Promise.resolve(null),
   ]);
 
   const serviciosActivos = serviciosList.filter((s) => s.activo);
@@ -179,6 +183,7 @@ export default async function HoyPage() {
         registrarAction={registrarAtencionExpressAction}
         defaultServicioId={defaultsCobro.servicioId ?? undefined}
         defaultMedioPagoId={defaultsCobro.medioPagoId ?? undefined}
+        torneoActivo={torneoActivo}
         marcianosTurnos={marcianosTurnosHoy.map((m) => ({
           turnoId: m.turnoId,
           horaInicio: m.horaInicio,

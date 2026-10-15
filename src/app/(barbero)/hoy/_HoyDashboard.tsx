@@ -8,6 +8,7 @@ import { PullToRefresh } from "@/components/ui/PullToRefresh";
 import QuickCheckoutPanel from "@/components/caja/QuickCheckoutPanel";
 import TurnosPendientesInbox, { type TurnoConAcciones } from "./_TurnosPendientesInbox";
 import { formatARS } from "@/lib/format";
+import type { TorneoActivoHoy } from "@/lib/hoy-torneo";
 import type { TurnoSummary } from "@/lib/types";
 import type { AtencionRapidaState } from "@/app/(barbero)/caja/actions";
 
@@ -35,6 +36,8 @@ type Props = {
     horaInicio: string;
     clienteNombre: string | null;
   }[];
+  /** Solo para el admin y solo con un torneo sin terminar; si no, null. */
+  torneoActivo: TorneoActivoHoy | null;
 };
 
 function getBadgeTone(estado: string) {
@@ -87,6 +90,23 @@ function MusicIcon() {
   );
 }
 
+function TrophyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 6H5v1.5A3 3 0 0 0 8 10.5M16 6h3v1.5A3 3 0 0 1 16 10.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 13v4M8.5 20h7M10 17h4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 function TurnosOverlayContent({
   turnosOperativos,
@@ -192,6 +212,7 @@ export default function HoyDashboard({
   defaultServicioId,
   defaultMedioPagoId,
   marcianosTurnos,
+  torneoActivo,
 }: Props) {
   const router = useRouter();
   const [showCobrar, setShowCobrar] = useState(false);
@@ -231,6 +252,29 @@ export default function HoyDashboard({
 
         {/* Central zone */}
         <div className="flex flex-1 flex-col gap-3 overflow-hidden p-4">
+          {/* TORNEO — solo admin, solo con un torneo en curso */}
+          {torneoActivo ? (
+            <Link
+              href="/torneo-admin"
+              className="flex shrink-0 items-center gap-3 rounded-[28px] border border-[#8cff59]/40 bg-[#8cff59]/10 px-4 py-3.5 transition hover:-translate-y-0.5 hover:bg-[#8cff59]/15 active:scale-[0.98]"
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#8cff59] text-[#07130a]">
+                <TrophyIcon />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-display text-base font-bold text-white">
+                  {torneoActivo.nombre}
+                </span>
+                <span className="block truncate text-sm font-semibold text-[#8cff59]">
+                  {torneoActivo.etapa}
+                </span>
+              </span>
+              <span className="shrink-0 text-[#8cff59]">
+                <ChevronRightIcon />
+              </span>
+            </Link>
+          ) : null}
+
           {/* COBRAR button — dominant */}
           <button
             type="button"
