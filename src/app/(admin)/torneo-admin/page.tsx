@@ -123,6 +123,10 @@ export default async function TorneoAdminPage() {
     jugadores: jugadoresPanel,
     equipos: equipos.map((e) => e.nombre),
     partidos: partidosVista,
+    mejorGol:
+      torneo.mejorGolPartidoId && torneo.mejorGolJugadorId
+        ? { partidoId: torneo.mejorGolPartidoId, jugadorId: torneo.mejorGolJugadorId }
+        : null,
   };
 
   return <Panel datos={datos} />;

@@ -49,6 +49,13 @@ function armarTablero(
       revealPaso: reveal.paso,
       revealTotal: reveal.total,
       ventanaPremium: premium.abierta ? "abierta" : null,
+      // En el ensayo, el mejor gol es del campeón en su primer partido.
+      mejorGol: (() => {
+        const podio = calcularPodio(cuadro);
+        if (!terminado || !podio.campeonId) return null;
+        const p = cuadro.find((x) => x.ronda === 1 && x.ganadorId === podio.campeonId);
+        return p ? { partidoId: `p-${p.ronda}-${p.posicion}`, jugadorId: podio.campeonId } : null;
+      })(),
     },
     ultimoCambio: premium.ultimoCambio,
     jugadores: NOMBRES.map((nombre, i) => ({ id: `j${i + 1}`, nombre, equipo: equipoDe.get(`j${i + 1}`) ?? null })),

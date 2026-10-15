@@ -65,6 +65,7 @@ export type PanelDatos = {
   /** Nombres de los equipos guardados. */
   equipos: string[];
   partidos: PartidoVista[];
+  mejorGol: { partidoId: string; jugadorId: string } | null;
 };
 
 const ESTADO: Record<EstadoTorneo, string> = {
@@ -393,7 +394,12 @@ export default function Panel({ datos }: { datos: PanelDatos }) {
           titulo="Los partidos"
           retraso={200}
         >
-          <Partidos partidos={partidos} jugadores={infoJugadores} finalizado={torneo.estado === "finalizado"} />
+          <Partidos
+            partidos={partidos}
+            jugadores={infoJugadores}
+            finalizado={torneo.estado === "finalizado"}
+            mejorGol={datos.mejorGol}
+          />
         </Seccion>
       ) : null}
 

@@ -54,7 +54,8 @@ describe("sortearTorneo", () => {
     const r = sortearTorneo({ jugadorIds: jugadores, equipoIds: equipos, semilla: "x" });
     expect(r.rondas).toBe(4);
     expect(r.partidos.filter((p) => p.ronda === 1)).toHaveLength(8);
-    expect(r.partidos).toHaveLength(15);
+    // 15 del cuadro + el partido por el tercer puesto.
+    expect(r.partidos).toHaveLength(16);
     expect(r.partidos.some((p) => p.esBye)).toBe(false);
     expect(r.partidos.filter((p) => p.ronda === 1).every((p) => p.estado === "listo")).toBe(true);
   });

@@ -1,4 +1,4 @@
-import { fueAPenales } from "@/lib/torneo";
+import { fueAPenales, POSICION_TERCER_PUESTO } from "@/lib/torneo";
 import { getTableroPublico } from "@/lib/torneo-juego";
 import Escudo from "@/components/torneo/Escudo";
 import Refrescar from "./_Refrescar";
@@ -23,7 +23,7 @@ export default async function CuadroPublico() {
   const jugadores = new Map(tablero.jugadores.map((j) => [j.id, j] as const));
   const rondas = Math.max(...tablero.partidos.map((p) => p.ronda));
   const campeon = tablero.podio.campeonId ? jugadores.get(tablero.podio.campeonId) : undefined;
-  const final = tablero.partidos.find((p) => p.ronda === rondas);
+  const final = tablero.partidos.find((p) => p.ronda === rondas && p.posicion === 1);
   // "Final 3 – 1", siempre desde el lado del campeón.
   const golesFinal =
     campeon && final && final.marcadorA !== null && final.marcadorB !== null
@@ -56,8 +56,10 @@ export default async function CuadroPublico() {
           <p className="torneo-hud text-[0.65rem] text-[#8cff59]">{nombreRonda(ronda, rondas)}</p>
           {tablero.partidos
             .filter((p) => p.ronda === ronda)
-            .sort((a, b) => a.posicion - b.posicion)
+            // En la ronda de la final, el tercer puesto va primero: se juega antes.
+            .sort((a, b) => (ronda === rondas ? b.posicion - a.posicion : a.posicion - b.posicion))
             .map((p) => {
+              const tercero = ronda === rondas && p.posicion === POSICION_TERCER_PUESTO;
               const penales = fueAPenales(p);
               const lado = (id: string | null, goles: number | null) => {
                 const j = id ? jugadores.get(id) : undefined;
@@ -85,6 +87,7 @@ export default async function CuadroPublico() {
               };
               return (
                 <div key={p.id} className="border border-white/10 bg-black/40 px-4 py-2">
+                  {tercero && <p className="torneo-hud mb-1 text-[0.6rem] text-[#8cff59]/80">Tercer puesto</p>}
                   {lado(p.jugadorAId, p.marcadorA)}
                   <div className="my-1 h-px bg-white/10" />
                   {p.esBye ? (

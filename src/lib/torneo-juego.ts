@@ -265,6 +265,38 @@ export async function cargarResultado(
 }
 
 // ————————————————————————————
+// Mejor gol: Pinky elige en qué partido fue y quién lo hizo (o lo borra con null)
+// ————————————————————————————
+export type ResultadoMejorGol = { ok: true } | { ok: false; motivo: "no_existe" | "sin_jugar" | "no_jugo" };
+
+export async function elegirMejorGol(
+  torneoId: string,
+  eleccion: { partidoId: string; jugadorId: string } | null,
+): Promise<ResultadoMejorGol> {
+  if (eleccion) {
+    const [partido] = await db
+      .select()
+      .from(torneoPartidos)
+      .where(and(eq(torneoPartidos.id, eleccion.partidoId), eq(torneoPartidos.torneoId, torneoId)))
+      .limit(1);
+    if (!partido) return { ok: false, motivo: "no_existe" };
+    if (partido.estado !== "jugado" || partido.esBye) return { ok: false, motivo: "sin_jugar" };
+    if (eleccion.jugadorId !== partido.jugadorAId && eleccion.jugadorId !== partido.jugadorBId) {
+      return { ok: false, motivo: "no_jugo" };
+    }
+  }
+  await db
+    .update(torneos)
+    .set({
+      mejorGolPartidoId: eleccion?.partidoId ?? null,
+      mejorGolJugadorId: eleccion?.jugadorId ?? null,
+      updatedAt: new Date(),
+    })
+    .where(eq(torneos.id, torneoId));
+  return { ok: true };
+}
+
+// ————————————————————————————
 // Tablero público (pantalla de la tele y página /torneo)
 // Nunca expone email ni WhatsApp.
 // ————————————————————————————
@@ -280,6 +312,8 @@ export type TableroPublico = {
     revealTotal: number;
     /** "abierta": la tele muestra la ventana premium entre la ruleta y los cruces. */
     ventanaPremium: Torneo["ventanaPremium"];
+    /** El mejor gol que eligió Pinky: el partido y quién lo hizo. */
+    mejorGol: { partidoId: string; jugadorId: string } | null;
   };
   /** El último cambio de equipo premium: la tele anima la ruleta cuando aparece uno nuevo. */
   ultimoCambio: CambioPremium | null;
@@ -323,6 +357,10 @@ export async function getTableroPublico(): Promise<TableroPublico | null> {
       revealPaso: reveal.paso,
       revealTotal: reveal.total,
       ventanaPremium: torneo.ventanaPremium,
+      mejorGol:
+        torneo.mejorGolPartidoId && torneo.mejorGolJugadorId
+          ? { partidoId: torneo.mejorGolPartidoId, jugadorId: torneo.mejorGolJugadorId }
+          : null,
     },
     ultimoCambio,
     jugadores: (() => {

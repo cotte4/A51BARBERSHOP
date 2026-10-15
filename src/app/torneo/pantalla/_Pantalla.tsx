@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import type { DatosPantalla, TableroPublico } from "@/lib/torneo-juego";
-import { fueAPenales, ordenRuleta } from "@/lib/torneo";
+import { fueAPenales, ordenRuleta, POSICION_TERCER_PUESTO } from "@/lib/torneo";
 import { coloresDeEquipo } from "@/lib/torneo-escudos";
 import Escudo from "@/components/torneo/Escudo";
 import { conAlfa, cuerpoPorLargo, VERDE, type Jugador, type Partido } from "./_comun";
 import { Podio } from "./_Campeon";
+import { Premios } from "./_Premios";
 import Espera from "./_Espera";
 import { EscenaCruce, EscenaRuleta, PrecargaEscudos } from "./_Reveal";
 
@@ -375,34 +376,37 @@ function Cuadro({
                   const estadoDe = (id: string | null) =>
                     p.ganadorId && id ? (p.ganadorId === id ? "ganador" : "perdedor") : null;
                   const conPenales = fueAPenales(p);
+                  const tercero = ronda === rondas && p.posicion === POSICION_TERCER_PUESTO;
                   return (
-                    <div
-                      key={p.id}
-                      className={`border bg-black/45 px-4 py-1 ${
-                        p.estado === "listo"
-                          ? "border-[#8cff59]/70 shadow-[0_0_24px_rgba(140,255,89,0.25)]"
-                          : "border-white/10"
-                      }`}
-                    >
-                      <Fila
-                        jugador={a}
-                        estado={estadoDe(p.jugadorAId)}
-                        goles={p.ganadorId ? p.marcadorA : null}
-                        penales={conPenales && p.ganadorId === p.jugadorAId}
-                      />
-                      <div className="h-px bg-white/10" />
-                      {p.esBye ? (
-                        <div className="flex h-[42px] items-center">
-                          <span className="torneo-hud text-[14px] text-white/40">Pase directo</span>
-                        </div>
-                      ) : (
+                    <div key={p.id}>
+                      {tercero && <p className="torneo-hud mb-1 text-center text-[16px] text-[#8cff59]/80">Tercer puesto</p>}
+                      <div
+                        className={`border bg-black/45 px-4 py-1 ${
+                          p.estado === "listo"
+                            ? "border-[#8cff59]/70 shadow-[0_0_24px_rgba(140,255,89,0.25)]"
+                            : "border-white/10"
+                        }`}
+                      >
                         <Fila
-                          jugador={b}
-                          estado={estadoDe(p.jugadorBId)}
-                          goles={p.ganadorId ? p.marcadorB : null}
-                          penales={conPenales && p.ganadorId === p.jugadorBId}
+                          jugador={a}
+                          estado={estadoDe(p.jugadorAId)}
+                          goles={p.ganadorId ? p.marcadorA : null}
+                          penales={conPenales && p.ganadorId === p.jugadorAId}
                         />
-                      )}
+                        <div className="h-px bg-white/10" />
+                        {p.esBye ? (
+                          <div className="flex h-[42px] items-center">
+                            <span className="torneo-hud text-[14px] text-white/40">Pase directo</span>
+                          </div>
+                        ) : (
+                          <Fila
+                            jugador={b}
+                            estado={estadoDe(p.jugadorBId)}
+                            goles={p.ganadorId ? p.marcadorB : null}
+                            penales={conPenales && p.ganadorId === p.jugadorBId}
+                          />
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -411,6 +415,26 @@ function Cuadro({
         ))}
       </div>
     </div>
+  );
+}
+
+// El cierre alterna el campeón (con su camino) y los premios; cada vuelta repite la animación.
+const DURACION_CAMPEON_MS = 18_000;
+const DURACION_PREMIOS_MS = 16_000;
+
+function Cierre({ tablero, jugadores }: { tablero: TableroPublico; jugadores: Map<string, Jugador> }) {
+  const [escena, setEscena] = useState<"campeon" | "premios">("campeon");
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setEscena((e) => (e === "campeon" ? "premios" : "campeon")),
+      escena === "campeon" ? DURACION_CAMPEON_MS : DURACION_PREMIOS_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [escena]);
+  return escena === "campeon" ? (
+    <Podio key="campeon" tablero={tablero} jugadores={jugadores} />
+  ) : (
+    <Premios key="premios" tablero={tablero} jugadores={jugadores} />
   );
 }
 
@@ -537,7 +561,7 @@ export function PantallaVista({ datos, sinConexion = false }: { datos: DatosPant
   if (!tablero) {
     vista = <Espera previa={previa} />;
   } else if (tablero.torneo.estado === "finalizado" && escenaActiva === null && mostrado >= total) {
-    vista = <Podio tablero={tablero} jugadores={jugadores} />;
+    vista = <Cierre tablero={tablero} jugadores={jugadores} />;
   } else if (escenaActiva !== null ? escenaActiva <= orden.length : fondo <= orden.length) {
     // Terminada la ruleta, la grilla completa queda a la vista hasta que arranca el primer cruce.
     vista = (

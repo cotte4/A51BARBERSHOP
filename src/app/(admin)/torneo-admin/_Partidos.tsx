@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { GOLES_MAX } from "@/lib/torneo";
+import { GOLES_MAX, POSICION_TERCER_PUESTO } from "@/lib/torneo";
 import Escudo from "@/components/torneo/Escudo";
 import { cargarResultadoAction } from "./actions";
+import MejorGol from "./_MejorGol";
 
 export type PartidoVista = {
   id: string;
@@ -25,6 +26,7 @@ type PartidosProps = {
   partidos: PartidoVista[];
   jugadores: Map<string, JugadorInfo>;
   finalizado: boolean;
+  mejorGol: { partidoId: string; jugadorId: string } | null;
 };
 
 function nombreRonda(ronda: number, maxRonda: number): string {
@@ -36,18 +38,33 @@ function nombreRonda(ronda: number, maxRonda: number): string {
   return `Ronda ${ronda}`;
 }
 
-export default function Partidos({ partidos, jugadores, finalizado }: PartidosProps) {
+export default function Partidos({ partidos, jugadores, finalizado, mejorGol }: PartidosProps) {
   const maxRonda = partidos.reduce((m, p) => Math.max(m, p.ronda), 0);
-  const rondas = [...new Set(partidos.map((p) => p.ronda))].sort((a, b) => a - b);
+  const esTercero = (p: PartidoVista) => p.ronda === maxRonda && p.posicion === POSICION_TERCER_PUESTO;
 
-  const final = partidos.find((p) => p.ronda === maxRonda);
+  // Grupos en el orden en que se juegan: las rondas, el tercer puesto y al final la final.
+  const grupos: { clave: string; titulo: string; partidos: PartidoVista[] }[] = [];
+  for (const ronda of [...new Set(partidos.map((p) => p.ronda))].sort((a, b) => a - b)) {
+    const deLaRonda = partidos.filter((p) => p.ronda === ronda).sort((a, b) => a.posicion - b.posicion);
+    const tercero = deLaRonda.filter(esTercero);
+    if (tercero.length > 0) grupos.push({ clave: "tercero", titulo: "Tercer puesto", partidos: tercero });
+    grupos.push({ clave: `r${ronda}`, titulo: nombreRonda(ronda, maxRonda), partidos: deLaRonda.filter((p) => !esTercero(p)) });
+  }
+
+  const final = partidos.find((p) => p.ronda === maxRonda && p.posicion === 1);
   const campeon = finalizado && final?.ganadorId ? jugadores.get(final.ganadorId) : undefined;
 
   // Un cruce se puede corregir mientras el partido al que lleva no se jugó (lo mismo valida el servidor).
+  // Una semi también lleva al tercer puesto.
   const siguienteJugado = (p: PartidoVista) =>
+    !esTercero(p) &&
     partidos.some(
-      (q) => q.ronda === p.ronda + 1 && q.posicion === Math.ceil(p.posicion / 2) && q.estado === "jugado",
+      (q) =>
+        q.estado === "jugado" &&
+        ((q.ronda === p.ronda + 1 && q.posicion === Math.ceil(p.posicion / 2) && !esTercero(q)) ||
+          (p.ronda === maxRonda - 1 && esTercero(q))),
     );
+  const algunoJugado = partidos.some((p) => p.estado === "jugado" && !p.esBye);
 
   return (
     <div className="flex flex-col gap-6">
@@ -69,14 +86,13 @@ export default function Partidos({ partidos, jugadores, finalizado }: PartidosPr
         </div>
       ) : null}
 
-      {rondas.map((ronda) => {
-        const deLaRonda = partidos.filter((p) => p.ronda === ronda).sort((a, b) => a.posicion - b.posicion);
+      {grupos.map(({ clave, titulo, partidos: deLaRonda }) => {
         const jugables = deLaRonda.filter((p) => !p.esBye);
         const jugados = jugables.filter((p) => p.estado === "jugado").length;
         return (
-          <div key={ronda} className="flex flex-col gap-3">
+          <div key={clave} className="flex flex-col gap-3">
             <div className="flex items-center gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b6ff84]">{nombreRonda(ronda, maxRonda)}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b6ff84]">{titulo}</p>
               {jugables.length > 1 ? (
                 <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-xs font-semibold tabular-nums text-zinc-300">
                   {jugados}/{jugables.length}
@@ -98,6 +114,16 @@ export default function Partidos({ partidos, jugadores, finalizado }: PartidosPr
           </div>
         );
       })}
+
+      {/* El mejor gol se elige al final; se puede ir marcando desde que hay un partido jugado. */}
+      {algunoJugado ? (
+        <MejorGol
+          partidos={partidos.filter((p) => p.estado === "jugado" && !p.esBye)}
+          jugadores={jugadores}
+          elegido={mejorGol}
+          nombreGrupo={(p) => (esTercero(p) ? "Tercer puesto" : nombreRonda(p.ronda, maxRonda))}
+        />
+      ) : null}
     </div>
   );
 }

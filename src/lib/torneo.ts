@@ -202,6 +202,39 @@ export function tamanoCuadro(n: number): number {
   return tamano;
 }
 
+// ————————————————————————————
+// Tercer puesto: los que pierden las semis lo juegan antes de la final. Va en la ronda de la
+// final, en la posición 2 (la final es la posición 1). Los torneos de antes no lo tienen.
+// ————————————————————————————
+export const POSICION_TERCER_PUESTO = 2;
+
+type ConRondaPosicion = Pick<PartidoCuadro, "ronda" | "posicion">;
+
+function rondaFinal(cuadro: readonly ConRondaPosicion[]): number {
+  return Math.max(...cuadro.map((p) => p.ronda));
+}
+
+export function esTercerPuesto(p: ConRondaPosicion, cuadro: readonly ConRondaPosicion[]): boolean {
+  return p.ronda === rondaFinal(cuadro) && p.posicion === POSICION_TERCER_PUESTO;
+}
+
+export function esFinal(p: ConRondaPosicion, cuadro: readonly ConRondaPosicion[]): boolean {
+  return p.ronda === rondaFinal(cuadro) && p.posicion === 1;
+}
+
+/** El partido al que va el ganador: el de la ronda siguiente (la final nunca recibe del tercer puesto). */
+function siguienteDe(partidos: PartidoCuadro[], desde: PartidoCuadro): PartidoCuadro | undefined {
+  if (esTercerPuesto(desde, partidos)) return undefined;
+  return buscar(partidos, desde.ronda + 1, Math.ceil(desde.posicion / 2));
+}
+
+/** El partido por el tercer puesto, si el que se jugó es una semi y el cuadro lo tiene. */
+function tercerPuestoDe(partidos: PartidoCuadro[], desde: PartidoCuadro): PartidoCuadro | undefined {
+  const final = rondaFinal(partidos);
+  if (desde.ronda !== final - 1) return undefined;
+  return buscar(partidos, final, POSICION_TERCER_PUESTO);
+}
+
 function vacio(ronda: number, posicion: number): PartidoCuadro {
   return {
     ronda,
@@ -236,7 +269,7 @@ function colocarEnSiguiente(
   desde: PartidoCuadro,
   jugadorId: string | null,
 ): boolean {
-  const siguiente = buscar(partidos, desde.ronda + 1, Math.ceil(desde.posicion / 2));
+  const siguiente = siguienteDe(partidos, desde);
   if (!siguiente) return false;
   if (desde.posicion % 2 === 1) siguiente.jugadorAId = jugadorId;
   else siguiente.jugadorBId = jugadorId;
@@ -326,6 +359,12 @@ export function sortearTorneo({ jugadorIds, equipoIds, semilla, tochos }: Entrad
     if (partido.ronda === 1 && partido.esBye) colocarEnSiguiente(partidos, partido, partido.ganadorId);
   }
 
+  // Tercer puesto: hace falta que las dos semis se jueguen (con 3 jugadores una es pase directo).
+  const semis = partidos.filter((p) => p.ronda === rondas - 1);
+  if (rondas >= 2 && semis.length === 2 && semis.every((p) => !p.esBye)) {
+    partidos.push(vacio(rondas, POSICION_TERCER_PUESTO));
+  }
+
   return { partidos, asignaciones, rondas };
 }
 
@@ -380,9 +419,13 @@ export function avanzarGanador(
     if (error) throw new Error(error);
   }
 
-  const siguiente = buscar(partidos, ronda + 1, Math.ceil(posicion / 2));
+  const siguiente = siguienteDe(partidos, partido);
   if (siguiente && siguiente.estado === "jugado") {
     throw new Error("No se puede corregir: el partido siguiente ya se jugó.");
+  }
+  const tercero = tercerPuestoDe(partidos, partido);
+  if (tercero && tercero.estado === "jugado") {
+    throw new Error("No se puede corregir: el partido por el tercer puesto ya se jugó.");
   }
 
   partido.ganadorId = ganadorId;
@@ -390,40 +433,95 @@ export function avanzarGanador(
   partido.marcadorB = marcador ? marcador.b : null;
   actualizarEstado(partido);
   colocarEnSiguiente(partidos, partido, ganadorId);
+  if (tercero) {
+    // El que pierde la semi va al partido por el tercer puesto, del mismo lado que iría a la final.
+    const perdedor = ganadorId === partido.jugadorAId ? partido.jugadorBId : partido.jugadorAId;
+    if (partido.posicion % 2 === 1) tercero.jugadorAId = perdedor;
+    else tercero.jugadorBId = perdedor;
+    actualizarEstado(tercero);
+  }
   return partidos;
 }
 
 export type Podio = {
   campeonId: string | null;
   subcampeonId: string | null;
-  /** Los perdedores de las semifinales (3.º y 4.º, sin partido por el tercer puesto). */
+  /**
+   * 3.º y 4.º. Con partido por el tercer puesto jugado: [tercero, cuarto]. Sin ese partido (torneos
+   * de antes) son los perdedores de las semis, sin orden.
+   */
   tercerosIds: string[];
+  /** true si 3.º y 4.º salen de un partido jugado (y entonces tercerosIds[0] es el tercero). */
+  tercerJugado: boolean;
 };
 
+function perdedorDe(p: PartidoCuadro): string | null {
+  if (!p.ganadorId) return null;
+  return p.jugadorAId === p.ganadorId ? p.jugadorBId : p.jugadorAId;
+}
+
 export function calcularPodio(cuadro: readonly PartidoCuadro[]): Podio {
-  const rondas = Math.max(...cuadro.map((p) => p.ronda));
-  const final = cuadro.find((p) => p.ronda === rondas);
+  const rondas = rondaFinal(cuadro);
+  const final = cuadro.find((p) => p.ronda === rondas && p.posicion === 1);
   const campeonId = final?.ganadorId ?? null;
-  const subcampeonId =
-    final && final.ganadorId
-      ? final.jugadorAId === final.ganadorId
-        ? final.jugadorBId
-        : final.jugadorAId
-      : null;
+  const subcampeonId = final ? perdedorDe(final) : null;
+
+  const tercerPuesto = cuadro.find((p) => p.ronda === rondas && p.posicion === POSICION_TERCER_PUESTO);
+  if (tercerPuesto) {
+    const jugado = tercerPuesto.ganadorId !== null;
+    const ids = jugado ? [tercerPuesto.ganadorId, perdedorDe(tercerPuesto)] : [];
+    return { campeonId, subcampeonId, tercerosIds: ids.filter((id): id is string => id !== null), tercerJugado: jugado };
+  }
 
   const tercerosIds: string[] = [];
   if (campeonId && rondas >= 2) {
     for (const p of cuadro) {
-      if (p.ronda !== rondas - 1 || p.esBye || !p.ganadorId) continue;
-      const perdedor = p.jugadorAId === p.ganadorId ? p.jugadorBId : p.jugadorAId;
+      if (p.ronda !== rondas - 1 || p.esBye) continue;
+      const perdedor = perdedorDe(p);
       if (perdedor) tercerosIds.push(perdedor);
     }
   }
-  return { campeonId, subcampeonId, tercerosIds };
+  return { campeonId, subcampeonId, tercerosIds, tercerJugado: false };
 }
 
+export type PasoCamino = {
+  ronda: number;
+  rivalId: string;
+  golesPropios: number | null;
+  golesRival: number | null;
+  penales: boolean;
+};
+
+/**
+ * El camino de un jugador: los partidos que ganó, en orden (sin pases directos ni el tercer puesto).
+ * Para la pantalla del campeón: los rivales que fue eliminando, con el resultado.
+ */
+export function caminoDe(cuadro: readonly PartidoCuadro[], jugadorId: string): PasoCamino[] {
+  return cuadro
+    .filter((p) => p.ganadorId === jugadorId && !p.esBye && !esTercerPuesto(p, cuadro))
+    .sort((a, b) => a.ronda - b.ronda)
+    .flatMap((p) => {
+      const esA = p.jugadorAId === jugadorId;
+      const rivalId = esA ? p.jugadorBId : p.jugadorAId;
+      if (!rivalId) return [];
+      return [
+        {
+          ronda: p.ronda,
+          rivalId,
+          golesPropios: esA ? p.marcadorA : p.marcadorB,
+          golesRival: esA ? p.marcadorB : p.marcadorA,
+          penales: fueAPenales(p),
+        },
+      ];
+    });
+}
+
+/** Terminado: la final jugada y, si el cuadro tiene tercer puesto, ese también. */
 export function torneoTerminado(cuadro: readonly PartidoCuadro[]): boolean {
-  return calcularPodio(cuadro).campeonId !== null;
+  const rondas = rondaFinal(cuadro);
+  const final = cuadro.find((p) => p.ronda === rondas && p.posicion === 1);
+  const tercerPuesto = cuadro.find((p) => p.ronda === rondas && p.posicion === POSICION_TERCER_PUESTO);
+  return Boolean(final?.ganadorId) && (!tercerPuesto || tercerPuesto.ganadorId !== null);
 }
 
 // ————————————————————————————

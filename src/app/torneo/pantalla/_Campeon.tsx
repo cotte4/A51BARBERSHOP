@@ -4,7 +4,7 @@ import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Escudo from "@/components/torneo/Escudo";
-import { fueAPenales } from "@/lib/torneo";
+import { caminoDe, type PartidoCuadro } from "@/lib/torneo";
 import { coloresDeEquipo } from "@/lib/torneo-escudos";
 import type { TableroPublico } from "@/lib/torneo-juego";
 import { crearLimitador60, usarMovimientoReducido } from "../_movimiento";
@@ -164,18 +164,13 @@ function crearConfeti(lienzo: HTMLCanvasElement, colores: string[]): Confeti {
 // ————————————————————————————
 // La escena de cierre: el campeón
 // ————————————————————————————
-function Segundo({ rotulo, jugador, cuerpo }: { rotulo: string; jugador: Jugador | undefined; cuerpo: number }) {
-  return (
-    <div className="segundo opacity-0">
-      <p className="torneo-hud text-[22px] text-[#8cff59]">{rotulo}</p>
-      <div className="mt-2 flex items-center justify-center gap-4">
-        <Escudo equipo={jugador?.equipo ?? null} tamano={56} />
-        <p className="torneo-titulo whitespace-nowrap font-extrabold italic text-white" style={{ fontSize: cuerpo }}>
-          {jugador?.nombre}
-        </p>
-      </div>
-    </div>
-  );
+function nombreRonda(ronda: number, rondas: number): string {
+  const faltan = rondas - ronda;
+  if (faltan === 0) return "Final";
+  if (faltan === 1) return "Semis";
+  if (faltan === 2) return "Cuartos";
+  if (faltan === 3) return "Octavos";
+  return `Ronda ${ronda}`;
 }
 
 /**
@@ -189,34 +184,24 @@ export function Podio({ tablero, jugadores }: { tablero: TableroPublico; jugador
   const lienzo = useRef<HTMLCanvasElement>(null);
   const quieto = usarMovimientoReducido();
 
-  const { campeonId, subcampeonId, tercerosIds } = tablero.podio;
+  const { campeonId } = tablero.podio;
   const campeon = campeonId ? jugadores.get(campeonId) : undefined;
-  const subcampeon = subcampeonId ? jugadores.get(subcampeonId) : undefined;
   const colores = coloresDeEquipo(campeon?.equipo ?? null);
   const rondas = Math.max(...tablero.partidos.map((p) => p.ronda));
-  const final = tablero.partidos.find((p) => p.ronda === rondas);
-  // Los goles de la final, siempre desde el lado del campeón: "3 – 1".
-  const golesFinal =
-    final && final.marcadorA !== null && final.marcadorB !== null
-      ? final.ganadorId === final.jugadorAId
-        ? [final.marcadorA, final.marcadorB]
-        : [final.marcadorB, final.marcadorA]
-      : null;
   const nombreCampeon = campeon?.nombre ?? "";
-  // Debajo del campeón entran tres nombres en fila: si alguno es largo, bajan los tres juntos.
-  const segundos = [subcampeon, ...tercerosIds.map((id) => jugadores.get(id))];
-  const largoMayor = Math.max(0, ...segundos.map((j) => j?.nombre.length ?? 0));
-  const cuerpoSegundos = cuerpoPorLargo(largoMayor, [[10, 64], [14, 52]], 42);
+  // El camino: los rivales que fue eliminando, en orden, con el resultado desde su lado.
+  const camino = campeonId ? caminoDe(tablero.partidos as PartidoCuadro[], campeonId) : [];
 
   useGSAP(
     () => {
       const el = raiz.current;
       if (!el) return;
       const q = gsap.utils.selector(el);
-      const animados = q(".escudo, .rotulo, .alias, .equipo, .final, .segundo, .premios, .tinte, .rayos, .reflector");
+      const animados = q(".escudo, .rotulo, .alias, .equipo, .camino-titulo, .camino-paso, .tinte, .rayos, .reflector");
 
       if (quieto) {
         gsap.set(animados, { opacity: 1 });
+        gsap.set(q(".tachado"), { scaleX: 1 });
         return;
       }
 
@@ -269,15 +254,20 @@ export function Podio({ tablero, jugadores }: { tablero: TableroPublico; jugador
           "golpe+=0.25",
         )
         .fromTo(q(".equipo"), { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, "golpe+=0.55")
-        .fromTo(q(".final"), { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, "golpe+=0.75")
-        .fromTo(
-          q(".segundo"),
-          { opacity: 0, y: 40 },
-          { opacity: 1, y: 0, duration: 0.5, stagger: 0.12, ease: "power3.out" },
-          "golpe+=0.95",
-        )
-        .fromTo(q(".premios"), { opacity: 0 }, { opacity: 1, duration: 0.6 }, "golpe+=1.3")
+        .fromTo(q(".camino-titulo"), { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, "golpe+=0.9")
         .call(() => confeti?.lluvia(16), [], "golpe+=1.4");
+      // El camino: cada rival entra y al toque lo tacha una raya roja, uno detrás del otro.
+      q(".camino-paso").forEach((paso, i) => {
+        const at = `golpe+=${1.1 + i * 0.55}`;
+        t.fromTo(paso, { opacity: 0, y: 50, scale: 0.85 }, { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: "back.out(1.8)" }, at)
+          .fromTo(
+            paso.querySelector(".tachado"),
+            { scaleX: 0 },
+            { scaleX: 1, duration: 0.28, ease: "power3.in" },
+            `${at}+0.32`,
+          )
+          .fromTo(paso.querySelector(".rival"), { opacity: 1 }, { opacity: 0.45, duration: 0.25 }, `${at}+0.55`);
+      });
 
       // Lo que queda vivo mientras la tele siga en el podio. Periodos distintos: no se ve el loop.
       gsap.to(q(".rayos-giro"), { rotate: 360, duration: 30, ease: "none", repeat: -1 });
@@ -362,27 +352,45 @@ export function Podio({ tablero, jugadores }: { tablero: TableroPublico; jugador
             {campeon.equipo}
           </p>
         )}
-        {golesFinal && subcampeon && (
-          <p className="final torneo-hud mt-6 flex items-baseline justify-center gap-5 text-[30px] text-white/80 opacity-0">
-            <span className="text-[#8cff59]">Final</span>
-            <span className="torneo-titulo text-[56px] font-extrabold tabular-nums text-white">
-              {golesFinal[0]} – {golesFinal[1]}
-            </span>
-            {final && fueAPenales(final) ? <span className="text-[#8cff59]">pen.</span> : null}
-            <span>vs</span>
-            <span className="torneo-titulo text-[44px] font-extrabold italic text-white">{subcampeon.nombre}</span>
-          </p>
-        )}
-        <div className="mt-12 flex gap-24">
-          {subcampeon && <Segundo rotulo="Subcampeón" jugador={subcampeon} cuerpo={cuerpoSegundos} />}
-          {tercerosIds.map((id) => (
-            <Segundo key={id} rotulo="Semifinalista" jugador={jugadores.get(id)} cuerpo={cuerpoSegundos} />
-          ))}
-        </div>
-        {tablero.torneo.premiosTexto && (
-          <p className="premios torneo-hud mt-10 max-w-[1500px] whitespace-pre-line text-[24px] text-white/70 opacity-0">
-            {tablero.torneo.premiosTexto}
-          </p>
+        {camino.length > 0 && (
+          <div className="mt-10 flex flex-col items-center">
+            <p className="camino-titulo torneo-hud text-[24px] text-white/70 opacity-0">El camino del campeón</p>
+            <div className="mt-4 flex gap-6">
+              {camino.map((paso) => {
+                const rival = jugadores.get(paso.rivalId);
+                const esFinal = paso.ronda === rondas;
+                return (
+                  <div
+                    key={paso.ronda}
+                    className={`camino-paso flex w-[300px] flex-col items-center border px-4 py-4 opacity-0 ${
+                      esFinal ? "border-[#8cff59]/70 bg-[#8cff59]/10" : "border-white/15 bg-black/50"
+                    }`}
+                  >
+                    <p className="torneo-hud text-[18px] text-[#8cff59]">{nombreRonda(paso.ronda, rondas)}</p>
+                    <div className="relative mt-2 flex w-full items-center justify-center gap-3">
+                      <div className="rival flex min-w-0 items-center gap-3">
+                        <Escudo equipo={rival?.equipo ?? null} tamano={52} />
+                        <span className="torneo-titulo min-w-0 truncate text-[34px] font-extrabold italic text-white">
+                          {rival?.nombre ?? "—"}
+                        </span>
+                      </div>
+                      {/* La raya que lo tacha: crece de izquierda a derecha. */}
+                      <span
+                        aria-hidden="true"
+                        className="tachado absolute left-[-6px] right-[-6px] top-1/2 h-[6px] origin-left -rotate-6 bg-[#ff3b4e] shadow-[0_0_14px_rgba(255,59,78,0.7)]"
+                      />
+                    </div>
+                    {paso.golesPropios !== null && paso.golesRival !== null && (
+                      <p className="torneo-titulo mt-2 text-[36px] font-extrabold tabular-nums text-white">
+                        {paso.golesPropios} – {paso.golesRival}
+                        {paso.penales && <span className="torneo-hud ml-2 text-[16px] text-[#8cff59]">pen.</span>}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
 

@@ -1674,6 +1674,10 @@ export const torneos = pgTable("torneos", {
   // Ventana premium (entre la ruleta de equipos y los cruces): null = nunca se abrió.
   // Mientras está "abierta", los cruces esperan y Pinky puede cambiarle el equipo a quien pagó.
   ventanaPremium: text("ventana_premium").$type<"abierta" | "cerrada">(),
+  // Mejor gol del torneo: lo elige Pinky al final (en qué partido y quién lo hizo).
+  // Sin FK a propósito: torneo_jugadores y torneo_partidos ya apuntan a torneos (evita el ciclo de tipos).
+  mejorGolPartidoId: uuid("mejor_gol_partido_id"),
+  mejorGolJugadorId: uuid("mejor_gol_jugador_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

@@ -17,6 +17,7 @@ import {
 import {
   avanzarReveal,
   cargarResultado,
+  elegirMejorGol,
   reiniciarReveal,
   sortearYGuardar,
 } from "@/lib/torneo-juego";
@@ -250,6 +251,31 @@ export async function cambiarEquipoPremiumAction(entrada: z.input<typeof cambioS
   }
   refrescar();
   return { ok: true, mensaje: null, equipo: resultado.equipo };
+}
+
+const mejorGolSchema = z
+  .object({ partidoId: z.string().uuid(), jugadorId: z.string().uuid() })
+  .nullable();
+
+export async function elegirMejorGolAction(entrada: z.input<typeof mejorGolSchema>): Promise<TorneoAdminState> {
+  const denegado = await exigirAdmin();
+  if (denegado) return denegado;
+  const datos = mejorGolSchema.safeParse(entrada);
+  if (!datos.success) return { ok: false, mensaje: "Pedido inválido." };
+  const torneo = await getTorneoVigente();
+  if (!torneo) return { ok: false, mensaje: "Todavía no hay torneo." };
+
+  const resultado = await elegirMejorGol(torneo.id, datos.data);
+  if (!resultado.ok) {
+    const mensajes = {
+      no_existe: "Ese partido no existe.",
+      sin_jugar: "Ese partido todavía no se jugó.",
+      no_jugo: "Ese jugador no jugó ese partido.",
+    } as const;
+    return { ok: false, mensaje: mensajes[resultado.motivo] };
+  }
+  refrescar();
+  return { ok: true, mensaje: null };
 }
 
 const resultadoSchema = z.object({
