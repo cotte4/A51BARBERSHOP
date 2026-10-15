@@ -11,7 +11,7 @@ import {
   type Marcador,
   type PartidoCuadro,
 } from "@/lib/torneo";
-import { CATALOGO_CLUBES } from "@/lib/torneo-escudos";
+import { CATALOGO_CLUBES, esTocho, PROBABILIDAD_TOCHO } from "@/lib/torneo-escudos";
 import type { DatosPantalla, TableroPublico } from "@/lib/torneo-juego";
 import { PantallaVista } from "../_Pantalla";
 
@@ -29,10 +29,13 @@ function pasosDelEnsayo(cuadro: PartidoCuadro[], paso: number) {
   return revealDesdePaso(paso, ordenRuleta(cuadro).length, cuadro.filter((p) => p.ronda === 1).length);
 }
 
+type Premium = { abierta: boolean; ultimoCambio: TableroPublico["ultimoCambio"] };
+
 function armarTablero(
   cuadro: PartidoCuadro[],
   asignaciones: { jugadorId: string; equipoId: string }[],
   revealPaso: number,
+  premium: Premium,
 ): TableroPublico {
   const equipoDe = new Map(asignaciones.map((a) => [a.jugadorId, a.equipoId] as const));
   const terminado = torneoTerminado(cuadro);
@@ -45,9 +48,9 @@ function armarTablero(
       premiosTexto: null,
       revealPaso: reveal.paso,
       revealTotal: reveal.total,
-      ventanaPremium: null,
+      ventanaPremium: premium.abierta ? "abierta" : null,
     },
-    ultimoCambio: null,
+    ultimoCambio: premium.ultimoCambio,
     jugadores: NOMBRES.map((nombre, i) => ({ id: `j${i + 1}`, nombre, equipo: equipoDe.get(`j${i + 1}`) ?? null })),
     partidos: cuadro.map((p) => ({
       id: `p-${p.ronda}-${p.posicion}`,
@@ -83,6 +86,8 @@ function nuevoSorteo() {
     jugadorIds: NOMBRES.map((_, i) => `j${i + 1}`),
     equipoIds: EQUIPOS,
     semilla,
+    // Igual que el de verdad: los tochos salen 1,5% por giro.
+    tochos: { esTocho, probabilidad: PROBABILIDAD_TOCHO },
   });
   return r;
 }
@@ -92,6 +97,7 @@ export default function Demo() {
   const [cuadro, setCuadro] = useState<PartidoCuadro[]>(sorteo.partidos);
   const [revealPaso, setRevealPaso] = useState(0);
   const [empezo, setEmpezo] = useState(false);
+  const [premium, setPremium] = useState<Premium>({ abierta: false, ultimoCambio: null });
 
   const datos: DatosPantalla = useMemo(
     () => ({
@@ -101,10 +107,11 @@ export default function Demo() {
             cuadro,
             sorteo.asignaciones.map((a) => ({ jugadorId: a.jugadorId, equipoId: a.equipoId })),
             revealPaso,
+            premium,
           )
         : null,
     }),
-    [cuadro, empezo, revealPaso, sorteo],
+    [cuadro, empezo, revealPaso, sorteo, premium],
   );
 
   const reveal = pasosDelEnsayo(cuadro, revealPaso);
@@ -120,12 +127,28 @@ export default function Demo() {
     setCuadro(avanzarGanador(cuadro, siguientePartido.ronda, siguientePartido.posicion, gana, marcador));
   }
 
+  // Ensayo de la ventana premium: a un jugador al azar le toca un equipo libre (en el de verdad lo elige Pinky).
+  const momentoPremium = reveal.equiposVistos === reveal.jugadores && reveal.crucesVistos === 0;
+  function cambioDeEnsayo() {
+    const usados = new Set(sorteo.asignaciones.map((a) => a.equipoId));
+    const libres = EQUIPOS.filter((e) => !usados.has(e));
+    if (libres.length === 0) return;
+    const a = sorteo.asignaciones[Math.floor(Math.random() * sorteo.asignaciones.length)];
+    const nuevo = libres[Math.floor(Math.random() * libres.length)];
+    setSorteo({ ...sorteo, asignaciones: sorteo.asignaciones.map((x) => (x === a ? { ...x, equipoId: nuevo } : x)) });
+    setPremium((p) => ({
+      ...p,
+      ultimoCambio: { id: String(Math.random()), jugadorId: a.jugadorId, tipo: Math.random() < 0.5 ? "reroll" : "elegir" },
+    }));
+  }
+
   function reiniciar() {
     const otro = nuevoSorteo();
     setSorteo(otro);
     setCuadro(otro.partidos);
     setRevealPaso(0);
     setEmpezo(false);
+    setPremium({ abierta: false, ultimoCambio: null });
   }
 
   const boton =
@@ -141,10 +164,26 @@ export default function Demo() {
           </button>
         ) : (
           <>
+            {momentoPremium ? (
+              premium.abierta ? (
+                <>
+                  <button type="button" className={boton} onClick={cambioDeEnsayo}>
+                    Cambio premium
+                  </button>
+                  <button type="button" className={boton} onClick={() => setPremium((p) => ({ ...p, abierta: false }))}>
+                    Cerrar ventana
+                  </button>
+                </>
+              ) : (
+                <button type="button" className={boton} onClick={() => setPremium((p) => ({ ...p, abierta: true }))}>
+                  Abrir ventana premium
+                </button>
+              )
+            ) : null}
             <button
               type="button"
               className={boton}
-              disabled={revealPaso >= total}
+              disabled={revealPaso >= total || premium.abierta}
               onClick={() => setRevealPaso((p) => Math.min(total, p + 1))}
             >
               {reveal.completo
