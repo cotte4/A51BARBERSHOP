@@ -1,5 +1,6 @@
 import { and, asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
+import { jukeboxOcupaSpotify } from "@/lib/jukebox";
 import {
   barberos,
   musicEvents,
@@ -533,6 +534,9 @@ export async function syncMusicEngine() {
   await processPendingDjContext(runtime.activePlayerProviderId);
 
   if (mode.activeMode === "auto") {
+    // La jukebox maneja Spotify ella sola (ver jukebox-spotify.ts): Auto no le cambia la música a la gente.
+    // DJ y Jam sí siguen: los prende alguien del staff a propósito.
+    if (await jukeboxOcupaSpotify()) return "ready";
     await attemptAutoResume(runtime.activePlayerProviderId);
     await ensureAutoPlayback(runtime.activePlayerProviderId);
     return "ready";

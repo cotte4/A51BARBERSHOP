@@ -1,5 +1,7 @@
+import { after } from "next/server";
 import { z } from "zod";
 import { getLastProposalForDevice } from "@/lib/jukebox";
+import { latidoJukebox } from "@/lib/jukebox-spotify";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,5 +23,7 @@ export async function GET(request: Request) {
   }
 
   const pedido = await getLastProposalForDevice(parsed.data.deviceKey);
+  // Quien espera su tema también hace avanzar la cola (ver /api/jukebox/now).
+  after(() => latidoJukebox());
   return Response.json({ pedido }, { headers: { "Cache-Control": "no-store" } });
 }

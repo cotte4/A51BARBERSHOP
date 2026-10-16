@@ -1,5 +1,5 @@
 import { getTurnosActorContext } from "@/lib/turnos-access";
-import { getJukeboxStaffState } from "@/lib/jukebox";
+import { getJukeboxStaffState, latidoJukebox } from "@/lib/jukebox-spotify";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -15,6 +15,8 @@ export async function GET() {
     return Response.json({ error: "Solo el staff puede ver la cola." }, { status: 403 });
   }
 
+  // Acá el latido va antes de leer: Pinky ve lo que acaba de pasar en Spotify, no lo de hace un rato.
+  await latidoJukebox();
   const state = await getJukeboxStaffState();
   return Response.json(state, { headers: { "Cache-Control": "no-store" } });
 }

@@ -195,6 +195,8 @@ export const spotifyAdapter: MusicProviderAdapter = {
       expiresAt: input.expiresAt,
       lastError: null,
       lastSyncedAt: new Date(),
+      // Puede ser otra cuenta (Pinky en vez de Was): el nombre se vuelve a preguntar.
+      accountName: null,
     });
 
     return {
@@ -216,6 +218,7 @@ export const spotifyAdapter: MusicProviderAdapter = {
       expiresAt: null,
       lastError: null,
       lastSyncedAt: new Date(),
+      accountName: null,
     });
   },
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getJukeboxStaffState } from "@/lib/jukebox";
+import { getJukeboxStaffState } from "@/lib/jukebox-spotify";
 import { getTurnosActorContext } from "@/lib/turnos-access";
 import JukeboxStaff from "./_JukeboxStaff";
 
@@ -45,17 +45,11 @@ export default async function MusicaJukeboxPage() {
           >
             ← Música
           </Link>
-          <header className="mt-4 mb-6">
-            <p className="eyebrow text-[#8cff59]">Operacion</p>
-            <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-              Jukebox del local
-            </h1>
-            <p className="mt-3 max-w-xl text-sm text-zinc-300">
-              Los temas que propone el público (QR en <span className="font-semibold">/jukebox</span>)
-              suenan desde este celular. Dejá esta pantalla abierta mientras dure el evento.
-            </p>
+          <header className="mt-3 mb-4">
+            <h1 className="font-display text-3xl font-semibold tracking-tight">Jukebox</h1>
+            <p className="mt-1 text-sm text-zinc-400">La gente pide por el QR y suena en tu Spotify.</p>
           </header>
-          <JukeboxStaff initial={initial} />
+          <JukeboxStaff initial={initial} esAdmin={actor.isAdmin} />
         </div>
       </div>
     </main>

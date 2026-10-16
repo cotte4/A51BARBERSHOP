@@ -7,12 +7,15 @@ type SpotifyConnectButtonProps = {
   returnTo: string;
   label: string;
   className: string;
+  /** Que Spotify pregunte con qué cuenta entrar: para pasar del Spotify de uno al de otro. */
+  elegirCuenta?: boolean;
 };
 
 export default function SpotifyConnectButton({
   returnTo,
   label,
   className,
+  elegirCuenta = false,
 }: SpotifyConnectButtonProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +29,7 @@ export default function SpotifyConnectButton({
         onClick={() => {
           startTransition(async () => {
             try {
-              const authUrl = await buildAuthUrlAsync(returnTo);
+              const authUrl = await buildAuthUrlAsync(returnTo, { elegirCuenta });
               window.location.href = authUrl;
             } catch (nextError) {
               setError(

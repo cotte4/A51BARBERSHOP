@@ -60,15 +60,18 @@ export type SpotifyPlaybackState = {
   contextType: string | null;
 };
 
-class SpotifyApiError extends Error {
+export class SpotifyApiError extends Error {
   readonly status: number;
   readonly payload: unknown;
+  /** Segundos que Spotify pide esperar (header Retry-After en un 429). */
+  readonly retryAfterSeconds: number | null;
 
-  constructor(message: string, status: number, payload: unknown) {
+  constructor(message: string, status: number, payload: unknown, retryAfterSeconds: number | null = null) {
     super(message);
     this.name = "SpotifyApiError";
     this.status = status;
     this.payload = payload;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -125,7 +128,8 @@ async function requestSpotify<T>(
       typeof payload === "object" && payload && "error" in payload
         ? stringifyErrorMessage((payload as { error?: { message?: string } }).error)
         : `Spotify API error ${response.status}`;
-    throw new SpotifyApiError(message, response.status, payload);
+    const retryAfter = Number(response.headers.get("retry-after"));
+    throw new SpotifyApiError(message, response.status, payload, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null);
   }
 
   if (response.status === 204) {
@@ -179,21 +183,23 @@ function mapDevice(device: {
   };
 }
 
+// Un episodio de podcast llega por el mismo campo sin artistas ni álbum: se lee con lo que tenga.
 function mapTrack(track: {
   id: string;
   uri: string;
   name: string;
-  artists: { name: string }[];
-  album: { name: string; images: { url: string }[] };
+  artists?: { name: string }[];
+  album?: { name: string; images: { url: string }[] };
+  images?: { url: string }[];
   duration_ms: number;
 }): SpotifyTrack {
   return {
     id: track.id,
     uri: track.uri,
     name: track.name,
-    artists: track.artists.map((artist) => artist.name),
-    albumName: track.album.name,
-    albumImageUrl: track.album.images[0]?.url ?? null,
+    artists: (track.artists ?? []).map((artist) => artist.name),
+    albumName: track.album?.name ?? "",
+    albumImageUrl: track.album?.images[0]?.url ?? track.images?.[0]?.url ?? null,
     durationMs: track.duration_ms,
   };
 }

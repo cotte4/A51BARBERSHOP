@@ -1,14 +1,14 @@
 import { createHash } from "node:crypto";
-import { and, asc, desc, eq, gt, like, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, like, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { configuracionNegocio, jukeboxProposals, jukeboxQueue } from "@/db/schema";
+import { configuracionNegocio, jukeboxProposals, jukeboxQueue, jukeboxRuntime } from "@/db/schema";
+import { fotoVigente, type FotoSpotify, type FuenteJukebox } from "@/lib/jukebox-runtime";
 import { resolverPedido, type PedidoCliente } from "@/lib/jukebox-pedido";
 
 const RATE_LIMIT_MINUTES = 5;
 const IP_LIMIT_WINDOW_MINUTES = 10;
 const IP_LIMIT_MAX_PROPOSALS = 25; // el Wi-Fi del local comparte una sola IP
 const GLOBAL_CAP_PER_HOUR = 60;
-export const MAX_DURATION_SECONDS = 6 * 60;
 const QUEUE_LOCK_ID = 51_000_001;
 /** Temas esperando (cola + propuestas sin resolver): evita que alguien llene el parlante. */
 export const MAX_WAITING = 10;
@@ -17,7 +17,8 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export type JukeboxProposalSummary = {
   id: string;
-  youtubeVideoId: string;
+  youtubeVideoId: string | null;
+  spotifyTrackUri: string | null;
   videoTitle: string;
   channelTitle: string;
   thumbnailUrl: string | null;
@@ -31,7 +32,8 @@ export type JukeboxProposalSummary = {
 export type JukeboxQueueItem = {
   id: string;
   proposalId: string;
-  youtubeVideoId: string;
+  youtubeVideoId: string | null;
+  spotifyTrackUri: string | null;
   videoTitle: string;
   channelTitle: string;
   thumbnailUrl: string | null;
@@ -40,6 +42,8 @@ export type JukeboxQueueItem = {
   state: "queued" | "playing" | "played" | "skipped";
   positionHint: number;
   startedAt: string | null;
+  /** Ya está en la cola de Spotify: suena sí o sí y no se puede quitar. */
+  enSpotify: boolean;
 };
 
 export function hashDeviceKey(raw: string): string {
@@ -104,18 +108,18 @@ export async function isGlobalCapReached(): Promise<boolean> {
 }
 
 /** Un tema que ya está esperando no se repite, y la espera tiene tope. null = se puede proponer. */
-export async function waitingBlock(videoId: string): Promise<"repetido" | "llena" | null> {
+export async function waitingBlock(spotifyTrackUri: string): Promise<"repetido" | "llena" | null> {
   const enCola = await db
-    .select({ videoId: jukeboxProposals.youtubeVideoId })
+    .select({ uri: jukeboxProposals.spotifyTrackUri })
     .from(jukeboxQueue)
     .innerJoin(jukeboxProposals, eq(jukeboxQueue.proposalId, jukeboxProposals.id))
     .where(sql`${jukeboxQueue.state} in ('queued', 'playing')`);
   const pendientes = await db
-    .select({ videoId: jukeboxProposals.youtubeVideoId })
+    .select({ uri: jukeboxProposals.spotifyTrackUri })
     .from(jukeboxProposals)
     .where(eq(jukeboxProposals.status, "pending"));
   const todos = [...enCola, ...pendientes];
-  if (todos.some((t) => t.videoId === videoId)) return "repetido";
+  if (todos.some((t) => t.uri === spotifyTrackUri)) return "repetido";
   if (todos.length >= MAX_WAITING) return "llena";
   return null;
 }
@@ -145,14 +149,21 @@ export async function getLastProposalForDevice(deviceKey: string): Promise<Pedid
   return resolverPedido(ultima, item ?? null, activos);
 }
 
-/** Saca un tema que todavía no empezó a sonar (Pinky modera la cola auto-aprobada). */
-export async function removeQueued(queueItemId: string): Promise<void> {
-  await db.transaction(async (tx) => {
+/**
+ * Saca un tema que todavía no empezó a sonar (Pinky modera la cola auto-aprobada).
+ * Lo que ya se mandó a Spotify no se puede sacar: Spotify no deja borrar de su cola. false = no se quitó.
+ */
+export async function removeQueued(queueItemId: string): Promise<boolean> {
+  return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(${QUEUE_LOCK_ID})`);
-    await tx
+    const quitados = await tx
       .update(jukeboxQueue)
       .set({ state: "skipped", endedAt: new Date() })
-      .where(and(eq(jukeboxQueue.id, queueItemId), eq(jukeboxQueue.state, "queued")));
+      .where(
+        and(eq(jukeboxQueue.id, queueItemId), eq(jukeboxQueue.state, "queued"), isNull(jukeboxQueue.sentToSpotifyAt)),
+      )
+      .returning({ id: jukeboxQueue.id });
+    return quitados.length > 0;
   });
 }
 
@@ -166,6 +177,7 @@ export async function listPendingProposals(): Promise<JukeboxProposalSummary[]> 
   return rows.map((r) => ({
     id: r.id,
     youtubeVideoId: r.youtubeVideoId,
+    spotifyTrackUri: r.spotifyTrackUri,
     videoTitle: r.videoTitle,
     channelTitle: r.channelTitle,
     thumbnailUrl: r.thumbnailUrl,
@@ -177,32 +189,44 @@ export async function listPendingProposals(): Promise<JukeboxProposalSummary[]> 
   }));
 }
 
-export async function listQueue(): Promise<JukeboxQueueItem[]> {
-  const rows = await db
-    .select({
-      id: jukeboxQueue.id,
-      proposalId: jukeboxQueue.proposalId,
-      state: jukeboxQueue.state,
-      positionHint: jukeboxQueue.positionHint,
-      startedAt: jukeboxQueue.startedAt,
-      youtubeVideoId: jukeboxProposals.youtubeVideoId,
-      videoTitle: jukeboxProposals.videoTitle,
-      channelTitle: jukeboxProposals.channelTitle,
-      thumbnailUrl: jukeboxProposals.thumbnailUrl,
-      durationSeconds: jukeboxProposals.durationSeconds,
-      proposedByName: jukeboxProposals.proposedByName,
-    })
-    .from(jukeboxQueue)
-    .innerJoin(jukeboxProposals, eq(jukeboxQueue.proposalId, jukeboxProposals.id))
-    .where(
-      sql`${jukeboxQueue.state} in ('queued', 'playing')`
-    )
-    .orderBy(asc(jukeboxQueue.positionHint));
+const camposCola = {
+  id: jukeboxQueue.id,
+  proposalId: jukeboxQueue.proposalId,
+  state: jukeboxQueue.state,
+  positionHint: jukeboxQueue.positionHint,
+  startedAt: jukeboxQueue.startedAt,
+  sentToSpotifyAt: jukeboxQueue.sentToSpotifyAt,
+  youtubeVideoId: jukeboxProposals.youtubeVideoId,
+  spotifyTrackUri: jukeboxProposals.spotifyTrackUri,
+  videoTitle: jukeboxProposals.videoTitle,
+  channelTitle: jukeboxProposals.channelTitle,
+  thumbnailUrl: jukeboxProposals.thumbnailUrl,
+  durationSeconds: jukeboxProposals.durationSeconds,
+  proposedByName: jukeboxProposals.proposedByName,
+};
 
-  return rows.map((r) => ({
+type FilaCola = {
+  id: string;
+  proposalId: string;
+  state: string;
+  positionHint: number;
+  startedAt: Date | null;
+  sentToSpotifyAt: Date | null;
+  youtubeVideoId: string | null;
+  spotifyTrackUri: string | null;
+  videoTitle: string;
+  channelTitle: string;
+  thumbnailUrl: string | null;
+  durationSeconds: number | null;
+  proposedByName: string;
+};
+
+function aItem(r: FilaCola): JukeboxQueueItem {
+  return {
     id: r.id,
     proposalId: r.proposalId,
     youtubeVideoId: r.youtubeVideoId,
+    spotifyTrackUri: r.spotifyTrackUri,
     videoTitle: r.videoTitle,
     channelTitle: r.channelTitle,
     thumbnailUrl: r.thumbnailUrl,
@@ -211,108 +235,53 @@ export async function listQueue(): Promise<JukeboxQueueItem[]> {
     state: r.state as JukeboxQueueItem["state"],
     positionHint: r.positionHint,
     startedAt: r.startedAt?.toISOString() ?? null,
-  }));
+    enSpotify: r.sentToSpotifyAt !== null,
+  };
 }
 
-/** Todo lo que necesita la pantalla del staff en una sola lectura (la consulta el sondeo cada 3 s). */
-export type JukeboxStaffState = {
-  nowPlaying: JukeboxQueueItem | null;
-  queue: JukeboxQueueItem[];
-  proposals: JukeboxProposalSummary[];
-  autoApprove: boolean;
-};
+/**
+ * La cola en el orden en que va a sonar: el que suena, el que ya está en Spotify y después el resto por
+ * posición (un tema "que siga" puede tener una posición menor que el ya mandado, pero suena después).
+ */
+export async function listQueue(): Promise<JukeboxQueueItem[]> {
+  const rows: FilaCola[] = await db
+    .select(camposCola)
+    .from(jukeboxQueue)
+    .innerJoin(jukeboxProposals, eq(jukeboxQueue.proposalId, jukeboxProposals.id))
+    .where(sql`${jukeboxQueue.state} in ('queued', 'playing')`)
+    .orderBy(asc(jukeboxQueue.positionHint));
 
-export async function getJukeboxStaffState(): Promise<JukeboxStaffState> {
-  const [queue, proposals, autoApprove] = await Promise.all([
-    listQueue(),
-    listPendingProposals(),
-    isAutoApproveEnabled(),
-  ]);
-  return {
-    nowPlaying: queue.find((item) => item.state === "playing") ?? null,
-    queue,
-    proposals,
-    autoApprove,
-  };
+  const rango = (r: FilaCola) => (r.state === "playing" ? 0 : r.sentToSpotifyAt ? 1 : 2);
+  return rows
+    .sort(
+      (a, b) =>
+        rango(a) - rango(b) ||
+        (a.sentToSpotifyAt?.getTime() ?? 0) - (b.sentToSpotifyAt?.getTime() ?? 0) ||
+        a.positionHint - b.positionHint,
+    )
+    .map(aItem);
 }
 
 export async function getNowPlaying(): Promise<JukeboxQueueItem | null> {
   const [row] = await db
-    .select({
-      id: jukeboxQueue.id,
-      proposalId: jukeboxQueue.proposalId,
-      state: jukeboxQueue.state,
-      positionHint: jukeboxQueue.positionHint,
-      startedAt: jukeboxQueue.startedAt,
-      youtubeVideoId: jukeboxProposals.youtubeVideoId,
-      videoTitle: jukeboxProposals.videoTitle,
-      channelTitle: jukeboxProposals.channelTitle,
-      thumbnailUrl: jukeboxProposals.thumbnailUrl,
-      durationSeconds: jukeboxProposals.durationSeconds,
-      proposedByName: jukeboxProposals.proposedByName,
-    })
+    .select(camposCola)
     .from(jukeboxQueue)
     .innerJoin(jukeboxProposals, eq(jukeboxQueue.proposalId, jukeboxProposals.id))
     .where(eq(jukeboxQueue.state, "playing"))
     .limit(1);
-
-  if (!row) return null;
-
-  return {
-    id: row.id,
-    proposalId: row.proposalId,
-    youtubeVideoId: row.youtubeVideoId,
-    videoTitle: row.videoTitle,
-    channelTitle: row.channelTitle,
-    thumbnailUrl: row.thumbnailUrl,
-    durationSeconds: row.durationSeconds,
-    proposedByName: row.proposedByName,
-    state: row.state as JukeboxQueueItem["state"],
-    positionHint: row.positionHint,
-    startedAt: row.startedAt?.toISOString() ?? null,
-  };
+  return row ? aItem(row) : null;
 }
 
-export async function getNextInQueue(): Promise<JukeboxQueueItem | null> {
-  const [row] = await db
-    .select({
-      id: jukeboxQueue.id,
-      proposalId: jukeboxQueue.proposalId,
-      state: jukeboxQueue.state,
-      positionHint: jukeboxQueue.positionHint,
-      startedAt: jukeboxQueue.startedAt,
-      youtubeVideoId: jukeboxProposals.youtubeVideoId,
-      videoTitle: jukeboxProposals.videoTitle,
-      channelTitle: jukeboxProposals.channelTitle,
-      thumbnailUrl: jukeboxProposals.thumbnailUrl,
-      durationSeconds: jukeboxProposals.durationSeconds,
-      proposedByName: jukeboxProposals.proposedByName,
-    })
-    .from(jukeboxQueue)
-    .innerJoin(jukeboxProposals, eq(jukeboxQueue.proposalId, jukeboxProposals.id))
-    .where(eq(jukeboxQueue.state, "queued"))
-    .orderBy(asc(jukeboxQueue.positionHint))
-    .limit(1);
-
-  if (!row) return null;
-
-  return {
-    id: row.id,
-    proposalId: row.proposalId,
-    youtubeVideoId: row.youtubeVideoId,
-    videoTitle: row.videoTitle,
-    channelTitle: row.channelTitle,
-    thumbnailUrl: row.thumbnailUrl,
-    durationSeconds: row.durationSeconds,
-    proposedByName: row.proposedByName,
-    state: row.state as JukeboxQueueItem["state"],
-    positionHint: row.positionHint,
-    startedAt: row.startedAt?.toISOString() ?? null,
-  };
+async function fuenteEn(tx: Tx): Promise<FuenteJukebox> {
+  const [fila] = await tx.select({ source: jukeboxRuntime.source }).from(jukeboxRuntime).limit(1);
+  return fila?.source ?? "spotify";
 }
 
-// Promueve el siguiente "queued" a "playing" si no hay nada sonando. Corre dentro de una transacción con lock.
+// Solo en modo YouTube: el navegador del staff toca lo que figura "playing", así que se promueve acá.
+// En modo Spotify "playing" lo marca el latido cuando Spotify de verdad lo empieza.
 async function startNextIfIdle(tx: Tx): Promise<void> {
+  if ((await fuenteEn(tx)) !== "youtube") return;
+
   const [playing] = await tx
     .select({ id: jukeboxQueue.id })
     .from(jukeboxQueue)
@@ -339,22 +308,32 @@ async function startNextIfIdle(tx: Tx): Promise<void> {
     .where(eq(jukeboxProposals.id, next.proposalId));
 }
 
-export async function enqueueApproved(proposalId: string): Promise<void> {
+/** La promoción de modo YouTube afuera de un alta (al cambiar de fuente, por ejemplo). */
+export async function arrancarSiHaceFalta(): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${QUEUE_LOCK_ID})`);
+    await startNextIfIdle(tx);
+  });
+}
+
+/** Encola un tema aprobado. `alFrente`: Pinky lo quiere a continuación (antes de lo que todavía espera). */
+export async function enqueueApproved(
+  proposalId: string,
+  { alFrente = false }: { alFrente?: boolean } = {},
+): Promise<void> {
   await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(${QUEUE_LOCK_ID})`);
 
-    const [last] = await tx
-      .select({ pos: jukeboxQueue.positionHint })
+    const vivos = await tx
+      .select({ pos: jukeboxQueue.positionHint, state: jukeboxQueue.state, sent: jukeboxQueue.sentToSpotifyAt })
       .from(jukeboxQueue)
-      .where(sql`${jukeboxQueue.state} in ('queued', 'playing')`)
-      .orderBy(desc(jukeboxQueue.positionHint))
-      .limit(1);
+      .where(sql`${jukeboxQueue.state} in ('queued', 'playing')`);
 
-    await tx.insert(jukeboxQueue).values({
-      proposalId,
-      positionHint: (last?.pos ?? 0) + 1,
-      state: "queued",
-    });
+    const ultima = Math.max(0, ...vivos.map((v) => v.pos));
+    const esperando = vivos.filter((v) => v.state === "queued" && !v.sent).map((v) => v.pos);
+    const posicion = alFrente && esperando.length > 0 ? Math.min(...esperando) - 1 : ultima + 1;
+
+    await tx.insert(jukeboxQueue).values({ proposalId, positionHint: posicion, state: "queued" });
 
     await startNextIfIdle(tx);
   });
@@ -376,19 +355,161 @@ export async function markPlayed(queueItemId: string): Promise<void> {
   });
 }
 
-export async function skipCurrent(): Promise<void> {
+/** Corta el que suena. `comoTerminado`: al cambiar de fuente no lo saltó nadie, ya sonó. */
+export async function skipCurrent({ comoTerminado = false }: { comoTerminado?: boolean } = {}): Promise<void> {
   await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(${QUEUE_LOCK_ID})`);
 
     const [skipped] = await tx
       .update(jukeboxQueue)
-      .set({ state: "skipped", endedAt: new Date() })
+      .set({ state: comoTerminado ? "played" : "skipped", endedAt: new Date() })
       .where(eq(jukeboxQueue.state, "playing"))
       .returning({ id: jukeboxQueue.id });
     if (!skipped) return;
 
     await startNextIfIdle(tx);
   });
+}
+
+/** Al pasar a YouTube, lo que se había mandado a Spotify vuelve a esperar: lo toca el celu del staff. */
+export async function olvidarEnviosASpotify(): Promise<void> {
+  await db
+    .update(jukeboxQueue)
+    .set({ sentToSpotifyAt: null })
+    .where(and(eq(jukeboxQueue.state, "queued"), isNotNull(jukeboxQueue.sentToSpotifyAt)));
+}
+
+/**
+ * Reserva un tema para mandarlo a Spotify ANTES de mandarlo: si dos latidos (o un latido y "Saltar")
+ * quieren el mismo, solo uno lo consigue, y si Pinky lo quitó recién, no se manda. false = no mandarlo.
+ * Solo en modo Spotify: si en el medio se pasó a YouTube, el tema queda para el celu del staff.
+ */
+export async function reservarEnvio(queueItemId: string): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${QUEUE_LOCK_ID})`);
+    if ((await fuenteEn(tx)) !== "spotify") return false;
+    const reservados = await tx
+      .update(jukeboxQueue)
+      .set({ sentToSpotifyAt: new Date() })
+      .where(
+        and(eq(jukeboxQueue.id, queueItemId), eq(jukeboxQueue.state, "queued"), isNull(jukeboxQueue.sentToSpotifyAt)),
+      )
+      .returning({ id: jukeboxQueue.id });
+    return reservados.length > 0;
+  });
+}
+
+/** Spotify no lo aceptó: vuelve a esperar como si nada (se reintenta en el próximo latido). */
+export async function liberarEnvio(queueItemId: string): Promise<void> {
+  await db
+    .update(jukeboxQueue)
+    .set({ sentToSpotifyAt: null })
+    .where(and(eq(jukeboxQueue.id, queueItemId), eq(jukeboxQueue.state, "queued")));
+}
+
+/**
+ * Lo que el latido decidió (ver jukebox-decidir.ts), aplicado de una vez con el candado de la cola.
+ * Las condiciones de estado en cada UPDATE hacen que un latido tardío no pise lo que ya hizo otro, y si
+ * mientras tanto se pasó a YouTube no se aplica nada (ahí manda el celu del staff).
+ */
+export async function aplicarDecision(d: { empieza: string | null; terminan: string[]; descartan: string[] }): Promise<void> {
+  if (!d.empieza && d.terminan.length === 0 && d.descartan.length === 0) return;
+  const ahora = new Date();
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${QUEUE_LOCK_ID})`);
+    if ((await fuenteEn(tx)) !== "spotify") return;
+    if (d.terminan.length > 0) {
+      await tx
+        .update(jukeboxQueue)
+        .set({ state: "played", endedAt: ahora })
+        .where(and(inArray(jukeboxQueue.id, d.terminan), inArray(jukeboxQueue.state, ["queued", "playing"])));
+    }
+    if (d.descartan.length > 0) {
+      await tx
+        .update(jukeboxQueue)
+        .set({ state: "skipped", endedAt: ahora })
+        .where(and(inArray(jukeboxQueue.id, d.descartan), eq(jukeboxQueue.state, "queued")));
+    }
+    if (d.empieza) {
+      const [fila] = await tx
+        .update(jukeboxQueue)
+        .set({ state: "playing", startedAt: ahora })
+        .where(and(eq(jukeboxQueue.id, d.empieza), eq(jukeboxQueue.state, "queued")))
+        .returning({ proposalId: jukeboxQueue.proposalId });
+      if (fila) {
+        await tx
+          .update(jukeboxProposals)
+          .set({ status: "played", resolvedAt: ahora })
+          .where(eq(jukeboxProposals.id, fila.proposalId));
+      }
+    }
+  });
+}
+
+/** Temas que esperaron de más (una cola de otro día): se descartan en cualquier modo. */
+export async function descartarViejos(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await db
+    .update(jukeboxQueue)
+    .set({ state: "skipped", endedAt: new Date() })
+    .where(and(inArray(jukeboxQueue.id, ids), eq(jukeboxQueue.state, "queued")));
+}
+
+/** Lo que el latido necesita de cada tema vivo. */
+export async function itemsVivos() {
+  return db
+    .select({
+      id: jukeboxQueue.id,
+      estado: jukeboxQueue.state,
+      uri: jukeboxProposals.spotifyTrackUri,
+      posicion: jukeboxQueue.positionHint,
+      enviadoEn: jukeboxQueue.sentToSpotifyAt,
+      empezoEn: jukeboxQueue.startedAt,
+      duracionSegundos: jukeboxProposals.durationSeconds,
+      creadoEn: jukeboxQueue.createdAt,
+      proposalId: jukeboxQueue.proposalId,
+      titulo: jukeboxProposals.videoTitle,
+      artistas: jukeboxProposals.channelTitle,
+    })
+    .from(jukeboxQueue)
+    .innerJoin(jukeboxProposals, eq(jukeboxQueue.proposalId, jukeboxProposals.id))
+    .where(sql`${jukeboxQueue.state} in ('queued', 'playing')`);
+}
+
+/** Le pone a un tema que entró en modo YouTube el tema de Spotify que se le encontró. */
+export async function guardarUriDeSpotify(proposalId: string, uri: string): Promise<void> {
+  await db.update(jukeboxProposals).set({ spotifyTrackUri: uri }).where(eq(jukeboxProposals.id, proposalId));
+}
+
+export async function guardarVideoDeYoutube(proposalId: string, videoId: string): Promise<void> {
+  await db.update(jukeboxProposals).set({ youtubeVideoId: videoId }).where(eq(jukeboxProposals.id, proposalId));
+}
+
+/**
+ * La jukebox está manejando Spotify: el modo Auto no tiene que pisarle la música con su lista. Solo
+ * cuenta si hay temas vivos Y la última foto muestra Spotify conectado y abierto en algún lado (si no,
+ * la jukebox no puede pasar nada y no tiene sentido frenar a Auto).
+ */
+export async function jukeboxOcupaSpotify(): Promise<boolean> {
+  const [runtime] = await db
+    .select({ source: jukeboxRuntime.source, foto: jukeboxRuntime.spotifySnapshot })
+    .from(jukeboxRuntime)
+    .limit(1);
+  if ((runtime?.source ?? "spotify") !== "spotify") return false;
+  const foto = fotoVigente((runtime?.foto as FotoSpotify | null) ?? null, 5 * 60 * 1000);
+  if (!foto || foto.conexion !== "conectado" || foto.estado === "sin_dispositivo") return false;
+
+  const [fila] = await db
+    .select({ id: jukeboxQueue.id })
+    .from(jukeboxQueue)
+    .where(
+      and(
+        sql`${jukeboxQueue.state} in ('queued', 'playing')`,
+        gt(jukeboxQueue.createdAt, new Date(Date.now() - 12 * 60 * 60 * 1000)),
+      ),
+    )
+    .limit(1);
+  return !!fila;
 }
 
 async function getConfig() {

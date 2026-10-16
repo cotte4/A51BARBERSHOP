@@ -62,7 +62,11 @@ export function decodeAuthState(state: string): SpotifyAuthStatePayload | null {
   }
 }
 
-export async function buildAuthUrlAsync(returnTo = "/configuracion/musica"): Promise<string> {
+/** `elegirCuenta`: Spotify muestra con qué cuenta entrar (si no, usa la que ya tiene abierta el navegador). */
+export async function buildAuthUrlAsync(
+  returnTo = "/configuracion/musica",
+  { elegirCuenta = false }: { elegirCuenta?: boolean } = {},
+): Promise<string> {
   const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
   if (!clientId) throw new Error("NEXT_PUBLIC_SPOTIFY_CLIENT_ID no configurado.");
 
@@ -83,6 +87,7 @@ export async function buildAuthUrlAsync(returnTo = "/configuracion/musica"): Pro
     code_challenge_method: "S256",
     code_challenge: codeChallenge,
   });
+  if (elegirCuenta) params.set("show_dialog", "true");
 
   return `https://accounts.spotify.com/authorize?${params.toString()}`;
 }

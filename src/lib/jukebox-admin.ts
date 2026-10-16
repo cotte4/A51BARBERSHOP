@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { jukeboxProposals } from "@/db/schema";
-import { enqueueApproved, removeQueued, skipCurrent, setAutoApprove } from "@/lib/jukebox";
+import { enqueueApproved, removeQueued, setAutoApprove } from "@/lib/jukebox";
 
 export async function approveJukeboxProposal(proposalId: string): Promise<void> {
   const [row] = await db
@@ -25,15 +25,12 @@ export async function dismissJukeboxProposal(proposalId: string): Promise<void> 
     .where(and(eq(jukeboxProposals.id, proposalId), eq(jukeboxProposals.status, "pending")));
 }
 
-export async function removeJukeboxQueued(queueItemId: string): Promise<void> {
+/** false = ya estaba en Spotify (o ya no esperaba) y no se pudo quitar. */
+export async function removeJukeboxQueued(queueItemId: string): Promise<boolean> {
   if (!z.string().uuid().safeParse(queueItemId).success) {
     throw new Error("Tema inválido.");
   }
-  await removeQueued(queueItemId);
-}
-
-export async function skipJukeboxCurrent(): Promise<void> {
-  await skipCurrent();
+  return removeQueued(queueItemId);
 }
 
 export { setAutoApprove as setJukeboxAutoApprove };

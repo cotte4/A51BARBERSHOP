@@ -101,34 +101,29 @@ export default function JukeboxPlayer({ nowPlaying }: Props) {
   }
 
   if (!nowPlaying) return null;
+  if (!nowPlaying.youtubeVideoId) {
+    return (
+      <div className="flex aspect-video w-full items-center justify-center rounded-2xl border border-zinc-800 bg-black text-sm text-zinc-400">
+        Buscando el video…
+      </div>
+    );
+  }
 
   const embedUrl = `https://www.youtube.com/embed/${nowPlaying.youtubeVideoId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
 
+  // Solo el video: el título y quién lo pidió los muestra el plato de /musica/jukebox.
   return (
-    <section className="rounded-[30px] border border-zinc-800 bg-zinc-900/80 p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Jukebox</p>
-          <h3 className="mt-1 max-w-xs truncate text-base font-semibold text-white">
-            {nowPlaying.videoTitle}
-          </h3>
-          <p className="text-xs text-zinc-400">Propuesto por {nowPlaying.proposedByName}</p>
-        </div>
-        <span className="shrink-0 rounded-full border border-[#8cff59]/25 bg-[#8cff59]/10 px-3 py-1 text-xs font-semibold text-[#d8ffc7]">
-          Sonando
-        </span>
-      </div>
-      <div className="mt-4 overflow-hidden rounded-2xl">
-        <iframe
-          key={nowPlaying.id}
-          ref={iframeRef}
-          src={embedUrl}
-          onLoad={handleIframeLoad}
-          allow="autoplay; encrypted-media"
-          allowFullScreen
-          className="aspect-video w-full"
-        />
-      </div>
-    </section>
+    <div className="overflow-hidden rounded-2xl">
+      <iframe
+        key={nowPlaying.id}
+        ref={iframeRef}
+        src={embedUrl}
+        onLoad={handleIframeLoad}
+        allow="autoplay; encrypted-media"
+        allowFullScreen
+        title={nowPlaying.videoTitle}
+        className="aspect-video w-full"
+      />
+    </div>
   );
 }

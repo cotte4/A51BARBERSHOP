@@ -662,7 +662,21 @@ export function PantallaVista({ datos, sinConexion = false }: { datos: DatosPant
   );
 }
 
+/**
+ * La tele está prendida todo el torneo: cada 10 s le da un latido a la jukebox para que la cola siga
+ * pasando a Spotify aunque el celu de Pinky esté bloqueado y nadie tenga /jukebox abierto.
+ * No muestra nada; si falla, el próximo intento lo cubre.
+ */
+function usarLatidoJukebox() {
+  useEffect(() => {
+    const latir = () => void fetch("/api/jukebox/now", { cache: "no-store" }).catch(() => undefined);
+    const timer = window.setInterval(latir, 10_000);
+    return () => window.clearInterval(timer);
+  }, []);
+}
+
 export default function Pantalla({ inicial }: { inicial: DatosPantalla }) {
   const { datos, sinConexion } = usarDatos(inicial);
+  usarLatidoJukebox();
   return <PantallaVista datos={datos} sinConexion={sinConexion} />;
 }

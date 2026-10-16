@@ -5,17 +5,29 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import type { PedidoCliente } from "@/lib/jukebox-pedido";
 import { usarMovimientoReducido } from "../torneo/_movimiento";
-import Disco from "./_Disco";
+import Disco from "@/components/musica/Disco";
 
 gsap.registerPlugin(useGSAP);
 
-const GENRES = ["Reggaeton", "Trap", "Rock", "Cumbia", "Pop", "Hip Hop", "Electrónica", "Salsa"];
+// Las teclas de géneros: Spotify no filtra bien por "genre:", así que cada una busca lo que mejor dio
+// probándolo en Argentina (2026-10-15). "Pop" traía cualquier cosa: se cambió por RKT.
+const GENRES: { tecla: string; busqueda: string }[] = [
+  { tecla: "Reggaeton", busqueda: "reggaeton" },
+  { tecla: "Trap", busqueda: "trap argentino" },
+  { tecla: "Rock", busqueda: "rock nacional" },
+  { tecla: "Cumbia", busqueda: "cumbia" },
+  { tecla: "RKT", busqueda: "rkt" },
+  { tecla: "Hip Hop", busqueda: "hip hop" },
+  { tecla: "Electro", busqueda: "electronica" },
+  { tecla: "Salsa", busqueda: "salsa" },
+];
 const DEVICE_KEY_STORAGE = "a51-jukebox-device-key";
 const COOLDOWN_STORAGE = "a51-jukebox-last-propose";
+const NOMBRE_STORAGE = "a51-jukebox-nombre";
 const COOLDOWN_MS = 5 * 60 * 1000;
 
 type SearchResult = {
-  videoId: string;
+  trackId: string;
   title: string;
   channelTitle: string;
   thumbnailUrl: string;
@@ -23,8 +35,10 @@ type SearchResult = {
 };
 
 type AhoraSonando = {
-  nowPlaying: { videoTitle: string; proposedByName: string; thumbnailUrl: string | null } | null;
+  nowPlaying: { videoTitle: string; channelTitle: string; proposedByName: string; thumbnailUrl: string | null } | null;
   upcoming: { videoTitle: string }[];
+  /** Lo que pasa la lista del local cuando no suena nada pedido. */
+  lista: { titulo: string; artistas: string; tapa: string | null } | null;
 };
 
 function formatCooldown(secs: number): string {
@@ -36,6 +50,23 @@ function formatDuration(secs: number | null): string {
   const m = Math.floor(secs / 60);
   const s = secs % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+// El nombre es opcional y se recuerda: el segundo pedido es buscar y tocar, nada más.
+function nombreGuardado(): string {
+  try {
+    return localStorage.getItem(NOMBRE_STORAGE) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function guardarNombre(nombre: string) {
+  try {
+    if (nombre) localStorage.setItem(NOMBRE_STORAGE, nombre);
+  } catch {
+    // sin almacenamiento (modo privado): la próxima vez se vuelve a escribir
+  }
 }
 
 function getOrCreateDeviceKey(): string {
@@ -168,11 +199,11 @@ export default function JukeboxClient() {
   // Cambia con cada pedido para consultar al toque, sin esperar los 10 s.
   const [pedidosHechos, setPedidosHechos] = useState(0);
   const [miPedido, setMiPedido] = useState<PedidoCliente | null>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isInCooldown()) setCooldownSecs(cooldownRemaining());
     if (yaPropuso()) setPedidosHechos(1);
+    setProposerName(nombreGuardado());
   }, []);
 
   useEffect(() => {
@@ -221,12 +252,6 @@ export default function JukeboxClient() {
     return () => clearTimeout(t);
   }, [cooldownSecs]);
 
-  useEffect(() => {
-    if (selected) {
-      setTimeout(() => nameInputRef.current?.focus(), 100);
-    }
-  }, [selected]);
-
   async function handleSearch(q: string) {
     if (!q.trim()) return;
     setSearching(true);
@@ -248,14 +273,14 @@ export default function JukeboxClient() {
         setSearchError(`No encontramos resultados para "${q}".`);
       }
     } catch (err) {
-      setSearchError(err instanceof Error ? err.message : "No pude buscar en YouTube.");
+      setSearchError(err instanceof Error ? err.message : "No pude buscar.");
     } finally {
       setSearching(false);
     }
   }
 
   async function handlePropose() {
-    if (!selected || !proposerName.trim()) return;
+    if (!selected) return;
     if (cooldownSecs > 0 || submitting) return;
 
     setSubmitting(true);
@@ -267,11 +292,7 @@ export default function JukeboxClient() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          videoId: selected.videoId,
-          title: selected.title,
-          channelTitle: selected.channelTitle,
-          thumbnailUrl: selected.thumbnailUrl,
-          durationSeconds: selected.durationSeconds,
+          trackId: selected.trackId,
           proposerName: proposerName.trim(),
           deviceKey,
         }),
@@ -281,6 +302,7 @@ export default function JukeboxClient() {
       if (!res.ok) throw new Error(data.error ?? "No se pudo proponer.");
 
       setCooldown();
+      guardarNombre(proposerName.trim());
       setCooldownSecs(cooldownRemaining());
       setAutoApproved(data.autoApproved ?? false);
       setSubmitted(true);
@@ -310,7 +332,6 @@ export default function JukeboxClient() {
                 setSubmitted(false);
                 setSelected(null);
                 setCodigo(null);
-                setProposerName("");
                 setResults([]);
                 setQuery("");
               }}
@@ -368,23 +389,23 @@ export default function JukeboxClient() {
 
           {/* Las teclas de la máquina: un toque busca el género. */}
           <div className="mt-4 grid grid-cols-4 gap-1.5">
-            {GENRES.map((genre) => (
+            {GENRES.map(({ tecla, busqueda }) => (
               <button
-                key={genre}
+                key={tecla}
                 type="button"
                 disabled={searching}
-                aria-pressed={query === genre}
+                aria-pressed={query === busqueda}
                 onClick={() => {
-                  setQuery(genre);
-                  handleSearch(genre);
+                  setQuery(busqueda);
+                  handleSearch(busqueda);
                 }}
                 className={`min-h-12 truncate rounded-xl border px-0.5 text-xs font-semibold transition-[transform,background-color,border-color] duration-150 ease-out active:scale-[0.95] disabled:opacity-50 ${
-                  query === genre
+                  query === busqueda
                     ? "border-[#8cff59]/70 bg-[#8cff59]/15 text-[#d8ffc7] shadow-[inset_0_-3px_0_rgba(140,255,89,0.35)]"
                     : "border-zinc-800 bg-zinc-900/80 text-zinc-300 shadow-[inset_0_-3px_0_rgba(0,0,0,0.45)]"
                 }`}
               >
-                {genre === "Electrónica" ? "Electro" : genre}
+                {tecla}
               </button>
             ))}
           </div>
@@ -422,7 +443,7 @@ export default function JukeboxClient() {
           <p className="px-1 text-sm text-zinc-400">Tocá el tuyo.</p>
           <ul className="mt-3 flex flex-col gap-2">
             {results.map((r, i) => (
-              <li key={r.videoId}>
+              <li key={r.trackId}>
                 <button
                   type="button"
                   onClick={() => {
@@ -483,11 +504,10 @@ export default function JukeboxClient() {
 
           <div className="mt-5">
             <label className="text-sm font-medium text-zinc-300" htmlFor="proposer-name">
-              Tu nombre o apodo
+              ¿Quién lo pide? <span className="font-normal text-zinc-500">(opcional)</span>
             </label>
             <input
               id="proposer-name"
-              ref={nameInputRef}
               value={proposerName}
               onChange={(e) => setProposerName(e.target.value)}
               onKeyDown={(e) => {
@@ -496,7 +516,7 @@ export default function JukeboxClient() {
                   void handlePropose();
                 }
               }}
-              placeholder="¿Cómo te llamás?"
+              placeholder="Tu nombre o apodo"
               maxLength={40}
               enterKeyHint="send"
               autoComplete="nickname"
@@ -519,7 +539,7 @@ export default function JukeboxClient() {
           ) : (
             <button
               type="button"
-              disabled={submitting || !proposerName.trim()}
+              disabled={submitting}
               onClick={handlePropose}
               className="neon-button mt-4 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-[20px] text-base font-semibold text-[#07130a] active:scale-[0.98] disabled:opacity-60"
             >
@@ -560,7 +580,10 @@ function Tapa({ url, className = "" }: { url: string | null; className?: string 
 
 /** Arriba de todo: la máquina con lo que suena. El disco gira y el brazo baja solo si hay un tema sonando. */
 function Maquina({ ahora }: { ahora: AhoraSonando | null }) {
-  const suena = ahora?.nowPlaying ?? null;
+  // Lo pedido manda; si no hay, lo que pasa la lista del local (sin "pedido por").
+  const suena = ahora?.nowPlaying
+    ? { titulo: ahora.nowPlaying.videoTitle, artistas: ahora.nowPlaying.channelTitle, tapa: ahora.nowPlaying.thumbnailUrl }
+    : (ahora?.lista ?? null);
   return (
     <section
       className="jukebox-motion relative overflow-hidden rounded-b-[28px] rounded-t-[180px] border border-[#8cff59]/30 px-5 pb-5 pt-12 shadow-[0_0_60px_rgba(140,255,89,0.08)]"
@@ -573,7 +596,7 @@ function Maquina({ ahora }: { ahora: AhoraSonando | null }) {
         aria-hidden="true"
       />
       <div className="flex justify-center">
-        <Disco tamano={196} etiqueta={suena?.thumbnailUrl ?? null} girando={!!suena} brazoAbajo={!!suena} />
+        <Disco tamano={196} etiqueta={suena?.tapa ?? null} girando={!!suena} brazoAbajo={!!suena} />
       </div>
 
       <div className="mt-6 rounded-2xl border border-zinc-800 bg-black/70 px-4 py-3 shadow-[inset_0_0_20px_rgba(140,255,89,0.06)]">
@@ -588,9 +611,10 @@ function Maquina({ ahora }: { ahora: AhoraSonando | null }) {
               <Ecualizador />
               <p className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-[#8cff59]">Suena ahora</p>
             </div>
-            <p key={suena.videoTitle} className="pop-in mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-white">
-              {suena.videoTitle}
+            <p key={suena.titulo} className="pop-in mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-white">
+              {suena.titulo}
             </p>
+            {suena.artistas ? <p className="truncate text-xs text-zinc-400">{suena.artistas}</p> : null}
             {ahora.upcoming[0] ? <p className="mt-1 truncate text-xs text-zinc-500">Sigue: {ahora.upcoming[0].videoTitle}</p> : null}
           </>
         ) : (

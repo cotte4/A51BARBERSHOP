@@ -972,6 +972,8 @@ export const musicProviderConnections = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     lastError: text("last_error"),
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    /** El nombre de la cuenta conectada ("Was", "Pinky"): para que se vea de quién es el Spotify. */
+    accountName: text("account_name"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1287,7 +1289,11 @@ export const jukeboxProposals = pgTable(
   "jukebox_proposals",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    youtubeVideoId: text("youtube_video_id").notNull(),
+    // Desde que la jukebox suena en Spotify, el tema es de Spotify y el video de YouTube se busca recién si
+    // Pinky pasa al modo YouTube de emergencia. Los nombres de columna quedaron de la época de YouTube:
+    // video_title = nombre del tema, channel_title = artistas, thumbnail_url = tapa del disco.
+    youtubeVideoId: text("youtube_video_id"),
+    spotifyTrackUri: text("spotify_track_uri"),
     videoTitle: text("video_title").notNull(),
     channelTitle: text("channel_title").notNull(),
     thumbnailUrl: text("thumbnail_url"),
@@ -1323,12 +1329,30 @@ export const jukeboxQueue = pgTable(
       .$type<"queued" | "playing" | "played" | "skipped">(),
     startedAt: timestamp("started_at", { withTimezone: true }),
     endedAt: timestamp("ended_at", { withTimezone: true }),
+    /** Cuándo se mandó a la cola de Spotify. Desde ahí no se puede quitar (Spotify no deja borrar de su cola). */
+    sentToSpotifyAt: timestamp("sent_to_spotify_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("jukebox_queue_state_idx").on(table.state),
     index("jukebox_queue_position_idx").on(table.positionHint),
   ]
+);
+
+/**
+ * Una sola fila ("singleton"): por dónde suena la jukebox y la última foto de Spotify.
+ * `synced_at` hace de turno: el primer sondeo que lo reclama habla con Spotify y el resto lee la foto.
+ */
+export const jukeboxRuntime = pgTable(
+  "jukebox_runtime",
+  {
+    id: text("id").primaryKey(),
+    source: text("source").notNull().default("spotify").$type<"spotify" | "youtube">(),
+    syncedAt: timestamp("synced_at", { withTimezone: true }),
+    spotifySnapshot: jsonb("spotify_snapshot"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [check("jukebox_runtime_source_check", sql`${table.source} IN ('spotify', 'youtube')`)]
 );
 
 // ————————————————————————————
