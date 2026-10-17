@@ -66,7 +66,6 @@ function applyFeedbackToleranceFilter(cuts: string[], feedbackTolerance?: string
 // ————————————————————————————
 export function getDefaultCuts(shape: FaceShape, answers: InterrogatoryAnswers): string[] {
   const { lifestyle, morningMinutes } = answers;
-  const low  = morningMinutes <= 3;   // 0-3 min
   const mid  = morningMinutes === 5;  // 5 min
   const high = morningMinutes >= 10;  // 10+ min
 

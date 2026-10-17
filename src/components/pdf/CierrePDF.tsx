@@ -1,4 +1,3 @@
-import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { pdfStyles, colors } from "./pdf-styles";
 
@@ -89,7 +88,6 @@ export function CierrePDF({ data }: { data: CierrePDFData }) {
     totalComisionesMedios,
     totalNeto,
     totalProductos,
-    cajaNetaDia,
     cajaNetaServicios,
     cajaNetaProductos,
     aporteEconomicoCasaDia,

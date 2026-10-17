@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { torneoEquipos, torneoJugadores, torneoPartidos, torneos } from "@/db/schema";
 import {

@@ -10,7 +10,6 @@ import {
   dismissMusicProposal,
   deleteScheduleRule,
   disconnectMusicProvider,
-  getDefaultWeekdayMask,
   joinActiveJamSession,
   pauseMusic,
   playPlaylistNow,

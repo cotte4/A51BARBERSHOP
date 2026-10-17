@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatOvnis, BET_MIN_AMOUNT } from "@/lib/ovnis";
+import { formatOvnis } from "@/lib/ovnis";
 import { searchMarcianoAction, donarAction } from "./actions";
 
 interface Props {

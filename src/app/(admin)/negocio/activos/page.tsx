@@ -180,7 +180,6 @@ export default async function HangarPage({
   const capitalBase = totalAportado - totalRetirado;
   const capitalDisponible = capitalBase - totalInvertido;
   const totalComprometido = activeAssetRows.reduce((sum, asset) => sum + asset.financials.pending, 0);
-  const totalTarget = activeAssetRows.reduce((sum, asset) => sum + asset.financials.target, 0);
   const totalActivos = activeAssetRows.length;
   const costosFijosMes = costosMes.reduce((sum, item) => sum + Number(item.monto ?? 0), 0);
 

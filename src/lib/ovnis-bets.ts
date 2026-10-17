@@ -1,9 +1,9 @@
 import "server-only";
 
 import { randomUUID } from "crypto";
-import { and, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { and, eq, inArray, lt, or } from "drizzle-orm";
 import { db } from "@/db";
-import { clients, ovnisBets, ovnisBalance } from "@/db/schema";
+import { clients, ovnisBets } from "@/db/schema";
 import {
   burnBetOvnisInTx,
   lockOvnisForBet,

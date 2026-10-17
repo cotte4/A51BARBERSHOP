@@ -56,16 +56,6 @@ function CalendarIcon() {
 }
 
 
-function MusicIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
-      <path d="M8 18a2.5 2.5 0 1 1-2.5-2.5A2.5 2.5 0 0 1 8 18Z" />
-      <path d="M18.5 16.5A2.5 2.5 0 1 1 16 14a2.5 2.5 0 0 1 2.5 2.5Z" />
-      <path d="M8 18V7.5l10-2V16" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function TrophyIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">

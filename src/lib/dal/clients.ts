@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, exists, isNull, or, sql } from "drizzle-orm";
+import { and, eq, exists, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { clients, visitLogs } from "@/db/schema";
 

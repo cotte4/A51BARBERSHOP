@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import type { BarberoFormState } from "@/app/(admin)/configuracion/barberos/actions";
-import { formatARS } from "@/lib/format";
 
 interface BarberoFormProps {
   action: (

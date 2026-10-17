@@ -8,7 +8,6 @@ import {
   formatDateLongLabel,
 } from "@/components/turnos/reserva-form-utils";
 import type {
-  QuickDateOption,
   Slot,
   SpotifyTrackOption,
 } from "@/components/turnos/reserva-form-utils";

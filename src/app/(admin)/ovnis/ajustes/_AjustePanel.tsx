@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { searchClientAction, ajustarBalanceAction } from "./actions";
 
 function formatOvnis(n: number) {

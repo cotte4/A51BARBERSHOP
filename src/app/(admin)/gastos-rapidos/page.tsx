@@ -22,14 +22,6 @@ type CategoryMetric = {
   count: number;
 };
 
-function formatMonthLabel() {
-  return new Date().toLocaleDateString("es-AR", {
-    month: "long",
-    year: "numeric",
-    timeZone: "America/Argentina/Buenos_Aires",
-  });
-}
-
 function formatCount(count: number) {
   return `${count} movimiento${count === 1 ? "" : "s"}`;
 }
@@ -110,7 +102,6 @@ export default async function GastosRapidosPage({
     ? `/gastos-rapidos?categoria=${encodeURIComponent(categoriaSeleccionada)}`
     : "/gastos-rapidos";
 
-  const monthLabel = formatMonthLabel();
   const emptyTitle = categoriaSeleccionada
     ? `No hay gastos en ${categoriaActiva?.label ?? "este filtro"}`
     : "Todavia no hay gastos rapidos cargados este mes";

@@ -101,12 +101,11 @@ export async function getMiResultadoData() {
   const { fechaHoy, anio, mes, inicioMes, finMes } = getFechasMesActual();
   const gastosRapidosHabilitados = await hasGastosRapidosSchema();
 
-  const [listaBarberos, plMes, margenProductosHoy, margenProductosMes, quickExpensesMes] =
+  const [listaBarberos, plMes, margenProductosHoy, quickExpensesMes] =
     await Promise.all([
       db.select().from(barberos),
       getPL(mes, anio),
       getProductoMargin(fechaHoy, fechaHoy),
-      getProductoMargin(inicioMes, finMes),
       getQuickExpenses(inicioMes, finMes),
     ]);
 
@@ -115,7 +114,7 @@ export async function getMiResultadoData() {
     .filter((barbero) => barbero.rol === "barbero")
     .map((barbero) => barbero.id);
 
-  const [atencionesHoy, atencionesMes, gastosFijosMesRows] = await Promise.all([
+  const [atencionesHoy, gastosFijosMesRows] = await Promise.all([
     db
       .select({
         barberoId: atenciones.barberoId,
@@ -125,22 +124,6 @@ export async function getMiResultadoData() {
       })
       .from(atenciones)
       .where(and(eq(atenciones.fecha, fechaHoy), eq(atenciones.anulado, false))),
-    db
-      .select({
-        barberoId: atenciones.barberoId,
-        precioCobrado: atenciones.precioCobrado,
-        comisionBarberoMonto: atenciones.comisionBarberoMonto,
-        comisionMedioPagoMonto: atenciones.comisionMedioPagoMonto,
-        fecha: atenciones.fecha,
-      })
-      .from(atenciones)
-      .where(
-        and(
-          gte(atenciones.fecha, inicioMes),
-          lte(atenciones.fecha, finMes),
-          eq(atenciones.anulado, false)
-        )
-      ),
     gastosRapidosHabilitados
       ? db
           .select({ monto: gastos.monto })

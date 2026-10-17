@@ -14,15 +14,6 @@ type RawSpotifyDevice = {
   volume_percent: number | null;
 };
 
-type RawSpotifyTrack = {
-  id: string;
-  uri: string;
-  name: string;
-  artists: { name: string }[];
-  album: { name: string; images: { url: string }[] };
-  duration_ms: number;
-};
-
 export type SpotifyDevice = {
   id: string;
   name: string;

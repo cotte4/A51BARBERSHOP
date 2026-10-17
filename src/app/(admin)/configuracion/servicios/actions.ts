@@ -85,7 +85,6 @@ export async function editarServicio(
   const precioBaseStr = formData.get("precioBase") as string;
   const duracionMinutosStr = formData.get("duracionMinutos") as string;
   const motivoCambioPrecio = formData.get("motivoCambioPrecio") as string;
-  const precioCambioStr = formData.get("precioCambio") as string; // solo presente si cambió
 
   const fieldErrors: ServicioFormState["fieldErrors"] = {};
 

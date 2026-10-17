@@ -1,6 +1,5 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -14,15 +13,8 @@ import {
 import { normalizePhone } from "@/lib/phone";
 import { CATALOGO_CLUBES } from "@/lib/torneo-escudos";
 import {
-  avanzarGanador,
-  calcularPodio,
   resumenCupo,
   siguienteOrdenPago,
-  sortearTorneo,
-  torneoTerminado,
-  type Marcador,
-  type PartidoCuadro,
-  type Podio,
 } from "@/lib/torneo";
 
 export type Torneo = typeof torneos.$inferSelect;

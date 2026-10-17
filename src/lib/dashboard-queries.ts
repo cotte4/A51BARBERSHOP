@@ -12,7 +12,7 @@ import {
   costosFijosNegocio,
 } from "@/db/schema";
 import { getEstadoRepago } from "./repago-service";
-import { and, desc, eq, gte, lte, sum, count, avg, isNull, or } from "drizzle-orm";
+import { and, desc, eq, gte, lte, count } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { toNumber, getDaysInMonth } from "./caja-finance";
 

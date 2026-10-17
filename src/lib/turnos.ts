@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, count, desc, eq, gte, inArray, isNotNull, lt, lte } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, lte } from "drizzle-orm";
 import { db } from "@/db";
 import {
   barberos,

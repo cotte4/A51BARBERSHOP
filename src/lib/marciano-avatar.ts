@@ -4,7 +4,6 @@ import { put } from "@vercel/blob";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/db";
 import { clients } from "@/db/schema";
-import { FACE_SHAPE_DESCRIPTIONS } from "@/lib/marciano-colors";
 import type { FaceShape } from "@/lib/types";
 import { AVATAR_PRESETS, INTENSITY_MODIFIERS } from "@/lib/marciano-avatar-presets";
 import type { AvatarPreset } from "@/lib/marciano-avatar-presets";

@@ -13,7 +13,6 @@ import {
 import {
   formatScheduleRule,
   getDefaultWeekdayKeys,
-  getPreferredActivePlayerId,
   getTimeInArgentina,
   getWeekdayKey,
   parseTurnoProposalPayload,

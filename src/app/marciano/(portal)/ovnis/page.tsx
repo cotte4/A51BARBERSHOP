@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { ovnisBalance, ovnisPendingCredits, ovnisTransactions } from "@/db/schema";
 import { requireMarcianoClient } from "@/lib/marciano-portal";

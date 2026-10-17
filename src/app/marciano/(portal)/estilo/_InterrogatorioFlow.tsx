@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { saveStyleProfileAction } from "./actions";
-import { playSound, toggleSoundMute, isSoundMuted } from "@/lib/marciano-sounds";
+import { toggleSoundMute, isSoundMuted } from "@/lib/marciano-sounds";
 import Question from "./_Question";
 import FaceCapture from "./_FaceCapture";
 import StyleDNAReveal from "./_StyleDNAReveal";

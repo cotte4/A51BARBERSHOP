@@ -1,6 +1,5 @@
 import { db } from "@/db";
 import { barberos } from "@/db/schema";
-import { formatARS } from "@/lib/format";
 import Link from "next/link";
 
 function formatPct(value: string | null) {
