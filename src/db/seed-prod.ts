@@ -12,11 +12,15 @@
  *
  * Idempotente — no duplica si ya existe.
  *
+ * DESACTUALIZADO (2026-10): precios viejos y Gabote activo. Con los datos reales ya
+ * importados (2026-09-30), correrlo mete datos de más. Pide confirmación antes de escribir.
+ *
  * Cómo correr:
  *   npx tsx src/db/seed-prod.ts
  */
 
 import "./load-env";
+import { confirmarEscrituraEnProd } from "./confirmar-prod";
 
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
@@ -31,6 +35,8 @@ const sql = neon(process.env.DATABASE_URL);
 const db = drizzle(sql, { schema });
 
 async function run() {
+  await confirmarEscrituraEnProd("seed-prod: precios y barberos de mayo 2026 (Gabote incluido), anteriores a los datos reales importados");
+
   console.log("=== Seed de producción A51 Barber ===\n");
 
   // ————————————————————

@@ -1,6 +1,7 @@
 import { chromium, type FullConfig } from "@playwright/test";
 import path from "path";
 import fs from "fs";
+import { confirmarEscrituraEnProd } from "../../db/confirmar-prod";
 
 const CREDENTIALS = {
   pinky: { email: "pinky@a51barber.com", password: "pinky1234" },
@@ -8,6 +9,9 @@ const CREDENTIALS = {
 } as const;
 
 export default async function globalSetup(config: FullConfig) {
+  // Los specs cobran, cierran caja y cargan atenciones contra la única base que hay (prod).
+  await confirmarEscrituraEnProd("tests E2E: registran atenciones y cierres de caja");
+
   const baseURL = config.projects[0].use.baseURL ?? "http://localhost:3000";
   const authDir = path.join(__dirname, ".auth");
   fs.mkdirSync(authDir, { recursive: true });

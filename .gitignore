@@ -38,6 +38,8 @@ a51-smoke*.log
 !.env.example
 .claude/
 planning/
+# scripts propios de Was que tocan la base (demo del torneo, etc.): quedan en la máquina, no en el repo
+scripts/local/
 
 # vercel
 .vercel
