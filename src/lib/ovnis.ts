@@ -24,7 +24,4 @@ export type OvnisTransactionType =
   | "bet_burn"
   | "admin_adjust";
 
-export const PORTAL_OVNIS_PATH = "/marciano/ovnis";
-export const PORTAL_RULETA_PATH = "/marciano/ruleta";
-export const PORTAL_JUEGOS_PATH = "/marciano/juegos";
 export const SCAN_PATH = (id: string) => `/marciano/ovnis/scan/${id}`;

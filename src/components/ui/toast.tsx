@@ -3,9 +3,7 @@
 import {
   createContext,
   useCallback,
-  useContext,
   useEffect,
-  useId,
   useRef,
   useState,
 } from "react";
@@ -182,12 +180,3 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ── Hook ──────────────────────────────────────────────────────────────────────
-
-export function useToast(): (message: string, variant?: ToastVariant) => void {
-  const ctx = useContext(ToastContext);
-  if (!ctx) {
-    throw new Error("useToast must be used inside <ToastProvider>");
-  }
-  return ctx.toast;
-}

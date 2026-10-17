@@ -99,17 +99,6 @@ export function getFotoCropStyle(
   };
 }
 
-export function getScopeLabel(scope: string | null | undefined): string {
-  switch (scope) {
-    case "memas":
-      return "Memas";
-    case "a51":
-      return "A51";
-    default:
-      return "Sin scope";
-  }
-}
-
 /**
  * Total general + subtotal por categoria. Solo suma: un presupuesto no tiene
  * pagos ni estado de compra, asi que no hay nada que conciliar contra capital.

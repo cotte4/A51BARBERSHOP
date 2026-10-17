@@ -38,10 +38,6 @@ export async function leerRuntime(): Promise<RuntimeJukebox> {
   return { fuente: fila.source, foto: (fila.spotifySnapshot as FotoSpotify | null) ?? null };
 }
 
-export async function fuenteJukebox(): Promise<FuenteJukebox> {
-  return (await leerRuntime()).fuente;
-}
-
 /** Lo máximo que puede tardar un latido. Si se cae a mitad de camino, el turno se libera solo después de esto. */
 const PRESTAMO_MS = 15_000;
 

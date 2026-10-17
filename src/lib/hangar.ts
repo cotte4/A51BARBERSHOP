@@ -140,15 +140,3 @@ export function getPaymentTypeLabel(tipo: string | null | undefined): string {
   }
 }
 
-export function getCapitalMovimientoLabel(tipo: string | null | undefined): string {
-  switch (tipo) {
-    case "aporte":
-      return "Aporte";
-    case "retiro":
-      return "Retiro";
-    case "inversion_activo":
-      return "Inversion activo";
-    default:
-      return "Movimiento";
-  }
-}

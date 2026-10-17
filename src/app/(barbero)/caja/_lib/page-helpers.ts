@@ -22,15 +22,6 @@ export function formatHora(hora: string | null): string {
   return hora.slice(0, 5);
 }
 
-export function formatHoraDate(date: Date | null | undefined): string {
-  if (!date) return "--:--";
-  return new Intl.DateTimeFormat("es-AR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "America/Argentina/Buenos_Aires",
-  }).format(date);
-}
-
 export function getPaymentAccent(nombre: string | null | undefined) {
   const normalized = (nombre ?? "").toLowerCase();
 

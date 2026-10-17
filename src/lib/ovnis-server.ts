@@ -182,46 +182,6 @@ export async function creditOvnis(input: {
   });
 }
 
-type DebitResult = { success: true } | { success: false; reason: "insufficient_funds" };
-
-export async function debitOvnis(input: {
-  clientId: string;
-  amount: number;
-  type: OvnisTransactionType;
-  description: string;
-  relatedRedemptionId?: string;
-  relatedBetId?: string;
-}): Promise<DebitResult> {
-  return db.transaction(async (tx) => {
-    const result = await tx
-      .update(ovnisBalance)
-      .set({
-        balance: sql`${ovnisBalance.balance} - ${input.amount}`,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(ovnisBalance.clientId, input.clientId),
-          sql`${ovnisBalance.balance} >= ${input.amount}`
-        )
-      )
-      .returning({ id: ovnisBalance.clientId });
-
-    if (result.length === 0) return { success: false, reason: "insufficient_funds" };
-
-    await tx.insert(ovnisTransactions).values({
-      clientId: input.clientId,
-      amount: -input.amount,
-      type: input.type,
-      description: input.description,
-      relatedRedemptionId: input.relatedRedemptionId,
-      relatedBetId: input.relatedBetId,
-    });
-
-    return { success: true };
-  });
-}
-
 type TransferResult =
   | { success: true }
   | { success: false; reason: "invalid_amount" | "insufficient_funds" | "same_client" | "recipient_not_marciano" };
@@ -780,36 +740,6 @@ export async function settleBetInTx(
   ]);
 }
 
-export async function settleBet(input: {
-  betId: string;
-  winnerClientId: string;
-  loserClientId: string;
-  amount: number;
-  resolvedByUserId?: string;
-}): Promise<void> {
-  await db.transaction(async (tx) => {
-    await settleBetInTx(tx, input);
-    /*
-    await tx.insert(ovnisTransactions).values([
-      {
-        clientId: input.winnerClientId,
-        amount: input.amount * 2,
-        type: "bet_win" satisfies OvnisTransactionType,
-        description: `Victoria en apuesta — ganaste ${input.amount * 2} OVNIS`,
-        relatedBetId: input.betId,
-      },
-      {
-        clientId: input.loserClientId,
-        amount: -input.amount,
-        type: "bet_burn" satisfies OvnisTransactionType,
-        description: `Derrota en apuesta — perdiste ${input.amount} OVNIS`,
-        relatedBetId: input.betId,
-      },
-    ]);
-    */
-  });
-}
-
 export async function burnBetOvnisInTx(
   tx: Tx,
   input: {
@@ -854,40 +784,3 @@ export async function burnBetOvnisInTx(
   }
 }
 
-export async function burnBetOvnis(input: {
-  betId: string;
-  challengerId: string;
-  opponentId: string;
-  amount: number;
-  status: "both_lost" | "stale_burned";
-}): Promise<void> {
-  await db.transaction(async (tx) => {
-    await burnBetOvnisInTx(tx, input);
-  });
-  /*
-  const description =
-    input.status === "both_lost"
-      ? "Por pelotudos — no se pusieron de acuerdo. OVNIS quemados."
-      : "Apuesta abandonada (30 días sin claims). OVNIS quemados.";
-
-  await db.transaction(async (tx) => {
-    for (const clientId of [input.challengerId, input.opponentId]) {
-      await tx
-        .update(ovnisBalance)
-        .set({
-          pendingBalance: sql`${ovnisBalance.pendingBalance} - ${input.amount}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(ovnisBalance.clientId, clientId));
-
-      await tx.insert(ovnisTransactions).values({
-        clientId,
-        amount: -input.amount,
-        type: "bet_burn" satisfies OvnisTransactionType,
-        description,
-        relatedBetId: input.betId,
-      });
-    }
-  });
-  */
-}

@@ -25,11 +25,3 @@ export function formatHeaderDate(fecha: string): string {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
-export function getBepProgress(actual: number, target: number): number {
-  if (target <= 0) return 0;
-  return Math.max(0, Math.min(100, Math.round((actual / target) * 100)));
-}
-
-export function getBepPips(progress: number): number {
-  return Math.max(0, Math.min(5, Math.round((progress / 100) * 5)));
-}
