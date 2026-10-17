@@ -37,6 +37,12 @@ const BOKEH = Array.from({ length: 6 }, (_, i) => ({
   w: (-azar(i, 10) * 12).toFixed(2),
 }));
 // Luces del borde de la nave, sobre la mitad de adelante de la elipse.
+// Chispas que el rayo arrastra junto con la pelota cuando la chupa.
+const CHISPAS = Array.from({ length: 14 }, (_, i) => ({
+  x: azar(i, 11) * 2 - 1,
+  y: azar(i, 12) * 2 - 1,
+  s: (0.5 + azar(i, 13) * 0.9).toFixed(2),
+}));
 const LUCES = Array.from({ length: 11 }, (_, i) => {
   const ang = (Math.PI * (i + 0.5)) / 11;
   return {
@@ -50,16 +56,114 @@ function v(nombre: string, valor: string): CSSProperties {
   return { [nombre]: valor } as CSSProperties;
 }
 
+function centroY(el: Element): number {
+  const r = el.getBoundingClientRect();
+  return r.top + r.height / 2;
+}
+
+/**
+ * Un ciclo de abducción (~9,5 s, se repite). Las distancias se miden al arrancar cada vuelta
+ * (repeatRefresh): la pelota llega al emisor a cualquier tamaño de escena, también si se rotó
+ * el celular. Al final de la vuelta el rayo respira y la pelota vuelve a flotar normal.
+ */
+function abduccion(q: ReturnType<typeof gsap.utils.selector>, e: Energia): gsap.core.Timeline {
+  const [pelota] = q(".escena-pelota");
+  const [emisor] = q(".escena-emisor");
+  const [nave] = q(".escena-nave");
+  const chispas = q(".escena-chispa");
+  const reticula = q(".escena-reticula");
+  // Hasta dónde sube: del centro de la pelota (en reposo) al emisor de la nave.
+  const subida = () => centroY(emisor) - centroY(pelota);
+  const ancho = () => pelota.getBoundingClientRect().width;
+
+  return (
+    gsap
+      // immediateRender: false: los fromTo no pintan su estado inicial hasta que les toca (si no,
+      // la onda aparece y la retícula se apaga antes de que termine la entrada).
+      .timeline({ repeat: -1, repeatRefresh: true, defaults: { immediateRender: false } })
+      // 1. El rayo carga y la pelota empieza a girar como loca.
+      .to(e, { haz: 1.45, duration: 0.9, ease: "power2.in" }, 0)
+      .to(e, { giro: 9, duration: 1.7, ease: "power2.in" }, 0)
+      .to(reticula, { opacity: 0, scale: 0.7, duration: 0.4, ease: "power2.in" }, 0.5)
+      // 2. Las chispas se juntan alrededor y suben primero, marcando el camino.
+      .fromTo(
+        chispas,
+        {
+          x: (i: number) => CHISPAS[i].x * ancho() * 0.75,
+          y: (i: number) => CHISPAS[i].y * ancho() * 0.45,
+          scale: 1,
+          opacity: 0,
+        },
+        { opacity: 1, duration: 0.3, stagger: 0.04 },
+        0.35,
+      )
+      .to(chispas, { x: 0, y: subida, scale: 0.15, duration: 0.95, ease: "power3.in", stagger: 0.04 }, 0.6)
+      .to(chispas, { opacity: 0, duration: 0.12, stagger: 0.04 }, 1.5)
+      // 3. La chupa: sube encogiéndose cada vez más rápido.
+      .to(pelota, { y: subida, scale: 0.06, duration: 1.1, ease: "power3.in" }, 0.8)
+      .to(pelota, { opacity: 0, duration: 0.12 }, 1.8)
+      // 4. Absorción: destello, onda expansiva, la nave acusa el golpe y el rayo pega un pico.
+      .to(e, { haz: 2.1, duration: 0.12, ease: "power2.out" }, 1.86)
+      .to(e, { haz: 0.7, duration: 0.9, ease: "power2.out" }, 1.98)
+      .fromTo(
+        q(".escena-destello"),
+        { scale: 0.3, opacity: 0 },
+        {
+          keyframes: [
+            { scale: 1.3, opacity: 1, duration: 0.12, ease: "power2.out" },
+            { scale: 2, opacity: 0, duration: 0.75, ease: "power2.out" },
+          ],
+        },
+        1.86,
+      )
+      .fromTo(
+        q(".escena-onda"),
+        { scale: 0.2, opacity: 1 },
+        { scale: 2.8, opacity: 0, duration: 1.2, ease: SALIDA },
+        1.88,
+      )
+      .fromTo(
+        nave,
+        { y: 0 },
+        {
+          keyframes: [
+            { y: () => -ancho() * 0.12, duration: 0.1, ease: "power2.out" },
+            { y: 0, duration: 1.1, ease: "elastic.out(1, 0.35)" },
+          ],
+        },
+        1.88,
+      )
+      // 5. La escupe de vuelta: cae girando y se frena hasta su ritmo normal.
+      .set(e, { giro: 6 }, 3.0)
+      .set(pelota, { opacity: 1 }, 3.0)
+      .to(pelota, { y: 0, scale: 1, duration: 1.4, ease: ATERRIZAJE }, 3.0)
+      .to(e, { giro: 1, duration: 2.6, ease: "power2.out" }, 3.0)
+      .to(e, { haz: 1, duration: 1, ease: VAIVEN }, 3.0)
+      .fromTo(reticula, { opacity: 0, scale: 1.18 }, { opacity: 1, scale: 1, duration: 0.55, ease: SALIDA }, 4.2)
+      // 6. Respira hasta la próxima.
+      .to(
+        e,
+        {
+          keyframes: { haz: [1, 0.86, 1, 1.25, 0.95, 1], easeEach: "sine.inOut" },
+          duration: 5.1,
+          ease: "none",
+        },
+        4.4,
+      )
+  );
+}
+
 /**
  * Escena de abducción: la nave baja, el rayo se enciende con un parpadeo, la lava de luz empieza
- * a subir por el haz y la pelota alien levita adentro. Capas con parallax del mouse (solo con
+ * a subir por el haz y la pelota alien levita adentro. Cada ~9,5 s el rayo la chupa: acelera el
+ * giro, sube encogiéndose hasta la nave con un destello y la nave la escupe de vuelta. Capas con parallax del mouse (solo con
  * puntero fino). Decorativa: aria-hidden, respeta prefers-reduced-motion y se pausa con la
  * pestaña oculta. `tele`: tamaño fijo para el lienzo de 1920x1080 de la pantalla del torneo
  * (sin depender del viewport) y el HUD legible a distancia.
  */
 export default function EscenaOvni({ compacta = false, tele = false }: { compacta?: boolean; tele?: boolean }) {
   const raiz = useRef<HTMLDivElement>(null);
-  const energia = useRef<Energia>({ haz: 0, alcance: 0 });
+  const energia = useRef<Energia>({ haz: 0, alcance: 0, giro: 1 });
   const quieto = usarMovimientoReducido();
 
   useGSAP(
@@ -70,12 +174,14 @@ export default function EscenaOvni({ compacta = false, tele = false }: { compact
       if (quieto) {
         e.haz = 1;
         e.alcance = 1;
+        e.giro = 1;
         gsap.set(q(".escena-entra"), { opacity: 1 });
         return;
       }
 
       e.haz = 0;
       e.alcance = 0;
+      e.giro = 1;
       const maestro = gsap.timeline();
 
       // Entrada (~2.6 s). La nave cae con inercia y se asienta; el rayo baja y parpadea al
@@ -193,21 +299,8 @@ export default function EscenaOvni({ compacta = false, tele = false }: { compact
             repeat: -1,
           },
           desde + 1.36,
-        )
-        // El rayo respira y cada tanto pega un pico; la pelota y la lava lo acusan.
-        .to(
-          e,
-          {
-            keyframes: {
-              haz: [1, 0.86, 1, 1, 1.35, 0.95, 1],
-              easeEach: "sine.inOut",
-            },
-            duration: 7,
-            ease: "none",
-            repeat: -1,
-          },
-          2.2,
         );
+      maestro.add(abduccion(q, e), 3.6);
 
       // Pausa total con la pestaña oculta (los lienzos se pausan solos).
       const alCambiar = () => (document.hidden ? maestro.pause() : maestro.resume());
@@ -286,9 +379,17 @@ export default function EscenaOvni({ compacta = false, tele = false }: { compact
             <Nave />
           </div>
         </div>
+        {/* Encima de la nave: el destello de la absorción le pega a la panza. */}
+        <span className="escena-onda" />
+        <span className="escena-destello" />
       </div>
 
       <div className="escena-capa escena-capa-cerca">
+        <div className="escena-chispas">
+          {CHISPAS.map((c, i) => (
+            <span key={i} className="escena-chispa" style={v("--s", c.s)} />
+          ))}
+        </div>
         <div className="escena-pelota escena-entra">
           <div className="escena-pelota-flota">
             <PelotaRayo energia={energia} quieto={quieto} />
@@ -358,18 +459,32 @@ function Nave() {
           <stop offset="0.45" stopColor="#8cff59" />
           <stop offset="1" stopColor="#8cff59" stopOpacity="0" />
         </radialGradient>
+        <radialGradient id="nave-alien" cx="0.4" cy="0.3" r="0.8">
+          <stop offset="0" stopColor="#ffd6f6" />
+          <stop offset="0.4" stopColor="#ff4fd8" />
+          <stop offset="1" stopColor="#b0179a" />
+        </radialGradient>
+        <filter id="nave-alien-neon" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="2.2" result="halo" />
+          <feMerge>
+            <feMergeNode in="halo" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
 
-      {/* Cúpula con el tripulante */}
+      {/* Cúpula con el tripulante (rosa neón) */}
       <path d="M66 46C66 21 81 8 100 8s34 13 34 38z" fill="url(#nave-cupula)" />
-      <ellipse cx="100" cy="35" rx="9" ry="11.5" fill="#06100a" fillOpacity="0.85" />
-      <path d="M90 47c1-6 5-9.5 10-9.5s9 3.5 10 9.5z" fill="#06100a" fillOpacity="0.85" />
+      <g filter="url(#nave-alien-neon)">
+        <ellipse cx="100" cy="35" rx="9" ry="11.5" fill="url(#nave-alien)" />
+        <path d="M90 47c1-6 5-9.5 10-9.5s9 3.5 10 9.5z" fill="url(#nave-alien)" />
+      </g>
       <ellipse
         cx="96.4"
         cy="34.5"
         rx="2.6"
         ry="1.5"
-        fill="#8cff59"
+        fill="#1a0216"
         transform="rotate(18 96.4 34.5)"
       />
       <ellipse
@@ -377,7 +492,7 @@ function Nave() {
         cy="34.5"
         rx="2.6"
         ry="1.5"
-        fill="#8cff59"
+        fill="#1a0216"
         transform="rotate(-18 103.6 34.5)"
       />
       <path

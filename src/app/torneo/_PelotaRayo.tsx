@@ -72,9 +72,14 @@ export default function PelotaRayo({
     };
 
     let pintada = false;
+    // El giro se acumula (no es t * velocidad) para que acelerar y frenar no pegue saltos.
+    let angulo = 0;
+    let previo = 0;
     const dibujar = (t: number) => {
-      const haz = energia.current.haz;
-      grupo.rotation.y = t * 0.42;
+      const { haz, giro } = energia.current;
+      angulo += Math.min(t - previo, 0.1) * 0.42 * giro;
+      previo = t;
+      grupo.rotation.y = quieto ? t * 0.42 : angulo;
       grupo.rotation.x = 0.32 + Math.sin(t * 0.55) * 0.09;
       anillo.rotation.z = t * 0.45;
       luzRayo.intensity = 30 * haz;

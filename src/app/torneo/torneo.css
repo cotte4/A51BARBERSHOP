@@ -365,13 +365,17 @@
   }
 }
 .torneo-escena--compacta {
-  --h: 66.667;
-  --bola: 27;
-  aspect-ratio: 3 / 2;
+  /* En el celu, más alta que ancha no: 6:5 deja rayo largo y pelota grande sin tapar el título. */
+  --h: 83.333;
+  --bola: 33;
+  aspect-ratio: 6 / 5;
 }
 @media (min-width: 640px) {
   .torneo-escena--compacta {
-    width: min(100%, 600px, calc(46svh * 1.5));
+    --h: 66.667;
+    --bola: 28;
+    width: min(100%, 760px, calc(54svh * 1.5));
+    aspect-ratio: 3 / 2;
   }
 }
 .torneo-escena .escena-entra {
@@ -431,6 +435,7 @@
 }
 
 .escena-pelota,
+.escena-chispas,
 .escena-reticula {
   position: absolute;
   left: 50%;
@@ -455,6 +460,42 @@
 .torneo-escena-pelota-gl[data-listo] {
   opacity: 1;
 }
+/* Abducción: chispas que suben con la pelota, destello y onda en el emisor (GSAP las mueve). */
+.escena-chispa {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--s) * 1.6cqw);
+  height: calc(var(--s) * 1.6cqw);
+  margin: calc(var(--s) * -0.8cqw) 0 0 calc(var(--s) * -0.8cqw);
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(circle, #f4ffee 0 25%, rgb(140 255 89 / 0.85) 45%, transparent 70%);
+}
+.escena-destello,
+.escena-onda {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--y0) * 1cqw);
+  opacity: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.escena-destello {
+  width: 36cqw;
+  height: 22cqw;
+  margin: -11cqw 0 0 -18cqw;
+  background: radial-gradient(closest-side, #ffffff, rgb(214 255 194 / 0.8) 25%, rgb(140 255 89 / 0.35) 55%, transparent);
+  mix-blend-mode: screen;
+}
+.escena-onda {
+  width: 30cqw;
+  height: 7cqw;
+  margin: -3.5cqw 0 0 -15cqw;
+  border: 2px solid rgb(182 255 132 / 0.9);
+  box-shadow: 0 0 2cqw rgb(140 255 89 / 0.6), inset 0 0 1.2cqw rgb(140 255 89 / 0.5);
+}
+
 /* Retícula de seguimiento: va con la pelota, apenas retrasada. */
 .escena-reticula-flota {
   position: absolute;

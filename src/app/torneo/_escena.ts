@@ -18,6 +18,8 @@ export type Energia = {
   haz: number;
   /** Cuánto bajó el rayo desde la nave (0 nada, 1 llegó al piso). */
   alcance: number;
+  /** Velocidad de giro de la pelota (1 normal; sube cuando el rayo la chupa). */
+  giro: number;
 };
 
 /**
