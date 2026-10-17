@@ -25,12 +25,6 @@ export default function InscripcionForm({ listaEspera = false }: { listaEspera?:
                   ? `Los 16 lugares ya están ocupados: quedaste en lista de espera, puesto ${state.puestoEspera}. Si se libera un lugar, te avisamos.`
                   : "Tu lugar se confirma cuando pagues la cuota en el local."}
               </p>
-              <a
-                href="/jukebox"
-                className="torneo-hud mt-6 inline-block border border-[#8cff59]/50 px-4 py-3 text-xs text-[#8cff59] transition hover:bg-[#8cff59]/10"
-              >
-                Proponé una canción
-              </a>
             </div>
           </div>
         </div>
@@ -58,7 +52,7 @@ export default function InscripcionForm({ listaEspera = false }: { listaEspera?:
         <form action={formAction} className="mt-6 flex flex-col gap-5">
           <div>
             <label htmlFor="t-nombre" className="torneo-label torneo-hud">
-              Nombre
+              Nombre completo
             </label>
             <input
               id="t-nombre"

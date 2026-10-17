@@ -1,0 +1,1 @@
+ALTER TABLE "torneos" ALTER COLUMN "cuota_ars" SET DEFAULT '5100';

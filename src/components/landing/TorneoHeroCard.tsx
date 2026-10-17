@@ -13,7 +13,7 @@ function filas(torneo?: TorneoDatosLanding) {
     { label: "Juego", value: "EA FC 27 · PS4" },
     { label: "Cupo", value: `${torneo?.cupo ?? 16} jugadores` },
     { label: "Formato", value: "Eliminación directa" },
-    { label: "Cuota", value: `${torneo?.cuota ?? "$4.200"} en el local` },
+    { label: "Cuota", value: `${torneo?.cuota ?? "$5.100"} en el local` },
     { label: "Fecha", value: torneo?.fecha ?? "A confirmar", accent: !torneo?.fecha },
   ] as const;
 }

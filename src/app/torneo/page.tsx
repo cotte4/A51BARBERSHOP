@@ -72,7 +72,7 @@ export default async function TorneoPage() {
             className="mt-3 text-[3.4rem] font-extrabold text-white sm:text-8xl"
           />
           <p className="torneo-hud mt-5 text-[0.62rem] text-[#cfd8cc] sm:text-[0.7rem]">
-            16 jugadores · $4.200 en el local
+            16 jugadores · $5.100 en el local
           </p>
           <div className="mt-8 w-full sm:mt-10">
             <Proximamente />

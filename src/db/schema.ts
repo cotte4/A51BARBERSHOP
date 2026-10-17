@@ -1685,7 +1685,7 @@ export const torneos = pgTable("torneos", {
   nombre: text("nombre").notNull(),
   // null = "Fecha a confirmar"
   fecha: timestamp("fecha", { withTimezone: true }),
-  cuotaArs: numeric("cuota_ars", { precision: 12, scale: 2 }).notNull().default("4200"),
+  cuotaArs: numeric("cuota_ars", { precision: 12, scale: 2 }).notNull().default("5100"),
   cupo: integer("cupo").notNull().default(16),
   estado: text("estado")
     .notNull()

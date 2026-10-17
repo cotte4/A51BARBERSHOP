@@ -14,7 +14,12 @@ export type InscripcionState = {
 };
 
 const inscripcionSchema = z.object({
-  nombre: z.string().trim().min(2, "Poné tu nombre.").max(80, "El nombre es muy largo."),
+  nombre: z
+    .string()
+    .trim()
+    .min(2, "Poné tu nombre completo.")
+    .max(80, "El nombre es muy largo.")
+    .refine((n) => n.split(/\s+/).length >= 2, "Poné nombre y apellido."),
   alias: z
     .string({ message: "Poné tu alias." })
     .transform(limpiarAlias)
