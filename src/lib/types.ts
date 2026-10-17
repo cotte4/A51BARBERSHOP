@@ -166,12 +166,3 @@ export type StyleProfile = {
   answers: InterrogatoryAnswers;
   generatedAt: string;
 };
-
-export interface MarcianoVisit {
-  id: string;
-  visitedAt: Date;
-  barberoNombre: string | null;
-  photoUrls: string[];
-  corteNombre: string | null;
-  tags: string[];
-}
