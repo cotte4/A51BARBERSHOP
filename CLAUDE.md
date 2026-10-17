@@ -41,6 +41,8 @@ npm run test:ovnis:flows   # OVNIS flow-level DB smoke tests (hits live DB)
 npm run verify:refactor    # typecheck + lint (run before any refactor commit)
 ```
 
+**Escribir en la base pide confirmación**: hay una sola base (local = prod). `seed-prod`, los tests E2E y los scripts de `scripts/local/` llaman a `confirmarEscrituraEnProd()` (`src/db/confirmar-prod.ts`): en la terminal piden escribir "si"; sin terminal solo corren con `CONFIRMO_PROD=si`. Todo script nuevo que inserte o borre datos tiene que llamarla. `scripts/local/` está en `.gitignore`: ahí van los scripts propios de Was (ej. la demo del torneo: `npx tsx scripts/local/demo-torneo-llenar.ts` / `demo-torneo-limpiar.ts`).
+
 ---
 
 ## Current State (July 2026)
