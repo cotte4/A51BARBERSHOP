@@ -578,28 +578,193 @@ function Tapa({ url, className = "" }: { url: string | null; className?: string 
   );
 }
 
-/** Arriba de todo: la máquina con lo que suena. El disco gira y el brazo baja solo si hay un tema sonando. */
+// Velocidad del plato sonando: 33⅓ RPM = 200°/s.
+const GRADOS_33 = 200;
+
+/**
+ * Arriba de todo: la máquina con lo que suena. El disco gira y el brazo baja solo si hay un tema
+ * sonando. Se puede rayar con el dedo o el mouse (sigue el ángulo del puntero y al soltarlo
+ * sigue por inercia hasta volver a su velocidad); un toque le da un empujón. El plato se inclina
+ * hacia el puntero y una luz lo sigue (Spotlight de Motion Primitives, MIT, hecho con GSAP).
+ * El neón, el halo y las RPM acusan la velocidad. Con movimiento reducido queda quieto.
+ */
 function Maquina({ ahora }: { ahora: AhoraSonando | null }) {
   // Lo pedido manda; si no hay, lo que pasa la lista del local (sin "pedido por").
   const suena = ahora?.nowPlaying
     ? { titulo: ahora.nowPlaying.videoTitle, artistas: ahora.nowPlaying.channelTitle, tapa: ahora.nowPlaying.thumbnailUrl }
     : (ahora?.lista ?? null);
+  const raiz = useRef<HTMLElement>(null);
+  const motor = useRef(0);
+  const quieto = usarMovimientoReducido();
+  const [tocado, setTocado] = useState(false);
+  const sonando = !!suena;
+
+  useEffect(() => {
+    motor.current = sonando ? GRADOS_33 : 0;
+  }, [sonando]);
+
+  useGSAP(
+    () => {
+      const el = raiz.current;
+      const q = gsap.utils.selector(raiz);
+      const [plato] = q(".plato") as HTMLElement[];
+      const [vinilo] = q(".vinilo");
+      const [rpm] = q(".rpm");
+      if (!el || !plato || !vinilo || quieto) return;
+
+      let angulo = 0;
+      let vel = 0; // grados por segundo
+      let arrastrando = false;
+      let movido = 0;
+      let ultimoAng = 0;
+      let ultimoT = 0;
+      let rpmMostradas = -1;
+      const girar = gsap.quickSetter(vinilo, "rotation", "deg");
+      const inclinarX = gsap.quickTo(plato, "rotationX", { duration: 0.7, ease: "power3.out" });
+      const inclinarY = gsap.quickTo(plato, "rotationY", { duration: 0.7, ease: "power3.out" });
+
+      const cuadro = (_t: number, dtMs: number) => {
+        const dt = Math.min(dtMs, 100) / 1000;
+        if (!arrastrando) {
+          // Como un plato: con la mano suelta vuelve de a poco a la velocidad del motor.
+          const objetivo = motor.current;
+          const tiron = Math.abs(vel) > Math.abs(objetivo) + 5 ? 1.2 : 2;
+          vel += (objetivo - vel) * Math.min(1, dt * tiron);
+          angulo += vel * dt;
+          girar(angulo);
+        }
+        const energia = Math.min(1, Math.abs(vel - motor.current) / 900);
+        el.style.setProperty("--energia", energia.toFixed(3));
+        const nuevas = Math.round(Math.abs(vel) / 6);
+        if (rpm && nuevas !== rpmMostradas) {
+          rpmMostradas = nuevas;
+          rpm.textContent = String(nuevas);
+        }
+      };
+      gsap.ticker.add(cuadro);
+
+      const anguloDe = (ev: PointerEvent) => {
+        const r = plato.getBoundingClientRect();
+        return (Math.atan2(ev.clientY - (r.top + r.height / 2), ev.clientX - (r.left + r.width / 2)) * 180) / Math.PI;
+      };
+      const agarrar = (ev: PointerEvent) => {
+        arrastrando = true;
+        movido = 0;
+        vel = 0; // la mano frena el disco, como un DJ
+        ultimoAng = anguloDe(ev);
+        ultimoT = performance.now();
+        plato.setPointerCapture(ev.pointerId);
+        setTocado(true);
+      };
+      const rayar = (ev: PointerEvent) => {
+        if (!arrastrando) return;
+        const a = anguloDe(ev);
+        let d = a - ultimoAng;
+        if (d > 180) d -= 360;
+        if (d < -180) d += 360;
+        const ahoraMs = performance.now();
+        const dtMs = Math.max(8, ahoraMs - ultimoT);
+        angulo += d;
+        girar(angulo);
+        vel = vel * 0.5 + ((d / dtMs) * 1000) * 0.5;
+        movido += Math.abs(d);
+        ultimoAng = a;
+        ultimoT = ahoraMs;
+      };
+      const soltar = () => {
+        if (!arrastrando) return;
+        arrastrando = false;
+        if (movido < 4) vel = Math.max(vel, motor.current) + 1100; // un toque: empujón
+        else if (performance.now() - ultimoT > 90) vel = 0; // lo soltó quieto
+        vel = Math.max(-2600, Math.min(2600, vel));
+      };
+
+      // Inclinación y luz que siguen al puntero (mouse encima o dedo arrastrando).
+      const seguir = (ev: PointerEvent) => {
+        const r = el.getBoundingClientRect();
+        const nx = ((ev.clientX - r.left) / r.width) * 2 - 1;
+        const ny = ((ev.clientY - r.top) / r.height) * 2 - 1;
+        inclinarY(nx * 12);
+        inclinarX(-ny * 9);
+        el.style.setProperty("--gx", `${((nx + 1) * 50).toFixed(1)}%`);
+        el.style.setProperty("--gy", `${((ny + 1) * 50).toFixed(1)}%`);
+        el.style.setProperty("--luz", "1");
+      };
+      const irse = () => {
+        inclinarX(0);
+        inclinarY(0);
+        el.style.setProperty("--luz", "0");
+      };
+      // Con el dedo no hay "pointerleave" al levantarlo: se endereza al soltar.
+      const levantar = (ev: PointerEvent) => {
+        if (ev.pointerType !== "mouse") irse();
+      };
+
+      plato.addEventListener("pointerdown", agarrar);
+      plato.addEventListener("pointermove", rayar);
+      plato.addEventListener("pointerup", soltar);
+      plato.addEventListener("pointercancel", soltar);
+      el.addEventListener("pointermove", seguir);
+      el.addEventListener("pointerleave", irse);
+      el.addEventListener("pointerup", levantar);
+
+      return () => {
+        gsap.ticker.remove(cuadro);
+        plato.removeEventListener("pointerdown", agarrar);
+        plato.removeEventListener("pointermove", rayar);
+        plato.removeEventListener("pointerup", soltar);
+        plato.removeEventListener("pointercancel", soltar);
+        el.removeEventListener("pointermove", seguir);
+        el.removeEventListener("pointerleave", irse);
+        el.removeEventListener("pointerup", levantar);
+      };
+    },
+    { scope: raiz, dependencies: [quieto] },
+  );
+
   return (
     <section
-      className="jukebox-motion relative overflow-hidden rounded-b-[28px] rounded-t-[180px] border border-[#8cff59]/30 px-5 pb-5 pt-12 shadow-[0_0_60px_rgba(140,255,89,0.08)]"
-      style={{ background: "radial-gradient(90% 70% at 50% 30%, rgba(140,255,89,0.10), rgba(9,9,11,0.95) 70%)" }}
+      ref={raiz}
+      className="jukebox-motion jukebox-maquina relative overflow-hidden rounded-b-[28px] rounded-t-[180px] px-5 pb-5 pt-12"
       aria-live="polite"
     >
+      {/* Luz que sigue al dedo o al mouse. */}
+      <span className="jukebox-maquina-luz pointer-events-none absolute inset-0" aria-hidden="true" />
       {/* El arco de neón de adentro: es lo que hace que se lea como una jukebox y no como una tarjeta. */}
       <span
-        className="pointer-events-none absolute inset-x-3 top-3 bottom-[45%] rounded-t-[170px] border border-b-0 border-[#8cff59]/20"
+        className="jukebox-maquina-arco pointer-events-none absolute inset-x-3 top-3 bottom-[45%] rounded-t-[170px]"
         aria-hidden="true"
       />
-      <div className="flex justify-center">
-        <Disco tamano={196} etiqueta={suena?.tapa ?? null} girando={!!suena} brazoAbajo={!!suena} />
+      <div className="relative flex justify-center [perspective:700px]">
+        <span
+          className="jukebox-maquina-halo pointer-events-none absolute left-1/2 top-1/2 h-[250px] w-[250px] rounded-full"
+          aria-hidden="true"
+        />
+        <div className="plato relative cursor-grab touch-none select-none active:cursor-grabbing" aria-hidden="true">
+          {/* El giro lo maneja GSAP; con movimiento reducido no gira. */}
+          <Disco tamano={196} etiqueta={suena?.tapa ?? null} brazoAbajo={sonando} />
+        </div>
+        <p
+          className="pointer-events-none absolute bottom-0 right-1 text-right font-mono text-[10px] font-bold uppercase leading-tight tracking-[0.18em] text-zinc-500"
+          aria-hidden="true"
+        >
+          <span className="rpm block text-base tabular-nums text-[#8cff59]">{sonando ? 33 : 0}</span>
+          RPM
+        </p>
+        {!quieto && !tocado ? (
+          <p
+            className="jukebox-maquina-pista pointer-events-none absolute bottom-0 left-1 font-mono text-[10px] font-bold uppercase leading-tight tracking-[0.18em] text-zinc-400"
+            aria-hidden="true"
+          >
+            <span className="block text-base text-[#8cff59]">
+              <span className="jukebox-maquina-giro">↻</span>
+            </span>
+            Rayalo
+          </p>
+        ) : null}
       </div>
 
-      <div className="mt-6 rounded-2xl border border-zinc-800 bg-black/70 px-4 py-3 shadow-[inset_0_0_20px_rgba(140,255,89,0.06)]">
+      <div className="relative mt-6 rounded-2xl border border-zinc-800 bg-black/70 px-4 py-3 shadow-[inset_0_0_20px_rgba(140,255,89,0.06)]">
         {ahora === null ? (
           <div className="space-y-2" aria-busy="true">
             <div className="skeleton h-3 w-24 rounded-full" />

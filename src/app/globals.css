@@ -448,7 +448,83 @@ input, select, textarea {
   animation: a51-shimmer 1.2s ease-in-out infinite;
 }
 
+/* ── Jukebox: la máquina que reacciona al dedo (Maquina en /jukebox) ───── */
+
+.jukebox-maquina {
+  --energia: 0;
+  --luz: 0;
+  --gx: 50%;
+  --gy: 40%;
+  border: 1px solid rgb(140 255 89 / calc(0.3 + var(--energia) * 0.5));
+  background: radial-gradient(90% 70% at 50% 30%, rgba(140, 255, 89, 0.1), rgba(9, 9, 11, 0.95) 70%);
+  box-shadow: 0 0 calc(60px + var(--energia) * 50px) rgb(140 255 89 / calc(0.08 + var(--energia) * 0.22));
+}
+.jukebox-maquina-luz {
+  opacity: var(--luz);
+  background: radial-gradient(220px circle at var(--gx) var(--gy), rgb(140 255 89 / 0.14), transparent 65%);
+  transition: opacity 0.4s ease;
+}
+.jukebox-maquina-arco {
+  /* Propiedades sueltas: el atajo `border` con var() se expande mal al compilar. */
+  border-style: solid;
+  border-width: 1px 1px 0;
+  border-color: rgb(140 255 89 / calc(0.2 + var(--energia) * 0.6));
+  /* drop-shadow sigue solo la línea del neón (un box-shadow pintaría también el borde de abajo). */
+  filter: drop-shadow(0 0 calc(var(--energia) * 8px) rgb(140 255 89 / calc(var(--energia) * 0.9)));
+}
+.jukebox-maquina-halo {
+  opacity: calc(0.25 + var(--energia) * 0.75);
+  transform: translate(-50%, -50%) scale(calc(0.92 + var(--energia) * 0.18));
+  background: radial-gradient(circle, rgb(140 255 89 / 0.3), rgb(255 79 216 / calc(var(--energia) * 0.12)) 45%, transparent 68%);
+}
+.jukebox-maquina-giro {
+  display: inline-block;
+  animation: a51-spin 2.8s linear infinite;
+}
+
+/* ── Movimiento: Text effect y Border trail (src/components/motion) ───── */
+
+.a51-palabra {
+  display: inline-block;
+  opacity: 0;
+  animation: a51-palabra 0.55s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+@keyframes a51-palabra {
+  from { opacity: 0; filter: blur(6px); transform: translateY(0.25em); }
+  to   { opacity: 1; filter: blur(0px); transform: none; }
+}
+
+@property --a51-trail {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.a51-border-trail {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--a51-trail),
+    transparent 0deg 250deg,
+    rgb(140 255 89 / 0.5) 300deg,
+    #f4ffee 345deg,
+    transparent 360deg
+  );
+  animation: a51-trail 1.6s linear infinite;
+}
+@keyframes a51-trail {
+  to { --a51-trail: 360deg; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .a51-palabra {
+    opacity: 1;
+    animation: none;
+  }
+  .a51-border-trail {
+    animation: none;
+    background: #8cff59;
+  }
   .public-shell *,
   .public-shell *::before,
   .public-shell *::after,
