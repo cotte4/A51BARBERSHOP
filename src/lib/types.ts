@@ -108,15 +108,6 @@ export interface TurnoSummary {
   }>;
 }
 
-export interface QuickActionDefaults {
-  servicioId: string;
-  servicioNombre: string;
-  precioBase: number;
-  medioPagoId: string;
-  medioPagoNombre: string;
-  comisionMedioPagoPct: number;
-}
-
 // Perfil Marciano (Style DNA)
 export type FaceShape = "oval" | "cuadrado" | "redondo" | "corazon" | "diamante" | "alien";
 

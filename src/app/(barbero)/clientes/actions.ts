@@ -6,14 +6,12 @@ import {
   clientBriefingCache,
   clientProfileEvents,
   clients,
-  marcianoBeneficiosUso,
   retentionFollowups,
   visitLogs,
 } from "@/db/schema";
 import { canAccessClient, getClientActorContext } from "@/lib/client-access";
 import { normalizeClientPreferences } from "@/lib/client-preferences";
 import { recalculateClientMetrics } from "@/lib/client-queries";
-import { MARCIANO_BENEFICIOS } from "@/lib/marciano-config";
 import { normalizePhone } from "@/lib/phone";
 import { and, eq, ilike, isNull, ne, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -423,117 +421,6 @@ export async function createVisitLogAction(
 
   revalidatePath(`/clientes/${clientId}`);
   revalidatePath("/clientes");
-}
-
-export async function updateVisitLogAction(
-  visitId: string,
-  data: {
-    barberNotes: string | null;
-    tags: string[];
-    propinaEstrellas: number;
-  }
-): Promise<{ error: string } | undefined> {
-  const actor = await getClientActorContext();
-  if (!actor) {
-    return { error: "Debés iniciar sesión." };
-  }
-
-  const [visit] = await db
-    .select({ clientId: visitLogs.clientId, createdByBarberoId: visitLogs.createdByBarberoId })
-    .from(visitLogs)
-    .where(eq(visitLogs.id, visitId))
-    .limit(1);
-
-  if (!visit) {
-    return { error: "Visita no encontrada." };
-  }
-
-  const canEdit = actor.isAdmin || actor.barberoId === visit.createdByBarberoId;
-  if (!canEdit) {
-    return { error: "Solo podés editar tus propias visitas." };
-  }
-
-  await db
-    .update(visitLogs)
-    .set({
-      barberNotes: data.barberNotes,
-      tags: data.tags,
-      propinaEstrellas: data.propinaEstrellas,
-      updatedAt: new Date(),
-    })
-    .where(eq(visitLogs.id, visitId));
-
-  await invalidateBriefingCache(visit.clientId);
-  revalidatePath(`/clientes/${visit.clientId}`);
-}
-
-// ————————————————————————————
-// Membresía Marciano
-// ————————————————————————————
-
-export async function registrarUsoMarcianoAction(
-  clientId: string,
-  tipo: "corte" | "consumicion" | "sorteo"
-): Promise<{ error: string } | undefined> {
-  const actor = await getClientActorContext();
-  if (!actor) {
-    return { error: "Debés iniciar sesión." };
-  }
-
-  const [client] = await db
-    .select({ esMarciano: clients.esMarciano })
-    .from(clients)
-    .where(eq(clients.id, clientId))
-    .limit(1);
-
-  if (!client?.esMarciano) {
-    return { error: "El cliente no es Marciano." };
-  }
-
-  const mes = new Date()
-    .toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
-    .slice(0, 7);
-
-  const [existing] = await db
-    .select()
-    .from(marcianoBeneficiosUso)
-    .where(
-      and(eq(marcianoBeneficiosUso.clientId, clientId), eq(marcianoBeneficiosUso.mes, mes))
-    )
-    .limit(1);
-
-  if (tipo === "corte") {
-    const usados = existing?.cortesUsados ?? 0;
-    if (usados >= MARCIANO_BENEFICIOS.cortesPorMes) {
-      return {
-        error: `Ya usó los ${MARCIANO_BENEFICIOS.cortesPorMes} cortes incluidos de este mes.`,
-      };
-    }
-  }
-
-  if (existing) {
-    const update =
-      tipo === "corte"
-        ? { cortesUsados: (existing.cortesUsados ?? 0) + 1, updatedAt: new Date() }
-        : tipo === "consumicion"
-          ? { consumicionesUsadas: (existing.consumicionesUsadas ?? 0) + 1, updatedAt: new Date() }
-          : { sorteosParticipados: (existing.sorteosParticipados ?? 0) + 1, updatedAt: new Date() };
-
-    await db
-      .update(marcianoBeneficiosUso)
-      .set(update)
-      .where(eq(marcianoBeneficiosUso.id, existing.id));
-  } else {
-    await db.insert(marcianoBeneficiosUso).values({
-      clientId,
-      mes,
-      cortesUsados: tipo === "corte" ? 1 : 0,
-      consumicionesUsadas: tipo === "consumicion" ? 1 : 0,
-      sorteosParticipados: tipo === "sorteo" ? 1 : 0,
-    });
-  }
-
-  revalidatePath(`/clientes/${clientId}`);
 }
 
 export async function upsertRetentionFollowupAction(

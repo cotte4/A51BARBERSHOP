@@ -30,7 +30,6 @@ import {
   anularVentaProductoConReversion,
   crearAtencionDesdeInput,
   getFechaHoyArgentina,
-  getQuickActionDefaultsForBarbero,
   registrarVentaProductoDesdeInput,
   syncMarcianoCorteUsoForAtencionChange,
   syncProductosAtencion,
@@ -204,66 +203,6 @@ export async function registrarAtencion(
 export type AtencionRapidaState = {
   error?: string;
 };
-
-async function registrarAtencionRapidaInterna(
-  medioPagoIdOverride?: string
-): Promise<AtencionRapidaState> {
-  const actor = await getCajaActorContext();
-
-  if (!actor) {
-    return { error: "Debes iniciar sesión para registrar una atención." };
-  }
-
-  if (await hasCajaCerradaHoy()) {
-    return { error: "La caja del día ya fue cerrada. No se pueden registrar nuevas atenciones." };
-  }
-
-  const barberoId = await resolveCajaActorBarberoIdForActor(actor);
-  if (!barberoId) {
-    return { error: "No encontré un barbero activo vinculado para usar la acción rápida." };
-  }
-
-  const defaults = await getQuickActionDefaultsForBarbero(barberoId);
-  if (!defaults) {
-    return { error: "Faltan el servicio o medio de pago por defecto del barbero." };
-  }
-
-  try {
-    await crearAtencionDesdeInput({
-      barberoId,
-      servicioId: defaults.servicioId,
-      medioPagoId: medioPagoIdOverride ?? defaults.medioPagoId,
-      precioCobrado: defaults.precioBase,
-    });
-  } catch (error) {
-    console.error("Error registrando atención rápida:", error);
-    return { error: "No se pudo registrar la atención rápida. Intenta de nuevo." };
-  }
-
-  revalidateCajaViews({ includeInventario: true, includeDashboard: true });
-  redirect("/caja");
-}
-
-export async function registrarAtencionRapidaAction(
-  prevState: AtencionRapidaState
-): Promise<AtencionRapidaState> {
-  return registrarAtencionRapidaInterna();
-}
-
-export async function registrarAtencionRapidaSeleccionadaAction(
-  prevState: AtencionRapidaState,
-  formData: FormData
-): Promise<AtencionRapidaState> {
-  const medioPagoId = (formData.get("medioPagoId") as string | null) || undefined;
-  return registrarAtencionRapidaInterna(medioPagoId);
-}
-
-export async function registrarAtencionRapidaConMedioAction(
-  medioPagoId: string,
-  prevState: AtencionRapidaState
-): Promise<AtencionRapidaState> {
-  return registrarAtencionRapidaInterna(medioPagoId);
-}
 
 function sanitizeReturnTo(value: string | null): string {
   if (value && value.startsWith("/")) return value;

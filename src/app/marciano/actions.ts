@@ -14,8 +14,7 @@ import { buildMarcianoResetRedirectUrl, isPasswordResetEmailConfigured } from "@
 import { getMarcianoTurnoById } from "@/lib/marciano-turnos";
 import { normalizeMarcianoEmail, requireMarcianoClient } from "@/lib/marciano-portal";
 import { normalizePhone } from "@/lib/phone";
-import { getBarberosPublicosReserva, normalizeHora, resolvePublicBarberoBySlug } from "@/lib/turnos";
-import { createTurnoReserva } from "@/lib/turnos-reserva";
+import { getBarberosPublicosReserva } from "@/lib/turnos";
 
 export type MarcianoRegisterState = {
   success?: boolean;
@@ -63,14 +62,6 @@ const passwordSchema = z
 const registerSchema = z.object({
   email: z.email("Ingresa un email valido."),
   password: passwordSchema,
-});
-
-const marcianoReservaSchema = z.object({
-  slug: z.string().trim().min(1, "Elegi un barbero valido."),
-  serviceId: z.string().uuid("Elegi un servicio valido."),
-  slotId: z.string().uuid("Elegi un horario disponible."),
-  notaCliente: z.string().trim().max(300).optional().or(z.literal("")),
-  reprogramarTurnoId: z.string().uuid().optional().or(z.literal("")),
 });
 
 const requestPasswordResetSchema = z.object({
@@ -231,109 +222,6 @@ export async function updateMarcianoProfileAction(
     success: true,
     message: "Perfil actualizado.",
   };
-}
-
-export async function createMarcianoTurnoAction(
-  _prevState: MarcianoReservaState,
-  formData: FormData
-): Promise<MarcianoReservaState> {
-  const { client } = await requireMarcianoClient();
-
-  if (!client.phoneRaw) {
-    return {
-      message: "Completa tu telefono desde tu perfil antes de reservar.",
-    };
-  }
-
-  const phoneNormalized = normalizePhone(client.phoneRaw);
-  if (!phoneNormalized) {
-    return {
-      message: "Tu telefono actual no es valido. Actualizalo en tu perfil antes de reservar.",
-    };
-  }
-
-  const parsed = marcianoReservaSchema.safeParse({
-    slug: String(formData.get("slug") ?? ""),
-    serviceId: String(formData.get("serviceId") ?? ""),
-    slotId: String(formData.get("slotId") ?? ""),
-    notaCliente: String(formData.get("notaCliente") ?? ""),
-    reprogramarTurnoId: String(formData.get("reprogramarTurnoId") ?? ""),
-  });
-
-  if (!parsed.success) {
-    return {
-      fieldErrors: {
-        serviceId: parsed.error.flatten().fieldErrors.serviceId?.[0],
-        slotId: parsed.error.flatten().fieldErrors.slotId?.[0],
-      },
-    };
-  }
-
-  const reprogramarTurnoId = parsed.data.reprogramarTurnoId || null;
-  const turnoOriginal = reprogramarTurnoId
-    ? await getMarcianoTurnoById(client.id, reprogramarTurnoId)
-    : null;
-
-  if (reprogramarTurnoId && !turnoOriginal) {
-    return {
-      message: "No encontramos el turno que queres reprogramar.",
-    };
-  }
-
-  if (turnoOriginal && !turnoOriginal.canManage) {
-    return {
-      message: turnoOriginal.manageMessage ?? "Ese turno ya no admite cambios desde el portal.",
-    };
-  }
-
-  const barbero = await resolvePublicBarberoBySlug(parsed.data.slug);
-  if (!barbero) {
-    return {
-      message: "No pudimos resolver la agenda disponible de A51.",
-    };
-  }
-
-  const result = await createTurnoReserva({
-    barberoId: barbero.id,
-    slotId: parsed.data.slotId,
-    serviceId: parsed.data.serviceId,
-    clienteNombre: client.name,
-    clienteTelefonoRaw: client.phoneRaw,
-    notaCliente: parsed.data.notaCliente || null,
-    clientContext: {
-      clientId: client.id,
-      esMarciano: true,
-      phoneNormalized,
-    },
-  });
-
-  if (!result.ok) {
-    return {
-      message: result.message,
-    };
-  }
-
-  if (turnoOriginal) {
-    await db
-      .update(turnos)
-      .set({
-        estado: "cancelado",
-        motivoCancelacion: `Reprogramado por Marciano hacia ${result.fecha} ${normalizeHora(result.horaInicio)}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(turnos.id, turnoOriginal.id));
-  }
-
-  revalidatePath("/marciano");
-  revalidatePath("/marciano/turnos");
-  revalidatePath("/marciano/turnos/nuevo");
-  revalidatePath("/turnos");
-  revalidatePath("/turnos/disponibilidad");
-  revalidatePath("/hoy");
-  revalidatePath("/reservar");
-  revalidatePath(`/reservar/${parsed.data.slug}`);
-
-  redirect(`/marciano/turnos?estado=${turnoOriginal ? "reprogramado" : "reservado"}`);
 }
 
 export async function cancelMarcianoTurnoAction(

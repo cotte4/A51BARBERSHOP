@@ -14,12 +14,7 @@ import {
   serviciosAdicionales,
   stockMovimientos,
 } from "@/db/schema";
-import type { QuickActionDefaults } from "@/lib/types";
 import { MARCIANO_BENEFICIOS } from "@/lib/marciano-config";
-import {
-  hasCajaCerradaHoy as hasCajaCerradaHoyInDal,
-  resolveCajaActorBarberoIdByUser,
-} from "@/lib/dal/caja";
 import {
   assertAnulacionReversionAllowed,
   countMarcianoConsumicionesToRevert,
@@ -220,10 +215,6 @@ export async function syncMarcianoCorteUsoForAtencionChange(input: {
       fecha: input.fecha,
     });
   }
-}
-
-export async function hasCajaCerradaHoy() {
-  return hasCajaCerradaHoyInDal();
 }
 
 export async function crearAtencionDesdeInput(input: AtencionCreationInput) {
@@ -687,58 +678,6 @@ export async function syncProductosAtencion({
       fecha: atencion.fecha,
     });
   }
-}
-
-export async function getQuickActionDefaultsForBarbero(barberoId: string): Promise<QuickActionDefaults | null> {
-  const [barbero] = await db
-    .select({
-      servicioDefectoId: barberos.servicioDefectoId,
-      medioPagoDefectoId: barberos.medioPagoDefectoId,
-    })
-    .from(barberos)
-    .where(eq(barberos.id, barberoId))
-    .limit(1);
-
-  if (!barbero?.servicioDefectoId || !barbero.medioPagoDefectoId) {
-    return null;
-  }
-
-  const [servicio] = await db
-    .select({
-      id: servicios.id,
-      nombre: servicios.nombre,
-      precioBase: servicios.precioBase,
-    })
-    .from(servicios)
-    .where(eq(servicios.id, barbero.servicioDefectoId))
-    .limit(1);
-
-  const [medioPago] = await db
-    .select({
-      id: mediosPago.id,
-      nombre: mediosPago.nombre,
-      comisionPorcentaje: mediosPago.comisionPorcentaje,
-    })
-    .from(mediosPago)
-    .where(eq(mediosPago.id, barbero.medioPagoDefectoId))
-    .limit(1);
-
-  if (!servicio || !medioPago || servicio.precioBase === null) {
-    return null;
-  }
-
-  return {
-    servicioId: servicio.id,
-    servicioNombre: servicio.nombre,
-    precioBase: Number(servicio.precioBase),
-    medioPagoId: medioPago.id,
-    medioPagoNombre: medioPago.nombre ?? "—",
-    comisionMedioPagoPct: Number(medioPago.comisionPorcentaje ?? 0),
-  };
-}
-
-export async function resolveCajaActorBarberoId(userId: string, isAdmin: boolean) {
-  return resolveCajaActorBarberoIdByUser(userId, isAdmin);
 }
 
 export async function registrarVentaProductoDesdeInput(
