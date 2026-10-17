@@ -151,6 +151,10 @@
     0 calc(100% - 26px)
   );
 }
+/* Mientras se registra, el borde engorda para que se vea la luz del Border trail. */
+.torneo-ficha-borde--trabajando {
+  padding: 2px;
+}
 .torneo-ficha {
   background:
     radial-gradient(90% 50% at 100% 0%, rgb(140 255 89 / 0.1), transparent 60%),
@@ -620,22 +624,6 @@
 }
 
 /* ── Título que entra por letras ── */
-.torneo-senal-hud {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7em;
-  font-size: 0.68rem;
-  color: var(--t-green);
-}
-.torneo-senal-hud i {
-  width: 0.62em;
-  height: 0.62em;
-  border-radius: 50%;
-  background: var(--t-red);
-  box-shadow: 0 0 10px var(--t-red);
-}
 .torneo-senal {
   position: relative;
   z-index: 1;
@@ -710,12 +698,8 @@
   .escena-bokeh {
     animation: escena-bokeh var(--d) linear var(--w) infinite;
   }
-  .escena-rec i,
-  .torneo-senal-hud i {
+  .escena-rec i {
     animation: escena-rec 1.4s steps(1) infinite;
-  }
-  .torneo-senal-hud {
-    animation: torneo-up 0.7s var(--ease-salida) 0.15s both;
   }
   .torneo-senal-letra {
     animation: torneo-letra 1s var(--ease-salida) both;

@@ -62,10 +62,6 @@ export default async function TorneoPage() {
       {!torneo ? (
         <section className="torneo-hero flex flex-col items-center text-center">
           <EscenaOvni />
-          <p className="torneo-senal-hud torneo-hud sm:mt-2">
-            <i aria-hidden="true" />
-            A51 · Señal interceptada
-          </p>
           <TituloSenal
             texto="El torneo abre pronto"
             retraso={350}
@@ -92,6 +88,7 @@ async function TorneoContenido({
 }) {
   const resumen = await getResumenPublico(torneo.id, torneo.cupo);
   const cuota = Number(torneo.cuotaArs);
+  const muestraFormulario = torneo.estado === "inscripcion" && resumen.anotados < MAX_ANOTADOS;
   const pct =
     resumen.cupo > 0 ? Math.min(100, Math.round((resumen.pagados / resumen.cupo) * 100)) : 0;
 
@@ -100,9 +97,6 @@ async function TorneoContenido({
       <section className="torneo-hero">
         <div className="relative z-10 flex flex-col items-center text-center">
           <EscenaOvni compacta />
-          <p className="torneo-hud torneo-up -mt-2 text-[0.7rem] text-[#8cff59]" style={orden(0)}>
-            A51 · Señal interceptada
-          </p>
           <h1
             className="torneo-titulo torneo-up mt-3 text-[3.1rem] font-extrabold text-white sm:text-8xl"
             style={orden(1)}
@@ -185,9 +179,12 @@ async function TorneoContenido({
 
       {torneo.estado !== "inscripcion" && <CuadroPublico />}
 
-      <div className="torneo-up mx-auto w-full max-w-xl" style={orden(5)}>
-        <Proximamente />
-      </div>
+      {/* Con el formulario a la vista, "lo que viene" ya va adentro, pegado a la ficha. */}
+      {!muestraFormulario && (
+        <div className="torneo-up mx-auto w-full max-w-xl" style={orden(5)}>
+          <Proximamente />
+        </div>
+      )}
     </>
   );
 }
