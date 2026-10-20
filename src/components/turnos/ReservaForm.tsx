@@ -228,12 +228,12 @@ export default function ReservaForm({
     }
 
     if (!selectedServicio) {
-      setError("Elegi un servicio antes de seguir.");
+      setError("Elegí un servicio antes de seguir.");
       return;
     }
 
     if (!selectedSlotItem) {
-      setError("Elegi un horario disponible.");
+      setError("Elegí un horario disponible.");
       return;
     }
 
@@ -312,7 +312,7 @@ export default function ReservaForm({
                 Paso 1
               </p>
               <h2 className="mt-2 font-display text-2xl font-semibold text-white">
-                Elegi tu servicio
+                Elegí tu servicio
               </h2>
             </div>
             <div className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/10 px-3 py-2 text-xs font-semibold text-[#d8ffc7]">
@@ -430,7 +430,7 @@ export default function ReservaForm({
                   Otra fecha
                 </span>
                 <span className="mt-2 block text-sm text-zinc-300">
-                  Si queres ir mas lejos, elegi otra fecha sin bajar a un selector crudo.
+                  Si querés ir más lejos, elegí otra fecha sin bajar a un selector crudo.
                 </span>
                 <input
                   id="fecha"
@@ -451,8 +451,8 @@ export default function ReservaForm({
                 </p>
                 <p className="mt-2 text-sm text-zinc-400">
                   {isCustomFecha
-                    ? "Elegiste una fecha fuera de la ventana rapida."
-                    : "Estas dentro de la ventana sugerida para reservar sin friccion."}
+                    ? "Elegiste una fecha fuera de la ventana rápida."
+                    : "Estás dentro de la ventana sugerida para reservar sin fricción."}
                 </p>
               </div>
             </div>
@@ -464,7 +464,7 @@ export default function ReservaForm({
             {loading ? (
               <p className="text-sm text-zinc-400">Buscando horarios disponibles...</p>
             ) : !selectedServicio ? (
-              <p className="text-sm text-zinc-500">Primero elegi un servicio.</p>
+              <p className="text-sm text-zinc-500">Primero elegí un servicio.</p>
             ) : slots.length === 0 ? (
               <div className="rounded-[22px] border border-white/10 bg-black/20 px-4 py-4 text-sm text-zinc-400">
                 {proximoDia ? (
@@ -632,7 +632,7 @@ export default function ReservaForm({
 
             {hasLinkedTrack ? (
               <p className="mt-3 text-xs font-medium text-emerald-300">
-                Cancion vinculada a Spotify. Si quieren, la barberia la puede tirar con URI estable.
+                Canción vinculada a Spotify. Si quieren, la barbería la puede tirar con URI estable.
               </p>
             ) : (
               <p className="mt-3 text-xs text-zinc-400">
@@ -732,7 +732,7 @@ export default function ReservaForm({
               detail={
                 selectedServicio
                   ? `${selectedServicio.duracionMinutos} min - ${formatARS(selectedServicio.precioBase) ?? "Precio a confirmar"}`
-                  : "Marca uno para seguir"
+                  : "Marcá uno para seguir"
               }
             />
             <SummaryRow
@@ -783,7 +783,7 @@ export default function ReservaForm({
             ? "Mandando senal..."
             : canSubmit
               ? "Enviar solicitud a A51"
-              : "Completa servicio, horario y contacto"}
+              : "Completá servicio, horario y contacto"}
         </button>
       </aside>
     </form>

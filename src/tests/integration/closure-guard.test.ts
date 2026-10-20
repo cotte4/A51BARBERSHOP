@@ -23,7 +23,7 @@ describe("closure-guard: mutation blocking on closed day", () => {
     const { assertCajaAbiertaOrThrow } = await import("@/lib/finance/closure-guard");
 
     await expect(assertCajaAbiertaOrThrow("2026-05-05")).rejects.toThrow(
-      "La caja del dia ya fue cerrada."
+      "La caja del día ya fue cerrada."
     );
   });
 });

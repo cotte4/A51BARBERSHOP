@@ -55,7 +55,7 @@ export default function ClientProfileHeader({
                 Cliente
               </p>
               <h1 className="text-2xl font-bold tracking-tight text-white">{client.name}</h1>
-              <p className="text-sm text-zinc-400">{client.phoneRaw || "Sin telefono"}</p>
+              <p className="text-sm text-zinc-400">{client.phoneRaw || "Sin teléfono"}</p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">

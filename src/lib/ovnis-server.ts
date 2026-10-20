@@ -753,7 +753,7 @@ export async function burnBetOvnisInTx(
   const description =
     input.status === "both_lost"
       ? "No hubo acuerdo. OVNIS quemados."
-      : "Apuesta abandonada (30 dias sin claims). OVNIS quemados.";
+      : "Apuesta abandonada (30 días sin claims). OVNIS quemados.";
 
   for (const clientId of [input.challengerId, input.opponentId]) {
     const result = await tx

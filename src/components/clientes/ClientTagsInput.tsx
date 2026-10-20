@@ -54,7 +54,7 @@ export default function ClientTagsInput({
       <div className="space-y-2">
         <div className="space-y-1">
           <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-600">Sugerencias rapidas</p>
-          <p className="text-xs text-zinc-500">Toca para sumar o sacar memoria util del cliente.</p>
+          <p className="text-xs text-zinc-500">Tocá para sumar o sacar memoria útil del cliente.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {QUICK_TAGS.map((tag) => {
@@ -100,7 +100,7 @@ export default function ClientTagsInput({
               </span>
             ))
           ) : (
-            <p className="text-xs text-zinc-500">Sin tags todavia. Agrega los que ayuden al corte.</p>
+            <p className="text-xs text-zinc-500">Sin tags todavía. Agregá los que ayuden al corte.</p>
           )}
         </div>
       </div>

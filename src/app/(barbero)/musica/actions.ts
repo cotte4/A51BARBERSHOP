@@ -39,7 +39,7 @@ function revalidateMusicSurfaces() {
 async function requireMusicActor() {
   const actor = await getTurnosActorContext();
   if (!actor) {
-    throw new Error("Necesitas iniciar sesion para usar Musica.");
+    throw new Error("Necesitás iniciar sesión para usar Música.");
   }
   return actor;
 }
@@ -47,7 +47,7 @@ async function requireMusicActor() {
 async function requireMusicAdmin() {
   const admin = await getAdminSessionContext();
   if (!admin) {
-    throw new Error("Solo el admin puede cambiar esta configuracion.");
+    throw new Error("Solo el admin puede cambiar esta configuración.");
   }
   return admin;
 }
@@ -55,7 +55,7 @@ async function requireMusicAdmin() {
 async function requireMusicBarberoActor(): Promise<TurnosActorContext & { barberoId: string }> {
   const actor = await requireMusicActor();
   if (!actor.barberoId) {
-    throw new Error("Necesitas un perfil de barbero activo para unirte a Jam.");
+    throw new Error("Necesitás un perfil de barbero activo para unirte a Jam.");
   }
   return {
     ...actor,
@@ -233,7 +233,7 @@ export async function pauseMusicAction(): Promise<ActionResult> {
     revalidateMusicSurfaces();
     return { ok: true };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "No pude pausar la musica." };
+    return { error: error instanceof Error ? error.message : "No pude pausar la música." };
   }
 }
 
@@ -244,7 +244,7 @@ export async function resumeMusicAction(): Promise<ActionResult> {
     revalidateMusicSurfaces();
     return { ok: true };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "No pude reanudar la musica." };
+    return { error: error instanceof Error ? error.message : "No pude reanudar la música." };
   }
 }
 
@@ -300,7 +300,7 @@ export async function createScheduleRuleAction(input: unknown): Promise<ActionRe
     const parsed = scheduleRuleSchema.parse(input);
 
     if (parsed.endTime <= parsed.startTime) {
-      return { error: "La franja debe terminar despues de la hora de inicio." };
+      return { error: "La franja debe terminar después de la hora de inicio." };
     }
 
     await saveScheduleRule({
@@ -315,7 +315,7 @@ export async function createScheduleRuleAction(input: unknown): Promise<ActionRe
     revalidateMusicSurfaces();
     return { ok: true };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "No pude guardar la franja automatica." };
+    return { error: error instanceof Error ? error.message : "No pude guardar la franja automática." };
   }
 }
 

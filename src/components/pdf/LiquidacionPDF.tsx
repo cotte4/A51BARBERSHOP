@@ -72,10 +72,10 @@ export function LiquidacionPDF({ data }: { data: LiquidacionPDFData }) {
   const periodoPositivo = montoAPagar > 0;
 
   return (
-    <Document title={`Liquidacion ${barberoNombre} - ${periodoInicio}`} author="A51 Barber">
+    <Document title={`Liquidación ${barberoNombre} - ${periodoInicio}`} author="A51 Barber">
       <Page size="A4" style={pdfStyles.page}>
         <View style={pdfStyles.header}>
-          <Text style={pdfStyles.headerTitle}>A51 Barber - Liquidacion</Text>
+          <Text style={pdfStyles.headerTitle}>A51 Barber - Liquidación</Text>
           <Text style={pdfStyles.headerSubtitle}>{barberoNombre}</Text>
           <Text style={pdfStyles.headerMeta}>Periodo: {formatPeriodo(periodoInicio, periodoFin)}</Text>
           <Text style={pdfStyles.headerMeta}>Fecha de emision: {formatFechaLarga(fechaEmision)}</Text>
@@ -108,7 +108,7 @@ export function LiquidacionPDF({ data }: { data: LiquidacionPDFData }) {
         </View>
 
         <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>Liquidacion</Text>
+          <Text style={pdfStyles.sectionTitle}>Liquidación</Text>
 
           <View style={pdfStyles.subtotalRow}>
             <Text style={pdfStyles.subtotalLabel}>

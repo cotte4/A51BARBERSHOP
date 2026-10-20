@@ -58,13 +58,13 @@ export default function BarberoForm({
 
   const modeloLabel = useMemo(() => {
     if (tipoModelo === "hibrido") return "Comision + alquiler";
-    if (tipoModelo === "fijo") return "Con minimo garantizado";
+    if (tipoModelo === "fijo") return "Con mínimo garantizado";
     return "Variable por comision";
   }, [tipoModelo]);
 
   const modeloDetail = useMemo(() => {
-    if (tipoModelo === "hibrido") return "Comision mas alquiler mensual del banco.";
-    if (tipoModelo === "fijo") return "Pago base con minimo garantizado.";
+    if (tipoModelo === "hibrido") return "Comision más alquiler mensual del banco.";
+    if (tipoModelo === "fijo") return "Pago base con mínimo garantizado.";
     return "Solo comision variable por venta.";
   }, [tipoModelo]);
 
@@ -190,7 +190,7 @@ export default function BarberoForm({
                   </span>
                 </div>
                 <p className="text-xs text-zinc-500">
-                  Se aplica a la liquidacion del servicio y a la lectura de resultados.
+                  Se aplica a la liquidación del servicio y a la lectura de resultados.
                 </p>
                 {state.fieldErrors?.porcentajeComision ? (
                   <p className="text-xs text-red-500">{state.fieldErrors.porcentajeComision}</p>
@@ -219,7 +219,7 @@ export default function BarberoForm({
                   ))}
                 </select>
                 <p className="text-xs text-zinc-500">
-                  Se prellenara cuando cargues una atencion desde caja.
+                  Se prellenara cuando cargues una atención desde caja.
                 </p>
               </div>
 
@@ -242,7 +242,7 @@ export default function BarberoForm({
                   ))}
                 </select>
                 <p className="text-xs text-zinc-500">
-                  Tambien se preselecciona al cobrar si lo dejamos seteado.
+                  También se preselecciona al cobrar si lo dejamos seteado.
                 </p>
               </div>
             </div>
@@ -250,7 +250,7 @@ export default function BarberoForm({
 
           <div className="rounded-[24px] bg-zinc-900 p-5 text-white">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
-              Lectura rapida
+              Lectura rápida
             </p>
             <p className="mt-2 text-sm text-zinc-400">
               Revisá esta columna para confirmar cómo va a caer el perfil en operación.
@@ -267,10 +267,10 @@ export default function BarberoForm({
                 label="Comision"
                 value={`${Number(porcentajeComision || 0)}%`}
                 strong
-                detail="Impacta la lectura de resultados y la liquidacion."
+                detail="Impacta la lectura de resultados y la liquidación."
               />
               <BarberStat
-                label="Accion rapida"
+                label="Acción rápida"
                 value={`${servicioDefecto?.nombre ?? "Sin servicio"} · ${medioPagoDefecto?.nombre ?? "Sin medio"}`}
                 detail="Defaults que aceleran la carga en caja."
               />
@@ -285,8 +285,8 @@ export default function BarberoForm({
           Reserva publica
         </p>
         <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-          Desde aca dejamos listo el link de este barbero para la landing general de Area51 y, si
-          queres, le sumamos una clave simple para filtrar el acceso publico.
+          Desde acá dejamos listo el link de este barbero para la landing general de Area51 y, si
+          querés, le sumamos una clave simple para filtrar el acceso público.
         </p>
 
         <div className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
@@ -309,7 +309,7 @@ export default function BarberoForm({
 
             <div className="flex flex-col gap-2">
               <label htmlFor="publicSlug" className="text-sm font-medium text-zinc-300">
-                Slug publico
+                Slug público
               </label>
               <input
                 id="publicSlug"
@@ -342,7 +342,7 @@ export default function BarberoForm({
               <div>
                 <p className="text-sm font-medium text-white">Pedir clave para reservar</p>
                 <p className="mt-1 text-xs text-zinc-400">
-                  Si el cliente ya entra con cuenta, la clave se salta. Si entra publico, la
+                  Si el cliente ya entra con cuenta, la clave se salta. Si entra público, la
                   necesitara antes de ver horarios y reservar.
                 </p>
               </div>
@@ -360,15 +360,15 @@ export default function BarberoForm({
                 onChange={(event) => setPublicReservaPassword(event.target.value)}
                 placeholder={
                   initialData?.publicReservaPasswordConfigured
-                    ? "Deja vacio para conservar la actual"
+                    ? "Dejá vacío para conservar la actual"
                     : "Ej: area51-abril"
                 }
                 className="min-h-[48px] w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-sm text-white placeholder:text-zinc-500 focus:border-[#8cff59]/60 focus:outline-none"
               />
               <p className="text-xs text-zinc-500">
                 {initialData?.publicReservaPasswordConfigured
-                  ? "Si escribis una nueva, reemplaza la actual. Si desmarcas la clave, el acceso queda abierto."
-                  : "Se guarda protegida y solo la usamos para habilitar el flujo publico."}
+                  ? "Si escribís una nueva, reemplaza la actual. Si desmarcás la clave, el acceso queda abierto."
+                  : "Se guarda protegida y solo la usamos para habilitar el flujo público."}
               </p>
               {state.fieldErrors?.publicReservaPassword ? (
                 <p className="text-xs text-red-500">{state.fieldErrors.publicReservaPassword}</p>

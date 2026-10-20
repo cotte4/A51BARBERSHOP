@@ -24,7 +24,7 @@ export default function Reemplazo({ bajaId, nombre, espera, cuota }: ReemplazoPr
   const [error, setError] = useState<string | null>(null);
 
   function enviar(input: unknown, quien: string) {
-    const pregunta = `¿Le devolviste la cuota a ${nombre} y ${quien} pagó ${cuota}? Entra con el mismo equipo y el mismo cruce.`;
+    const pregunta = `¿Le devolviste la cuota a ${nombre} y ${quien} pagó ${cuota}? Entrá con el mismo equipo y el mismo cruce.`;
     if (!window.confirm(pregunta)) return;
     setError(null);
     startTransition(async () => {

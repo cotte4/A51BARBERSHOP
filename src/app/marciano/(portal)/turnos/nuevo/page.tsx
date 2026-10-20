@@ -48,10 +48,10 @@ export default async function MarcianoNuevoTurnoPage({
               {turnoAReprogramar ? "Reprogramar turno" : "Nueva reserva"}
             </p>
             <h1 className="font-display text-4xl font-semibold text-white sm:text-5xl">
-              {turnoAReprogramar ? "Elegi tu nuevo horario" : "Reserva desde tu portal"}
+              {turnoAReprogramar ? "Elegí tu nuevo horario" : "Reserva desde tu portal"}
             </h1>
             <p className="max-w-2xl text-sm text-zinc-300">
-              Esta reserva usa tus datos Marcianos y queda vinculada a tu cuenta automaticamente.
+              Esta reserva usa tus datos Marcianos y queda vinculada a tu cuenta automáticamente.
             </p>
           </div>
 
@@ -110,7 +110,7 @@ export default async function MarcianoNuevoTurnoPage({
         </section>
       ) : !selectedBarbero ? (
         <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 text-sm text-zinc-300">
-          Todavia no hay barberos publicados para reserva.
+          Todavía no hay barberos publicados para reserva.
         </section>
       ) : (
         <MarcianoReservaForm

@@ -60,10 +60,10 @@ export default async function ConfiguracionPage() {
     },
     {
       href: "/configuracion/musica",
-      title: "Musica",
+      title: "Música",
       stat: "Auto",
       detail: "Spotify, player esperado y reglas que acompañan el local.",
-      cta: "Ver musica",
+      cta: "Ver música",
     },
   ];
 

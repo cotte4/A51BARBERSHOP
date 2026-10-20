@@ -29,7 +29,7 @@ export default function NuevoServicioPage() {
           </div>
 
           <div className="rounded-[24px] bg-zinc-950/80 px-4 py-3 ring-1 ring-zinc-800">
-            <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Guia rapida</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Guia rápida</p>
             <p className="mt-2 text-sm text-zinc-300">
               Nombre, precio y duración. Lo demás se apoya sobre esta base.
             </p>

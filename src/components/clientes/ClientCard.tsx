@@ -27,8 +27,8 @@ export default function ClientCard({ client }: ClientCardProps) {
     .map((chunk) => chunk[0]?.toUpperCase() ?? "")
     .join("");
 
-  const barberMemory = client.lastVisitNote?.trim() || "Sin nota del ultimo corte";
-  const relativeLastVisit = client.lastVisitAt ? formatRelativeVisit(client.lastVisitAt) : "Todavia no vino";
+  const barberMemory = client.lastVisitNote?.trim() || "Sin nota del último corte";
+  const relativeLastVisit = client.lastVisitAt ? formatRelativeVisit(client.lastVisitAt) : "Todavía no vino";
   const phoneHref = client.phoneRaw ? `tel:${client.phoneRaw.replace(/\D/g, "")}` : null;
   const hasExpandableDetails = Boolean(client.lastVisitNote?.trim()) || client.esMarciano;
   const [isExpanded, setIsExpanded] = useState(false);
@@ -97,7 +97,7 @@ export default function ClientCard({ client }: ClientCardProps) {
                   {client.phoneRaw}
                 </a>
               ) : (
-                <span>Sin telefono</span>
+                <span>Sin teléfono</span>
               )}
               <span className="text-zinc-600">-</span>
               <span>{client.totalVisits} visitas</span>
@@ -202,7 +202,7 @@ function formatRelativeVisit(date: Date) {
   const diffDays = Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
 
   if (diffDays <= 1) return "Vino hoy";
-  if (diffDays < 7) return `Hace ${diffDays} dias`;
+  if (diffDays < 7) return `Hace ${diffDays} días`;
 
   const weeks = Math.round(diffDays / 7);
   if (weeks < 5) return `Hace ${weeks} semana${weeks === 1 ? "" : "s"}`;

@@ -77,13 +77,13 @@ export async function crearAssetAction(
 
   const fieldErrors: AssetFormState["fieldErrors"] = {};
 
-  if (!nombre) fieldErrors.nombre = "Carga un nombre.";
-  if (!categoria) fieldErrors.categoria = "Elegi una categoria.";
+  if (!nombre) fieldErrors.nombre = "Cargá un nombre.";
+  if (!categoria) fieldErrors.categoria = "Elegí una categoría.";
   if (!precioObjetivo || toMoneyNumber(precioObjetivo) <= 0) {
-    fieldErrors.precioObjetivo = "Ingresa un monto mayor a 0.";
+    fieldErrors.precioObjetivo = "Ingresá un monto mayor a 0.";
   }
   if (!ASSET_CATEGORIAS.includes(categoria as AssetCategoria)) {
-    fieldErrors.categoria = "Categoria invalida.";
+    fieldErrors.categoria = "Categoría inválida.";
   }
   if (!["planificado", "pagado"].includes(estadoCompra)) {
     fieldErrors.estadoCompra = "El alta nueva arranca como planificado o pagado.";
@@ -152,14 +152,14 @@ export async function crearAssetAction(
     redirectTo = `/negocio/activos/${created.id}`;
   } catch (error) {
     console.error("[hangar] crearAssetAction", error);
-    return { error: "No pudimos guardar el activo. Intenta de nuevo." };
+    return { error: "No pudimos guardar el activo. Intentá de nuevo." };
   }
 
   if (redirectTo) {
     redirect(redirectTo);
   }
 
-  return { error: "No pudimos redirigir al activo nuevo. Intenta de nuevo." };
+  return { error: "No pudimos redirigir al activo nuevo. Intentá de nuevo." };
 }
 
 export async function registrarAssetPaymentAction(
@@ -183,7 +183,7 @@ export async function registrarAssetPaymentAction(
     fieldErrors.tipo = "Selecciona un tipo de pago.";
   }
   if (!monto || toMoneyNumber(monto) <= 0) {
-    fieldErrors.monto = "Ingresa un monto mayor a 0.";
+    fieldErrors.monto = "Ingresá un monto mayor a 0.";
   }
   if (!fecha) {
     fieldErrors.fecha = "Falta la fecha del pago.";
@@ -231,7 +231,7 @@ export async function registrarAssetPaymentAction(
     };
   } catch (error) {
     console.error("[hangar] registrarAssetPaymentAction", error);
-    return { error: "No pudimos registrar el pago. Intenta de nuevo." };
+    return { error: "No pudimos registrar el pago. Intentá de nuevo." };
   }
 }
 

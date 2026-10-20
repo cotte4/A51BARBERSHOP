@@ -107,7 +107,7 @@ export default function EditarProductoForm({ editarAction, producto }: Props) {
 
       <div>
         <label htmlFor="stockMinimo" className="mb-1 block text-sm font-medium text-zinc-300">
-          Stock minimo
+          Stock mínimo
         </label>
         <input
           id="stockMinimo"
@@ -131,7 +131,7 @@ export default function EditarProductoForm({ editarAction, producto }: Props) {
           className="mt-0.5 size-4 rounded border-zinc-600 bg-zinc-900 accent-[#8cff59]"
         />
         <span>
-          <span className="block font-medium text-white">Producto de consumicion</span>
+          <span className="block font-medium text-white">Producto de consumición</span>
           <span className="mt-1 block text-xs text-zinc-500">
             Permite incluirlo a $0 dentro de beneficios Marciano desde caja.
           </span>

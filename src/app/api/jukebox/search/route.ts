@@ -54,7 +54,7 @@ export async function GET(request: Request) {
   });
 
   if (!parsed.success) {
-    return Response.json({ error: "Busqueda invalida." }, { status: 400 });
+    return Response.json({ error: "Búsqueda inválida." }, { status: 400 });
   }
 
   const { q, deviceKey } = parsed.data;

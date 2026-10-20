@@ -132,7 +132,7 @@ export default function VentaProductoForm({
 
   const selectedLabel = productoSeleccionado
     ? `${formatARS(precioBaseProducto)} base`
-    : "Elegi un producto para arrancar";
+    : "Elegí un producto para arrancar";
 
   return (
     <form action={formAction} className="space-y-5">
@@ -150,7 +150,7 @@ export default function VentaProductoForm({
             </p>
             <h2 className="text-2xl font-semibold text-white">Venta de producto</h2>
             <p className="max-w-2xl text-sm leading-6 text-zinc-400">
-              Primero elegi el producto, despues la cantidad y el cobro. El resumen te muestra el
+              Primero elegí el producto, después la cantidad y el cobro. El resumen te muestra el
               neto antes de confirmar para evitar errores.
             </p>
           </div>
@@ -246,7 +246,7 @@ export default function VentaProductoForm({
             <div className="grid gap-5 md:grid-cols-2">
               <FieldShell
                 label="Paso 2 - Cantidad"
-                description="Usa un toque rapido o ingresala manualmente si hace falta."
+                description="Usá un toque rápido o ingresala manualmente si hace falta."
                 error={state.fieldErrors?.cantidad}
               >
                 <div className="flex flex-wrap gap-2">
@@ -294,7 +294,7 @@ export default function VentaProductoForm({
                       {excedeStock ? " | La cantidad supera el stock." : ""}
                     </p>
                   ) : (
-                    <p className="text-xs text-zinc-500">Elegi un producto para ver el stock.</p>
+                    <p className="text-xs text-zinc-500">Elegí un producto para ver el stock.</p>
                   )}
                 </div>
               </FieldShell>
@@ -339,7 +339,7 @@ export default function VentaProductoForm({
               </legend>
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-zinc-400">Elegi el medio que realmente entra a caja.</p>
+                <p className="text-sm text-zinc-400">Elegí el medio que realmente entra a caja.</p>
                 <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs text-zinc-400">
                   {mediosPagoList.length} medios
                 </span>
@@ -427,7 +427,7 @@ export default function VentaProductoForm({
 
               {!previewReady ? (
                 <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-400">
-                  Completa producto, cantidad, precio y medio de pago para habilitar la lectura
+                  Completá producto, cantidad, precio y medio de pago para habilitar la lectura
                   final.
                 </div>
               ) : null}
@@ -441,11 +441,11 @@ export default function VentaProductoForm({
 
             <section className="rounded-[28px] border border-zinc-800 bg-zinc-950/60 p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                Regla rapida
+                Regla rápida
               </p>
               <p className="mt-2 text-sm leading-6 text-zinc-300">
-                Si el producto no tiene stock o el medio no esta activo, el sistema frena antes de
-                tocar caja e inventario. Mejor cortar aca que corregir despues.
+                Si el producto no tiene stock o el medio no está activo, el sistema frena antes de
+                tocar caja e inventario. Mejor cortar acá que corregir después.
               </p>
             </section>
           </div>

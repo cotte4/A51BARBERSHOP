@@ -14,7 +14,7 @@ export function hasRedeemedPendingCredits(credits: PendingCreditState[]): boolea
 export function assertAnulacionReversionAllowed(credits: PendingCreditState[]): void {
   if (hasRedeemedPendingCredits(credits)) {
     throw new Error(
-      "No se puede anular: esta atencion ya acreditó OVNIS canjeados por el cliente."
+      "No se puede anular: esta atención ya acreditó OVNIS canjeados por el cliente."
     );
   }
 }

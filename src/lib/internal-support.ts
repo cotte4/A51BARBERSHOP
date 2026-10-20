@@ -48,13 +48,13 @@ const CURATED_GUIDES: CuratedRouteGuide[] = [
     routePrefix: "/caja",
     title: "Caja operativa",
     bullets: [
-      "Registrar atenciones del dia, editar y cerrar (solo admin).",
+      "Registrar atenciones del día, editar y cerrar (solo admin).",
       "Ventas de producto desde Vender, con medio de pago obligatorio.",
       "Si ves bloqueo por cierre, esa fecha ya no admite mutaciones.",
     ],
     deepLinks: [
       { label: "Caja", href: "/caja" },
-      { label: "Nueva atencion", href: "/caja/nueva" },
+      { label: "Nueva atención", href: "/caja/nueva" },
       { label: "Vender producto", href: "/caja/vender" },
     ],
   },
@@ -75,9 +75,9 @@ const CURATED_GUIDES: CuratedRouteGuide[] = [
     routePrefix: "/clientes",
     title: "Clientes",
     bullets: [
-      "Busqueda y perfil por cliente con historial reciente.",
+      "Búsqueda y perfil por cliente con historial reciente.",
       "Pipeline de retencion para seguimiento (pendiente/contactado/reagendado).",
-      "Beneficios Marciano se actualizan automaticamente por atencion.",
+      "Beneficios Marciano se actualizan automáticamente por atención.",
     ],
     deepLinks: [
       { label: "Clientes", href: "/clientes" },
@@ -88,7 +88,7 @@ const CURATED_GUIDES: CuratedRouteGuide[] = [
     routePrefix: "/negocio",
     title: "Negocio",
     bullets: [
-      "Hub owner con soporte, go-live, activos y configuracion clave.",
+      "Hub owner con soporte, go-live, activos y configuración clave.",
       "Mutaciones sensibles protegidas por rol owner/admin.",
       "Soporte centraliza bugs y propuestas internas.",
     ],
@@ -154,12 +154,12 @@ function intentPrompt(intent: SupportIntent): string {
     return "Buena idea. Te paso el formulario de propuesta para convertirla en item accionable.";
   }
   if (intent === "implementation_idea") {
-    return "Excelente. Te paso un formulario tecnico para capturar implementacion y trade-offs.";
+    return "Excelente. Te paso un formulario técnico para capturar implementación y trade-offs.";
   }
   if (intent === "how_to_use") {
     return "Te guio paso a paso con lo que ya existe en esta pantalla.";
   }
-  return "Decime si queres ayuda de uso, reportar bug o proponer mejora y te abro el formulario correcto.";
+  return "Decime si querés ayuda de uso, reportar bug o proponer mejora y te abro el formulario correcto.";
 }
 
 export type SupportFormType = "bug_report" | "feature_request" | "implementation_idea" | null;
@@ -180,8 +180,8 @@ export function buildInternalSupportReply(input: {
   const curatedGuide = guidanceForPath(input.pathname);
   const fallbackBullets = [
     "Puedo guiarte por pantalla actual o abrir formulario de bug/propuesta.",
-    "Si algo fallo, escribi 'no funciono'.",
-    "Si queres pedir mejora, escribi 'feature' o 'idea de implementacion'.",
+    "Si algo falló, escribí 'no funcionó'.",
+    "Si querés pedir mejora, escribí 'feature' o 'idea de implementación'.",
   ];
 
   return {

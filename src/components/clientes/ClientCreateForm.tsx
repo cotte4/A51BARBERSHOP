@@ -91,7 +91,7 @@ export default function ClientCreateForm({ isAdmin }: ClientCreateFormProps) {
 
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-xs text-zinc-400">
             <p className="font-medium text-zinc-200">Orden sugerido</p>
-            <p className="mt-1 leading-5">Nombre, telefono, foto y despues contexto.</p>
+            <p className="mt-1 leading-5">Nombre, teléfono, foto y después contexto.</p>
           </div>
         </div>
 
@@ -100,7 +100,7 @@ export default function ClientCreateForm({ isAdmin }: ClientCreateFormProps) {
             <div className="space-y-1">
               <p className="eyebrow text-[11px] font-semibold">Foto</p>
               <p className="text-sm leading-6 text-zinc-300">
-                Sube un avatar si ayuda a reconocerlo mas rapido en la ficha.
+                Subí un avatar si ayuda a reconocerlo más rápido en la ficha.
               </p>
             </div>
             <div className="mt-4">
@@ -112,7 +112,7 @@ export default function ClientCreateForm({ isAdmin }: ClientCreateFormProps) {
             <FieldBlock
               htmlFor="name"
               label="Nombre"
-              description="Tal como queres que aparezca en clientes y en el historial."
+              description="Tal como querés que aparezca en clientes y en el historial."
               error={state.fieldErrors?.name}
             >
               <input
@@ -126,8 +126,8 @@ export default function ClientCreateForm({ isAdmin }: ClientCreateFormProps) {
 
             <FieldBlock
               htmlFor="phoneRaw"
-              label="Telefono"
-              description="Sirve para ubicarlo rapido y detectar coincidencias."
+              label="Teléfono"
+              description="Sirve para ubicarlo rápido y detectar coincidencias."
               error={state.fieldErrors?.phoneRaw}
             >
               <input
@@ -146,7 +146,7 @@ export default function ClientCreateForm({ isAdmin }: ClientCreateFormProps) {
               <div className="space-y-1">
                 <p className="eyebrow text-[11px] font-semibold">Acceso Marciano</p>
                 <p className="text-sm leading-6 text-zinc-300">
-                  Solo visible para admins. Si este cliente entra al portal, cargalo aca.
+                  Solo visible para admins. Si este cliente entra al portal, cargalo acá.
                 </p>
               </div>
 
@@ -230,7 +230,7 @@ export default function ClientCreateForm({ isAdmin }: ClientCreateFormProps) {
               <FieldBlock
                 htmlFor="notes"
                 label="Nota general"
-                description="Visible en la ficha para dejar contexto rapido."
+                description="Visible en la ficha para dejar contexto rápido."
               >
                 <textarea id="notes" name="notes" rows={4} className={textareaClass} />
               </FieldBlock>
@@ -260,7 +260,7 @@ export default function ClientCreateForm({ isAdmin }: ClientCreateFormProps) {
                     >
                       <span className="font-medium">{duplicate.name}</span>
                       <span className="text-xs text-zinc-400">
-                        {duplicate.phoneRaw ?? "Sin telefono"}
+                        {duplicate.phoneRaw ?? "Sin teléfono"}
                       </span>
                     </li>
                   ))}
@@ -277,8 +277,8 @@ export default function ClientCreateForm({ isAdmin }: ClientCreateFormProps) {
                   Crear igual
                 </button>
                 <p className="text-xs leading-5 text-amber-100/80">
-                  Si ya existe, revisalo antes. Si igual queres crear el perfil, este boton
-                  confirma la accion.
+                  Si ya existe, revisalo antes. Si igual querés crear el perfil, este boton
+                  confirmá la acción.
                 </p>
               </div>
             </div>

@@ -27,7 +27,7 @@ export default async function MarcianoTurnosPage({ searchParams }: MarcianoTurno
                 Tu agenda Marciana
               </h1>
               <p className="mt-3 max-w-2xl text-sm text-zinc-300">
-                Desde aca ves lo que ya tenes reservado y autogestionas cambios mientras falten mas de
+                Desde acá ves lo que ya tenés reservado y autogestionás cambios mientras falten más de
                 11 horas para el turno.
               </p>
             </div>
@@ -42,9 +42,9 @@ export default async function MarcianoTurnosPage({ searchParams }: MarcianoTurno
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <PortalStat label="Proximos" value={String(proximos.length)} />
+          <PortalStat label="Próximos" value={String(proximos.length)} />
           <PortalStat label="Historial" value={String(historial.length)} />
-          <PortalStat label="Auto gestion" value="Abierta 11 hs antes" />
+          <PortalStat label="Autogestión" value="Abierta 11 hs antes" />
         </div>
       </section>
 
@@ -57,7 +57,7 @@ export default async function MarcianoTurnosPage({ searchParams }: MarcianoTurno
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="eyebrow text-zinc-500">Proximos</p>
+            <p className="eyebrow text-zinc-500">Próximos</p>
             <h2 className="mt-1 text-2xl font-semibold text-white">Lo que viene</h2>
           </div>
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-zinc-300">
@@ -67,7 +67,7 @@ export default async function MarcianoTurnosPage({ searchParams }: MarcianoTurno
 
         {proximos.length === 0 ? (
           <div className="rounded-[24px] border border-dashed border-white/10 bg-black/15 p-6 text-sm text-zinc-400">
-            No tenes turnos activos ahora mismo.
+            No tenés turnos activos ahora mismo.
           </div>
         ) : (
           <div className="grid gap-4">
@@ -81,12 +81,12 @@ export default async function MarcianoTurnosPage({ searchParams }: MarcianoTurno
       <section className="space-y-4">
         <div>
           <p className="eyebrow text-zinc-500">Historial reciente</p>
-          <h2 className="mt-1 text-2xl font-semibold text-white">Tus ultimos movimientos</h2>
+          <h2 className="mt-1 text-2xl font-semibold text-white">Tus últimos movimientos</h2>
         </div>
 
         {historial.length === 0 ? (
           <div className="rounded-[24px] border border-dashed border-white/10 bg-black/15 p-6 text-sm text-zinc-400">
-            Todavia no hay historial visible en tu agenda.
+            Todavía no hay historial visible en tu agenda.
           </div>
         ) : (
           <div className="grid gap-4">
@@ -110,8 +110,8 @@ function PortalStat({ label, value }: { label: string; value: string }) {
 }
 
 function getFeedbackMessage(value: string | undefined) {
-  if (value === "reservado") return "Tu reserva quedo enviada a A51 para confirmacion.";
+  if (value === "reservado") return "Tu reserva quedó enviada a A51 para confirmación.";
   if (value === "reprogramado") return "Listo. Creamos tu nueva reserva y cancelamos la anterior.";
-  if (value === "cancelado") return "Tu turno quedo cancelado desde el portal.";
+  if (value === "cancelado") return "Tu turno quedó cancelado desde el portal.";
   return null;
 }

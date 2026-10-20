@@ -40,7 +40,7 @@ function buildPresets(): DatePreset[] {
     {
       id: "today",
       label: "Hoy",
-      description: "Liquidacion diaria del dia en curso.",
+      description: "Liquidación diaria del día en curso.",
       getRange: () => ({
         inicio: formatDateInput(today),
         fin: formatDateInput(today),
@@ -49,7 +49,7 @@ function buildPresets(): DatePreset[] {
     {
       id: "yesterday",
       label: "Ayer",
-      description: "Cierra el dia anterior en un toque.",
+      description: "Cerrá el día anterior en un toque.",
       getRange: () => ({
         inicio: formatDateInput(yesterday),
         fin: formatDateInput(yesterday),
@@ -133,10 +133,10 @@ export default function NuevaLiquidacionForm({
           <div>
             <p className="eyebrow text-[10px]">Paso 1</p>
             <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-white">
-              Elegi a quien liquidar
+              Elegí a quien liquidar
             </h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Seleccion directa y visible para evitar dudas al cargar la liquidacion.
+              Selección directa y visible para evitar dudas al cargar la liquidación.
             </p>
           </div>
           <div className="panel-soft rounded-[22px] px-4 py-3 text-sm text-zinc-200">
@@ -170,7 +170,7 @@ export default function NuevaLiquidacionForm({
                   {barbero.nombre}
                 </span>
                 <span className={`mt-2 block text-sm ${selected ? "text-zinc-300" : "text-zinc-500"}`}>
-                  Genera una liquidacion individual para este periodo.
+                  Genera una liquidación individual para este periodo.
                 </span>
                 {selected ? (
                   <span className="mt-3 inline-flex rounded-full border border-[#8cff59]/20 bg-[#8cff59]/10 px-2.5 py-1 text-[11px] font-semibold text-[#8cff59]">
@@ -193,7 +193,7 @@ export default function NuevaLiquidacionForm({
           Defini el periodo
         </h2>
         <p className="mt-1 text-sm text-zinc-400">
-          El default es diario. Si necesitas otro rango, cambialo sin perder el contexto visual.
+          El default es diario. Si necesitás otro rango, cambialo sin perder el contexto visual.
         </p>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -237,7 +237,7 @@ export default function NuevaLiquidacionForm({
             <span
               className={`mt-2 block text-xs ${activePreset === "custom" ? "text-zinc-300" : "text-zinc-500"}`}
             >
-              Edita inicio y fin manualmente si necesitas un rango mayor a un dia.
+              Edita inicio y fin manualmente si necesitás un rango mayor a un día.
             </span>
           </button>
         </div>
@@ -290,14 +290,14 @@ export default function NuevaLiquidacionForm({
 
         <div className="mt-5 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="panel-soft rounded-[24px] p-5">
-            <p className="eyebrow text-[10px]">Liquidacion lista</p>
+            <p className="eyebrow text-[10px]">Liquidación lista</p>
             <h3 className="mt-2 font-display text-3xl font-semibold tracking-tight text-white">
-              {selectedBarbero ? selectedBarbero.nombre : "Elegi un barbero"}
+              {selectedBarbero ? selectedBarbero.nombre : "Elegí un barbero"}
             </h3>
             <p className="mt-2 text-sm text-zinc-300">{periodLabel}</p>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <MiniCard label="Duracion" value={durationDays ? (durationDays === 1 ? "Liquidacion diaria" : `${durationDays} dias`) : "Pendiente"} />
+              <MiniCard label="Duración" value={durationDays ? (durationDays === 1 ? "Liquidación diaria" : `${durationDays} días`) : "Pendiente"} />
               <MiniCard label="Modo" value={activePreset === "custom" ? "Personalizado" : presets.find((preset) => preset.id === activePreset)?.label ?? "Diario"} />
               <MiniCard
                 label="Notas"
@@ -311,7 +311,7 @@ export default function NuevaLiquidacionForm({
           </div>
 
           <div className="panel-soft rounded-[24px] p-5">
-            <p className="eyebrow text-[10px]">Chequeo rapido</p>
+            <p className="eyebrow text-[10px]">Chequeo rápido</p>
             <div className="mt-4 space-y-3 text-sm">
               <PreviewRow
                 label="Barbero"
@@ -329,12 +329,12 @@ export default function NuevaLiquidacionForm({
                 ok={Boolean(periodoFin)}
               />
               <PreviewRow
-                label="Rango valido"
+                label="Rango válido"
                 value={
                   durationDays
                     ? durationDays === 1
-                      ? "Liquidacion diaria"
-                      : `${durationDays} dias incluidos`
+                      ? "Liquidación diaria"
+                      : `${durationDays} días incluidos`
                     : "Revisá el rango"
                 }
                 ok={Boolean(durationDays)}
@@ -354,7 +354,7 @@ export default function NuevaLiquidacionForm({
           rows={4}
           value={notas}
           onChange={(event) => setNotas(event.target.value)}
-          placeholder="Ej: periodo con ajuste especial, adelanto previo o aclaracion para administracion."
+          placeholder="Ej: periodo con ajuste especial, adelanto previo o aclaracion para administración."
           className="mt-2 w-full resize-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-[#8cff59]"
         />
 
@@ -364,7 +364,7 @@ export default function NuevaLiquidacionForm({
             disabled={isPending}
             className="neon-button inline-flex min-h-[52px] flex-1 items-center justify-center rounded-2xl px-5 text-sm font-semibold disabled:opacity-50"
           >
-            {isPending ? "Generando liquidacion..." : "Generar liquidacion"}
+            {isPending ? "Generando liquidación..." : "Generar liquidación"}
           </button>
           <Link
             href="/liquidaciones"

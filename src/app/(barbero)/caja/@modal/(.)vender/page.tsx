@@ -27,7 +27,7 @@ export default async function VenderModal() {
     return (
       <Modal>
         <div className="py-4 text-center">
-          <p className="font-medium text-white">La caja ya esta cerrada.</p>
+          <p className="font-medium text-white">La caja ya está cerrada.</p>
           <p className="mt-1 text-sm text-zinc-400">No se pueden registrar nuevas ventas.</p>
           <Link
             href={`/caja/cierre/${fechaHoy}`}

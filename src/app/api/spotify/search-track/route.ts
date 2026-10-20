@@ -12,7 +12,7 @@ async function getClientCredentialsToken() {
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    throw new Error("Configuracion de Spotify incompleta.");
+    throw new Error("Configuración de Spotify incompleta.");
   }
 
   const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
   });
 
   if (!parsed.success) {
-    return Response.json({ error: "Busqueda invalida." }, { status: 400 });
+    return Response.json({ error: "Búsqueda inválida." }, { status: 400 });
   }
 
   try {

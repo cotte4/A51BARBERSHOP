@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   });
   if (!parsed.success) {
     return Response.json(
-      { error: "Dispositivo invalido." },
+      { error: "Dispositivo inválido." },
       { status: 400, headers: { "Cache-Control": "no-store" } }
     );
   }

@@ -16,7 +16,7 @@ export default function MarcianoPasswordResetForm({
   tokenError,
 }: MarcianoPasswordResetFormProps) {
   const [state, formAction, pending] = useActionState(resetMarcianoPasswordAction, initialState);
-  const effectiveError = tokenError ?? (!token ? "El link de recuperacion no es valido." : null);
+  const effectiveError = tokenError ?? (!token ? "El link de recuperación no es válido." : null);
 
   return (
     <div className="space-y-5">
@@ -28,7 +28,7 @@ export default function MarcianoPasswordResetForm({
           <div className="rounded-[26px] border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
             <p className="font-semibold text-white">Probemos con un link nuevo</p>
             <p className="mt-2 leading-6">
-              Pedimos otro correo de recuperacion y volvemos a cargar la pagina con ese acceso.
+              Pedimos otro correo de recuperación y volvemos a cargar la página con ese acceso.
             </p>
             <Link
               href="/marciano/recuperar"
@@ -47,13 +47,13 @@ export default function MarcianoPasswordResetForm({
               Seguridad
             </p>
             <p className="mt-2 text-sm leading-6 text-zinc-300">
-              La nueva contrasena reemplaza la anterior en el acto. Elegi una que no compartas.
+              La nueva contraseña reemplaza la anterior en el acto. Elegí una que no compartas.
             </p>
           </div>
 
           <div className="flex flex-col gap-2">
             <label htmlFor="newPassword" className="text-sm font-medium text-zinc-300">
-              Nueva contrasena
+              Nueva contraseña
             </label>
             <input
               id="newPassword"
@@ -69,7 +69,7 @@ export default function MarcianoPasswordResetForm({
 
           <div className="flex flex-col gap-2">
             <label htmlFor="confirmPassword" className="text-sm font-medium text-zinc-300">
-              Confirmar nueva contrasena
+              Confirmar nueva contraseña
             </label>
             <input
               id="confirmPassword"
@@ -100,7 +100,7 @@ export default function MarcianoPasswordResetForm({
             disabled={pending}
             className="neon-button h-12 w-full rounded-[20px] text-sm font-semibold disabled:opacity-50"
           >
-            {pending ? "Guardando..." : "Guardar nueva contrasena"}
+            {pending ? "Guardando..." : "Guardar nueva contraseña"}
           </button>
         </form>
       )}

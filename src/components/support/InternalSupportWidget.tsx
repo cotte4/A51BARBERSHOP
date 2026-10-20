@@ -37,7 +37,7 @@ export default function InternalSupportWidget() {
   const [turns, setTurns] = useState<ChatTurn[]>([
     {
       role: "assistant",
-      content: "Soy soporte interno. Preguntame como usar esta pantalla o decime si algo no funciono.",
+      content: "Soy soporte interno. Preguntame cómo usar esta pantalla o decime si algo no funcionó.",
     },
   ]);
 
@@ -74,13 +74,13 @@ export default function InternalSupportWidget() {
           ...prev,
           {
             role: "assistant",
-            content: payload.error ?? "No pude procesar tu consulta. Intenta de nuevo.",
+            content: payload.error ?? "No pude procesar tu consulta. Intentá de nuevo.",
           },
         ]);
         return;
       }
 
-      const assistantReply = payload.reply ?? "No pude procesar tu consulta. Intenta de nuevo.";
+      const assistantReply = payload.reply ?? "No pude procesar tu consulta. Intentá de nuevo.";
 
       setTurns((prev) => [
         ...prev,
@@ -271,7 +271,7 @@ export default function InternalSupportWidget() {
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Ej: como completo un turno, o no funciono cobrar..."
+              placeholder="Ej: cómo completo un turno, o no funcionó cobrar..."
               className="min-h-[72px] w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-[#8cff59]/60 focus:outline-none"
             />
             <button
@@ -329,7 +329,7 @@ export default function InternalSupportWidget() {
           {activeFormType === "feature_request" || activeFormType === "implementation_idea" ? (
             <form onSubmit={onSubmitProposal} className="mt-2 flex flex-col gap-2 border-t border-zinc-800 pt-3">
               <p className="text-xs font-medium text-zinc-300">
-                {activeFormType === "feature_request" ? "Formulario de feature" : "Formulario de implementacion"}
+                {activeFormType === "feature_request" ? "Formulario de feature" : "Formulario de implementación"}
               </p>
               <input
                 value={proposalTitle}
@@ -340,7 +340,7 @@ export default function InternalSupportWidget() {
               <textarea
                 value={proposalProblem}
                 onChange={(event) => setProposalProblem(event.target.value)}
-                placeholder="Problema que queres resolver"
+                placeholder="Problema que querés resolver"
                 className="min-h-[56px] w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-white placeholder:text-zinc-500 focus:border-[#8cff59]/60 focus:outline-none"
               />
               <textarea

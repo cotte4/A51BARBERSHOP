@@ -58,7 +58,7 @@ export default async function SoportePage() {
       <main className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-6 pb-24">
         {reports.length === 0 ? (
           <section className="panel-card rounded-[28px] p-5 text-sm text-zinc-400">
-            No hay reportes todavia.
+            No hay reportes todavía.
           </section>
         ) : (
           reports.map((report) => (
@@ -121,7 +121,7 @@ export default async function SoportePage() {
           <div className="mb-3">
             <p className="eyebrow text-[10px]">Propuestas internas</p>
             <p className="text-sm text-zinc-400">
-              Ideas de feature e implementacion enviadas por barberos y admins.
+              Ideas de feature e implementación enviadas por barberos y admins.
             </p>
           </div>
           {intakes.length === 0 ? (

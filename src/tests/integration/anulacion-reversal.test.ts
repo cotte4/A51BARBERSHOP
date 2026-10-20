@@ -11,7 +11,7 @@ describe("anulacion-reversal: transactional guardrails", () => {
 
     expect(hasRedeemedPendingCredits(credits)).toBe(true);
     expect(() => assertAnulacionReversionAllowed(credits)).toThrow(
-      "No se puede anular: esta atencion ya acreditó OVNIS canjeados por el cliente."
+      "No se puede anular: esta atención ya acreditó OVNIS canjeados por el cliente."
     );
   });
 

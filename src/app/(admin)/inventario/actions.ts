@@ -61,17 +61,17 @@ function parseProductoInput(formData: FormData): {
 
   const stockMinimo = stockMinimoRaw !== "" ? parseInt(stockMinimoRaw, 10) : 5;
   if (isNaN(stockMinimo) || stockMinimo < 0) {
-    fieldErrors.stockMinimo = "El stock minimo debe ser 0 o mayor";
+    fieldErrors.stockMinimo = "El stock mínimo debe ser 0 o mayor";
   }
 
   const precioVenta = precioVentaRaw !== "" ? parseFloat(precioVentaRaw) : null;
   if (precioVentaRaw !== "" && (precioVenta === null || isNaN(precioVenta))) {
-    fieldErrors.precioVenta = "Ingresa un precio valido";
+    fieldErrors.precioVenta = "Ingresá un precio válido";
   }
 
   const costoCompra = costoCompraRaw !== "" ? parseFloat(costoCompraRaw) : null;
   if (costoCompraRaw !== "" && (costoCompra === null || isNaN(costoCompra))) {
-    fieldErrors.costoCompra = "Ingresa un costo valido";
+    fieldErrors.costoCompra = "Ingresá un costo válido";
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -104,7 +104,7 @@ export async function crearProducto(
     await crearProductoDesdeInput(parsed.input);
   } catch (error) {
     console.error("Error creando producto:", error);
-    return { error: "No se pudo crear el producto. Intenta de nuevo." };
+    return { error: "No se pudo crear el producto. Intentá de nuevo." };
   }
 
   revalidatePath("/inventario");
@@ -129,7 +129,7 @@ export async function editarProducto(
     if (!result.ok) return { error: result.error };
   } catch (error) {
     console.error("Error editando producto:", error);
-    return { error: "No se pudo actualizar el producto. Intenta de nuevo." };
+    return { error: "No se pudo actualizar el producto. Intentá de nuevo." };
   }
 
   revalidatePath(`/inventario/${id}`);
@@ -162,7 +162,7 @@ export async function registrarMovimiento(
 
   const cantidadInput = cantidadRaw !== "" ? parseInt(cantidadRaw, 10) : NaN;
   if (isNaN(cantidadInput) || cantidadInput <= 0) {
-    fieldErrors.cantidad = "La cantidad debe ser un numero entero mayor a cero";
+    fieldErrors.cantidad = "La cantidad debe ser un número entero mayor a cero";
   }
 
   if (Object.keys(fieldErrors).length > 0 || !tipo) {
@@ -182,7 +182,7 @@ export async function registrarMovimiento(
     if (!result.ok) return { error: result.error };
   } catch (error) {
     console.error("Error registrando movimiento:", error);
-    return { error: "No se pudo registrar el movimiento. Intenta de nuevo." };
+    return { error: "No se pudo registrar el movimiento. Intentá de nuevo." };
   }
 
   revalidatePath(`/inventario/${productoId}`);
@@ -201,7 +201,7 @@ export async function ajustarStockRapido(
   if (authError) return authError;
 
   if (!Number.isInteger(delta) || delta === 0) {
-    return { error: "El ajuste rapido es invalido." };
+    return { error: "El ajuste rápido es inválido." };
   }
 
   try {

@@ -15,7 +15,7 @@ export default async function MarcianoPerfilPage() {
         <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-3">
             <h2 className="font-display text-3xl font-semibold text-white sm:text-4xl">
-              Ajusta como te vemos antes del corte
+              Ajustá como te vemos antes del corte
             </h2>
             <p className="max-w-2xl text-sm text-zinc-300">
               Acá podés mantener tu nombre, teléfono y preferencias al día para que el equipo tenga
@@ -25,7 +25,7 @@ export default async function MarcianoPerfilPage() {
 
           <div className="grid gap-2 text-sm text-zinc-300 sm:min-w-[220px]">
             <ProfileSummary label="Email" value={client.email ?? "Sin email"} />
-            <ProfileSummary label="Telefono" value={client.phoneRaw ?? "Pendiente"} />
+            <ProfileSummary label="Teléfono" value={client.phoneRaw ?? "Pendiente"} />
           </div>
         </div>
       </div>
@@ -33,11 +33,11 @@ export default async function MarcianoPerfilPage() {
       <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
         <section className="public-panel rounded-[28px] p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
-            Resumen rapido
+            Resumen rápido
           </p>
           <div className="mt-4 space-y-3">
             <ProfileSummary label="Nombre visible" value={client.name} />
-            <ProfileSummary label="Telefono" value={client.phoneRaw ?? "Pendiente"} />
+            <ProfileSummary label="Teléfono" value={client.phoneRaw ?? "Pendiente"} />
             <ProfileSummary
               label="Preferencias"
               value={

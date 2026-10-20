@@ -32,7 +32,7 @@ export async function generarLiquidacion(
   const notas = formData.get("notas") as string | null;
 
   const fieldErrors: LiquidacionFormState["fieldErrors"] = {};
-  if (!barberoId) fieldErrors.barberoId = "Selecciona un barbero";
+  if (!barberoId) fieldErrors.barberoId = "Seleccioná un barbero";
   if (!periodoInicio) fieldErrors.periodoInicio = "La fecha de inicio es requerida";
   if (!periodoFin) fieldErrors.periodoFin = "La fecha de fin es requerida";
   if (periodoInicio && periodoFin && periodoInicio > periodoFin) {
@@ -55,7 +55,7 @@ export async function generarLiquidacion(
     liquidacionId = result.id;
   } catch (error) {
     console.error("Error generando liquidacion:", error);
-    return { error: "No se pudo generar la liquidacion. Intenta de nuevo." };
+    return { error: "No se pudo generar la liquidación. Intentá de nuevo." };
   }
 
   revalidatePath("/liquidaciones");
@@ -75,7 +75,7 @@ export async function marcarPagada(
     if (!result.ok) return { error: result.error };
   } catch (error) {
     console.error("Error marcando liquidacion:", error);
-    return { error: "No se pudo actualizar. Intenta de nuevo." };
+    return { error: "No se pudo actualizar. Intentá de nuevo." };
   }
 
   revalidatePath(`/liquidaciones/${id}`);

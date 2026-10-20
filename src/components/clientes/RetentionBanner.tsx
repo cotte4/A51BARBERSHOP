@@ -63,7 +63,7 @@ export default function RetentionBanner({ candidates }: RetentionBannerProps) {
               >
                 <span className="font-medium text-white">{client.name}</span>
                 <span className="text-xs text-amber-300">
-                  {daysSince !== null ? `${daysSince} dias` : "Sin fecha"}
+                  {daysSince !== null ? `${daysSince} días` : "Sin fecha"}
                 </span>
               </Link>
             </li>

@@ -39,7 +39,7 @@ export default function RetentionPipelineBoard({ rows }: RetentionPipelineBoardP
                         year: "numeric",
                         timeZone: "America/Argentina/Buenos_Aires",
                       }).format(new Date(row.client.lastVisitAt))}`
-                    : "Sin ultima visita registrada"}
+                    : "Sin última visita registrada"}
                 </p>
               </div>
               <Link

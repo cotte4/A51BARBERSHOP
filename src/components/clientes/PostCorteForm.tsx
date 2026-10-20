@@ -173,7 +173,7 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
           const data = (await res.json()) as { url: string };
           uploadedUrls.push(data.url);
         } catch {
-          setError("No se pudo subir la foto. Verifica la conexion e intenta otra vez.");
+          setError("No se pudo subir la foto. Verificá la conexión e intentá otra vez.");
           setUploadProgress(null);
           return;
         }
@@ -237,7 +237,7 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
               Libro de cortes
             </p>
-            <h3 className="mt-1 text-lg font-semibold text-white">Que paso en esta sesion</h3>
+            <h3 className="mt-1 text-lg font-semibold text-white">Que paso en esta sesión</h3>
           </div>
         </div>
 
@@ -249,11 +249,11 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
             id="barberNotes"
             name="barberNotes"
             rows={4}
-            placeholder="Ej: pidio degradado mas alto, vino apurado, mantener laterales cortos, ofrecer producto nuevo..."
+            placeholder="Ej: pidió degradado más alto, vino apurado, mantener laterales cortos, ofrecer producto nuevo..."
             className="w-full resize-none rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60"
           />
           <p className="mt-2 text-xs text-zinc-500">
-            Deja una nota corta y accionable para el proximo barbero.
+            Dejá una nota corta y accionable para el próximo barbero.
           </p>
         </div>
 
@@ -272,7 +272,7 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
           <div className="mb-1.5 space-y-1">
             <label className="block text-sm font-medium text-zinc-300">Tags</label>
             <p className="text-xs text-zinc-500">
-              Marca rapido el tipo de corte, contexto o comportamiento.
+              Marcá rápido el tipo de corte, contexto o comportamiento.
             </p>
           </div>
 
@@ -345,7 +345,7 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
           <label className="mb-1.5 block text-sm font-medium text-zinc-300">Propina</label>
           <PropinaSelector value={propina} onChange={setPropina} />
           <p className="mt-2 text-xs text-zinc-500">
-            Usalo como termometro rapido de la experiencia.
+            Usalo como termometro rápido de la experiencia.
           </p>
         </div>
 
@@ -353,7 +353,7 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
           <div className="mb-1.5 space-y-1">
             <label className="block text-sm font-medium text-zinc-300">Fotos del corte</label>
             <p className="text-xs text-zinc-500">
-              Una buena foto convierte este corte en referencia real para la proxima visita.
+              Una buena foto convierte este corte en referencia real para la próxima visita.
             </p>
           </div>
 
@@ -429,7 +429,7 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
         disabled={isSubmitting}
         className="neon-button flex h-14 w-full items-center justify-center rounded-[20px] text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {statusText ?? "Cerrar y guardar sesion"}
+        {statusText ?? "Cerrar y guardar sesión"}
       </button>
     </form>
   );

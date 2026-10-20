@@ -79,12 +79,12 @@ export default function GastoForm({
               Gasto fijo
             </p>
             <p className="mt-3 text-sm text-zinc-400">
-              La combinacion de fecha, categoria y recurrencia define como entra en cierres y
+              La combinacion de fecha, categoría y recurrencia define como entra en cierres y
               seguimiento mensual.
             </p>
           </div>
           <div className="rounded-[20px] bg-zinc-900 px-4 py-3 text-sm text-zinc-300 ring-1 ring-zinc-700">
-            <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Lectura rapida</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Lectura rápida</p>
             <p className="mt-2">{modalidad}</p>
           </div>
         </div>
@@ -102,7 +102,7 @@ export default function GastoForm({
                 onChange={(event) => setCategoriaId(event.target.value)}
                 className="min-h-[48px] rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-sm text-white focus:border-[#8cff59]/60 focus:outline-none"
               >
-                <option value="">Sin categoria</option>
+                <option value="">Sin categoría</option>
                 {categorias.map((categoria) => (
                   <option key={categoria.id} value={categoria.id}>
                     {categoria.nombre}
@@ -226,7 +226,7 @@ export default function GastoForm({
                 rows={3}
                 value={notas}
                 onChange={(event) => setNotas(event.target.value)}
-                placeholder="Informacion adicional, vencimiento o aclaraciones."
+                placeholder="Información adicional, vencimiento o aclaraciones."
                 className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-[#8cff59]/60 focus:outline-none"
               />
             </div>
@@ -237,13 +237,13 @@ export default function GastoForm({
               Impacto
             </p>
             <div className="mt-4 space-y-3">
-              <SummaryRow label="Descripcion" value={descripcion.trim() || "Pendiente"} />
+              <SummaryRow label="Descripción" value={descripcion.trim() || "Pendiente"} />
               <SummaryRow label="Monto" value={formatARS(Number(monto) || 0)} strong />
               <SummaryRow label="Modalidad" value={modalidad} />
               <SummaryRow label="Frecuencia" value={frecuenciaTexto} />
               <SummaryRow
-                label="Categoria"
-                value={categoriaNombre ?? "Sin categoria"}
+                label="Categoría"
+                value={categoriaNombre ?? "Sin categoría"}
               />
               <SummaryRow label="Notas" value={notas.trim() ? "Con observaciones" : "Sin notas"} />
             </div>

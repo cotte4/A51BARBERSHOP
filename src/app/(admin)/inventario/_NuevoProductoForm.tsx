@@ -43,7 +43,7 @@ export default function NuevoProductoForm() {
           name="descripcion"
           rows={2}
           className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-white placeholder:text-zinc-500 focus:border-[#8cff59]/60 focus:outline-none"
-          placeholder="Descripcion del producto"
+          placeholder="Descripción del producto"
         />
       </div>
 
@@ -87,7 +87,7 @@ export default function NuevoProductoForm() {
 
       <div>
         <label htmlFor="stockMinimo" className="mb-1 block text-sm font-medium text-zinc-300">
-          Stock minimo
+          Stock mínimo
         </label>
         <input
           id="stockMinimo"

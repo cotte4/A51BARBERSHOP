@@ -47,7 +47,7 @@ export default function MovimientoForm({ registrarAction }: Props) {
             Cantidad
           </label>
           <p className="mt-1 text-xs leading-5 text-zinc-500">
-            Siempre usa un numero positivo. El tipo define si entra stock o si se descuenta.
+            Siempre usá un número positivo. El tipo define si entra stock o si se descuenta.
           </p>
           <input
             id="cantidad"
@@ -65,9 +65,9 @@ export default function MovimientoForm({ registrarAction }: Props) {
         </div>
 
         <div className="rounded-[24px] border border-zinc-800 bg-zinc-950/60 p-4">
-          <p className="text-sm font-medium text-zinc-200">Accion</p>
+          <p className="text-sm font-medium text-zinc-200">Acción</p>
           <p className="mt-1 text-xs leading-5 text-zinc-500">
-            Elegi el sentido del movimiento. No hace falta escribir el tipo.
+            Elegí el sentido del movimiento. No hace falta escribir el tipo.
           </p>
           <div className="mt-4 grid gap-2">
             <button

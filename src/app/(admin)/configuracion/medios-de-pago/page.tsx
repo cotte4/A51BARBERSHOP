@@ -57,13 +57,13 @@ export default async function MediosDePagoPage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-2xl">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-400">
-                Configuracion financiera
+                Configuración financiera
               </p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">
                 Medios de pago
               </h1>
               <p className="mt-3 max-w-xl text-sm text-zinc-400">
-                Ordena comisiones, netos y estados de activacion para que caja y cierres lean
+                Ordena comisiones, netos y estados de activación para que caja y cierres lean
                 siempre el mismo dato.
               </p>
             </div>
@@ -98,7 +98,7 @@ export default async function MediosDePagoPage() {
 
       {lista.length === 0 ? (
         <div className="panel-card rounded-[28px] p-8 text-center">
-          <p className="text-zinc-400">No hay medios de pago cargados todavia.</p>
+          <p className="text-zinc-400">No hay medios de pago cargados todavía.</p>
           <Link
             href="/configuracion/medios-de-pago/nuevo"
             className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-zinc-800 px-4 text-sm font-medium text-white transition hover:bg-zinc-700"

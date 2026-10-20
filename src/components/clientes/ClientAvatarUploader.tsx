@@ -60,7 +60,7 @@ export default function ClientAvatarUploader({ initialValue, clientId }: ClientA
 
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-white">Foto o avatar del cliente</p>
-          <p className="mt-1 text-xs text-zinc-500">Sirve para reconocerlo rapido en clientes y su perfil.</p>
+          <p className="mt-1 text-xs text-zinc-500">Sirve para reconocerlo rápido en clientes y su perfil.</p>
         </div>
 
         <div className="flex flex-wrap gap-2">

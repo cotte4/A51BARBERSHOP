@@ -390,7 +390,7 @@ export default function AtencionForm({
             <p className="mt-1 text-sm text-zinc-400">
               {barberoBloqueado
                 ? "Tu perfil ya viene seleccionado."
-                : "Elegi quien esta atendiendo; define la comision principal del movimiento."}
+                : "Elegí quien está atendiendo; define la comision principal del movimiento."}
             </p>
           </div>
           {state.fieldErrors?.barberoId ? (
@@ -407,7 +407,7 @@ export default function AtencionForm({
               nombre={item.nombre}
               subtitle={
                 item.id === preselectedBarberoId && !isAdmin
-                  ? "Sesion activa"
+                  ? "Sesión activa"
                   : Number(item.porcentajeComision ?? 0) > 0
                     ? `${item.porcentajeComision}% comision`
                     : "Listo para cobrar"
@@ -426,7 +426,7 @@ export default function AtencionForm({
             <p className="eyebrow text-xs font-semibold">Paso 2</p>
             <h3 className="font-display mt-2 text-2xl font-semibold text-white">Cliente</h3>
             <p className="mt-1 text-sm text-zinc-400">
-              Opcional en caja comun. Si el cliente es Marciano, habilita consumiciones incluidas y deja trazabilidad del movimiento.
+              Opcional en caja común. Si el cliente es Marciano, habilita consumiciones incluidas y deja trazabilidad del movimiento.
             </p>
           </div>
           {state.fieldErrors?.clientId ? (
@@ -437,11 +437,11 @@ export default function AtencionForm({
         <div className="mt-5 rounded-[26px] border border-zinc-800 bg-zinc-950/25 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <label htmlFor="clientSearch" className="text-sm font-medium text-zinc-200">
-              Buscar cliente por nombre o telefono
+              Buscar cliente por nombre o teléfono
             </label>
             <div className="flex flex-wrap gap-2 text-xs font-semibold">
               <span className="rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-zinc-300">
-                Caja comun
+                Caja común
               </span>
               <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-emerald-200">
                 Marciano habilita consumiciones a $0
@@ -474,7 +474,7 @@ export default function AtencionForm({
 
           {!selectedClient ? (
             <div className="mt-3 rounded-[20px] border border-dashed border-zinc-700 bg-zinc-950/40 px-4 py-3 text-sm text-zinc-400">
-              Si no elegis cliente, la atencion queda como caja comun y no podras aplicar beneficios Marciano.
+              Si no elegís cliente, la atención queda como caja común y no podrás aplicar beneficios Marciano.
             </div>
           ) : null}
 
@@ -499,7 +499,7 @@ export default function AtencionForm({
                   </div>
                   <div>
                     <p className="font-semibold text-white">{selectedClient.name}</p>
-                    <p className="mt-1 text-zinc-300">{selectedClient.phoneRaw ?? "Sin telefono"}</p>
+                    <p className="mt-1 text-zinc-300">{selectedClient.phoneRaw ?? "Sin teléfono"}</p>
                   </div>
                 </div>
                 <span
@@ -509,7 +509,7 @@ export default function AtencionForm({
                       : "bg-zinc-800 text-zinc-200"
                   }`}
                 >
-                  {selectedClient.esMarciano ? "Marciano activo" : "Cliente comun"}
+                  {selectedClient.esMarciano ? "Marciano activo" : "Cliente común"}
                 </span>
               </div>
 
@@ -528,7 +528,7 @@ export default function AtencionForm({
                   </p>
                   <p className="mt-2 text-sm font-semibold text-white">
                     {selectedClient.esMarciano
-                      ? "Ya podes marcar productos incluidos a $0"
+                      ? "Ya podés marcar productos incluidos a $0"
                       : "Solo productos cobrados normalmente"}
                   </p>
                 </div>
@@ -566,7 +566,7 @@ export default function AtencionForm({
                       </div>
                       <div>
                         <p className="font-medium text-white">{client.name}</p>
-                        <p className="mt-1 text-sm text-zinc-400">{client.phoneRaw ?? "Sin telefono"}</p>
+                        <p className="mt-1 text-sm text-zinc-400">{client.phoneRaw ?? "Sin teléfono"}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -577,7 +577,7 @@ export default function AtencionForm({
                             : "bg-zinc-800 text-zinc-200"
                         }`}
                       >
-                        {client.esMarciano ? "Marciano" : "Comun"}
+                        {client.esMarciano ? "Marciano" : "Común"}
                       </span>
                       <span className="text-xs font-medium text-zinc-400">Seleccionar</span>
                     </div>
@@ -809,7 +809,7 @@ export default function AtencionForm({
                             Se descuenta del beneficio y suma stock consumido, no del total a cobrar.
                           </>
                         ) : canUseMarcianoConsumiciones ? (
-                          "Podes incluir esta consumicion dentro del beneficio Marciano."
+                          "Podés incluir esta consumición dentro del beneficio Marciano."
                         ) : (
                           "Seleccioná un cliente Marciano para habilitar la consumición incluida."
                         )}
@@ -833,7 +833,7 @@ export default function AtencionForm({
             </div>
           ) : (
             <div className="mt-4 rounded-[22px] border border-dashed border-zinc-700 bg-zinc-950/40 px-4 py-4 text-sm text-zinc-400">
-              Sin productos agregados. Si el cliente tambien compra productos o usa una consumicion, lo sumas aca.
+              Sin productos agregados. Si el cliente también compra productos o usa una consumición, lo sumas acá.
             </div>
           )}
 
@@ -910,7 +910,7 @@ export default function AtencionForm({
                 <p className="mt-2 text-sm text-zinc-400">
                   {allowManualPrice
                     ? "Ajuste manual activo. Usalo solo si hay descuento o una excepcion."
-                    : "Bloqueado en automatico. Solo se habilita si queres aplicar un ajuste."}
+                    : "Bloqueado en automático. Solo se habilita si querés aplicar un ajuste."}
                 </p>
               </div>
               <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-zinc-200">
@@ -933,7 +933,7 @@ export default function AtencionForm({
                     : "border border-zinc-700 bg-zinc-950 text-zinc-300 hover:bg-zinc-900"
                 }`}
               >
-                {allowManualPrice ? "Volver al automatico" : "Permitir ajuste manual"}
+                {allowManualPrice ? "Volver al automático" : "Permitir ajuste manual"}
               </button>
               {allowManualPrice ? (
                 <button

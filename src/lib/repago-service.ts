@@ -132,7 +132,7 @@ export async function registrarCuotaRepagoMemas(
   }
 
   if (!Number.isFinite(input.tcDia) || input.tcDia <= 0) {
-    return { ok: false, error: "El tipo de cambio del dia debe ser mayor a 0." };
+    return { ok: false, error: "El tipo de cambio del día debe ser mayor a 0." };
   }
 
   const hoy = fechaHoyArgentina();

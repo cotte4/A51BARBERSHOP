@@ -25,8 +25,8 @@ export type GastoRapidoActionState = {
 const gastoRapidoSchema = z.object({
   categoriaVisual: z
     .string()
-    .min(1, "Elegi una categoria")
-    .refine((value) => GASTO_RAPIDO_EMOJIS.has(value), "Categoria invalida"),
+    .min(1, "Elegí una categoría")
+    .refine((value) => GASTO_RAPIDO_EMOJIS.has(value), "Categoría inválida"),
   monto: z.coerce.number().positive("El monto debe ser mayor a 0"),
   nota: z.string().trim().max(160, "La nota no puede superar 160 caracteres").optional(),
   returnTo: z.string().default("/gastos-rapidos"),
@@ -56,12 +56,12 @@ export async function registrarGastoRapidoAction(
   formData: FormData
 ): Promise<GastoRapidoActionState> {
   if (!(await requireAdminSession())) {
-    return { error: "Solo el admin puede registrar gastos rapidos." };
+    return { error: "Solo el admin puede registrar gastos rápidos." };
   }
 
   if (!(await hasGastosRapidosSchema())) {
     return {
-      error: "Falta aplicar la migracion de Phase 6. Corre db:push antes de registrar gastos rapidos.",
+      error: "Falta aplicar la migracion de Phase 6. Corre db:push antes de registrar gastos rápidos.",
     };
   }
 
@@ -87,7 +87,7 @@ export async function registrarGastoRapidoAction(
   const categoria = getCategoriaGastoRapidoByEmoji(categoriaVisual);
 
   if (!categoria) {
-    return { fieldErrors: { categoriaVisual: "Categoria invalida" } };
+    return { fieldErrors: { categoriaVisual: "Categoría inválida" } };
   }
 
   await db.insert(gastos).values({

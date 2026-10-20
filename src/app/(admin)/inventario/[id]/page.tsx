@@ -87,7 +87,7 @@ export default async function ProductoDetallePage({ params }: Props) {
                   </h1>
                   {producto.esConsumicion ? (
                     <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
-                      Consumicion Marciano
+                      Consumición Marciano
                     </span>
                   ) : null}
                   {stockBajo ? (
@@ -122,7 +122,7 @@ export default async function ProductoDetallePage({ params }: Props) {
             <StatCard
               label="Stock actual"
               value={stockActual}
-              helper={stockBajo ? `Reponer pronto (minimo ${stockMinimo})` : `Minimo ${stockMinimo}`}
+              helper={stockBajo ? `Reponer pronto (mínimo ${stockMinimo})` : `Mínimo ${stockMinimo}`}
               tone={
                 stockBajo
                   ? "border-amber-500/20 bg-amber-500/10 text-white"
@@ -157,8 +157,8 @@ export default async function ProductoDetallePage({ params }: Props) {
                     Movimiento manual
                   </h2>
                   <p className="mt-1 text-sm leading-6 text-zinc-400">
-                    Solo administracion puede tocar el stock manualmente. Cada carga queda
-                    registrada para auditoria.
+                    Solo administración puede tocar el stock manualmente. Cada carga queda
+                    registrada para auditoría.
                   </p>
                 </div>
               </div>
@@ -178,7 +178,7 @@ export default async function ProductoDetallePage({ params }: Props) {
                 <div>
                   <p className="eyebrow text-xs font-semibold">Historial</p>
                   <h2 className="font-display mt-2 text-2xl font-semibold text-white">
-                    Ultimos movimientos
+                    Últimos movimientos
                   </h2>
                   <p className="mt-1 text-sm leading-6 text-zinc-400">
                     La linea de tiempo muestra como se movio este producto en el tiempo.

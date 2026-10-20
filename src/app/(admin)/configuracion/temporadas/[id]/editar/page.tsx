@@ -40,13 +40,13 @@ export default async function EditarTemporadaPage({
             </Link>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
-                Edicion de periodo
+                Edición de periodo
               </p>
               <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-white">
                 {temporada.nombre ?? "Sin nombre"}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300">
-                Ajusta la ventana proyectada sin perder el contexto de negocio. Si cambia la
+                Ajustá la ventana proyectada sin perder el contexto de negocio. Si cambia la
                 fecha o la expectativa, el dashboard debería leerlo al instante.
               </p>
             </div>

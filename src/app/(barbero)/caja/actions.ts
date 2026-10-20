@@ -128,7 +128,7 @@ export async function registrarAtencion(
 ): Promise<AtencionFormState> {
   const actor = await getCajaActorContext();
   if (!actor) {
-    return { error: "Debes iniciar sesión para registrar atenciones." };
+    return { error: "Tenés que iniciar sesión para registrar atenciones." };
   }
 
   // Leer campos
@@ -145,9 +145,9 @@ export async function registrarAtencion(
 
   // Validaciones
   const fieldErrors: AtencionFormState["fieldErrors"] = {};
-  if (!barberoId) fieldErrors.barberoId = "Selecciona un barbero";
-  if (!servicioId) fieldErrors.servicioId = "Selecciona un servicio";
-  if (!medioPagoId) fieldErrors.medioPagoId = "Selecciona un medio de pago";
+  if (!barberoId) fieldErrors.barberoId = "Seleccioná un barbero";
+  if (!servicioId) fieldErrors.servicioId = "Seleccioná un servicio";
+  if (!medioPagoId) fieldErrors.medioPagoId = "Seleccioná un medio de pago";
   if (precioCobradoStr === "" || precioCobradoStr === null || isNaN(Number(precioCobradoStr))) {
     fieldErrors.precioCobrado = "El precio es requerido";
   } else if (Number(precioCobradoStr) <= 0) {
@@ -186,7 +186,7 @@ export async function registrarAtencion(
   } catch (e) {
     console.error("Error registrando atención:", e);
     return {
-      error: e instanceof Error ? e.message : "No se pudo registrar la atención. Intenta de nuevo.",
+      error: e instanceof Error ? e.message : "No se pudo registrar la atención. Intentá de nuevo.",
     };
   }
 
@@ -216,7 +216,7 @@ export async function registrarAtencionExpressAction(
 ): Promise<AtencionRapidaState> {
   const actor = await getCajaActorContext();
 
-  if (!actor) return { error: "Debes iniciar sesión para registrar una atención." };
+  if (!actor) return { error: "Tenés que iniciar sesión para registrar una atención." };
   if (await hasCajaCerradaHoy()) return { error: "La caja del día ya fue cerrada." };
 
   const barberoId = await resolveCajaActorBarberoIdForActor(actor);
@@ -227,8 +227,8 @@ export async function registrarAtencionExpressAction(
   const precioCobradoStr = formData.get("precioCobrado") as string | null;
   const returnTo = formData.get("returnTo") as string | null;
 
-  if (!servicioId) return { error: "Selecciona un servicio." };
-  if (!medioPagoId) return { error: "Selecciona un medio de pago." };
+  if (!servicioId) return { error: "Seleccioná un servicio." };
+  if (!medioPagoId) return { error: "Seleccioná un medio de pago." };
 
   const precioCobrado = Number(precioCobradoStr ?? 0);
   if (!precioCobradoStr || isNaN(precioCobrado) || precioCobrado <= 0) {
@@ -240,7 +240,7 @@ export async function registrarAtencionExpressAction(
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("Error registrando atención express:", message);
-    return { error: "No se pudo registrar la atención. Intenta de nuevo." };
+    return { error: "No se pudo registrar la atención. Intentá de nuevo." };
   }
 
   revalidateCajaViews({ includeDashboard: true });
@@ -254,7 +254,7 @@ export async function editarAtencion(
 ): Promise<AtencionFormState> {
   const actor = await getCajaActorContext();
   if (!actor) {
-    return { error: "Debes iniciar sesión para editar atenciones." };
+    return { error: "Tenés que iniciar sesión para editar atenciones." };
   }
 
   const barberoId = formData.get("barberoId") as string;
@@ -280,9 +280,9 @@ export async function editarAtencion(
   }
 
   const fieldErrors: AtencionFormState["fieldErrors"] = {};
-  if (!barberoId) fieldErrors.barberoId = "Selecciona un barbero";
-  if (!servicioId) fieldErrors.servicioId = "Selecciona un servicio";
-  if (!medioPagoId) fieldErrors.medioPagoId = "Selecciona un medio de pago";
+  if (!barberoId) fieldErrors.barberoId = "Seleccioná un barbero";
+  if (!servicioId) fieldErrors.servicioId = "Seleccioná un servicio";
+  if (!medioPagoId) fieldErrors.medioPagoId = "Seleccioná un medio de pago";
   if (precioCobradoStr === "" || isNaN(Number(precioCobradoStr))) {
     fieldErrors.precioCobrado = "El precio es requerido";
   } else if (Number(precioCobradoStr) <= 0) {
@@ -375,7 +375,7 @@ export async function editarAtencion(
   } catch (e) {
     console.error("Error editando atencion:", e);
     return {
-      error: e instanceof Error ? e.message : "No se pudo actualizar la atencion. Intenta de nuevo.",
+      error: e instanceof Error ? e.message : "No se pudo actualizar la atención. Intentá de nuevo.",
     };
   }
 
@@ -428,7 +428,7 @@ export async function anularAtencion(
     });
   } catch (e) {
     console.error("Error anulando atencion:", e);
-    return { error: "No se pudo anular la atención. Intenta de nuevo." };
+    return { error: "No se pudo anular la atención. Intentá de nuevo." };
   }
 
   revalidateCajaViews();
@@ -470,7 +470,7 @@ export async function anularVentaProducto(
   } catch (e) {
     console.error("Error anulando venta de producto:", e);
     return {
-      error: e instanceof Error ? e.message : "No se pudo anular la venta. Intenta de nuevo.",
+      error: e instanceof Error ? e.message : "No se pudo anular la venta. Intentá de nuevo.",
     };
   }
 
@@ -648,7 +648,7 @@ export async function cerrarCaja(
       await generarLiquidacionesDiariasParaFecha(
         {
           fecha: fechaHoy,
-          notas: `Auto-liquidacion diaria desde cierre ${fechaHoy}.`,
+          notas: `Auto-liquidación diaria desde cierre ${fechaHoy}.`,
         },
         tx
       );
@@ -660,7 +660,7 @@ export async function cerrarCaja(
         ? e.message
         : e instanceof Error && e.message.includes("no cierran contra el bruto")
           ? e.message
-          : "No se pudo cerrar la caja. Intenta de nuevo.",
+          : "No se pudo cerrar la caja. Intentá de nuevo.",
     };
   }
 
@@ -692,7 +692,7 @@ export async function registrarVentaProducto(
 
   // Validaciones
   const fieldErrors: VentaProductoFormState["fieldErrors"] = {};
-  if (!productoId) fieldErrors.productoId = "Selecciona un producto";
+  if (!productoId) fieldErrors.productoId = "Seleccioná un producto";
   if (!cantidadStr || isNaN(Number(cantidadStr)) || Number(cantidadStr) < 1) {
     fieldErrors.cantidad = "La cantidad debe ser al menos 1";
   }
@@ -701,14 +701,14 @@ export async function registrarVentaProducto(
   } else if (Number(precioCobradoStr) < 0) {
     fieldErrors.precioCobrado = "El precio no puede ser negativo";
   }
-  if (!medioPagoId) fieldErrors.medioPagoId = "Selecciona un medio de pago";
+  if (!medioPagoId) fieldErrors.medioPagoId = "Seleccioná un medio de pago";
 
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
   // Verificar sesión
   const actor = await getCajaActorContext();
   if (!actor) {
-    return { error: "Debes iniciar sesión para realizar esta operación." };
+    return { error: "Tenés que iniciar sesión para realizar esta operación." };
   }
   if (!actor.isAdmin && !actor.barberoId) {
     return { error: "Tu usuario no tiene un barbero activo vinculado." };
@@ -739,7 +739,7 @@ export async function registrarVentaProducto(
     }
   } catch (e) {
     console.error("Error registrando venta de producto:", e);
-    return { error: "No se pudo registrar la venta. Intenta de nuevo." };
+    return { error: "No se pudo registrar la venta. Intentá de nuevo." };
   }
 
   revalidateCajaViews({ includeInventario: true });

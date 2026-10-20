@@ -46,7 +46,7 @@ export default function RegistrarPagoForm({
         <div className="grid gap-3 sm:grid-cols-2">
           <PaymentTypeOption
             value="sena"
-            title="Sena"
+            title="Seña"
             helper="Primer compromiso para sacar el activo del radar y meterlo en curso."
             defaultChecked
           />
@@ -58,7 +58,7 @@ export default function RegistrarPagoForm({
           <PaymentTypeOption
             value="saldo_final"
             title="Saldo final"
-            helper="Cierra la compra y deja el activo completamente pagado."
+            helper="Cerrá la compra y deja el activo completamente pagado."
           />
           <PaymentTypeOption
             value="ajuste"

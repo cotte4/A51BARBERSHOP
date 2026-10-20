@@ -170,7 +170,7 @@ export default function TemporadaForm({
 
         <div className="panel-card rounded-[28px] p-5 sm:p-6 text-white">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
-            Lectura rapida
+            Lectura rápida
           </p>
           <div className="mt-4 space-y-3">
             <PreviewRow label="Temporada" value={nombre.trim() || "Pendiente"} strong />
@@ -180,7 +180,7 @@ export default function TemporadaForm({
             />
             <PreviewRow
               label="Ritmo proyectado"
-              value={cortesDiaProyectados ? `${cortesNumero} cortes/dia` : "Sin proyeccion"}
+              value={cortesDiaProyectados ? `${cortesNumero} cortes/dia` : "Sin proyección"}
             />
             <PreviewRow
               label="Precio estimado"

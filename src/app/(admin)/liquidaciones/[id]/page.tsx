@@ -82,7 +82,7 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
           <div className="bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.14),_transparent_36%),radial-gradient(circle_at_bottom_left,_rgba(140,255,89,0.06),_transparent_28%)] p-6 sm:p-7">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-2xl">
-                <p className="eyebrow text-xs">Liquidacion</p>
+                <p className="eyebrow text-xs">Liquidación</p>
                 <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                   {barbero?.nombre ?? "Sin barbero"}
                 </h1>
@@ -146,7 +146,7 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
           <section className="panel-card rounded-[28px] p-5">
             <p className="eyebrow text-[10px]">Desglose</p>
             <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-white">
-              Lo que compone esta liquidacion
+              Lo que compone esta liquidación
             </h2>
             <div className="mt-5 flex flex-col gap-3">
               <Row label="Cortes realizados" value={String(liq.totalCortes ?? 0)} plain />
@@ -167,12 +167,12 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
             <section className="panel-card rounded-[28px] p-5">
               <p className="eyebrow text-[10px]">Estado</p>
               <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-white">
-                Pago y confirmacion
+                Pago y confirmación
               </h2>
 
               {liq.pagado ? (
                 <div className="mt-5 rounded-[22px] border border-emerald-500/20 bg-emerald-500/10 p-4">
-                  <p className="text-sm font-semibold text-emerald-300">Ya esta cerrada</p>
+                  <p className="text-sm font-semibold text-emerald-300">Ya está cerrada</p>
                   <p className="mt-1 text-sm text-zinc-200">
                     Fecha de pago: <span className="font-semibold text-white">{formatFecha(liq.fechaPago)}</span>
                   </p>
@@ -181,7 +181,7 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
                 <div className="mt-5 rounded-[22px] border border-amber-500/20 bg-amber-500/10 p-4">
                   <p className="text-sm font-semibold text-amber-300">Pendiente de pago</p>
                   <p className="mt-1 text-sm leading-6 text-zinc-200">
-                    Revisá el monto final antes de confirmar. Una vez pagada, la liquidacion pasa al
+                    Revisá el monto final antes de confirmar. Una vez pagada, la liquidación pasa al
                     historial y queda marcada con fecha.
                   </p>
                   <div className="mt-4">
@@ -194,7 +194,7 @@ export default async function LiquidacionDetallePage({ params }: LiquidacionPage
             <section className="panel-card rounded-[28px] p-5">
               <p className="eyebrow text-[10px]">Contexto</p>
               <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-white">
-                Metadatos utiles
+                Metadatos útiles
               </h2>
               <div className="mt-5 flex flex-col gap-3">
                 <Row label="Barbero" value={barbero?.nombre ?? "Sin dato"} plain />

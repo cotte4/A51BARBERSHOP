@@ -47,7 +47,7 @@ export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionP
           Volver a caja
         </Link>
         <div className="panel-card rounded-[28px] p-6 text-center">
-          <p className="font-medium text-white">La caja del dia ya fue cerrada.</p>
+          <p className="font-medium text-white">La caja del día ya fue cerrada.</p>
           <p className="mt-1 text-sm text-zinc-400">No se pueden registrar nuevas atenciones.</p>
           <Link
             href={`/caja/cierre/${fechaHoy}`}
@@ -104,7 +104,7 @@ export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionP
         <div className="panel-card rounded-[28px] p-6 text-center">
           <p className="font-medium text-white">Tu usuario no tiene un barbero activo vinculado.</p>
           <p className="mt-1 text-sm text-zinc-400">
-            Vincula el usuario desde configuracion antes de registrar atenciones.
+            Vincula el usuario desde configuración antes de registrar atenciones.
           </p>
         </div>
       </div>
@@ -124,17 +124,17 @@ export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionP
         <h1 className="font-display mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
           {clientePreseleccionado
             ? `Cobrar a ${clientePreseleccionado.name}`
-            : "Nueva atencion"}
+            : "Nueva atención"}
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
-          Registra el servicio, los productos y el medio de pago. Si es un cliente Marciano, se
-          habilitan las consumiciones incluidas automaticamente.
+          Registrá el servicio, los productos y el medio de pago. Si es un cliente Marciano, se
+          habilitan las consumiciones incluidas automáticamente.
         </p>
       </section>
 
       {params.fromQuickAction ? (
         <div className="rounded-[22px] border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-zinc-200">
-          Configura el servicio y medio de pago por defecto del barbero para usar la accion rapida
+          Configura el servicio y medio de pago por defecto del barbero para usar la acción rápida
           sin pasar por este formulario.
         </div>
       ) : null}
@@ -181,7 +181,7 @@ export default async function NuevaAtencionPage({ searchParams }: NuevaAtencionP
             precioCobrado: params.precioCobrado,
             client: clientePreseleccionado,
           }}
-          submitLabel="Registrar atencion"
+          submitLabel="Registrar atención"
           cancelHref="/caja"
         />
       </div>

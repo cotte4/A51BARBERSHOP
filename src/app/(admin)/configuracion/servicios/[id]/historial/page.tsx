@@ -53,7 +53,7 @@ export default async function HistorialServicioPage({
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300">
                 El historial le da trazabilidad al precio base y evita que una correccion quede
-                escondida. Aca se ve el pulso real del servicio con fecha, valor y motivo.
+                escondida. Acá se ve el pulso real del servicio con fecha, valor y motivo.
               </p>
             </div>
           </div>
@@ -62,7 +62,7 @@ export default async function HistorialServicioPage({
             <SummaryCard label="Precio actual" value={formatARS(servicio.precioBase)} strong />
             <SummaryCard label="Movimientos" value={`${historial.length}`} />
             <SummaryCard
-              label="Ultimo cambio"
+              label="Último cambio"
               value={ultimoCambio ? formatFecha(ultimoCambio.vigentaDesde) : "Sin cambios"}
             />
             <SummaryCard
@@ -75,7 +75,7 @@ export default async function HistorialServicioPage({
 
       {historial.length === 0 ? (
         <section className="panel-card rounded-[28px] p-8 text-center">
-          <p className="text-zinc-400">Todavia no hay movimientos de precio para este servicio.</p>
+          <p className="text-zinc-400">Todavía no hay movimientos de precio para este servicio.</p>
           <Link
             href={`/configuracion/servicios/${id}/editar`}
             className="neon-button mt-4 inline-flex min-h-[48px] items-center justify-center rounded-[20px] px-5 text-sm font-medium transition"

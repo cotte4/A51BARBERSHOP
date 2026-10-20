@@ -88,10 +88,10 @@ export default function QuickTurnoSlotCard({
         <form id={panelId} action={formAction} className="space-y-3 border-t border-zinc-800/80 px-3.5 pb-3.5 pt-3">
           <div className="space-y-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8cff59]">
-              Alta rapida
+              Alta rápida
             </p>
             <p className="text-xs text-zinc-400">
-              Carga el nombre y, si lo tenes, el telefono para confirmar este hueco al instante.
+              Cargá el nombre y, si lo tenés, el teléfono para confirmar este hueco al instante.
             </p>
           </div>
 
@@ -111,7 +111,7 @@ export default function QuickTurnoSlotCard({
               name="clienteTelefonoRaw"
               autoComplete="tel"
               inputMode="tel"
-              placeholder="Telefono (opcional)"
+              placeholder="Teléfono (opcional)"
               className="h-11 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500"
             />
           </div>

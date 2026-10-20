@@ -80,7 +80,7 @@ export async function confirmarTurnoAction(
     return { error: "Turno no encontrado." };
   }
   if (!allowed) {
-    return { error: "Solo podes gestionar tus propios turnos." };
+    return { error: "Solo podés gestionar tus propios turnos." };
   }
   if (turno.estado !== "pendiente") {
     return { error: "Solo se pueden confirmar turnos pendientes." };
@@ -125,7 +125,7 @@ export async function rechazarTurnoAction(
     return { error: "Turno no encontrado." };
   }
   if (!allowed) {
-    return { error: "Solo podes gestionar tus propios turnos." };
+    return { error: "Solo podés gestionar tus propios turnos." };
   }
   if (turno.estado === "cancelado" || turno.estado === "completado") {
     return { error: "Ese turno ya no puede rechazarse." };
@@ -160,18 +160,18 @@ export async function clienteLlegoAction(
     return { error: "Turno no encontrado." };
   }
   if (!actor) {
-    return { error: "Necesitas iniciar sesion para avisar la llegada." };
+    return { error: "Necesitás iniciar sesión para avisar la llegada." };
   }
   if (!allowed) {
-    return { error: "Solo podes gestionar tus propios turnos." };
+    return { error: "Solo podés gestionar tus propios turnos." };
   }
   if (turno.estado !== "confirmado") {
-    return { error: "Solo podes avisar llegada en turnos confirmados." };
+    return { error: "Solo podés avisar llegada en turnos confirmados." };
   }
 
   const cancion = turno.sugerenciaCancion?.trim();
   if (!cancion) {
-    return { error: "Ese turno no tiene sugerencia de cancion." };
+    return { error: "Ese turno no tiene sugerencia de canción." };
   }
 
   try {
@@ -200,28 +200,28 @@ export async function clienteLlegoAction(
     }
 
     if (result.kind === "queued_in_jam") {
-      return { success: "La llegada entro a Jam y ya participa de la cola compartida." };
+      return { success: "La llegada entró a Jam y ya participa de la cola compartida." };
     }
 
     if (result.kind === "blocked_by_manual_dj") {
-      return { success: "DJ esta activo. La cancion quedo como propuesta para no pisar al operador." };
+      return { success: "DJ está activo. La canción quedó como propuesta para no pisar al operador." };
     }
 
     if (result.kind === "waiting_for_recovery") {
-      return { success: `La llegada quedo visible, pero Musica espera recuperacion: ${result.reason}` };
+      return { success: `La llegada quedó visible, pero Música espera recuperación: ${result.reason}` };
     }
 
     if (result.kind === "missing_track_uri") {
       return {
         success:
-          "La llegada quedo registrada, pero falta vincular la track de Spotify para sonar automatico.",
+          "La llegada quedó registrada, pero falta vincular la track de Spotify para sonar automático.",
       };
     }
 
-    return { success: "La llegada quedo como propuesta en Musica." };
+    return { success: "La llegada quedó como propuesta en Música." };
   } catch (error) {
     console.error("Error procesando llegada en turnos:", error);
-    return { error: "No pude procesar la llegada ni hablar con Musica. Intenta de nuevo." };
+    return { error: "No pude procesar la llegada ni hablar con Música. Intentá de nuevo." };
   }
 }
 
@@ -235,10 +235,10 @@ export async function crearTurnoRapidoAction(
 ): Promise<QuickTurnoCreateState> {
   const actor = await getTurnosActorContext();
   if (!actor) {
-    return { error: "Debes iniciar sesion para crear turnos." };
+    return { error: "Tenés que iniciar sesión para crear turnos." };
   }
   if (!canManageTurnoForBarbero(actor, barberoId)) {
-    return { error: "Solo podes crear turnos para tu propia agenda." };
+    return { error: "Solo podés crear turnos para tu propia agenda." };
   }
 
   const clienteNombre = String(formData.get("clienteNombre") ?? "").trim();
@@ -253,11 +253,11 @@ export async function crearTurnoRapidoAction(
   }
 
   if (fecha < getFechaHoyArgentina()) {
-    return { error: "No podes cargar turnos en fechas pasadas." };
+    return { error: "No podés cargar turnos en fechas pasadas." };
   }
 
   if (await isFechaCerrada(fecha)) {
-    return { error: "Ese dia ya fue cerrado y no admite nuevos turnos." };
+    return { error: "Ese día ya fue cerrado y no admite nuevos turnos." };
   }
 
   const horaNormalizada = normalizeTimeInput(horaInicio);
@@ -314,7 +314,7 @@ export async function crearTurnoRapidoAction(
     });
   } catch (error) {
     console.error("Error creando turno rapido:", error);
-    return { error: "No se pudo guardar el turno rapido." };
+    return { error: "No se pudo guardar el turno rápido." };
   }
 
   revalidatePath("/turnos");
@@ -330,7 +330,7 @@ export async function cobrarYCompletarTurnoAction(
 ): Promise<TurnoActionState> {
   const actor = await getTurnosActorContext();
   if (!actor) {
-    return { error: "Necesitas iniciar sesion." };
+    return { error: "Necesitás iniciar sesión." };
   }
 
   const medioPagoId = String(formData.get("medioPagoId") ?? "").trim();

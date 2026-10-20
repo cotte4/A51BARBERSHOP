@@ -46,7 +46,7 @@ export default async function EditarBarberoPage({ params }: EditarBarberoPagePro
         </Link>
         <div className="mt-4 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
           <div className="max-w-2xl">
-            <p className="eyebrow">Configuracion / Barberos</p>
+            <p className="eyebrow">Configuración / Barberos</p>
             <h2 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
               Editar: {barbero.nombre}
             </h2>
@@ -58,7 +58,7 @@ export default async function EditarBarberoPage({ params }: EditarBarberoPagePro
 
           <div className="rounded-[24px] border border-amber-400/20 bg-amber-400/10 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">
-              Accion sensible
+              Acción sensible
             </p>
             <p className="mt-2 text-sm text-amber-50/80">
               Activar o desactivar este perfil impacta caja y liquidaciones.

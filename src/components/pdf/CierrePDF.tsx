@@ -150,10 +150,10 @@ export function CierrePDF({ data }: { data: CierrePDFData }) {
 
         {/* Totales generales */}
         <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>Totales del dia</Text>
+          <Text style={pdfStyles.sectionTitle}>Totales del día</Text>
 
           <View style={pdfStyles.subtotalRow}>
-            <Text style={pdfStyles.subtotalLabel}>Total bruto del dia</Text>
+            <Text style={pdfStyles.subtotalLabel}>Total bruto del día</Text>
             <Text style={pdfStyles.subtotalValue}>{ars(totalBruto)}</Text>
           </View>
 
@@ -171,7 +171,7 @@ export function CierrePDF({ data }: { data: CierrePDFData }) {
           <View style={pdfStyles.dividerRow} />
 
           <View style={pdfStyles.subtotalRow}>
-            <Text style={pdfStyles.subtotalLabelBold}>Caja neta del dia</Text>
+            <Text style={pdfStyles.subtotalLabelBold}>Caja neta del día</Text>
             <Text style={pdfStyles.subtotalValueBold}>{ars(totalNeto)}</Text>
           </View>
 

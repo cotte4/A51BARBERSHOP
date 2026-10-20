@@ -41,7 +41,7 @@ export async function generarLiquidacionDesdeInput(
     if (existente) {
       return {
         ok: false,
-        error: "Ya existe una liquidacion para este barbero en ese periodo.",
+        error: "Ya existe una liquidación para este barbero en ese periodo.",
       };
     }
 
@@ -56,7 +56,7 @@ export async function generarLiquidacionDesdeInput(
     }
 
     if (barbero.rol === "admin") {
-      return { ok: false, error: "Pinky no se liquida como empleado. Elegi un barbero liquidable." };
+      return { ok: false, error: "Pinky no se liquida como empleado. Elegí un barbero liquidable." };
     }
 
     const atencionesDelPeriodo = await tx
@@ -131,10 +131,10 @@ export async function marcarLiquidacionPagada(id: string): Promise<MarcarPagadaR
       .limit(1);
 
     if (!liquidacion) {
-      return { ok: false, error: "Liquidacion no encontrada." };
+      return { ok: false, error: "Liquidación no encontrada." };
     }
 
-    return { ok: false, error: "Esta liquidacion ya esta marcada como pagada." };
+    return { ok: false, error: "Esta liquidación ya está marcada como pagada." };
   });
 }
 
@@ -157,7 +157,7 @@ export async function generarLiquidacionesDiariasParaFecha(
         barberoId: barbero.id,
         periodoInicio: input.fecha,
         periodoFin: input.fecha,
-        notas: input.notas ?? "Generada automaticamente en cierre diario.",
+        notas: input.notas ?? "Generada automáticamente en cierre diario.",
       },
       txExterna
     );

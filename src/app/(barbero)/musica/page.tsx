@@ -48,13 +48,13 @@ export default async function MusicaPage() {
                   <MusicStateBadge state={state.runtime.state} />
                 </div>
                 <div>
-                  <p className="eyebrow text-[#8cff59]">Operacion</p>
+                  <p className="eyebrow text-[#8cff59]">Operación</p>
                   <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight sm:text-5xl">
-                    Musica del local
+                    Música del local
                   </h1>
                   <p className="mt-3 max-w-2xl text-sm text-zinc-300 sm:text-base">
                     Aca manejas Auto, Soy DJ, Jam y la cola compartida (Spotify) desde un solo panel legible.
-                    Primero ves el estado, despues los controles y al final el detalle fino.
+                    Primero ves el estado, después los controles y al final el detalle fino.
                   </p>
                 </div>
               </div>

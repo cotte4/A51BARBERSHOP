@@ -13,7 +13,7 @@ export default function ReservarLoading() {
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              {["Servicio", "Horario", "Confirmacion"].map((label) => (
+              {["Servicio", "Horario", "Confirmación"].map((label) => (
                 <div
                   key={label}
                   className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-4"
@@ -33,7 +33,7 @@ export default function ReservarLoading() {
                 <div className="mt-4 space-y-3">
                   {[
                     "Elegir servicio",
-                    "Seleccionar dia y horario",
+                    "Seleccionar día y horario",
                     "Enviar la solicitud",
                   ].map((item, index) => (
                     <div key={item} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">

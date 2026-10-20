@@ -133,7 +133,7 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
                 <div className="mt-4 space-y-3 text-sm text-zinc-300">
                   <p>Elegís un servicio y la grilla te muestra solo slots que cierran.</p>
                   <p>La fecha sale desde mañana y la música queda separada del envío final.</p>
-                  <p>Cuando lo mandas, A51 baja la señal y confirma desde la base.</p>
+                  <p>Cuando lo mandás, A51 baja la señal y confirma desde la base.</p>
                 </div>
               </div>
 

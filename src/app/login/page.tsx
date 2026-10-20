@@ -23,7 +23,7 @@ export default function LoginPage() {
     });
 
     if (authError) {
-      setError("Email o contrasena incorrectos. Revisa los datos e intenta de nuevo.");
+      setError("Email o contraseña incorrectos. Revisá los datos e intentá de nuevo.");
       setLoading(false);
       return;
     }
@@ -117,7 +117,7 @@ export default function LoginPage() {
                   onChange={(event) => setPassword(event.target.value)}
                   required
                   autoComplete="current-password"
-                  placeholder="Tu contrasena"
+                  placeholder="Tu contraseña"
                   className="h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-950/75 px-4 text-zinc-50 outline-none focus:border-[#8cff59] focus:ring-2 focus:ring-[#8cff59]/20"
                 />
               </div>

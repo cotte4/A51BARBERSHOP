@@ -91,7 +91,7 @@ async function syncPlayersFromSpotify() {
     await updateRuntimeStatus({
       providerStatus: provider.status,
       playerStatus: "missing",
-      degradedReason: provider.status === "disconnected" ? "Spotify no esta conectado." : null,
+      degradedReason: provider.status === "disconnected" ? "Spotify no está conectado." : null,
       lastError: provider.lastError,
       activePlayerId: null,
       lastPlayerSeenAt: null,
@@ -172,7 +172,7 @@ async function syncPlayersFromSpotify() {
         playerStatus: "missing",
         degradedReason:
           refreshedPlayers.find((player) => player.isExpectedLocalPlayer) != null
-            ? "El player esperado del local no esta disponible."
+            ? "El player esperado del local no está disponible."
             : "No encontramos un player activo de Spotify.",
         lastError: null,
         activePlayerId: null,
@@ -686,7 +686,7 @@ export async function disconnectMusicProvider() {
   await updateRuntimeStatus({
     providerStatus: "disconnected",
     playerStatus: "missing",
-    degradedReason: "Spotify no esta conectado.",
+    degradedReason: "Spotify no está conectado.",
     lastError: null,
     activePlayerId: null,
     lastPlayerSeenAt: null,
@@ -790,7 +790,7 @@ async function handleClienteLlegoQueuedInJam(
 async function handleClienteLlegoBlockedByManualDj(
   input: HandleClienteLlegoInput,
 ): Promise<ClienteLlegoResult> {
-  const reason = "DJ esta activo; dejamos la cancion como propuesta para no pisar al operador.";
+  const reason = "DJ está activo; dejamos la canción como propuesta para no pisar al operador.";
   const event = await createTurnoArrivalEvent({
     ...getTurnoArrivalBasePayload(input),
     proposalStatus: "pending",
@@ -1156,7 +1156,7 @@ export async function joinActiveJamSession(input: {
 
   const session = await getActiveJamSessionSummary();
   if (!session) {
-    throw new Error("No encontramos una sesion de Jam activa.");
+    throw new Error("No encontramos una sesión de Jam activa.");
   }
 
   const [barbero] = await db
@@ -1168,7 +1168,7 @@ export async function joinActiveJamSession(input: {
     .limit(1);
 
   if (!barbero) {
-    throw new Error("Tu perfil de barbero no esta activo.");
+    throw new Error("Tu perfil de barbero no está activo.");
   }
 
   const dashboard = await getMusicDashboardState();
@@ -1200,7 +1200,7 @@ export async function acceptMusicProposal(input: {
 
   const payload = parseTurnoProposalPayload(event.payload);
   if (!payload) {
-    throw new Error("La propuesta no tiene datos validos.");
+    throw new Error("La propuesta no tiene datos válidos.");
   }
   if (!payload.spotifyTrackUri) {
     throw new Error("Esta propuesta no tiene track de Spotify vinculada. Buscala manualmente.");

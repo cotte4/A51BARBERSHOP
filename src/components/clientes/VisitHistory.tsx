@@ -194,7 +194,7 @@ type RecentVisitCardProps = {
 function RecentVisitCard({ visit, label, onOpen }: RecentVisitCardProps) {
   const photo = visit.photoUrls[0] ?? null;
   const dateLabel = formatDateShort(new Date(visit.visitedAt));
-  const note = visit.barberNotes?.trim() || "Sin nota cargada todavia.";
+  const note = visit.barberNotes?.trim() || "Sin nota cargada todavía.";
   const hasContext = visit.tags.length > 0 || visit.propinaEstrellas > 0 || visit.photoUrls.length > 1;
 
   return (
@@ -208,7 +208,7 @@ function RecentVisitCard({ visit, label, onOpen }: RecentVisitCardProps) {
           {photo ? (
             <Image
               src={photo}
-              alt={`Sesion del ${dateLabel}`}
+              alt={`Sesión del ${dateLabel}`}
               fill
               sizes="(max-width: 768px) 100vw, 220px"
               className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
@@ -262,7 +262,7 @@ function RecentVisitCard({ visit, label, onOpen }: RecentVisitCardProps) {
             </div>
           ) : hasContext ? null : (
             <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-500">
-              Todavia no hay tags ni extras marcados para esta sesion.
+              Todavía no hay tags ni extras marcados para esta sesión.
             </div>
           )}
 
@@ -272,7 +272,7 @@ function RecentVisitCard({ visit, label, onOpen }: RecentVisitCardProps) {
               onClick={onOpen}
               className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-white"
             >
-              Ver sesion completa
+              Ver sesión completa
             </button>
           </div>
         </div>
@@ -289,7 +289,7 @@ export default function VisitHistory({ visits }: VisitHistoryProps) {
   if (visits.length === 0) {
     return (
       <section className="rounded-[28px] border border-dashed border-zinc-800 bg-zinc-950/50 p-6 text-center">
-        <p className="text-sm text-zinc-600">Todavia no hay memoria de cortes cargada.</p>
+        <p className="text-sm text-zinc-600">Todavía no hay memoria de cortes cargada.</p>
       </section>
     );
   }
@@ -306,7 +306,7 @@ export default function VisitHistory({ visits }: VisitHistoryProps) {
               {visits.length} {visits.length === 1 ? "corte" : "cortes"}
             </p>
             <p className="mt-1 text-sm text-zinc-400">
-              Las dos mas recientes quedan arriba y el resto baja al archivo.
+              Las dos más recientes quedan arriba y el resto baja al archivo.
             </p>
           </div>
         </div>
@@ -316,7 +316,7 @@ export default function VisitHistory({ visits }: VisitHistoryProps) {
             <RecentVisitCard
               key={visit.id}
               visit={visit}
-              label={index === 0 ? "Ultimo corte" : "Corte anterior"}
+              label={index === 0 ? "Último corte" : "Corte anterior"}
               onOpen={() => setSelected(visit)}
             />
           ))}
@@ -329,7 +329,7 @@ export default function VisitHistory({ visits }: VisitHistoryProps) {
                 Archivo completo
               </p>
               <p className="text-xs text-zinc-500">
-                {archiveVisits.length} {archiveVisits.length === 1 ? "sesion mas" : "sesiones mas"}
+                {archiveVisits.length} {archiveVisits.length === 1 ? "sesión más" : "sesiones más"}
               </p>
             </div>
 

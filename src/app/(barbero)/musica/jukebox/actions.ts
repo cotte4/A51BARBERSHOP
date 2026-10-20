@@ -30,7 +30,7 @@ type ActionResult = {
 async function requireJukeboxActor() {
   const actor = await getTurnosActorContext();
   if (!actor) {
-    throw new Error("Necesitas iniciar sesion para usar el Jukebox.");
+    throw new Error("Necesitás iniciar sesión para usar el Jukebox.");
   }
   if (!actor.isAdmin && !actor.barberoId) {
     throw new Error("Solo el staff puede manejar el Jukebox.");
@@ -83,7 +83,7 @@ export async function toggleJukeboxAutoApproveAction(enabled: boolean): Promise<
   try {
     const admin = await getAdminSessionContext();
     if (!admin) {
-      throw new Error("Solo el admin puede cambiar esta configuracion.");
+      throw new Error("Solo el admin puede cambiar esta configuración.");
     }
     await setJukeboxAutoApprove(enabled);
     revalidateJukebox();

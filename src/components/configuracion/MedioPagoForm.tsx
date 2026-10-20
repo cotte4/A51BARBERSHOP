@@ -68,14 +68,14 @@ export default function MedioPagoForm({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
-              Configuracion del medio
+              Configuración del medio
             </p>
             <p className="mt-3 text-sm text-zinc-400">
               Defini el nombre y la comision para que caja calcule el neto sin dudas.
             </p>
           </div>
           <div className="rounded-[20px] bg-zinc-900 px-4 py-3 text-sm text-zinc-300 ring-1 ring-zinc-700">
-            <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Lectura rapida</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Lectura rápida</p>
             <p className="mt-2">{comisionTexto}</p>
           </div>
         </div>

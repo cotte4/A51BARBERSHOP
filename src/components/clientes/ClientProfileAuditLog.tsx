@@ -6,7 +6,7 @@ type ClientProfileAuditLogProps = {
 
 function formatAuditValue(value: string | null) {
   if (!value) {
-    return "Vacio";
+    return "Vacío";
   }
 
   if (value === "true") {

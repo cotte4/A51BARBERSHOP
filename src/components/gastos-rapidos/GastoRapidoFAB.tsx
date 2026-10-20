@@ -22,7 +22,7 @@ export default function GastoRapidoFAB({
   action,
   returnTo,
   historyHref = "/gastos-rapidos",
-  buttonLabel = "+ Gasto rapido",
+  buttonLabel = "+ Gasto rápido",
   buttonClassName,
   fixed = true,
   showHistoryLink = true,

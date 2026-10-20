@@ -37,10 +37,10 @@ export async function sendMarcianoPasswordResetEmail(input: {
       text: [
         `Hola ${input.name || "Marciano"},`,
         "",
-        "Recibimos un pedido para cambiar tu contrasena del portal Marciano.",
+        "Recibimos un pedido para cambiar tu contraseña del portal Marciano.",
         `Abri este link para continuar: ${input.resetUrl}`,
         "",
-        "Si no fuiste vos, podes ignorar este email.",
+        "Si no fuiste vos, podés ignorar este email.",
         "",
         "A51 Barber",
       ].join("\n"),
@@ -53,7 +53,7 @@ export async function sendMarcianoPasswordResetEmail(input: {
               Hola ${escapeHtml(input.name || "Marciano")}. Recibimos un pedido para cambiar tu contrasena del portal.
             </p>
             <a href="${input.resetUrl}" style="display:inline-block;padding:14px 22px;border-radius:18px;background:#8cff59;color:#07130a;text-decoration:none;font-weight:700">
-              Crear nueva contrasena
+              Crear nueva contraseña
             </a>
             <p style="margin:24px 0 0;color:#a1a1aa;font-size:13px;line-height:1.6">
               Si el boton no funciona, pega este link en tu navegador:<br />

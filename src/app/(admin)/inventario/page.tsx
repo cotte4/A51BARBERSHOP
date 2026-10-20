@@ -29,7 +29,7 @@ function getStockStatus(stockActual: number, stockMinimo: number) {
 
   if (stockActual <= stockMinimo) {
     return {
-      label: "Bajo minimo",
+      label: "Bajo mínimo",
       tone: "border-amber-500/30 bg-amber-500/12 text-amber-200",
       helper: "Conviene reponer pronto.",
     };
@@ -38,7 +38,7 @@ function getStockStatus(stockActual: number, stockMinimo: number) {
   return {
     label: "Saludable",
     tone: "border-emerald-500/25 bg-emerald-500/10 text-emerald-200",
-    helper: "Todavia tiene margen operativo.",
+    helper: "Todavía tiene margen operativo.",
   };
 }
 
@@ -134,7 +134,7 @@ export default async function InventarioPage() {
               helper="Unidades disponibles en productos activos."
             />
             <StatCard
-              label="Bajo minimo"
+              label="Bajo mínimo"
               value={bajoMinimo}
               helper="Productos que conviene reponer primero."
               tone="border-amber-500/20 bg-amber-500/10 text-white"
@@ -155,7 +155,7 @@ export default async function InventarioPage() {
 
         {lista.length === 0 ? (
           <div className="mt-5 rounded-[28px] border border-zinc-800 bg-zinc-900 p-8 text-center">
-            <p className="text-zinc-400">Todavia no hay productos cargados.</p>
+            <p className="text-zinc-400">Todavía no hay productos cargados.</p>
             <Link
               href="/inventario/nuevo"
               className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-full bg-[#8cff59] px-5 text-sm font-semibold text-[#07130a] transition hover:bg-[#b6ff84]"
@@ -252,7 +252,7 @@ export default async function InventarioPage() {
                           Card tactil
                         </p>
                         <p className="mt-2 text-sm leading-6 text-zinc-400">
-                          Tocala para entrar al detalle. Los botones de abajo hacen el ajuste rapido
+                          Tocala para entrar al detalle. Los botones de abajo hacen el ajuste rápido
                           sin salir de la tarjeta.
                         </p>
                         <p className="mt-2 text-xs text-zinc-500">

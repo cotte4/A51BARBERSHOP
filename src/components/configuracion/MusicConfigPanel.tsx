@@ -27,8 +27,8 @@ function formatDateTime(value: string | null) {
 }
 
 function formatShortDays(dayMask: WeekdayKey[]) {
-  if (dayMask.length === WEEKDAY_OPTIONS.length) return "Todos los dias";
-  if (dayMask.length === 0) return "Sin dias";
+  if (dayMask.length === WEEKDAY_OPTIONS.length) return "Todos los días";
+  if (dayMask.length === 0) return "Sin días";
   return dayMask.join(", ");
 }
 
@@ -81,7 +81,7 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
   const expectedPlayer = state.players.find((player) => player.isExpectedLocalPlayer) ?? null;
   const selectedPlaylist =
     state.playlists.find((playlist) => playlist.uri === providerPlaylistRef) ?? null;
-  const autoResumeLabel = state.autoResume.resumeContextLabel ?? "la playlist automatica";
+  const autoResumeLabel = state.autoResume.resumeContextLabel ?? "la playlist automática";
 
   function runMutation(task: () => Promise<{ error?: string }>, successMessage: string) {
     setDisconnectArmed(false);
@@ -115,7 +115,7 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
           providerPlaylistRef,
           dayMask,
         }),
-      "Franja automatica guardada.",
+      "Franja automática guardada.",
     );
   }
 
@@ -145,12 +145,12 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
             </div>
 
             <div>
-              <p className="eyebrow">Configuracion / Musica</p>
+              <p className="eyebrow">Configuración / Música</p>
               <h2 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                Musica del local
+                Música del local
               </h2>
               <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-                Definimos proveedor, player esperado y franjas automaticas para que la musica
+                Definimos proveedor, player esperado y franjas automáticas para que la música
                 acompañe el ritmo del local sin dejar huecos raros ni estados confusos.
               </p>
             </div>
@@ -210,7 +210,7 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
             detail={expectedPlayer ? `Visto ${formatDateTime(expectedPlayer.lastSeenAt)}` : "Elegilo para evitar desfasajes."}
           />
           <StatCard
-            label="Ultimo playback"
+            label="Último playback"
             value={formatDateTime(state.runtime.lastPlaybackSuccessAt)}
             detail={`Intento ${formatDateTime(state.runtime.lastPlaybackAttemptAt)}`}
           />
@@ -219,7 +219,7 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
             value={state.runtime.lastError ?? state.provider.lastError ?? "Sin errores"}
             detail={
               state.autoResume.pending
-                ? `Reanudacion pendiente hacia ${autoResumeLabel}.`
+                ? `Reanudación pendiente hacía ${autoResumeLabel}.`
                 : state.runtime.degradedReason ?? "Sistema estable"
             }
           />
@@ -284,9 +284,9 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
 
         <div className="rounded-[30px] border border-zinc-800 bg-zinc-900/80 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Modo Auto</p>
-          <h3 className="mt-2 text-xl font-semibold text-white">Franja automatica</h3>
+          <h3 className="mt-2 text-xl font-semibold text-white">Franja automática</h3>
           <p className="mt-2 text-sm text-zinc-400">
-            Armamos una regla por dias y horario, usando una playlist concreta para que el
+            Armamos una regla por días y horario, usando una playlist concreta para que el
             cambio de clima sea predecible.
           </p>
 
@@ -341,7 +341,7 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
 
             <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/60 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm text-zinc-300">Dias</p>
+                <p className="text-sm text-zinc-300">Días</p>
                 <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
                   {dayMask.length} seleccionados
                 </p>
@@ -372,7 +372,7 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
               <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Preview</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <SummaryItem label="Playlist" value={selectedPlaylist?.name ?? "Elegir una playlist"} />
-                <SummaryItem label="Dias" value={formatShortDays(dayMask)} />
+                <SummaryItem label="Días" value={formatShortDays(dayMask)} />
                 <SummaryItem label="Horario" value={`${startTime} a ${endTime}`} />
                 <SummaryItem label="Estado" value={playlistCount > 0 ? "Listo para guardar" : "Sin playlists"} />
               </div>
@@ -399,7 +399,7 @@ export default function MusicConfigPanel({ state, callbackMessage }: MusicConfig
         <div className="mt-5 space-y-3">
           {state.schedules.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-950/60 p-5 text-sm text-zinc-400">
-              Todavia no hay reglas para Auto.
+              Todavía no hay reglas para Auto.
             </div>
           ) : null}
 

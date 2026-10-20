@@ -69,8 +69,8 @@ export async function crearLineaPresupuestoAction(
 
   const fieldErrors: PresupuestoLineaFormState["fieldErrors"] = {};
 
-  if (!nombre) fieldErrors.nombre = "Carga un nombre.";
-  if (!isPresupuestoCategoria(categoria)) fieldErrors.categoria = "Elegi una categoria valida.";
+  if (!nombre) fieldErrors.nombre = "Cargá un nombre.";
+  if (!isPresupuestoCategoria(categoria)) fieldErrors.categoria = "Elegí una categoría valida.";
 
   const monto = toMoneyNumber(montoRaw);
   if (monto < 0) fieldErrors.montoEstimado = "El monto no puede ser negativo.";
@@ -122,8 +122,8 @@ export async function actualizarLineaPresupuestoAction(
 
   const fieldErrors: PresupuestoLineaFormState["fieldErrors"] = {};
 
-  if (!nombre) fieldErrors.nombre = "Carga un nombre.";
-  if (!isPresupuestoCategoria(categoria)) fieldErrors.categoria = "Elegi una categoria valida.";
+  if (!nombre) fieldErrors.nombre = "Cargá un nombre.";
+  if (!isPresupuestoCategoria(categoria)) fieldErrors.categoria = "Elegí una categoría valida.";
 
   const monto = toMoneyNumber(montoRaw);
   if (monto < 0) fieldErrors.montoEstimado = "El monto no puede ser negativo.";

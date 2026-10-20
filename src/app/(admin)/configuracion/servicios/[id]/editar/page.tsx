@@ -48,7 +48,7 @@ export default async function EditarServicioPage({
             </Link>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
-                Edicion operativa
+                Edición operativa
               </p>
               <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-white">
                 {servicio.nombre}
@@ -62,7 +62,7 @@ export default async function EditarServicioPage({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <SummaryCard label="Precio base" value={formatARS(servicio.precioBase)} strong />
-            <SummaryCard label="Duracion" value={`${servicio.duracionMinutos} min`} />
+            <SummaryCard label="Duración" value={`${servicio.duracionMinutos} min`} />
             <SummaryCard label="Estado" value={servicio.activo ? "Activo" : "Inactivo"} />
             <SummaryCard
               label="Adicionales"

@@ -31,13 +31,13 @@ export async function GET(request: Request) {
   });
 
   if (!parsed.success) {
-    return Response.json({ error: "Parametros invalidos." }, { status: 400 });
+    return Response.json({ error: "Parametros inválidos." }, { status: 400 });
   }
 
   if (!canReserveOnPublicFecha(parsed.data.fecha)) {
     return Response.json(
       {
-        error: `Los turnos se reservan desde el ${getFechaMananaArgentina()} y hasta 30 dias adelante. Elegi otra fecha.`,
+        error: `Los turnos se reservan desde el ${getFechaMananaArgentina()} y hasta 30 días adelante. Elegí otra fecha.`,
       },
       { status: 400 }
     );
@@ -45,12 +45,12 @@ export async function GET(request: Request) {
 
   const barbero = await resolvePublicBarberoBySlug(parsed.data.slug);
   if (!barbero) {
-    return Response.json({ error: "Slug invalido." }, { status: 404 });
+    return Response.json({ error: "Slug inválido." }, { status: 404 });
   }
 
   if (!(await canAccessPublicReserva(barbero))) {
     return Response.json(
-      { error: "Primero ingresa la clave de reserva de este barbero o entra con tu cuenta." },
+      { error: "Primero ingresá la clave de reserva de este barbero o entrá con tu cuenta." },
       { status: 401 }
     );
   }

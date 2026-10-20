@@ -100,7 +100,7 @@ export default function PresupuestoMemas({
               </h1>
               <p className="max-w-3xl text-sm leading-6 text-zinc-300 sm:text-base">
                 Inversion inicial de una vez: inmueble, obra y puesta en marcha. Es una
-                proyeccion para negociar — no impacta el capital ni las finanzas de A51.
+                proyección para negociar — no impacta el capital ni las finanzas de A51.
               </p>
             </div>
 
@@ -123,7 +123,7 @@ export default function PresupuestoMemas({
                 helper={
                   filtrando
                     ? `de ${formatARS(total)} · ${Math.round((totalVisible / (total || 1)) * 100)}% del total`
-                    : "Suma de todas las lineas cargadas"
+                    : "Sumá de todas las lineas cargadas"
                 }
                 accent
               />
@@ -133,7 +133,7 @@ export default function PresupuestoMemas({
                 helper={
                   filtrando
                     ? `de ${lineas.length} lineas en total`
-                    : `${categoriasConItems.length} categoria${categoriasConItems.length === 1 ? "" : "s"} con items`
+                    : `${categoriasConItems.length} categoría${categoriasConItems.length === 1 ? "" : "s"} con items`
                 }
               />
               <HeroStat
@@ -198,7 +198,7 @@ export default function PresupuestoMemas({
         {lineas.length === 0 ? (
           <section className="panel-card mt-5 rounded-[30px] p-6 text-center">
             <p className="text-sm text-zinc-400">
-              Todavia no hay lineas cargadas. Arranca por el inmueble y la obra.
+              Todavía no hay lineas cargadas. Arranca por el inmueble y la obra.
             </p>
           </section>
         ) : (
@@ -445,7 +445,7 @@ function LineaForm({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-zinc-300">Categoria</label>
+          <label className="text-sm font-medium text-zinc-300">Categoría</label>
           <select
             name="categoria"
             defaultValue={defaultCategoria}

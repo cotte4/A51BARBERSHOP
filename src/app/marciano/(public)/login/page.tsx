@@ -24,7 +24,7 @@ export default function MarcianoLoginPage() {
     });
 
     if (authError) {
-      setError("No pudimos validar tu acceso. Revisa tu email y tu clave.");
+      setError("No pudimos validar tu acceso. Revisá tu email y tu clave.");
       setLoading(false);
       return;
     }
@@ -37,9 +37,9 @@ export default function MarcianoLoginPage() {
     <MarcianoPublicShell
       badge="Club Marciano"
       title="La entrada al club"
-      description="Entra con tu email y tu clave para ver tus cortes, mover tus turnos y entrar a tu Perfil Marciano."
+      description="Entrá con tu email y tu clave para ver tus cortes, mover tus turnos y entrar a tu Perfil Marciano."
       sideTitle="La entrada del club."
-      sideDescription="Aca cae lo real de ser Marciano: tus cortes del mes, agenda propia, Style DNA y acceso al portal sin pasar por el staff."
+      sideDescription="Acá cae lo real de ser Marciano: tus cortes del mes, agenda propia, Style DNA y acceso al portal sin pasar por el staff."
       notes={[
         { label: "Cortes", value: "2 por mes" },
         { label: "Agenda", value: "Reserva y reprograma" },

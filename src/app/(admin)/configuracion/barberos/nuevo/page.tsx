@@ -19,7 +19,7 @@ export default async function NuevoBarberoPage() {
         </Link>
         <div className="mt-4 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
           <div className="max-w-2xl">
-            <p className="eyebrow">Configuracion / Barberos</p>
+            <p className="eyebrow">Configuración / Barberos</p>
             <h2 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
               Nuevo barbero
             </h2>
@@ -37,7 +37,7 @@ export default async function NuevoBarberoPage() {
             <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/60 p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Salida</p>
               <p className="mt-2 text-sm font-medium text-white">
-                Perfil listo para caja y liquidacion.
+                Perfil listo para caja y liquidación.
               </p>
             </div>
           </div>

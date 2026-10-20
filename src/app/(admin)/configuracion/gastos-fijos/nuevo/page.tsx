@@ -22,12 +22,12 @@ export default async function NuevoGastoPage() {
               Nuevo gasto fijo
             </h1>
             <p className="mt-3 max-w-xl text-sm text-zinc-400">
-              Cargalo con categoria, fecha y recurrencia para que la lectura mensual no quede
+              Cargalo con categoría, fecha y recurrencia para que la lectura mensual no quede
               repartida en varios lugares.
             </p>
           </div>
           <div className="rounded-[22px] bg-zinc-900 px-4 py-3 text-sm text-zinc-300 ring-1 ring-zinc-700">
-            <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Lectura rapida</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Lectura rápida</p>
             <p className="mt-2">Los recurrentes impactan en cierres y proyecciones.</p>
           </div>
         </div>

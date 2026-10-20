@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   } catch (error) {
     return Response.json(
       {
-        error: error instanceof Error ? error.message : "No pude sincronizar musica.",
+        error: error instanceof Error ? error.message : "No pude sincronizar música.",
       },
       { status: 500 },
     );

@@ -19,7 +19,7 @@ export default async function MarcianoSecurityPage() {
             </h1>
             <p className="max-w-2xl text-sm text-zinc-300">
               Tu email de acceso actual es <span className="font-semibold text-white">{client.email}</span>.
-              Desde aca podes cambiar la contrasena de tu portal y cerrar sesiones viejas.
+              Desde acá podés cambiar la contraseña de tu portal y cerrar sesiones viejas.
             </p>
           </div>
 
@@ -36,20 +36,20 @@ export default async function MarcianoSecurityPage() {
             Lo que cambia
           </p>
           <div className="mt-4 space-y-3 text-sm text-zinc-300">
-            <SecuritySummary label="Sesion" value="Se revocan otras sesiones activas" />
-            <SecuritySummary label="Recuperacion" value="Si te olvidaste, usa el flujo publico" />
+            <SecuritySummary label="Sesión" value="Se revocan otras sesiones activas" />
+            <SecuritySummary label="Recuperación" value="Si te olvidaste, usá el flujo público" />
             <SecuritySummary label="Email" value="No cambia, sigue siendo tu identificador" />
           </div>
           <div className="mt-4 rounded-[24px] border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
-            Mantener esta clave al dia es la forma mas simple de proteger tu acceso sin molestar al
+            Mantener esta clave al día es la forma más simple de proteger tu acceso sin molestar al
             equipo.
           </div>
         </div>
 
         <section className="public-panel rounded-[28px] p-5">
-          <h2 className="text-xl font-semibold text-white">Cambiar contrasena</h2>
+          <h2 className="text-xl font-semibold text-white">Cambiar contraseña</h2>
           <p className="mt-2 text-sm text-zinc-400">
-            Si perdes el acceso por completo, tambien podes usar la recuperacion publica.
+            Si perdés el acceso por completo, también podés usar la recuperación publica.
           </p>
           <div className="mt-5">
             <MarcianoChangePasswordForm />
@@ -60,7 +60,7 @@ export default async function MarcianoSecurityPage() {
       <section className="rounded-[24px] border border-white/10 bg-white/5 p-5 text-sm text-zinc-300">
         ¿Necesitas recuperar la cuenta desde cero? Usa{" "}
         <Link href="/marciano/recuperar" className="text-[#8cff59] hover:text-[#b6ff84]">
-          la recuperacion de contrasena
+          la recuperación de contraseña
         </Link>
         .
       </section>

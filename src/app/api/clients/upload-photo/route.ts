@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   try {
     formData = await request.formData();
   } catch {
-    return Response.json({ error: "Formato de solicitud invalido." }, { status: 400 });
+    return Response.json({ error: "Formato de solicitud inválido." }, { status: 400 });
   }
 
   const file = formData.get("file");
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   const kind = String(formData.get("kind") ?? "visit").trim();
 
   if (!(file instanceof File)) {
-    return Response.json({ error: "No se recibio ningun archivo." }, { status: 400 });
+    return Response.json({ error: "No se recibió ningún archivo." }, { status: 400 });
   }
 
   if (!clientId) {
@@ -34,14 +34,14 @@ export async function POST(request: Request) {
 
   if (!ALLOWED_MIME.has(file.type)) {
     return Response.json(
-      { error: "Tipo de archivo no permitido. Usa JPG, PNG o WebP." },
+      { error: "Tipo de archivo no permitido. Usá JPG, PNG o WebP." },
       { status: 400 }
     );
   }
 
   if (file.size > MAX_BYTES) {
     return Response.json(
-      { error: "El archivo supera el limite de 5 MB." },
+      { error: "El archivo supera el límite de 5 MB." },
       { status: 400 }
     );
   }
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[upload-photo] Blob error:", message);
     return Response.json(
-      { error: "No se pudo subir la foto. Intenta de nuevo.", detail: message },
+      { error: "No se pudo subir la foto. Intentá de nuevo.", detail: message },
       { status: 500 }
     );
   }

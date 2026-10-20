@@ -9,17 +9,17 @@ type MarcianoResetPageProps = {
 export default async function MarcianoResetPage({ searchParams }: MarcianoResetPageProps) {
   const params = await searchParams;
   const tokenError =
-    params.error === "INVALID_TOKEN" ? "El link de recuperacion ya vencio o no es valido." : null;
+    params.error === "INVALID_TOKEN" ? "El link de recuperación ya venció o no es válido." : null;
 
   return (
     <MarcianoPublicShell
-      badge="Nueva contrasena"
-      title="Vuelve a entrar al portal"
-      description="Crea una nueva clave para tu acceso Marciano y segui con la misma cuenta."
+      badge="Nueva contraseña"
+      title="Volvé a entrar al portal"
+      description="Creá una nueva clave para tu acceso Marciano y seguí con la misma cuenta."
       sideTitle="Reinicio limpio, mismo portal."
-      sideDescription="Cuando el token esta bien, cambias la clave y listo. Si vencio, desde aca mismo pedis otro enlace sin perderte en rutas raras."
+      sideDescription="Cuando el token está bien, cambiás la clave y listo. Si venció, desde acá mismo pedís otro enlace sin perderte en rutas raras."
       notes={[
-        { label: "Token", value: tokenError ? "Vencido" : "Valido" },
+        { label: "Token", value: tokenError ? "Vencido" : "Válido" },
         { label: "Clave", value: "Nueva y segura" },
         { label: "Acceso", value: "Portal Marciano" },
         { label: "Ruta", value: "/marciano/reset" },

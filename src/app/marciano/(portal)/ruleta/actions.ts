@@ -16,7 +16,7 @@ export async function girarRuletaAction(): Promise<SpinActionResult> {
     const messages: Record<string, string> = {
       already_spun: "Ya giraste la ruleta. Solo se gira una vez en la vida Marciana.",
       client_not_marciano: "Tu membresía Marciano está inactiva.",
-      no_prizes_configured: "La ruleta todavia no tiene premios configurados.",
+      no_prizes_configured: "La ruleta todavía no tiene premios configurados.",
     };
     return {
       success: false,

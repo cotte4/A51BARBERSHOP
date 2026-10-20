@@ -25,7 +25,7 @@ function getStockState(stock: number, stockMinimo?: number | null) {
 
   if (stock <= minimo) {
     return {
-      label: "Bajo minimo",
+      label: "Bajo mínimo",
       tone: "border-amber-500/30 bg-amber-500/12 text-amber-200",
       hint: "Conviene reponer pronto.",
     };
@@ -34,7 +34,7 @@ function getStockState(stock: number, stockMinimo?: number | null) {
   return {
     label: "Saludable",
     tone: "border-emerald-500/25 bg-emerald-500/10 text-emerald-200",
-    hint: "Todavia tiene margen operativo.",
+    hint: "Todavía tiene margen operativo.",
   };
 }
 
@@ -72,14 +72,14 @@ export default function InventoryQuickAdjust({
 
       <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Lectura rapida</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Lectura rápida</p>
           <p className="mt-2 text-sm text-zinc-300">
             {stockMinimo !== null && stockMinimo !== undefined
-              ? `Minimo sugerido: ${stockMinimo}`
-              : "Sin minimo configurado"}
+              ? `Mínimo sugerido: ${stockMinimo}`
+              : "Sin mínimo configurado"}
           </p>
           <p className="mt-1 text-xs text-zinc-500">
-            Ajuste rapido para mover stock sin salir de la tarjeta.
+            Ajuste rápido para mover stock sin salir de la tarjeta.
           </p>
         </div>
 

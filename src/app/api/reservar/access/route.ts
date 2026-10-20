@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const parsed = accessSchema.safeParse(body);
 
   if (!parsed.success) {
-    return Response.json({ error: "Datos invalidos." }, { status: 400 });
+    return Response.json({ error: "Datos inválidos." }, { status: 400 });
   }
 
   const barbero = await resolvePublicBarberoBySlug(parsed.data.slug);

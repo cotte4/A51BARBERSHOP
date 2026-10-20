@@ -385,10 +385,10 @@ export async function anularAtencionConReversion(input: {
       .limit(1);
 
     if (!atencion) {
-      throw new Error("Atencion no encontrada.");
+      throw new Error("Atención no encontrada.");
     }
     if (atencion.anulado) {
-      throw new Error("Esta atencion ya esta anulada.");
+      throw new Error("Esta atención ya está anulada.");
     }
 
     const pendingCredits = await tx
@@ -502,7 +502,7 @@ export async function syncProductosAtencion({
     .limit(1);
 
   if (!atencion) {
-    throw new Error("Atencion no encontrada");
+    throw new Error("Atención no encontrada");
   }
 
   const resolvedClientId = clientId ?? atencion.clientId ?? null;
@@ -626,7 +626,7 @@ export async function syncProductosAtencion({
       throw new Error("Producto no encontrado");
     }
     if (!producto.activo) {
-      throw new Error("El producto no esta activo");
+      throw new Error("El producto no está activo");
     }
     if ((producto.stockActual ?? 0) < item.cantidad) {
       throw new Error(`Sin stock para ${producto.nombre}`);
@@ -703,7 +703,7 @@ export async function registrarVentaProductoDesdeInput(
     }
 
     if (!producto.activo) {
-      return { ok: false, fieldErrors: { productoId: "El producto no esta activo" } };
+      return { ok: false, fieldErrors: { productoId: "El producto no está activo" } };
     }
 
     if ((producto.stockActual ?? 0) < input.cantidad) {

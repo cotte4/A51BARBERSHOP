@@ -18,7 +18,7 @@ export default function MarcianoChangePasswordForm() {
 
       <div>
         <label htmlFor="currentPassword" className="mb-2 block text-sm font-medium text-zinc-300">
-          Contrasena actual
+          Contraseña actual
         </label>
         <input
           id="currentPassword"
@@ -33,7 +33,7 @@ export default function MarcianoChangePasswordForm() {
 
       <div>
         <label htmlFor="newPassword" className="mb-2 block text-sm font-medium text-zinc-300">
-          Nueva contrasena
+          Nueva contraseña
         </label>
         <input
           id="newPassword"
@@ -48,7 +48,7 @@ export default function MarcianoChangePasswordForm() {
 
       <div>
         <label htmlFor="confirmPassword" className="mb-2 block text-sm font-medium text-zinc-300">
-          Confirmar nueva contrasena
+          Confirmar nueva contraseña
         </label>
         <input
           id="confirmPassword"
@@ -82,7 +82,7 @@ export default function MarcianoChangePasswordForm() {
         disabled={pending}
         className="neon-button h-12 w-full rounded-[20px] text-sm font-semibold disabled:opacity-50"
       >
-        {pending ? "Guardando..." : "Cambiar contrasena"}
+        {pending ? "Guardando..." : "Cambiar contraseña"}
       </button>
     </form>
   );

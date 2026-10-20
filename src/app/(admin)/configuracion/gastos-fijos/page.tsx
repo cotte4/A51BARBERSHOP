@@ -73,7 +73,7 @@ export default async function GastosFijosPage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-2xl">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-400">
-                Configuracion financiera
+                Configuración financiera
               </p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">
                 Gastos fijos
@@ -97,7 +97,7 @@ export default async function GastosFijosPage() {
             <MetricCard
               label="Monto listado"
               value={formatARS(String(montoTotal))}
-              hint="Suma de todos los gastos visibles"
+              hint="Sumá de todos los gastos visibles"
             />
           </div>
         </div>
@@ -105,7 +105,7 @@ export default async function GastosFijosPage() {
 
       {listaGastos.length === 0 ? (
         <div className="panel-card rounded-[28px] p-8 text-center">
-          <p className="text-zinc-400">No hay gastos cargados todavia.</p>
+          <p className="text-zinc-400">No hay gastos cargados todavía.</p>
           <Link
             href="/configuracion/gastos-fijos/nuevo"
             className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-zinc-800 px-4 text-sm font-medium text-white transition hover:bg-zinc-700"

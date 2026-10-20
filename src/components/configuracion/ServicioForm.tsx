@@ -146,12 +146,12 @@ export default function ServicioForm({
 
         <div className="panel-card rounded-[28px] p-5 sm:p-6 text-white">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
-            Lectura rapida
+            Lectura rápida
           </p>
           <div className="mt-4 space-y-3">
             <PreviewRow label="Servicio" value={nombre.trim() || "Nombre pendiente"} strong />
             <PreviewRow label="Precio visible en caja" value={formatARS(precioNumero)} strong />
-            <PreviewRow label="Duracion" value={`${duracionMinutos} min`} />
+            <PreviewRow label="Duración" value={`${duracionMinutos} min`} />
             <PreviewRow label="Impacto" value="Se usa en caja, turnos y liquidaciones" />
             {showMotivoField ? (
               <PreviewRow

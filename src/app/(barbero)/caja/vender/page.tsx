@@ -30,7 +30,7 @@ export default async function VenderProductoPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">
             Caja segura
           </p>
-          <h1 className="mt-3 text-3xl font-bold text-white">Necesitas iniciar sesion</h1>
+          <h1 className="mt-3 text-3xl font-bold text-white">Necesitás iniciar sesión</h1>
           <p className="mt-3 text-sm leading-6 text-zinc-400">
             La venta de productos queda reservada a usuarios autenticados para no romper stock ni
             caja.
@@ -64,7 +64,7 @@ export default async function VenderProductoPage() {
           </p>
           <h1 className="mt-3 text-3xl font-bold text-white">No se pueden registrar nuevas ventas</h1>
           <p className="mt-3 text-sm leading-6 text-zinc-400">
-            El cierre de hoy ya fue guardado. Si queres revisar el resumen, te dejamos el detalle
+            El cierre de hoy ya fue guardado. Si querés revisar el resumen, te dejamos el detalle
             y el acceso al historial.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
@@ -133,7 +133,7 @@ export default async function VenderProductoPage() {
               Vender producto sin perder ritmo
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-zinc-300 sm:text-base">
-              Elegi producto, cantidad y cobro en una sola pasada. El resumen te marca stock,
+              Elegí producto, cantidad y cobro en una sola pasada. El resumen te marca stock,
               comision y neto antes de confirmar.
             </p>
           </div>
@@ -198,7 +198,7 @@ export default async function VenderProductoPage() {
                   </h2>
                   <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
                     No se puede confirmar una venta sin una forma de cobro activa. Activala en
-                    configuracion y volve a esta pantalla.
+                    configuración y volve a esta pantalla.
                   </p>
                   <Link
                     href="/configuracion/medios-de-pago"
@@ -217,11 +217,11 @@ export default async function VenderProductoPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
               Antes de cobrar
             </p>
-            <h2 className="mt-2 text-lg font-semibold text-white">Orden rapido</h2>
+            <h2 className="mt-2 text-lg font-semibold text-white">Orden rápido</h2>
             <div className="mt-4 space-y-3 text-sm leading-6 text-zinc-300">
-              <p>1. Elegi el producto que queres sacar del stock.</p>
+              <p>1. Elegí el producto que querés sacar del stock.</p>
               <p>2. Confirmá cantidad y precio si hubo descuento o ajuste.</p>
-              <p>3. Elegi el medio de pago y revisa el neto antes de guardar.</p>
+              <p>3. Elegí el medio de pago y revisa el neto antes de guardar.</p>
             </div>
           </section>
 
@@ -270,8 +270,8 @@ export default async function VenderProductoPage() {
               Regla de oro
             </p>
             <p className="mt-2 text-sm leading-6 text-zinc-200">
-              Si el producto o el medio de pago no estan activos, frenamos antes de escribir en
-              stock o caja. Menos sorpresa, mas control.
+              Si el producto o el medio de pago no están activos, frenamos antes de escribir en
+              stock o caja. Menos sorpresa, más control.
             </p>
           </section>
         </aside>

@@ -39,7 +39,7 @@ export default function TurnosSpotifyBridge() {
         tone: "success",
         message:
           detail.successMessage?.trim() ||
-          `Llegada registrada para ${detail.clienteNombre}. La pantalla ya puede mostrar la cancion.`,
+          `Llegada registrada para ${detail.clienteNombre}. La pantalla ya puede mostrar la canción.`,
       });
     }
 

@@ -33,18 +33,18 @@ export default function NuevoAssetForm() {
               Nuevo activo para la inversion inicial
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-              Registra lo que ya compraste o deja planificado lo que todavia falta cerrar.
+              Registrá lo que ya compraste o deja planificado lo que todavía falta cerrar.
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
               title="Planificado"
-              helper="Todavia no tuvo pagos, pero ya entra en el radar."
+              helper="Todavía no tuvo pagos, pero ya entra en el radar."
             />
             <StatusCard
               title="Pagado"
-              helper="Crea el activo y registra el movimiento conectado enseguida."
+              helper="Creá el activo y registra el movimiento conectado enseguida."
             />
           </div>
         </div>
@@ -77,7 +77,7 @@ export default function NuevoAssetForm() {
                     defaultValue=""
                   >
                     <option value="" disabled>
-                      Elegir categoria
+                      Elegir categoría
                     </option>
                     {ASSET_CATEGORIAS.map((categoria) => (
                       <option key={categoria} value={categoria}>
@@ -91,7 +91,7 @@ export default function NuevoAssetForm() {
                 </div>
 
                 <Field
-                  label="Marca"
+                  label="Marcá"
                   name="marca"
                   placeholder="Ej: Wahl"
                 />
@@ -134,7 +134,7 @@ export default function NuevoAssetForm() {
                       />
                       <p className="mt-3 text-sm font-semibold text-white">Planificado</p>
                       <p className="mt-1 text-xs leading-5 text-zinc-500">
-                        Lo agregas ahora y despues registras sena o cuotas desde la ficha.
+                        Lo agregás ahora y después registrás seña o cuotas desde la ficha.
                       </p>
                     </label>
                     <label className="rounded-[22px] border border-zinc-700 bg-zinc-900 px-4 py-4 has-[:checked]:border-[#8cff59]/40 has-[:checked]:bg-[#8cff59]/10">
@@ -146,7 +146,7 @@ export default function NuevoAssetForm() {
                       />
                       <p className="mt-3 text-sm font-semibold text-white">Pagado directo</p>
                       <p className="mt-1 text-xs leading-5 text-zinc-500">
-                        Cierra la compra en una sola vez y crea el movimiento conectado.
+                        Cerrá la compra en una sola vez y crea el movimiento conectado.
                       </p>
                     </label>
                   </div>
@@ -183,7 +183,7 @@ export default function NuevoAssetForm() {
                   id="notas"
                   name="notas"
                   rows={4}
-                  placeholder="Contexto de compra, prioridad, ubicacion prevista, etc."
+                  placeholder="Contexto de compra, prioridad, ubicación prevista, etc."
                   className="w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none transition focus:border-[#8cff59]/60"
                 />
               </div>
@@ -199,7 +199,7 @@ export default function NuevoAssetForm() {
                 <HangarUploadField
                   name="fotoUrl"
                   label="Foto del activo"
-                  helper="Ayuda a reconocer rapido lo que ya entro al Hangar."
+                  helper="Ayuda a reconocer rápido lo que ya entró al Hangar."
                   kind="photo"
                   accept="image/jpeg,image/png,image/webp"
                 />
@@ -218,9 +218,9 @@ export default function NuevoAssetForm() {
                 Que pasa al guardar
               </p>
               <div className="mt-3 space-y-3 text-sm leading-6 text-zinc-200">
-                <p>1. El activo entra al Hangar con su categoria y su objetivo de compra.</p>
-                <p>2. Si lo marcas como pagado, se registra tambien el movimiento conectado en Finanzas.</p>
-                <p>3. Si queda planificado, desde la ficha podras cargar sena, cuotas o cierre final.</p>
+                <p>1. El activo entra al Hangar con su categoría y su objetivo de compra.</p>
+                <p>2. Si lo marcas como pagado, se registra también el movimiento conectado en Finanzas.</p>
+                <p>3. Si queda planificado, desde la ficha podrás cargar seña, cuotas o cierre final.</p>
               </div>
             </section>
           </aside>

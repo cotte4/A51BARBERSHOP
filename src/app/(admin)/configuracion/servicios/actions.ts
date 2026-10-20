@@ -39,7 +39,7 @@ export async function crearServicio(
     fieldErrors.precioBase = "El precio debe ser mayor a $0";
   }
   if (!duracionMinutosStr || ![30, 45, 60].includes(Number(duracionMinutosStr))) {
-    fieldErrors.duracionMinutos = "La duracion debe ser 30, 45 o 60 minutos";
+    fieldErrors.duracionMinutos = "La duración debe ser 30, 45 o 60 minutos";
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -97,7 +97,7 @@ export async function editarServicio(
     fieldErrors.precioBase = "El precio debe ser mayor a $0";
   }
   if (!duracionMinutosStr || ![30, 45, 60].includes(Number(duracionMinutosStr))) {
-    fieldErrors.duracionMinutos = "La duracion debe ser 30, 45 o 60 minutos";
+    fieldErrors.duracionMinutos = "La duración debe ser 30, 45 o 60 minutos";
   }
 
   if (Object.keys(fieldErrors).length > 0) {

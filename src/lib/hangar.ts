@@ -128,7 +128,7 @@ export function getEstadoCompraLabel(estado: string | null | undefined): string 
 export function getPaymentTypeLabel(tipo: string | null | undefined): string {
   switch (tipo) {
     case "sena":
-      return "Sena";
+      return "Seña";
     case "cuota":
       return "Cuota";
     case "saldo_final":

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   try {
     formData = await request.formData();
   } catch {
-    return Response.json({ error: "Formato de solicitud invalido." }, { status: 400 });
+    return Response.json({ error: "Formato de solicitud inválido." }, { status: 400 });
   }
 
   const file = formData.get("file");
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const kind = String(formData.get("kind") ?? "photo").trim();
 
   if (!(file instanceof File)) {
-    return Response.json({ error: "No se recibio ningun archivo." }, { status: 400 });
+    return Response.json({ error: "No se recibió ningún archivo." }, { status: 400 });
   }
 
   if (!assetId) {
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
   if (file.size > MAX_BYTES) {
     return Response.json(
-      { error: "El archivo supera el limite de 8 MB." },
+      { error: "El archivo supera el límite de 8 MB." },
       { status: 400 }
     );
   }
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[hangar-upload] Blob error:", message);
     return Response.json(
-      { error: "No se pudo subir el archivo. Intenta de nuevo.", detail: message },
+      { error: "No se pudo subir el archivo. Intentá de nuevo.", detail: message },
       { status: 500 }
     );
   }

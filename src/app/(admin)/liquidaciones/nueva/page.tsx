@@ -27,12 +27,12 @@ export default async function NuevaLiquidacionPage({ searchParams }: NuevaLiquid
           <div className="bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.14),_transparent_36%),radial-gradient(circle_at_bottom_left,_rgba(140,255,89,0.06),_transparent_28%)] p-6 sm:p-7">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-2xl">
-                <p className="eyebrow text-xs">Nueva liquidacion</p>
+                <p className="eyebrow text-xs">Nueva liquidación</p>
                 <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                  Crear liquidacion
+                  Crear liquidación
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm text-zinc-300">
-                  Elegi a quien liquidar, define el periodo y revisa el preview antes de generar el
+                  Elegí a quien liquidar, define el periodo y revisa el preview antes de generar el
                   registro. El flujo esta armado para que no haya dudas sobre lo que se esta cerrando.
                 </p>
               </div>

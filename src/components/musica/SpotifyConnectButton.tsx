@@ -35,7 +35,7 @@ export default function SpotifyConnectButton({
               setError(
                 nextError instanceof Error
                   ? nextError.message
-                  : "No pude iniciar la conexion con Spotify.",
+                  : "No pude iniciar la conexión con Spotify.",
               );
             }
           });

@@ -58,7 +58,7 @@ export default async function EditarGastoPage({ params }: EditarGastoPageProps) 
               Editar gasto fijo
             </h1>
             <p className="mt-3 max-w-xl text-sm text-zinc-400">
-              Ajusta monto, fecha o recurrencia sin perder el contexto del gasto original.
+              Ajustá monto, fecha o recurrencia sin perder el contexto del gasto original.
             </p>
           </div>
           <div className="rounded-[22px] bg-zinc-900 px-4 py-3 text-sm text-zinc-300 ring-1 ring-zinc-700">

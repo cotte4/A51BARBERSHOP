@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as BugReportRequestBody;
   } catch {
-    return NextResponse.json({ error: "Payload invalido." }, { status: 400 });
+    return NextResponse.json({ error: "Payload inválido." }, { status: 400 });
   }
 
   const summary = redactText(body.summary ?? "");
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   const severity = body.severity ?? "medium";
 
   if (!summary || !expectedBehavior || !actualBehavior) {
-    return NextResponse.json({ error: "Completa resumen, esperado y actual." }, { status: 400 });
+    return NextResponse.json({ error: "Completá resumen, esperado y actual." }, { status: 400 });
   }
 
   if (!isInternalSupportPath(pathname)) {
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   }
 
   if (!["low", "medium", "high", "critical"].includes(severity)) {
-    return NextResponse.json({ error: "Severidad invalida." }, { status: 400 });
+    return NextResponse.json({ error: "Severidad inválida." }, { status: 400 });
   }
 
   const userAgent = requestHeaders.get("user-agent") ?? "";

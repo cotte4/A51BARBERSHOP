@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as IntakeRequestBody;
   } catch {
-    return NextResponse.json({ error: "Payload invalido." }, { status: 400 });
+    return NextResponse.json({ error: "Payload inválido." }, { status: 400 });
   }
 
   const intakeType = body.intakeType;
@@ -47,16 +47,16 @@ export async function POST(request: Request) {
   const pathname = (body.pathname ?? "").trim();
 
   if (!intakeType || !["feature_request", "implementation_idea"].includes(intakeType)) {
-    return NextResponse.json({ error: "Tipo de propuesta invalido." }, { status: 400 });
+    return NextResponse.json({ error: "Tipo de propuesta inválido." }, { status: 400 });
   }
   if (!title || !problem) {
-    return NextResponse.json({ error: "Completa titulo y problema." }, { status: 400 });
+    return NextResponse.json({ error: "Completá titulo y problema." }, { status: 400 });
   }
   if (!isInternalSupportPath(pathname)) {
     return NextResponse.json({ error: "Ruta fuera del alcance interno." }, { status: 403 });
   }
   if (!["baja", "media", "alta", "critica"].includes(urgency)) {
-    return NextResponse.json({ error: "Urgencia invalida." }, { status: 400 });
+    return NextResponse.json({ error: "Urgencia inválida." }, { status: 400 });
   }
 
   const [created] = await db

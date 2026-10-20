@@ -37,7 +37,7 @@ export default function MarcarPagadaButton({ marcarAction }: Props) {
         <div className="rounded-[22px] border border-amber-500/20 bg-amber-500/10 p-4">
           <p className="text-sm font-semibold text-amber-300">Confirmar pago</p>
           <p className="mt-1 text-sm leading-6 text-zinc-200">
-            Esta accion cierra la liquidacion y la manda al historial con fecha de pago.
+            Esta acción cierra la liquidación y la manda al historial con fecha de pago.
           </p>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <button

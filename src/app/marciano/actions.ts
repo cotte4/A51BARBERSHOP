@@ -55,24 +55,24 @@ export type MarcianoPasswordState = {
 
 const passwordSchema = z
   .string()
-  .min(8, "La contrasena debe tener al menos 8 caracteres.")
-  .regex(/[a-zA-Z]/, "La contrasena debe incluir al menos una letra.")
-  .regex(/[0-9]/, "La contrasena debe incluir al menos un numero.");
+  .min(8, "La contraseña debe tener al menos 8 caracteres.")
+  .regex(/[a-zA-Z]/, "La contraseña debe incluir al menos una letra.")
+  .regex(/[0-9]/, "La contraseña debe incluir al menos un número.");
 
 const registerSchema = z.object({
-  email: z.email("Ingresa un email valido."),
+  email: z.email("Ingresá un email válido."),
   password: passwordSchema,
 });
 
 const requestPasswordResetSchema = z.object({
-  email: z.email("Ingresa un email valido."),
+  email: z.email("Ingresá un email válido."),
 });
 
 const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, "Ingresa tu contrasena actual."),
+    currentPassword: z.string().min(1, "Ingresá tu contraseña actual."),
     newPassword: passwordSchema,
-    confirmPassword: z.string().min(1, "Confirma tu nueva contrasena."),
+    confirmPassword: z.string().min(1, "Confirmá tu nueva contraseña."),
   })
   .refine((values) => values.newPassword === values.confirmPassword, {
     path: ["confirmPassword"],
@@ -81,9 +81,9 @@ const changePasswordSchema = z
 
 const resetPasswordSchema = z
   .object({
-    token: z.string().min(1, "El token de recuperacion no es valido."),
+    token: z.string().min(1, "El token de recuperación no es válido."),
     newPassword: passwordSchema,
-    confirmPassword: z.string().min(1, "Confirma tu nueva contrasena."),
+    confirmPassword: z.string().min(1, "Confirmá tu nueva contraseña."),
   })
   .refine((values) => values.newPassword === values.confirmPassword, {
     path: ["confirmPassword"],
@@ -132,7 +132,7 @@ export async function registerMarcianoAction(
 
   if (client.userId) {
     return {
-      message: "Tu acceso ya esta creado. Ingresa con tu email y contrasena desde el login.",
+      message: "Tu acceso ya está creado. Ingresá con tu email y contraseña desde el login.",
     };
   }
 
@@ -191,7 +191,7 @@ export async function updateMarcianoProfileAction(
   if (phoneRaw && !phoneNormalized) {
     return {
       fieldErrors: {
-        phoneRaw: "Ingresa un telefono valido.",
+        phoneRaw: "Ingresá un teléfono válido.",
       },
     };
   }
@@ -289,7 +289,7 @@ export async function requestMarcianoPasswordResetAction(
   if (!isPasswordResetEmailConfigured()) {
     return {
       message:
-        "La recuperacion por email todavia no esta configurada en este entorno. Cuando agreguemos Resend, queda operativa sin tocar este flujo.",
+        "La recuperación por email todavía no está configurada en este entorno. Cuando agreguemos Resend, queda operativa sin tocar este flujo.",
     };
   }
 
@@ -303,14 +303,14 @@ export async function requestMarcianoPasswordResetAction(
   } catch (error) {
     console.error("Error pidiendo reset de contrasena Marciano:", error);
     return {
-      message: "No pudimos enviar el email de recuperacion. Intenta de nuevo.",
+      message: "No pudimos enviar el email de recuperación. Intentá de nuevo.",
     };
   }
 
   return {
     success: true,
     message:
-      "Si ese email existe en el portal Marciano, te mandamos un link para crear una nueva contrasena.",
+      "Si ese email existe en el portal Marciano, te mandamos un link para crear una nueva contraseña.",
   };
 }
 
@@ -346,13 +346,13 @@ export async function changeMarcianoPasswordAction(
     });
   } catch (error) {
     return {
-      message: getAuthErrorMessage(error, "No pudimos cambiar tu contrasena."),
+      message: getAuthErrorMessage(error, "No pudimos cambiar tu contraseña."),
     };
   }
 
   return {
     success: true,
-    message: "Contrasena actualizada.",
+    message: "Contraseña actualizada.",
   };
 }
 
@@ -386,13 +386,13 @@ export async function resetMarcianoPasswordAction(
     });
   } catch (error) {
     return {
-      message: getAuthErrorMessage(error, "No pudimos guardar tu nueva contrasena."),
+      message: getAuthErrorMessage(error, "No pudimos guardar tu nueva contraseña."),
     };
   }
 
   return {
     success: true,
-    message: "Contrasena actualizada. Ya podes volver a entrar al portal Marciano.",
+    message: "Contraseña actualizada. Ya podés volver a entrar al portal Marciano.",
   };
 }
 
@@ -400,16 +400,16 @@ function getAuthErrorMessage(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message : "";
 
   if (message.includes("INVALID_PASSWORD")) {
-    return "La contrasena actual no coincide.";
+    return "La contraseña actual no coincide.";
   }
   if (message.includes("INVALID_TOKEN")) {
-    return "El link de recuperacion ya no es valido o vencio.";
+    return "El link de recuperación ya no es válido o venció.";
   }
   if (message.includes("PASSWORD_TOO_SHORT")) {
-    return "La nueva contrasena es demasiado corta.";
+    return "La nueva contraseña es demasiado corta.";
   }
   if (message.includes("PASSWORD_TOO_LONG")) {
-    return "La nueva contrasena es demasiado larga.";
+    return "La nueva contraseña es demasiado larga.";
   }
 
   return fallback;

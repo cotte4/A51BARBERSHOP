@@ -31,7 +31,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "A51 Barber Shop",
-  description: "Base de control interna para la operacion diaria de A51 Barber Shop",
+  description: "Base de control interna para la operación diaria de A51 Barber Shop",
 };
 
 export default function RootLayout({

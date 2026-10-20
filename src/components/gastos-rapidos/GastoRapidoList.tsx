@@ -68,8 +68,8 @@ function getTone(categoryKey?: string | null) {
 export default function GastoRapidoList({
   gastos,
   returnTo = "/gastos-rapidos",
-  emptyTitle = "Todavia no hay gastos rapidos cargados este mes",
-  emptyDescription = "Cuando cargues el primero, aca vas a ver fecha, categoria, monto y notas de cada movimiento.",
+  emptyTitle = "Todavía no hay gastos rápidos cargados este mes",
+  emptyDescription = "Cuando cargues el primero, acá vas a ver fecha, categoría, monto y notas de cada movimiento.",
 }: GastoRapidoListProps) {
   if (gastos.length === 0) {
     return (
@@ -104,7 +104,7 @@ export default function GastoRapidoList({
               <div className="min-w-0 flex-1 space-y-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-semibold text-white">
-                    {categoria?.label ?? gasto.descripcion ?? "Gasto rapido"}
+                    {categoria?.label ?? gasto.descripcion ?? "Gasto rápido"}
                   </span>
                   <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs text-zinc-400">
                     {formatFecha(gasto.fecha)}

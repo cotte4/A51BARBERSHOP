@@ -22,9 +22,9 @@ export function AtencionFormHero({
           <>
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-2xl">
-                <p className="eyebrow text-xs font-semibold">Edicion de movimiento</p>
+                <p className="eyebrow text-xs font-semibold">Edición de movimiento</p>
                 <h3 className="font-display mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-                  Estas editando una atencion ya registrada.
+                  Estás editando una atención ya registrada.
                 </h3>
                 <p className="mt-3 text-sm leading-6 text-zinc-300">
                   Ajusta solo lo que cambie: barbero, cliente, servicio, productos, precio
@@ -66,7 +66,7 @@ export function AtencionFormHero({
                   </p>
                   <p className="mt-2 text-3xl font-semibold text-white">{editContext.totalAmount}</p>
                   <p className="mt-1 text-sm text-emerald-100/80">
-                    Lo que ves aca es la base de la caja antes de guardar los cambios.
+                    Lo que ves acá es la base de la caja antes de guardar los cambios.
                   </p>
                 </div>
               </div>

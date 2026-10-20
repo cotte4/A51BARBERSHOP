@@ -104,12 +104,12 @@ export function MusicOverviewSection({
             </span>
           </div>
           <div>
-            <p className="eyebrow text-zinc-500">Operacion</p>
+            <p className="eyebrow text-zinc-500">Operación</p>
             <h2 className="mt-2 font-display text-3xl font-semibold text-white sm:text-4xl">
               Musica
             </h2>
             <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-              Auto resuelve playlists por horario, Soy DJ pisa el automatico y Jam alterna la
+              Auto resuelve playlists por horario, Soy DJ pisa el automático y Jam alterna la
               cola entre barberos.
             </p>
           </div>
@@ -141,7 +141,7 @@ export function MusicOverviewSection({
           <MetricCard
             label="Player"
             value={activePlayerName}
-            detail={`Ultimo playback: ${lastPlaybackSuccessLabel}`}
+            detail={`Último playback: ${lastPlaybackSuccessLabel}`}
           />
         </div>
       </div>
@@ -155,11 +155,11 @@ export function MusicOverviewSection({
         <MetricCard
           label="Cola activa"
           value={queueSummary}
-          detail={`Ultimo intento: ${lastPlaybackAttemptLabel}`}
+          detail={`Último intento: ${lastPlaybackAttemptLabel}`}
         />
         <MetricCard
           label="Estado"
-          value={state.runtime.state === "ready" ? "Listo para operar" : "Requiere atencion"}
+          value={state.runtime.state === "ready" ? "Listo para operar" : "Requiere atención"}
           detail={state.runtime.lastError ?? state.provider.lastError ?? "Sistema estable"}
         />
         <MetricCard
@@ -194,7 +194,7 @@ export function MusicProposalsSection({
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Propuestas</p>
-          <h3 className="mt-2 text-xl font-semibold text-white">Cliente llego</h3>
+          <h3 className="mt-2 text-xl font-semibold text-white">Cliente llegó</h3>
         </div>
         <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
           {proposals.length} pendientes
@@ -221,7 +221,7 @@ export function MusicProposalsSection({
                 </p>
                 {!proposal.spotifyTrackUri ? (
                   <p className="mt-2 text-xs text-amber-300">
-                    Falta track vinculada en Spotify. Si queres usarla, buscalo manualmente abajo.
+                    Falta track vinculada en Spotify. Si querés usarla, buscalo manualmente abajo.
                   </p>
                 ) : null}
               </div>
@@ -352,7 +352,7 @@ export function MusicQueueSection({
 
         {queueItems.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-950/60 p-5 text-sm text-zinc-400">
-            Todavia no hay temas en la cola activa.
+            Todavía no hay temas en la cola activa.
           </div>
         ) : null}
 

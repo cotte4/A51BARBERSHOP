@@ -27,7 +27,7 @@ export default function MarcianosBriefing({ clientId }: MarcianosBriefingProps) 
         setBriefing(data.briefing ?? null);
         setCached(data.cached ?? false);
       } catch {
-        setError("Error de conexion. Verifica tu red e intenta de nuevo.");
+        setError("Error de conexión. Verificá tu red e intentá de nuevo.");
       }
     });
   }
@@ -69,10 +69,10 @@ export default function MarcianosBriefing({ clientId }: MarcianosBriefingProps) 
               </p>
               <div className="grid gap-2 text-xs text-zinc-500 sm:grid-cols-2">
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-                  Ultima visita, notas y tono del cliente.
+                  Última visita, notas y tono del cliente.
                 </div>
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-                  Preferencias, alertas y contexto rapido.
+                  Preferencias, alertas y contexto rápido.
                 </div>
               </div>
             </div>

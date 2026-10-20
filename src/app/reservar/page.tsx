@@ -31,7 +31,7 @@ export default async function ReservarLandingPage() {
                   Elegí tu nave y caé al turno
                 </h1>
                 <p className="max-w-xl text-sm text-zinc-300 sm:text-base">
-                  Esta es la entrada de calle de A51. Tomas barbero, entras por tu carril y caes a
+                  Esta es la entrada de calle de A51. Tomás barbero, entrás por tu carril y caés a
                   la agenda correcta sin memorizar links raros.
                 </p>
               </div>
@@ -51,8 +51,8 @@ export default async function ReservarLandingPage() {
 
           {barberos.length === 0 ? (
             <section className="mt-6 rounded-[30px] border border-white/10 bg-black/25 p-6 text-center text-zinc-300">
-              Todavia no hay barberos publicados para reserva. Activalos desde configuracion para
-              mostrarlos aca.
+              Todavía no hay barberos publicados para reserva. Activalos desde configuración para
+              mostrarlos acá.
             </section>
           ) : (
             <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">

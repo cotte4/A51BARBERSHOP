@@ -29,7 +29,7 @@ export default function MarcianoProfileForm({ client }: MarcianoProfileFormProps
       <div className="grid gap-3 sm:grid-cols-3">
         <ProfilePill label="Nombre" value={client.name} />
         <ProfilePill label="Email" value={client.email ?? "Sin email"} />
-        <ProfilePill label="Telefono" value={client.phoneRaw ?? "Pendiente"} />
+        <ProfilePill label="Teléfono" value={client.phoneRaw ?? "Pendiente"} />
       </div>
 
       <div className="grid gap-4">

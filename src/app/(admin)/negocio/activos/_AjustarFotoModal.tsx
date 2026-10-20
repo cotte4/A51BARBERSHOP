@@ -125,9 +125,9 @@ export default function AjustarFotoModal({
         </div>
 
         <p className="mt-3 text-xs leading-5 text-zinc-500">
-          Arrastra la imagen para mover el encuadre y usa el zoom para recortar mas
+          Arrastra la imagen para mover el encuadre y usá el zoom para recortar más
           cerca. Se guardan los dos; el archivo original queda intacto, asi que
-          podes reajustarlo cuando quieras.
+          podés reajustarlo cuando quieras.
         </p>
 
         <div

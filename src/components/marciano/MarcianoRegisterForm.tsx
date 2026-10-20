@@ -34,7 +34,7 @@ export default function MarcianoRegisterForm() {
 
       if (error) {
         setAutoLoginError(
-          "La cuenta quedo creada, pero no pudimos iniciar sesion automaticamente. Probalo desde el login."
+          "La cuenta quedó creada, pero no pudimos iniciar sesión automáticamente. Probalo desde el login."
         );
         return;
       }
@@ -97,7 +97,7 @@ export default function MarcianoRegisterForm() {
           autoComplete="new-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          placeholder="Minimo 8 caracteres"
+          placeholder="Mínimo 8 caracteres"
           className="h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-950/75 px-4 text-zinc-50 outline-none transition focus:border-[#8cff59] focus:ring-2 focus:ring-[#8cff59]/20"
         />
         {state.fields?.password ? <p className="text-sm text-rose-300">{state.fields.password}</p> : null}

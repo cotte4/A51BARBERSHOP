@@ -78,7 +78,7 @@ export async function computeGoLiveChecks(): Promise<GoLiveCheck[]> {
     },
     {
       id: "flujo-liquidacion",
-      label: "Al menos una liquidacion registrada",
+      label: "Al menos una liquidación registrada",
       passed: liquidacionesExistentes > 0,
       detail: `${liquidacionesExistentes} liquidaciones`,
     },

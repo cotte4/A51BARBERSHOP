@@ -34,7 +34,7 @@ async function tokenDeLaApp(): Promise<string> {
 
   const clientId = process.env.SPOTIFY_CLIENT_ID;
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-  if (!clientId || !clientSecret) throw new Error("Configuracion de Spotify incompleta.");
+  if (!clientId || !clientSecret) throw new Error("Configuración de Spotify incompleta.");
 
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",

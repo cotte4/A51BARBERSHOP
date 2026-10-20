@@ -36,7 +36,7 @@ export async function registrarCuota(
     return { error: "El monto pagado debe ser mayor a 0." };
   }
   if (!tcDiaStr || Number.isNaN(tcDia) || tcDia <= 0) {
-    return { error: "El tipo de cambio del dia debe ser mayor a 0." };
+    return { error: "El tipo de cambio del día debe ser mayor a 0." };
   }
   if (monedaStr !== "USD" && monedaStr !== "ARS") {
     return { error: "La moneda ingresada no es valida." };
@@ -65,7 +65,7 @@ export async function registrarCuota(
         : `Faltan devolver ${formatUSD(result.nuevoSaldoUsd)}.`);
   } catch (error) {
     console.error("Error registrando cuota Memas:", error);
-    return { error: "No se pudo registrar el pago. Intenta de nuevo." };
+    return { error: "No se pudo registrar el pago. Intentá de nuevo." };
   }
 
   revalidatePath("/repago");

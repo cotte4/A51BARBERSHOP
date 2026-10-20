@@ -15,7 +15,7 @@ function getCallbackMessage(params: {
   spotify_error?: string;
 }) {
   if (params.spotify_connected === "1") {
-    return "Spotify quedo conectado al negocio.";
+    return "Spotify quedó conectado al negocio.";
   }
 
   if (!params.spotify_error) {
@@ -24,12 +24,12 @@ function getCallbackMessage(params: {
 
   const messages: Record<string, string> = {
     auth_failed: "No se pudo autenticar con Spotify.",
-    config_missing: "Falta configuracion de Spotify en el servidor.",
-    token_failed: "Spotify no devolvio un token valido.",
+    config_missing: "Falta configuración de Spotify en el servidor.",
+    token_failed: "Spotify no devolvió un token válido.",
     unexpected: "Paso un error inesperado al conectar Spotify.",
   };
 
-  return messages[params.spotify_error] ?? "No se pudo completar la conexion con Spotify.";
+  return messages[params.spotify_error] ?? "No se pudo completar la conexión con Spotify.";
 }
 
 export default async function ConfiguracionMusicaPage({

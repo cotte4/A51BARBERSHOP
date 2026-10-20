@@ -46,14 +46,14 @@ export async function createTurnoReserva(
   // de guardar, porque entre que el cliente lo vio y lo confirmó otro pudo haberlo tomado.
   const slot = leerHorarioId(input.slotId);
   if (!slot) {
-    return { ok: false, status: 400, message: "Ese horario no es valido. Elegi otro." };
+    return { ok: false, status: 400, message: "Ese horario no es válido. Elegí otro." };
   }
 
   if (!canReserveOnPublicFecha(slot.fecha)) {
     return {
       ok: false,
       status: 409,
-      message: "Los turnos se reservan desde mañana y hasta 30 dias adelante.",
+      message: "Los turnos se reservan desde mañana y hasta 30 días adelante.",
     };
   }
 
@@ -85,11 +85,11 @@ export async function createTurnoReserva(
 
   const servicio = servicioRows[0];
   if (!servicio) {
-    return { ok: false, status: 400, message: "Ese servicio ya no esta disponible." };
+    return { ok: false, status: 400, message: "Ese servicio ya no está disponible." };
   }
 
   if (!(await isHorarioLibre(input.barberoId, slot.fecha, slot.hora, servicio.duracionMinutos))) {
-    return { ok: false, status: 409, message: "Ese horario acaba de ocuparse. Elegi otro." };
+    return { ok: false, status: 409, message: "Ese horario acaba de ocuparse. Elegí otro." };
   }
 
   const activeExtraIds = new Set(extrasActivos.map((extra) => extra.id));
@@ -98,7 +98,7 @@ export async function createTurnoReserva(
     return {
       ok: false,
       status: 400,
-      message: "Uno de los extras elegidos ya no esta disponible.",
+      message: "Uno de los extras elegidos ya no está disponible.",
     };
   }
 

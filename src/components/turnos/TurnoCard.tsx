@@ -56,9 +56,9 @@ function statusClasses(estado: TurnoSummary["estado"]) {
 }
 
 function statusHint(estado: TurnoSummary["estado"]) {
-  if (estado === "pendiente") return "Todavia no fue confirmado";
+  if (estado === "pendiente") return "Todavía no fue confirmado";
   if (estado === "confirmado") return "Listo para atender o cerrar";
-  if (estado === "completado") return "Ya quedo cerrado";
+  if (estado === "completado") return "Ya quedó cerrado";
   return "Turno cancelado";
 }
 
@@ -372,7 +372,7 @@ export default function TurnoCard({
                 </span>
                 {turno.sugerenciaCancion ? (
                   <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-200">
-                    Musica cargada
+                    Música cargada
                   </span>
                 ) : null}
                 {turno.extras.length > 0 ? (
@@ -420,7 +420,7 @@ export default function TurnoCard({
                     </div>
                     <p className="mt-2 text-sm text-zinc-300">
                       {turno.esMarcianoSnapshot
-                        ? "Entro por la nave cliente y merece lectura rapida del flujo."
+                        ? "Entró por la nave cliente y merece lectura rápida del flujo."
                         : "Este turno ya dejo una senal para musicalizar la llegada."}
                     </p>
                   </div>
@@ -439,7 +439,7 @@ export default function TurnoCard({
                   {turno.sugerenciaCancion ? (
                     <div className="rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/10 px-3 py-2">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-fuchsia-300">
-                        Musica sugerida
+                        Música sugerida
                       </p>
                       <p className="mt-1 text-sm text-fuchsia-100/90">{turno.sugerenciaCancion}</p>
                     </div>
@@ -467,7 +467,7 @@ export default function TurnoCard({
                 {turno.motivoCancelacion ? (
                   <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-3 py-2">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-red-300">
-                      Motivo de cancelacion
+                      Motivo de cancelación
                     </p>
                     <p className="mt-1 text-sm text-red-200">{turno.motivoCancelacion}</p>
                   </div>
@@ -489,7 +489,7 @@ export default function TurnoCard({
                     </p>
                     <p className="mt-1 text-sm font-medium text-sky-100">{actionSuccess}</p>
                     <p className="mt-1 text-sm text-sky-100/75">
-                      La pantalla ya puede reaccionar y Musica recibio el resultado real de la llegada.
+                      La pantalla ya puede reaccionar y Música recibió el resultado real de la llegada.
                     </p>
                   </div>
                 ) : null}
@@ -502,9 +502,9 @@ export default function TurnoCard({
                       </p>
                       <p className="mt-1 text-sm text-zinc-300">
                         {localEstado === "pendiente"
-                          ? "Elegi una decision."
+                          ? "Elegí una decisión."
                           : localEstado === "confirmado"
-                            ? "Cierra el flujo o avisale a pantalla."
+                            ? "Cerrá el flujo o avisale a pantalla."
                             : "Sin acciones disponibles."}
                       </p>
                     </div>
@@ -558,7 +558,7 @@ export default function TurnoCard({
                             rel="noreferrer"
                             className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/10 px-4 text-sm font-medium text-fuchsia-200 hover:bg-fuchsia-500/20"
                           >
-                            Abrir cancion
+                            Abrir canción
                           </a>
                         ) : null}
                         {canCobrar ? (
@@ -685,10 +685,10 @@ export default function TurnoCard({
                   >
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-red-300">
-                        Confirmar cancelacion
+                        Confirmar cancelación
                       </p>
                       <p className="mt-1 text-sm text-red-100/80">
-                        Deja un motivo claro. Esto cancela el turno y ayuda a mantener trazabilidad.
+                        Dejá un motivo claro. Esto cancela el turno y ayuda a mantener trazabilidad.
                       </p>
                     </div>
                     <textarea
@@ -696,7 +696,7 @@ export default function TurnoCard({
                       rows={3}
                       required
                       minLength={3}
-                      placeholder="Motivo del rechazo o cancelacion"
+                      placeholder="Motivo del rechazo o cancelación"
                       className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-red-400"
                     />
                     <div className="flex flex-wrap gap-2">

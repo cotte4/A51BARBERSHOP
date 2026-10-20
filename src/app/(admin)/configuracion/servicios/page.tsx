@@ -88,7 +88,7 @@ export default async function ServiciosPage() {
 
       {serviciosConDetalle.length === 0 ? (
         <section className="panel-card rounded-[28px] p-10 text-center">
-          <p className="text-zinc-400">No hay servicios cargados todavia.</p>
+          <p className="text-zinc-400">No hay servicios cargados todavía.</p>
           <Link
             href="/configuracion/servicios/nuevo"
             className="neon-button mt-4 inline-flex min-h-[48px] items-center justify-center rounded-[20px] px-5 text-sm font-medium transition"
@@ -186,7 +186,7 @@ export default async function ServiciosPage() {
                   {servicio.ultimoPrecio?.motivo ? (
                     <div className="rounded-[20px] bg-zinc-950/70 px-4 py-3 ring-1 ring-zinc-800">
                       <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">
-                        Ultimo cambio
+                        Último cambio
                       </p>
                       <p className="mt-2 text-sm text-zinc-300">
                         {servicio.ultimoPrecio.motivo}

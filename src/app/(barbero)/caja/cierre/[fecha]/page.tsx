@@ -53,11 +53,11 @@ export default async function CierreDetallePage({
       eyebrow: "Estado",
       label: "Caja cerrada",
       value: horaCierre ? `A las ${horaCierre}` : "Sellada",
-      helper: "El cierre ya quedo grabado y no admite nuevas ventas.",
+      helper: "El cierre ya quedó grabado y no admite nuevas ventas.",
     },
     {
       eyebrow: "Bruto",
-      label: "Ingresos del dia",
+      label: "Ingresos del día",
       value: formatARS(cierre.totalBruto),
       helper: "Total antes de comisiones y ajustes.",
     },
@@ -98,8 +98,8 @@ export default async function CierreDetallePage({
                   Cierre de caja - {formatFechaLarga(fecha)}
                 </h1>
                 <p className="max-w-2xl text-sm leading-6 text-zinc-400">
-                  Este resumen deja claro lo que entro, lo que quedo neto y como se distribuyo el
-                  dia. Ideal para imprimir o revisar rapido sin leer toda la planilla.
+                  Este resumen deja claro lo que entró, lo que quedó neto y cómo se distribuyó el
+                  día. Ideal para imprimir o revisar rápido sin leer toda la planilla.
                 </p>
               </div>
             </div>
@@ -127,7 +127,7 @@ export default async function CierreDetallePage({
         </section>
 
         {/* Totales globales del dia: solo admin. El barbero ve su propia fila
-            en "Reparto del dia" — no el bruto/neto de toda la casa. */}
+            en "Reparto del día" — no el bruto/neto de toda la casa. */}
         {isAdmin ? (
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {summaryCards.map((card) => (
@@ -149,7 +149,7 @@ export default async function CierreDetallePage({
               {horaCierre ? `A las ${horaCierre}` : "Sellada"}
             </p>
             <p className="mt-2 text-sm text-zinc-400">
-              Abajo tenes tu propio resumen del dia.
+              Abajo tenés tu propio resumen del día.
             </p>
           </section>
         )}
@@ -158,9 +158,9 @@ export default async function CierreDetallePage({
           <div className="space-y-5">
             {isAdmin ? (
               <section className="panel-card rounded-[30px] p-5">
-                <h2 className="font-display text-2xl font-semibold text-white">Totales del dia</h2>
+                <h2 className="font-display text-2xl font-semibold text-white">Totales del día</h2>
                 <div className="mt-5 flex flex-col gap-2">
-                  <Row label="Total bruto del dia" value={formatARS(cierre.totalBruto)} />
+                  <Row label="Total bruto del día" value={formatARS(cierre.totalBruto)} />
                   {Number(cierre.totalComisionesMedios ?? 0) > 0 ? (
                     <Row
                       label="Comisiones medios de pago"
@@ -168,7 +168,7 @@ export default async function CierreDetallePage({
                       tone="text-red-300"
                     />
                   ) : null}
-                  <Row label="Caja neta del dia" value={formatARS(cierre.totalNeto)} strong />
+                  <Row label="Caja neta del día" value={formatARS(cierre.totalNeto)} strong />
                   <Row
                     label="Servicios netos"
                     value={formatARS(resumen.totales.cajaNetaServicios)}
@@ -198,7 +198,7 @@ export default async function CierreDetallePage({
                   <div>
                     <p className="eyebrow text-xs font-semibold">Por barbero</p>
                     <h2 className="font-display mt-2 text-2xl font-semibold text-white">
-                      Reparto del dia
+                      Reparto del día
                     </h2>
                     <p className="mt-1 text-sm text-zinc-400">
                       Lo que dejo cada barbero en bruto, cortes y comision.

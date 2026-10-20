@@ -47,7 +47,7 @@ export default async function PostCortePage({ params }: PostCortePageProps) {
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">
               Post-corte
             </p>
-            <p className="text-sm text-zinc-400">Cierra la sesion y deja memoria util para el proximo corte.</p>
+            <p className="text-sm text-zinc-400">Cerrá la sesión y deja memoria útil para el próximo corte.</p>
           </div>
         </div>
       </section>

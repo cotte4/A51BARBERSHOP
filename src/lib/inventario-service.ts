@@ -81,7 +81,7 @@ export async function ajustarStockRapidoDesdeInput(
     productoId,
     delta,
     tipo: delta > 0 ? "ajuste" : "uso_interno",
-    notas: delta > 0 ? "Ajuste rapido desde inventario" : "Descuento rapido desde inventario",
+    notas: delta > 0 ? "Ajuste rápido desde inventario" : "Descuento rápido desde inventario",
     insufficientMessage: () => "No hay stock suficiente para descontar.",
   });
 }

@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as AssistantRequestBody;
   } catch {
-    return NextResponse.json({ error: "Payload invalido." }, { status: 400 });
+    return NextResponse.json({ error: "Payload inválido." }, { status: 400 });
   }
 
   const pathname = (body.pathname ?? "").trim();
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   }
 
   if (!message) {
-    return NextResponse.json({ error: "Mensaje vacio." }, { status: 400 });
+    return NextResponse.json({ error: "Mensaje vacío." }, { status: 400 });
   }
 
   const result = await buildInternalSupportReplyWithModel({

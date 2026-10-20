@@ -97,10 +97,10 @@ export default async function RotacionPage() {
               <div className="space-y-3">
                 <p className="eyebrow text-[11px] font-semibold">Rotacion</p>
                 <h1 className="font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                  Productos que mas se mueven
+                  Productos que más se mueven
                 </h1>
                 <p className="max-w-2xl text-sm leading-6 text-zinc-400 sm:text-base">
-                  Un ranking historico para ver que vende mas, que deja mejor margen y que conviene
+                  Un ranking histórico para ver que vende más, que deja mejor margen y que conviene
                   reponer primero.
                 </p>
               </div>
@@ -122,7 +122,7 @@ export default async function RotacionPage() {
               <StatCard
                 label="Margen estimado"
                 value={formatARS(totalMargen)}
-                helper="Suma historica de margen segun costo de compra."
+                helper="Sumá histórica de margen segun costo de compra."
               />
             </div>
           </div>
@@ -132,7 +132,7 @@ export default async function RotacionPage() {
           <div className="space-y-4">
             {rotacion.length === 0 ? (
               <div className="rounded-[28px] border border-zinc-800 bg-zinc-900 p-8 text-center">
-                <p className="text-zinc-400">Sin ventas registradas todavia.</p>
+                <p className="text-zinc-400">Sin ventas registradas todavía.</p>
               </div>
             ) : (
               rotacion.map((item, index) => {
@@ -199,7 +199,7 @@ export default async function RotacionPage() {
 
                       <div className="grid gap-3 sm:min-w-[220px]">
                         <InfoPill label="Stock actual" value={String(p.stockActual ?? 0)} />
-                        <InfoPill label="Minimo" value={String(p.stockMinimo ?? 5)} />
+                        <InfoPill label="Mínimo" value={String(p.stockMinimo ?? 5)} />
                         <InfoPill
                           label="Precio venta"
                           value={p.precioVenta ? formatARS(p.precioVenta) : "Sin precio"}

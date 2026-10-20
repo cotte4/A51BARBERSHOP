@@ -59,7 +59,7 @@ export default async function TemporadasPage() {
             <div className="grid gap-3 sm:grid-cols-3">
               <Metric label="Activa" value={activaActual ? "En curso" : "Sin activa"} tone="accent" />
               <Metric label="Programadas" value={`${programadas.length}`} />
-              <Metric label="Con proyeccion" value={`${conProyeccion}`} />
+              <Metric label="Con proyección" value={`${conProyeccion}`} />
             </div>
           </div>
 
@@ -76,7 +76,7 @@ export default async function TemporadasPage() {
 
       {lista.length === 0 ? (
         <section className="panel-card rounded-[28px] p-8 text-center">
-          <p className="text-zinc-400">No hay temporadas cargadas todavia.</p>
+          <p className="text-zinc-400">No hay temporadas cargadas todavía.</p>
           <Link
             href="/configuracion/temporadas/nuevo"
             className="neon-button mt-4 inline-flex min-h-[48px] items-center justify-center rounded-[20px] px-5 text-sm font-medium transition"
@@ -137,11 +137,11 @@ export default async function TemporadasPage() {
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     {temporada.cortesDiaProyectados !== null ? (
                       <InfoCard
-                        label="Cortes por dia"
+                        label="Cortes por día"
                         value={`${temporada.cortesDiaProyectados} proy.`}
                       />
                     ) : (
-                      <InfoCard label="Cortes por dia" value="Sin proyeccion" />
+                      <InfoCard label="Cortes por día" value="Sin proyección" />
                     )}
                     {temporada.precioBaseProyectado !== null ? (
                       <InfoCard

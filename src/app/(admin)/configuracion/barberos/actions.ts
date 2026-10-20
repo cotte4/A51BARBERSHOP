@@ -91,7 +91,7 @@ function validarBarbero(formData: FormData): {
   }
 
   if (publicReservaRequiresPassword && !publicReservaPassword) {
-    fieldErrors.publicReservaPassword = "Carga una clave para proteger la reserva publica.";
+    fieldErrors.publicReservaPassword = "Cargá una clave para proteger la reserva publica.";
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -153,7 +153,7 @@ export async function crearBarbero(
       .limit(1);
 
     if (existingBySlug) {
-      return { fieldErrors: { publicSlug: "Ese slug ya esta en uso por otro barbero." } };
+      return { fieldErrors: { publicSlug: "Ese slug ya está en uso por otro barbero." } };
     }
   }
 
@@ -188,7 +188,7 @@ export async function crearBarbero(
           : null,
     });
   } catch {
-    return { error: "No se pudo guardar el barbero. Revisa los datos e intenta de nuevo." };
+    return { error: "No se pudo guardar el barbero. Revisá los datos e intentá de nuevo." };
   }
 
   revalidatePath("/configuracion/barberos");
@@ -250,7 +250,7 @@ export async function editarBarbero(
       .limit(1);
 
     if (existingBySlug) {
-      return { fieldErrors: { publicSlug: "Ese slug ya esta en uso por otro barbero." } };
+      return { fieldErrors: { publicSlug: "Ese slug ya está en uso por otro barbero." } };
     }
   }
 
@@ -288,7 +288,7 @@ export async function editarBarbero(
       })
       .where(eq(barberos.id, id));
   } catch {
-    return { error: "No se pudo actualizar el barbero. Intenta de nuevo." };
+    return { error: "No se pudo actualizar el barbero. Intentá de nuevo." };
   }
 
   revalidatePath("/configuracion/barberos");

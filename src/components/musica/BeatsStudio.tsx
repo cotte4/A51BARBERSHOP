@@ -20,7 +20,7 @@ export default function BeatsStudio() {
 
   async function searchBeats(q: string) {
     if (!q.trim()) {
-      setError("Escribi una busqueda primero.");
+      setError("Escribí una búsqueda primero.");
       return;
     }
 

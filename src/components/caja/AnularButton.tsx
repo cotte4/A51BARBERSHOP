@@ -47,7 +47,7 @@ export default function AnularButton({ atencionId, anularAction }: AnularButtonP
             setOpen(true);
           }}
           className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-200 transition-colors hover:border-rose-400/50 hover:bg-rose-500/15"
-          title="Marca la atención como anulada y pide un motivo"
+          title="Marcá la atención como anulada y pide un motivo"
         >
           Anular movimiento
         </button>

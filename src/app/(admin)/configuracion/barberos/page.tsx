@@ -35,12 +35,12 @@ export default async function BarberosPage() {
       <section className="panel-card rounded-[28px] p-6 sm:p-7">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
-            <p className="eyebrow">Configuracion / Barberos</p>
+            <p className="eyebrow">Configuración / Barberos</p>
             <h2 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
               Barberos
             </h2>
             <p className="mt-3 max-w-2xl text-sm text-zinc-400">
-              Cada perfil define comision, modelo y defaults de caja. La activacion se gestiona
+              Cada perfil define comision, modelo y defaults de caja. La activación se gestiona
               desde la ficha para evitar toques accidentales.
             </p>
           </div>
@@ -57,7 +57,7 @@ export default async function BarberosPage() {
 
       {lista.length === 0 ? (
         <div className="panel-card rounded-[28px] p-8 text-center">
-          <p className="text-zinc-400">No hay barberos cargados todavia.</p>
+          <p className="text-zinc-400">No hay barberos cargados todavía.</p>
           <Link
             href="/configuracion/barberos/nuevo"
             className="mt-4 inline-block text-sm font-semibold text-[#8cff59]"

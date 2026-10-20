@@ -61,7 +61,7 @@ export default async function GoLiveReadinessPage() {
         <section className="panel-card rounded-[28px] p-5">
           <p className="text-sm font-medium text-white">Firma de lanzamiento</p>
           <p className="mt-1 text-xs text-zinc-400">
-            Solo se firma cuando todos los checks automaticos estan en verde.
+            Solo se firma cuando todos los checks automáticos están en verde.
           </p>
 
           <form action={signoffGoLiveAction} className="mt-4 space-y-3">

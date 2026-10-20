@@ -108,7 +108,7 @@ export default function MusicOperationConsole({
     event.preventDefault();
     const nextQuery = query.trim();
     if (!nextQuery) {
-      setSearchError("Escribi una busqueda primero.");
+      setSearchError("Escribí una búsqueda primero.");
       return;
     }
 
@@ -130,7 +130,7 @@ export default function MusicOperationConsole({
 
       setSearchResults(data.tracks ?? []);
       if ((data.tracks ?? []).length === 0) {
-        setSearchError("No encontramos resultados con esa busqueda.");
+        setSearchError("No encontramos resultados con esa búsqueda.");
       }
     } catch (error) {
       setSearchResults([]);
@@ -142,9 +142,9 @@ export default function MusicOperationConsole({
 
   const queueSummary =
     state.queue.items.length === 0
-      ? "Sin temas cargados todavia."
+      ? "Sin temas cargados todavía."
       : `${state.queue.items.length} temas en la cola activa.`;
-  const autoResumeLabel = state.autoResume.resumeContextLabel ?? "la playlist automatica";
+  const autoResumeLabel = state.autoResume.resumeContextLabel ?? "la playlist automática";
   const activePlayer =
     state.players.find((player) => player.isExpectedLocalPlayer) ??
     state.players.find((player) => player.isDefault) ??
@@ -162,14 +162,14 @@ export default function MusicOperationConsole({
     ? `${state.jam.participants.length} ${
         state.jam.participants.length === 1 ? "barbero" : "barberos"
       } en la sesion`
-    : "Sin sesion activa";
+    : "Sin sesión activa";
   const jamHelpText = !state.jam.active
-    ? "Activa Jam para que cualquier barbero arranque la sesion compartida del local."
+    ? "Activa Jam para que cualquier barbero arranque la sesión compartida del local."
     : viewerIsJamHost
-      ? "Estas hosteando la Jam. Los demas pueden sumarse sin sacarte el lugar."
+      ? "Estás hosteando la Jam. Los demás pueden sumarse sin sacarte el lugar."
       : viewerJoinedJam
-        ? `Ya estas dentro de la Jam de ${jamHostName}. Lo que agregues queda como aporte tuyo.`
-        : `Pinky u otro barbero ya iniciaron la Jam. Puedes unirte sin reemplazar al host.`;
+        ? `Ya estás dentro de la Jam de ${jamHostName}. Lo que agregues queda como aporte tuyo.`
+        : `Pinky u otro barbero ya iniciaron la Jam. Podés unirte sin reemplazar al host.`;
 
   return (
     <div className="space-y-6">
@@ -226,7 +226,7 @@ export default function MusicOperationConsole({
               <section className="rounded-[30px] border border-cyan-400/20 bg-cyan-500/8 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-cyan-200/70">Sesion Jam</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-cyan-200/70">Sesión Jam</p>
                     <h3 className="mt-2 text-xl font-semibold text-white">
                       {state.jam.active
                         ? `Jam compartida de ${jamHostName}`
@@ -266,7 +266,7 @@ export default function MusicOperationConsole({
                       onClick={() =>
                         runMutation(
                           () => activateJamModeAction(),
-                          "Jam activa. Esta sesion queda lista para que otros se sumen.",
+                          "Jam activa. Esta sesión queda lista para que otros se sumen.",
                           "jam-init",
                         )
                       }
@@ -295,19 +295,19 @@ export default function MusicOperationConsole({
 
                   {viewerIsJamHost ? (
                     <span className="rounded-2xl border border-[#8cff59]/20 bg-[#8cff59]/8 px-4 py-3 text-sm font-semibold text-[#d8ffc7]">
-                      Sos el host de esta sesion
+                      Sos el host de esta sesión
                     </span>
                   ) : null}
 
                   {!viewerIsJamHost && viewerJoinedJam ? (
                     <span className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-100">
-                      Ya estas unido a la Jam
+                      Ya estás unido a la Jam
                     </span>
                   ) : null}
 
                   {state.jam.active && !viewerBarberoId ? (
                     <span className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300">
-                      Esta sesion admite participantes con perfil de barbero activo.
+                      Esta sesión admite participantes con perfil de barbero activo.
                     </span>
                   ) : null}
                 </div>
@@ -361,7 +361,7 @@ export default function MusicOperationConsole({
                       runMutation(
                         () => activateJamModeAction(),
                         state.jam.active
-                          ? "Jam sigue activa. Puedes seguir sumando gente y temas."
+                          ? "Jam sigue activa. Podés seguir sumando gente y temas."
                           : "Jam activa.",
                         "jam",
                       )

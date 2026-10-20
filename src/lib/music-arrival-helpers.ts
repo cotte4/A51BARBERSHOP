@@ -16,7 +16,7 @@ export function getClienteLlegoReadiness(dashboard: ArrivalDashboardSnapshot) {
   const activePlayerId = getPreferredActivePlayerId(dashboard.players);
   const recoveryReason =
     dashboard.runtime.degradedReason ??
-    (providerReady ? "No encontramos un player listo en el local." : "Spotify no esta conectado.");
+    (providerReady ? "No encontramos un player listo en el local." : "Spotify no está conectado.");
 
   return {
     providerReady,

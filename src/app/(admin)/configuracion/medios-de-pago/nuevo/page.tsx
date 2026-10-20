@@ -22,8 +22,8 @@ export default function NuevoMedioPagoPage() {
             </p>
           </div>
           <div className="rounded-[22px] bg-zinc-900 px-4 py-3 text-sm text-zinc-300 ring-1 ring-zinc-700">
-            <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Lectura rapida</p>
-            <p className="mt-2">Si tiene comision, descuenta del neto automaticamente.</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Lectura rápida</p>
+            <p className="mt-2">Si tiene comision, descuenta del neto automáticamente.</p>
           </div>
         </div>
       </section>

@@ -72,7 +72,7 @@ async function refreshSpotifyTokens(refreshToken: string) {
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    throw new Error("Configuracion de Spotify incompleta.");
+    throw new Error("Configuración de Spotify incompleta.");
   }
 
   const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
@@ -88,7 +88,7 @@ async function refreshSpotifyTokens(refreshToken: string) {
   });
 
   if (!tokenRes.ok) {
-    throw new Error("No pude renovar la conexion de Spotify.");
+    throw new Error("No pude renovar la conexión de Spotify.");
   }
 
   const data = (await tokenRes.json()) as {
@@ -177,7 +177,7 @@ function mapPlayer(device: Awaited<ReturnType<typeof listDevices>>[number]): Pro
 async function requireAccessToken() {
   const connection = await ensureValidConnection();
   if (!connection?.accessToken) {
-    throw new Error("Spotify no esta conectado.");
+    throw new Error("Spotify no está conectado.");
   }
 
   return connection;

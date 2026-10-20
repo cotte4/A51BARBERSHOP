@@ -121,14 +121,14 @@ export default function ClientSearch({
       <div className="panel-card rounded-[28px] p-4 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <p className="eyebrow text-[11px] font-semibold">Gestion de clientes</p>
+            <p className="eyebrow text-[11px] font-semibold">Gestión de clientes</p>
             <h2 className="font-display mt-2 text-2xl font-semibold text-white sm:text-[2rem]">
               Clientes
             </h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
               {queryTerm
                 ? `Mostrando ${visibleCount} resultado${visibleCount === 1 ? "" : "s"} en ${sourceLabel}.`
-                : `Arrancas con ${recentCount} recientes y puedes abrir ${totalClients} clientes totales.`}
+                : `Arrancás con ${recentCount} recientes y podés abrir ${totalClients} clientes totales.`}
             </p>
           </div>
 
@@ -202,10 +202,10 @@ export default function ClientSearch({
           <div className="panel-soft rounded-[28px] p-8 text-center">
             <p className="eyebrow text-[11px] font-semibold">Sin resultados</p>
             <h3 className="font-display mt-3 text-2xl font-semibold text-white">
-              Sin resultados para esa busqueda.
+              Sin resultados para esa búsqueda.
             </h3>
             <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-zinc-400">
-              Proba con otro nombre, un telefono o cambia el filtro a la base completa para ampliar la busqueda.
+              Probá con otro nombre, un teléfono o cambiá el filtro a la base completa para ampliar la búsqueda.
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-3">
               <button
@@ -213,7 +213,7 @@ export default function ClientSearch({
                 onClick={() => setQuery("")}
                 className="neon-button inline-flex min-h-[44px] items-center justify-center rounded-full px-4 text-sm font-semibold"
               >
-                Limpiar busqueda
+                Limpiar búsqueda
               </button>
               <button
                 type="button"
