@@ -48,3 +48,8 @@ scripts/local/
 *.tsbuildinfo
 next-env.d.ts
 .aider*
+
+# QA con agentes-persona: perfiles de navegador y capturas
+qa/.perfiles/
+qa/salida/
+qa/.q.tmp.mjs
