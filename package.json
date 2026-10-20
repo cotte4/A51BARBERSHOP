@@ -27,7 +27,8 @@
     "db:seed:activity": "tsx src/db/seed-activity.ts",
     "db:seed:golive": "tsx src/db/seed-go-live.ts",
     "db:generate": "drizzle-kit generate",
-    "test:presupuesto": "tsx --conditions=react-server scripts/test-presupuesto-access.ts"
+    "test:presupuesto": "tsx --conditions=react-server scripts/test-presupuesto-access.ts",
+    "db:check:esquema": "tsx scripts/check-esquema.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
