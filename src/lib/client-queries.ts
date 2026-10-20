@@ -11,7 +11,8 @@ import {
 import type { ClientProfile, ClientSummary } from "@/lib/types";
 import { normalizePhone } from "@/lib/phone";
 import { getClientVisibilityFilter, type ClientVisibilityActor } from "@/lib/dal/clients";
-import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, like, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, like, lt, or, sql } from "drizzle-orm";
+import { nombreContiene } from "@/lib/busqueda";
 
 export async function searchVisibleClients(
   actor: ClientVisibilityActor,
@@ -25,7 +26,7 @@ export async function searchVisibleClients(
     actor.isAdmin ? undefined : isNull(clients.archivedAt),
     trimmedQuery
       ? or(
-          ilike(clients.name, `%${trimmedQuery}%`),
+          nombreContiene(clients.name, trimmedQuery),
           normalizedPhone ? like(clients.phoneNormalized, `${normalizedPhone}%`) : undefined,
           like(clients.phoneRaw, `%${trimmedQuery}%`)
         )

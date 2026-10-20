@@ -13,9 +13,10 @@ import { canAccessClient, getClientActorContext } from "@/lib/client-access";
 import { normalizeClientPreferences } from "@/lib/client-preferences";
 import { recalculateClientMetrics } from "@/lib/client-queries";
 import { normalizePhone } from "@/lib/phone";
-import { and, eq, ilike, isNull, ne, or } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { nombreContiene } from "@/lib/busqueda";
 
 export type ClientFormState = {
   error?: string;
@@ -158,7 +159,7 @@ export async function createClientAction(
         phoneRaw: clients.phoneRaw,
       })
       .from(clients)
-      .where(and(or(ilike(clients.name, `%${name}%`), ilike(clients.name, `${name}%`)), isNull(clients.archivedAt)))
+      .where(and(nombreContiene(clients.name, name), isNull(clients.archivedAt)))
       .limit(3);
 
     if (possibleDuplicates.length > 0) {
@@ -436,7 +437,7 @@ export async function upsertRetentionFollowupAction(
   const notes = String(formData.get("notes") ?? "").trim() || null;
 
   if (!["pendiente", "contactado", "reagendado"].includes(status)) {
-    return { error: "Estado invalido." };
+    return { error: "Estado inválido." };
   }
 
   await db

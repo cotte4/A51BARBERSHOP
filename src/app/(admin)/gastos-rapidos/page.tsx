@@ -49,7 +49,7 @@ export default async function GastosRapidosPage({
   const userRole = (session?.user as { role?: string })?.role;
 
   if (userRole !== "admin" && userRole !== "asesor") {
-    redirect("/caja");
+    redirect("/caja?sinAcceso=1");
   }
 
   const [{ gastos, total, totalsByCategory }, params] = await Promise.all([
@@ -104,10 +104,10 @@ export default async function GastosRapidosPage({
 
   const emptyTitle = categoriaSeleccionada
     ? `No hay gastos en ${categoriaActiva?.label ?? "este filtro"}`
-    : "Todavia no hay gastos rapidos cargados este mes";
+    : "Todavía no hay gastos rápidos cargados este mes";
   const emptyDescription = categoriaSeleccionada
-    ? "Proba quitar el filtro o agrega un movimiento nuevo desde el boton de arriba."
-    : "Cuando cargues el primero, aca vas a ver fecha, categoria, monto y notas de cada movimiento.";
+    ? "Probá quitar el filtro o agrega un movimiento nuevo desde el boton de arriba."
+    : "Cuando cargues el primero, acá vas a ver fecha, categoría, monto y notas de cada movimiento.";
 
   return (
     <div className="app-shell min-h-screen pb-24">
@@ -118,11 +118,11 @@ export default async function GastosRapidosPage({
               <div className="space-y-3">
                 <p className="eyebrow text-xs font-semibold">Control de egresos</p>
                 <h1 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                  Gastos rapidos
+                  Gastos rápidos
                 </h1>
                 <p className="max-w-2xl text-sm leading-6 text-zinc-300 sm:text-base">
                   Captura cafe, limpieza, compras chicas y reposiciones sin perder contexto. La
-                  lectura queda ordenada por categoria para que sepas rapido donde se fue la caja.
+                  lectura queda ordenada por categoría para que sepas rápido donde se fue la caja.
                 </p>
               </div>
 
@@ -165,7 +165,7 @@ export default async function GastosRapidosPage({
 
             <div className="space-y-3">
               <section className="panel-soft rounded-[28px] p-5">
-                <p className="eyebrow text-xs font-semibold">Accion inmediata</p>
+                <p className="eyebrow text-xs font-semibold">Acción inmediata</p>
                 <h2 className="mt-2 text-xl font-semibold text-white">Registrar un gasto</h2>
                 <p className="mt-2 text-sm leading-6 text-zinc-400">
                   Captura el movimiento y vuelve enseguida a la lectura mensual.
@@ -178,7 +178,7 @@ export default async function GastosRapidosPage({
                 historyHref="/gastos-rapidos"
                 fixed={false}
                 showHistoryLink={false}
-                buttonLabel="Registrar gasto rapido"
+                buttonLabel="Registrar gasto rápido"
                 buttonClassName="neon-button inline-flex min-h-[54px] w-full items-center justify-center rounded-[20px] px-5 text-sm font-semibold sm:w-auto"
               />
             </div>
@@ -217,8 +217,8 @@ export default async function GastosRapidosPage({
             <section className="panel-card rounded-[28px] p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="eyebrow text-xs font-semibold">Lectura rapida</p>
-                  <h3 className="mt-2 text-xl font-semibold text-white">Categorias con mas peso</h3>
+                  <p className="eyebrow text-xs font-semibold">Lectura rápida</p>
+                  <h3 className="mt-2 text-xl font-semibold text-white">Categorías con más peso</h3>
                 </div>
                 <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs text-zinc-400">
                   Top 3
@@ -227,7 +227,7 @@ export default async function GastosRapidosPage({
 
               <div className="mt-4 space-y-3">
                 {topCategories.length === 0 ? (
-                  <p className="text-sm text-zinc-500">Todavia no hay gasto rapido para comparar.</p>
+                  <p className="text-sm text-zinc-500">Todavía no hay gasto rápido para comparar.</p>
                 ) : (
                   topCategories.map((categoria, index) => {
                     const maxTotal = topCategories[0]?.total ?? 1;
@@ -266,8 +266,8 @@ export default async function GastosRapidosPage({
             <section className="panel-card rounded-[28px] p-5">
               <p className="eyebrow text-xs font-semibold">Reglas rapidas</p>
               <ul className="mt-4 space-y-3 text-sm leading-6 text-zinc-300">
-                <li>Usa la categoria correcta para que el mes cierre limpio.</li>
-                <li>Deja nota cuando el gasto no sea obvio o cambie una rutina.</li>
+                <li>Usá la categoría correcta para que el mes cierre limpio.</li>
+                <li>Dejá nota cuando el gasto no sea obvio o cambie una rutina.</li>
                 <li>Si algo queda en Otros, revisalo al final de la semana.</li>
               </ul>
             </section>

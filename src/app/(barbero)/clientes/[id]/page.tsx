@@ -123,7 +123,7 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
           actions={
             <>
               <Link
-                href="/hoy"
+                href={`/caja/nueva?clienteId=${client.id}`}
                 className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[#8cff59] px-4 text-sm font-semibold text-[#07130a] transition hover:bg-[#a8ff80]"
               >
                 Cobrar
@@ -389,7 +389,7 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
               type="submit"
               className="h-12 w-full rounded-xl bg-[#8cff59] px-4 text-sm font-semibold text-[#07130a] transition hover:bg-[#a8ff80]"
             >
-              {isAdminView ? "Guardar perfil" : "Guardar ficha rapida"}
+              {isAdminView ? "Guardar perfil" : "Guardar ficha rápida"}
             </button>
           </form>
         </section>
@@ -444,7 +444,7 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
                 </p>
                 <p className="mt-1 text-xs text-zinc-500">
                   {cortesDisponibles === null
-                    ? "Plan sin limite configurado."
+                    ? "Plan sin límite configurado."
                     : `${cortesDisponibles} disponibles para usar.`}
                 </p>
               </div>
@@ -472,7 +472,7 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
                   {client.marcianoDesde ? formatDate(client.marcianoDesde) : "Sin fecha"}
                 </p>
                 <p className="mt-1 text-xs text-zinc-500">
-                  {client.esMarciano ? "Programa activo." : "Cliente sin activacion todavia."}
+                  {client.esMarciano ? "Programa activo." : "Cliente sin activación todavía."}
                 </p>
               </div>
             </div>

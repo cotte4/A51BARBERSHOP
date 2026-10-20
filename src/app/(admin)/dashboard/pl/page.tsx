@@ -108,7 +108,7 @@ function Section({
 export default async function PLPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin" && userRole !== "asesor") redirect("/caja");
+  if (userRole !== "admin" && userRole !== "asesor") redirect("/caja?sinAcceso=1");
 
   const sp = await searchParams;
   const hoyDate = new Date(

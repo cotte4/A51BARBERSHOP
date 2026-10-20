@@ -44,7 +44,7 @@ export default async function HangarAssetDetailPage({
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string } | undefined)?.role;
   if (userRole !== "admin" && userRole !== "asesor") {
-    redirect("/caja");
+    redirect("/caja?sinAcceso=1");
   }
 
   const { id } = await params;
@@ -209,7 +209,7 @@ export default async function HangarAssetDetailPage({
 
               {payments.length === 0 ? (
                 <div className="mt-5 rounded-[24px] border border-dashed border-zinc-700 bg-zinc-950/60 p-5 text-sm text-zinc-400">
-                  Todavia no hay pagos asociados. Si este activo ya comenzo a comprarse, registralos
+                  Todavía no hay pagos asociados. Si este activo ya comenzo a comprarse, registralos
                   desde el panel lateral.
                 </div>
               ) : (
@@ -266,11 +266,11 @@ export default async function HangarAssetDetailPage({
           <aside className="space-y-5">
             <section className="rounded-[28px] border border-[#8cff59]/20 bg-[#8cff59]/10 p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8cff59]">
-                Accion inmediata
+                Acción inmediata
               </p>
               <h2 className="mt-2 text-xl font-semibold text-white">Registrar pago</h2>
               <p className="mt-2 text-sm leading-6 text-zinc-200">
-                Cada pago que sumas aca impacta tambien en Finanzas y recalcula el estado de compra.
+                Cada pago que sumas acá impacta también en Finanzas y recalcula el estado de compra.
               </p>
             </section>
 

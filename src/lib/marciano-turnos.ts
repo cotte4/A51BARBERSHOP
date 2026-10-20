@@ -1,6 +1,6 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { barberos, servicios, turnos } from "@/db/schema";
+import { barberos, clients, servicios, turnos } from "@/db/schema";
 import type { TurnoEstado } from "@/lib/types";
 
 export const MARCIANO_SELF_MANAGEMENT_HOURS = 11;
@@ -174,4 +174,29 @@ export function splitMarcianoTurnos(turnosList: MarcianoTurnoItem[]) {
     .slice(0, 8);
 
   return { proximos, historial };
+}
+
+// Reprogramar desde el portal: el turno viejo tiene que ser del Marciano logueado y todavía admitir cambios.
+export async function getTurnoAReprogramar(
+  userId: string,
+  turnoId: string
+): Promise<{ ok: true; turnoId: string } | { ok: false; message: string }> {
+  const [client] = await db
+    .select({ id: clients.id })
+    .from(clients)
+    .where(and(eq(clients.userId, userId), eq(clients.esMarciano, true)))
+    .limit(1);
+  const turno = client ? await getMarcianoTurnoById(client.id, turnoId) : null;
+  if (!turno) return { ok: false, message: "No encontramos el turno que querés mover." };
+  if (!turno.canManage) {
+    return { ok: false, message: turno.manageMessage ?? "Ese turno ya no admite cambios desde el portal." };
+  }
+  return { ok: true, turnoId: turno.id };
+}
+
+export async function cancelarTurnoReprogramado(turnoId: string) {
+  await db
+    .update(turnos)
+    .set({ estado: "cancelado", motivoCancelacion: "Reprogramado por Marciano desde el portal", updatedAt: new Date() })
+    .where(and(eq(turnos.id, turnoId), inArray(turnos.estado, ["pendiente", "confirmado"])));
 }

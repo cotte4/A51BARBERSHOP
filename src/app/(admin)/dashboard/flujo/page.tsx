@@ -25,7 +25,7 @@ function formatDia(fechaStr: string): string {
 export default async function FlujoPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
-  if (userRole !== "admin" && userRole !== "asesor") redirect("/caja");
+  if (userRole !== "admin" && userRole !== "asesor") redirect("/caja?sinAcceso=1");
 
   const sp = await searchParams;
   const hoyDate = new Date(
@@ -114,7 +114,7 @@ export default async function FlujoPage({ searchParams }: { searchParams: Search
                 Egresos
               </div>
               <div className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                Saldo dia
+                Saldo día
               </div>
               <div className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-zinc-400">
                 Acumulado

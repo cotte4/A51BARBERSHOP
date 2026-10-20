@@ -31,7 +31,7 @@ function KpiCard({
 export default async function OvnisDashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const role = (session?.user as { role?: string })?.role;
-  if (role !== "admin" && role !== "asesor") redirect("/caja");
+  if (role !== "admin" && role !== "asesor") redirect("/caja?sinAcceso=1");
 
   const [stats, top5Rows] = await Promise.all([
     totalOvnisInCirculation(),

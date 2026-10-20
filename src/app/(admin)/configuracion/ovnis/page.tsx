@@ -10,7 +10,7 @@ import OvnisValueEditor from "./_OvnisValueEditor";
 export default async function ConfiguracionOvnisPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const role = (session?.user as { role?: string })?.role;
-  if (role !== "admin" && role !== "asesor") redirect("/caja");
+  if (role !== "admin" && role !== "asesor") redirect("/caja?sinAcceso=1");
 
   const [listaServicios, listaProductos] = await Promise.all([
     db

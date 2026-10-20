@@ -1,10 +1,10 @@
 "use server";
 
-import { ilike } from "drizzle-orm";
 import { db } from "@/db";
 import { clients } from "@/db/schema";
 import { getAdminActorContext } from "@/lib/dal/authz";
 import { adminAdjustBalance } from "@/lib/ovnis-server";
+import { nombreContiene } from "@/lib/busqueda";
 
 export async function ajustarBalanceAction(
   clientId: string,
@@ -50,7 +50,7 @@ export async function searchClientAction(
     })
     .from(clients)
     .leftJoin(ovnisBalance, eq(clients.id, ovnisBalance.clientId))
-    .where(ilike(clients.name, `%${query.trim()}%`))
+    .where(nombreContiene(clients.name, query.trim()))
     .limit(8);
 
   return results.map((r) => ({ id: r.id, name: r.name, balance: Number(r.balance) }));

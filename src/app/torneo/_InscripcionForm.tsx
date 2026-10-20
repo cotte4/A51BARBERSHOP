@@ -27,12 +27,12 @@ export default function InscripcionForm({
           <div className="torneo-ficha-borde">
             <div className="torneo-ficha">
               <p className="torneo-hud text-[0.65rem] text-[#8cff59]">
-                Ficha confirmada
+                {state.puestoEspera ? "En lista de espera" : "Ficha recibida"}
               </p>
               <h2 className="torneo-titulo mt-2 text-5xl font-extrabold text-white">
                 <span className="torneo-glitch inline-block italic">
                   <TextEffect
-                    texto="Jugador registrado"
+                    texto={state.alias ?? "Jugador registrado"}
                     retrasoMs={250}
                     pasoMs={140}
                   />

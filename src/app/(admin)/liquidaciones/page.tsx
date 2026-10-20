@@ -20,7 +20,7 @@ export default async function LiquidacionesPage() {
   const userRole = (session?.user as { role?: string })?.role;
 
   if (userRole !== "admin" && userRole !== "asesor") {
-    redirect("/caja");
+    redirect("/caja?sinAcceso=1");
   }
 
   const lista = await db.select().from(liquidaciones).orderBy(desc(liquidaciones.creadoEn));

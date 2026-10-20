@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, eq, gte, lte, sql } from "drizzle-orm";
 import AnularButton from "@/components/caja/AnularButton";
 import { db } from "@/db";
 import {
@@ -37,14 +37,19 @@ function plural(n: number, uno: string, varios: string): string {
   return `${n} ${n === 1 ? uno : varios}`;
 }
 
-export default async function CajaPage() {
+export default async function CajaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sinAcceso?: string }>;
+}) {
+  const { sinAcceso } = await searchParams;
   const actor = await getCajaActorContext();
   const isAdmin = actor?.isAdmin ?? false;
   const fechaHoy = getFechaHoy();
   const inicioDia = new Date(`${fechaHoy}T00:00:00-03:00`);
   const finDia = new Date(`${fechaHoy}T23:59:59-03:00`);
 
-  const [cierres, atencionesDelDia, ventasDelDia, barberosAll, serviciosAll, mediosAll, productosAll] =
+  const [cierres, atencionesDelDia, ventasDelDia, barberosAll, serviciosAll, mediosAll, productosAll, productosVendidosHoy] =
     await Promise.all([
       db
         .select({
@@ -81,6 +86,21 @@ export default async function CajaPage() {
       db.select({ id: servicios.id, nombre: servicios.nombre }).from(servicios),
       db.select({ id: mediosPago.id, nombre: mediosPago.nombre }).from(mediosPago),
       db.select({ id: productos.id, nombre: productos.nombre }).from(productos),
+      // El barbero no ve el importe de los productos, pero sí que se vendieron: sin esto parecía que la venta se perdió.
+      isAdmin
+        ? Promise.resolve(0)
+        : db
+            .select({ unidades: sql<number>`coalesce(-sum(${stockMovimientos.cantidad}), 0)::int` })
+            .from(stockMovimientos)
+            .where(
+              and(
+                eq(stockMovimientos.tipo, "venta"),
+                gte(stockMovimientos.fecha, inicioDia),
+                lte(stockMovimientos.fecha, finDia)
+              )
+            )
+            // Las ventas restan stock (-1) y las anulaciones lo devuelven (+1): el neto negado son las unidades vendidas.
+            .then((filas) => Math.max(0, Number(filas[0]?.unidades ?? 0))),
     ]);
 
   const cierreHoy = cierres[0] ?? null;
@@ -130,6 +150,12 @@ export default async function CajaPage() {
   return (
     <main className="app-shell min-h-screen px-4 py-6 pb-28">
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
+        {/* Las pantallas de la dueña mandan acá a quien no tiene permiso; sin este aviso parece un error. */}
+        {sinAcceso ? (
+          <p role="status" className="rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+            Esa pantalla es solo para la dueña. Te traje a tu caja.
+          </p>
+        ) : null}
         <section className="panel-card rounded-[28px] p-6">
           <p className="eyebrow text-xs font-semibold">Caja · {formatFechaLarga(fechaHoy)}</p>
           <p className="mt-4 text-sm text-zinc-300">{isAdmin ? "Hoy entraron" : "Hoy cobraste"}</p>
@@ -137,6 +163,12 @@ export default async function CajaPage() {
             {formatARS(caja.total)}
           </p>
           <p className="mt-2 text-sm text-zinc-300">{detalle}</p>
+          {productosVendidosHoy > 0 ? (
+            <p className="mt-1 text-sm text-zinc-400">
+              Además se vendieron {plural(productosVendidosHoy, "producto", "productos")} en el local. Esa plata no
+              cuenta en tu caja: la ve la dueña.
+            </p>
+          ) : null}
 
           {variosBarberos ? (
             <ul className="mt-3 space-y-1 text-sm tabular-nums text-zinc-300">

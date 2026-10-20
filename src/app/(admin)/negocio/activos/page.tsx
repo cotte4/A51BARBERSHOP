@@ -72,7 +72,7 @@ export default async function HangarPage({
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string } | undefined)?.role;
   if (userRole !== "admin" && userRole !== "asesor") {
-    redirect("/caja");
+    redirect("/caja?sinAcceso=1");
   }
 
   const { categoria, estado, sim, vista } = await searchParams;
@@ -207,7 +207,7 @@ export default async function HangarPage({
                   Capital fisico y compras del negocio
                 </h1>
                 <p className="max-w-3xl text-sm leading-6 text-zinc-300 sm:text-base">
-                  El Hangar organiza lo que querias comprar, lo que ya entro, lo que sigue en cuotas y
+                  El Hangar organiza lo que querías comprar, lo que ya entró, lo que sigue en cuotas y
                   cuanto capital queda disponible sin mezclarlo con costos fijos del asesor.
                 </p>
               </div>

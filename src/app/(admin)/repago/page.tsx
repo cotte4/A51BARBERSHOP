@@ -51,7 +51,7 @@ export default async function RepagoPage() {
   const userRole = (session?.user as { role?: string })?.role;
 
   if (userRole !== "admin" && userRole !== "asesor") {
-    redirect("/caja");
+    redirect("/caja?sinAcceso=1");
   }
 
   const hoy = fechaHoyArgentina();

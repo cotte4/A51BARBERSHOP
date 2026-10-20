@@ -18,7 +18,7 @@ const TYPE_LABELS: Record<string, string> = {
 export default async function RuletaPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const role = (session?.user as { role?: string })?.role;
-  if (role !== "admin" && role !== "asesor") redirect("/caja");
+  if (role !== "admin" && role !== "asesor") redirect("/caja?sinAcceso=1");
 
   const prizes = await db
     .select()

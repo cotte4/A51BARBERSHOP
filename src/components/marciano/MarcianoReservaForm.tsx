@@ -178,13 +178,13 @@ export default function MarcianoReservaForm({
     }
 
     if (!selectedSlot) {
-      setError("Elegi un horario disponible.");
+      setError("Elegí un horario disponible.");
       return;
     }
 
     const slot = slots.find((item) => item.id === selectedSlot);
     if (!slot) {
-      setError("Ese horario ya no esta disponible.");
+      setError("Ese horario ya no está disponible.");
       return;
     }
 
@@ -200,6 +200,7 @@ export default function MarcianoReservaForm({
       notaCliente,
       sugerenciaCancion: cancion,
       spotifyTrackUri,
+      reprogramarTurnoId: reprogramarTurno?.id,
     };
 
     try {
@@ -228,7 +229,7 @@ export default function MarcianoReservaForm({
         <h2 className="text-xl font-semibold text-emerald-300">Solicitud enviada</h2>
         <p className="mt-2 text-sm text-emerald-300">
           {reprogramarTurno
-            ? "La nueva reserva quedo enviada y el turno anterior se va a cancelar automaticamente."
+            ? "Listo: pediste el horario nuevo y tu turno anterior ya quedó cancelado."
             : "A51 va a revisar tu pedido y confirmar el turno."}
         </p>
       </div>
@@ -248,9 +249,9 @@ export default function MarcianoReservaForm({
 
       {reprogramarTurno ? (
         <div className="rounded-[24px] border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-100">
-          Estas reprogramando tu turno de {formatTurnoDate(reprogramarTurno.fecha)} a las{" "}
-          {reprogramarTurno.horaInicio}. Cuando confirmes el nuevo horario, el turno anterior se
-          cancela automaticamente.
+          Estás reprogramando tu turno de {formatTurnoDate(reprogramarTurno.fecha)} a las{" "}
+          {reprogramarTurno.horaInicio.slice(0, 5)}. Cuando confirmes el nuevo horario, el turno anterior se
+          cancela solo.
         </div>
       ) : null}
 
@@ -260,10 +261,10 @@ export default function MarcianoReservaForm({
             <p className="eyebrow text-zinc-500">Tus datos</p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <SummaryTile label="Nombre" value={clientName} />
-              <SummaryTile label="Telefono" value={clientPhoneRaw} />
+              <SummaryTile label="Teléfono" value={clientPhoneRaw} />
             </div>
             <p className="mt-3 text-sm text-zinc-400">
-              Si queres corregir estos datos antes de reservar, hacelo desde{" "}
+              Si querés corregir estos datos antes de reservar, hacelo desde{" "}
               <Link href="/marciano/perfil" className="text-[#8cff59] hover:text-[#b6ff84]">
                 tu perfil
               </Link>
@@ -331,7 +332,7 @@ export default function MarcianoReservaForm({
               ) : null}
             </div>
 
-            {loadingSlots ? <p className="text-sm text-zinc-400">Buscando horarios...</p> : null}
+            {loadingSlots ? <p className="text-sm text-zinc-400">Buscando horarios…</p> : null}
             {loadError ? <p className="text-sm text-rose-300">{loadError}</p> : null}
             {!loadingSlots && !loadError && slots.length === 0 ? (
               <div className="text-sm text-zinc-400">
@@ -368,7 +369,7 @@ export default function MarcianoReservaForm({
                   >
                     <span className="block font-semibold">{slot.horaInicio}</span>
                     <span className="mt-1 block text-xs text-zinc-500">
-                      slot de {slot.duracionMinutos} min
+                      turno de {slot.duracionMinutos} min
                     </span>
                   </button>
                 );
@@ -425,7 +426,7 @@ export default function MarcianoReservaForm({
                   id="sugerenciaCancion"
                   value={cancion}
                   onChange={(event) => handleSongInputChange(event.target.value)}
-                  placeholder="Tema, artista o cancion favorita"
+                  placeholder="Tema, artista o canción favorita"
                   className="min-h-[48px] w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-4 text-base text-white placeholder:text-zinc-500 outline-none focus:border-[#8cff59]/60"
                 />
                 <button
@@ -444,8 +445,8 @@ export default function MarcianoReservaForm({
                 </p>
               ) : (
                 <p className="text-xs text-zinc-400">
-                  Si elegis un resultado de Spotify, la barberia la puede reproducir de forma mas
-                  confiable.
+                  Si elegís un resultado de Spotify, en la barbería lo pueden poner sin
+                  buscarlo.
                 </p>
               )}
 

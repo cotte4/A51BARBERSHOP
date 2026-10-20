@@ -8,7 +8,7 @@ export default async function NuevoAssetPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
   if (userRole !== "admin" && userRole !== "asesor") {
-    redirect("/caja");
+    redirect("/caja?sinAcceso=1");
   }
 
   return (
@@ -31,7 +31,7 @@ export default async function NuevoAssetPage() {
             Crear activo
           </h1>
           <p className="mt-1 text-sm text-zinc-400">
-            Suma una compra nueva o deja planificado lo que todavia falta entrar al local.
+            Sumá una compra nueva o deja planificado lo que todavía falta entrar al local.
           </p>
         </div>
 

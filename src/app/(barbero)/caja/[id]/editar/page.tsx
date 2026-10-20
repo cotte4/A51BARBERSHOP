@@ -36,7 +36,7 @@ function buildClientLabel(
     phoneRaw: string | null;
   } | null
 ): string {
-  if (!client) return "Caja comun";
+  if (!client) return "Caja común";
   return client.phoneRaw ? `${client.name} - ${client.phoneRaw}` : client.name;
 }
 
@@ -66,14 +66,14 @@ export default async function EditarAtencionPage({
       <main className="app-shell min-h-screen px-4 py-6">
         <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-3xl items-center">
           <div className="panel-card w-full rounded-[32px] p-6 sm:p-8">
-            <p className="eyebrow text-xs font-semibold">Edicion bloqueada</p>
+            <p className="eyebrow text-xs font-semibold">Edición bloqueada</p>
             <h1 className="font-display mt-2 text-3xl font-semibold text-white">
               Solo se pueden editar atenciones de hoy.
             </h1>
             <p className="mt-3 text-sm leading-6 text-zinc-300">
               Esta atencion corresponde al {fechaAtencionLabel}. Para mantener caja,
-              stock y comisiones consistentes, la edicion queda limitada al movimiento
-              del dia actual.
+              stock y comisiones consistentes, la edición queda limitada al movimiento
+              del día actual.
             </p>
             <Link
               href="/caja"
@@ -139,7 +139,7 @@ export default async function EditarAtencionPage({
               Tu usuario no tiene un barbero activo vinculado.
             </h1>
             <p className="mt-3 text-sm leading-6 text-zinc-300">
-              Vincula el usuario desde configuracion para poder editar atenciones sin
+              Vincula el usuario desde configuración para poder editar atenciones sin
               perder trazabilidad.
             </p>
             <Link
@@ -155,7 +155,7 @@ export default async function EditarAtencionPage({
   }
 
   if (!isAdmin && atencion.barberoId !== preselectedBarberoId) {
-    redirect("/caja");
+    redirect("/caja?sinAcceso=1");
   }
 
   const barberoActual = barberosActivos.find((item) => item.id === atencion.barberoId) ?? null;
@@ -196,12 +196,12 @@ export default async function EditarAtencionPage({
           <div className="bg-[radial-gradient(circle_at_top_right,_rgba(140,255,89,0.22),_transparent_34%),radial-gradient(circle_at_bottom_left,_rgba(14,165,233,0.16),_transparent_30%)] p-6 sm:p-7">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-2xl">
-                <p className="eyebrow text-xs font-semibold">Caja / edicion de atencion</p>
+                <p className="eyebrow text-xs font-semibold">Caja / edición de atención</p>
                 <h1 className="font-display mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-                  Editar atencion
+                  Editar atención
                 </h1>
                 <p className="mt-3 text-sm leading-6 text-zinc-300">
-                  Estas ajustando un movimiento ya registrado. Cambiar servicio, cliente,
+                  Estás ajustando un movimiento ya registrado. Cambiar servicio, cliente,
                   productos o medio de pago recalcula stock y comisiones; las notas solo
                   suman contexto operativo.
                 </p>
@@ -275,7 +275,7 @@ export default async function EditarAtencionPage({
                 </p>
                 <p className="mt-2 text-sm font-semibold text-white">{buildClientLabel(clientActual)}</p>
                 <p className="mt-1 text-sm text-zinc-400">
-                  {clientActual?.esMarciano ? "Marciano activo" : "Caja comun"}
+                  {clientActual?.esMarciano ? "Marciano activo" : "Caja común"}
                 </p>
               </div>
 

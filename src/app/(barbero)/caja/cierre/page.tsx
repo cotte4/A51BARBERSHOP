@@ -21,7 +21,7 @@ import CierreForm from "./_CierreForm";
 
 export default async function CierrePage() {
   const actor = await getCajaActorContext();
-  if (!actor?.isAdmin) redirect("/caja");
+  if (!actor?.isAdmin) redirect("/caja?sinAcceso=1");
 
   const fechaHoy = getFechaHoy();
 

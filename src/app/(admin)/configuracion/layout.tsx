@@ -13,7 +13,7 @@ export default async function ConfiguracionLayout({
   const userRole = (session?.user as { role?: string })?.role;
 
   if (userRole !== "admin" && userRole !== "asesor") {
-    redirect("/caja");
+    redirect("/caja?sinAcceso=1");
   }
 
   return (
@@ -28,12 +28,12 @@ export default async function ConfiguracionLayout({
               ← Dashboard
             </Link>
             <div>
-              <p className="eyebrow">Configuracion segura</p>
+              <p className="eyebrow">Configuración segura</p>
               <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
                 Ajustes del sistema
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-                Barberos, musica, pagos y reglas sensibles del negocio en un solo lugar, con
+                Barberos, música, pagos y reglas sensibles del negocio en un solo lugar, con
                 lectura clara y acciones controladas.
               </p>
             </div>

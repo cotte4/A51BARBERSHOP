@@ -1,11 +1,12 @@
 "use server";
 
-import { and, eq, ilike, isNull, ne } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { clients } from "@/db/schema";
 import { requireMarcianoClient } from "@/lib/marciano-portal";
 import { createBet, acceptBet, cancelBet, rejectBet } from "@/lib/ovnis-bets";
+import { nombreContiene } from "@/lib/busqueda";
 
 export async function searchMarcianoForBetAction(
   query: string
@@ -19,7 +20,7 @@ export async function searchMarcianoForBetAction(
     .from(clients)
     .where(
       and(
-        ilike(clients.name, `%${query.trim()}%`),
+        nombreContiene(clients.name, query.trim()),
         eq(clients.esMarciano, true),
         isNull(clients.archivedAt),
         ne(clients.id, client.id)

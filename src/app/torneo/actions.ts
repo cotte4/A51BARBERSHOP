@@ -11,6 +11,8 @@ export type InscripcionState = {
   mensaje: string | null;
   /** Puesto en la lista de espera (1 = el que sigue); null si entró al cupo. */
   puestoEspera?: number | null;
+  /** El alias con que quedó anotado, para repetirlo en la ficha. */
+  alias?: string;
 };
 
 const inscripcionSchema = z.object({
@@ -100,5 +102,5 @@ export async function inscribirseAction(
 
   revalidatePath("/torneo");
   revalidatePath("/torneo-admin");
-  return { ok: true, mensaje: null, puestoEspera: resultado.puestoEspera };
+  return { ok: true, mensaje: null, puestoEspera: resultado.puestoEspera, alias: datos.alias };
 }

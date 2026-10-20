@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { eq } from "drizzle-orm";
 import QuickCheckoutPanel from "@/components/caja/QuickCheckoutPanel";
 import Modal from "@/components/ui/Modal";
@@ -81,12 +80,13 @@ export default async function NuevaAtencionModal({ searchParams }: Props) {
         />
 
         <div className="text-center">
-          <Link
+          {/* <a> y no <Link>: un Link a /caja/nueva lo vuelve a interceptar este mismo modal y no pasa nada. */}
+          <a
             href="/caja/nueva"
             className="text-sm text-zinc-500 transition-colors hover:text-[#8cff59]"
           >
             ¿Necesitás sumar cliente o productos? Cargalo completo
-          </Link>
+          </a>
         </div>
       </div>
     </Modal>

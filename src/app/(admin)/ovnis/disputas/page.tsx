@@ -10,7 +10,7 @@ import DisputaRow from "./_DisputaRow";
 export default async function DisputasPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const role = (session?.user as { role?: string })?.role;
-  if (role !== "admin" && role !== "asesor") redirect("/caja");
+  if (role !== "admin" && role !== "asesor") redirect("/caja?sinAcceso=1");
 
   const challengers = aliasedTable(clients, "challengers");
   const opponents = aliasedTable(clients, "opponents");

@@ -19,7 +19,7 @@ function formatDateTime(turno: MarcianoTurnoItem) {
     day: "numeric",
     month: "long",
     timeZone: "America/Argentina/Buenos_Aires",
-  })} · ${turno.horaInicio}`;
+  })} · ${turno.horaInicio.slice(0, 5)}`;
 }
 
 function statusClasses(status: MarcianoTurnoItem["estado"]) {
@@ -37,7 +37,7 @@ function statusLabel(status: MarcianoTurnoItem["estado"]) {
 }
 
 function compactSummary(turno: MarcianoTurnoItem) {
-  if (turno.estado === "pendiente") return "Todavia requiere decision.";
+  if (turno.estado === "pendiente") return "Todavía falta que el local lo confirme.";
   if (turno.estado === "confirmado") return "Listo para seguir el flujo.";
   if (turno.estado === "completado") return "Turno ya cerrado.";
   return "Turno cancelado.";
@@ -128,7 +128,7 @@ export default function MarcianoTurnoCard({ turno }: MarcianoTurnoCardProps) {
               </span>
               {turno.canManage ? (
                 <span className="rounded-full border border-[#8cff59]/20 bg-[#8cff59]/10 px-3 py-1 text-xs font-semibold text-[#d8ffc7]">
-                  Autogestion abierta
+                  Podés moverlo o cancelarlo
                 </span>
               ) : null}
             </div>
@@ -136,7 +136,7 @@ export default function MarcianoTurnoCard({ turno }: MarcianoTurnoCardProps) {
             <div className="grid gap-2 text-sm text-zinc-300 sm:grid-cols-2">
               <TurnoMeta label="Fecha" value={formatDateTime(turno)} />
               <TurnoMeta label="Barbero" value={turno.barberoNombre} />
-              <TurnoMeta label="Duracion" value={`${turno.duracionMinutos} min`} />
+              <TurnoMeta label="Duración" value={`${turno.duracionMinutos} min`} />
               <TurnoMeta label="Precio" value={price ?? "Precio a confirmar"} />
             </div>
           </div>
@@ -254,7 +254,7 @@ export default function MarcianoTurnoCard({ turno }: MarcianoTurnoCardProps) {
                             disabled={pending}
                             className="inline-flex min-h-[44px] items-center justify-center rounded-[20px] border border-rose-500/25 bg-rose-500/10 px-4 text-sm font-semibold text-rose-200 disabled:opacity-50"
                           >
-                            {pending ? "Cancelando..." : "Confirmar cancelacion"}
+                            {pending ? "Cancelando…" : "Sí, cancelar"}
                           </button>
                         </form>
                       </>

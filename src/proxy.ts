@@ -105,7 +105,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/marciano", request.url));
     }
     if (userRole !== "admin" && userRole !== "asesor") {
-      return NextResponse.redirect(new URL("/caja", request.url));
+      return NextResponse.redirect(new URL("/caja?sinAcceso=1", request.url));
     }
     return NextResponse.next();
   }
