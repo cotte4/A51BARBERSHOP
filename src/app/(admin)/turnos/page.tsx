@@ -10,6 +10,8 @@ import {
   cobrarYCompletarTurnoAction,
   confirmarTurnoAction,
   crearTurnoRapidoAction,
+  horasParaMoverAction,
+  moverTurnoAction,
   rechazarTurnoAction,
 } from "./actions";
 import {
@@ -284,6 +286,8 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
                         rechazarAction={rechazarTurnoAction.bind(null, turno.id)}
                         cobrarAction={cobrarYCompletarTurnoAction.bind(null, turno.id)}
                         clienteLlegoAction={clienteLlegoAction.bind(null, turno.id)}
+                        moverAction={moverTurnoAction.bind(null, turno.id)}
+                        horasParaMover={horasParaMoverAction.bind(null, turno.id)}
                         mediosPago={mediosPagoList}
                         servicios={serviciosList.map((s) => ({
                           id: s.id,

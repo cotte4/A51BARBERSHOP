@@ -126,7 +126,7 @@ Pinky nunca usó la app porque vio Caja "muy complicada" (en prod hay 28 atencio
 - Torneo FIFA (`/torneo`, `/torneo-admin`, `/torneo/pantalla`): **built, pending rehearsal en el local**
 
 ### Functional gaps (not blocking, but relevant for designer)
-- No dedicated reprogramación de turno flow para el staff (el Marciano sí reprograma desde el portal; el barbero no puede mover ni cancelar un turno confirmado: QA 2026-10-20, tema 3)
+- Mover y cancelar turnos (desde 2026-10-20): en `/turnos` cada barbero mueve ("Mover": solo horas libres del mismo barbero y duración, sin contar el lugar que ya ocupa) o cancela con motivo sus turnos pendientes y confirmados; la dueña, los de todos. No hay rol mostrador ni agenda compartida para barberos (decisión de Was, QA tema 3). Mover no avisa al cliente: `turno_notification_events` solo acepta confirmado/cancelado.
 - Marciano portal: unclear if client can cancel/reschedule from UI
 - Email notifications exist (`src/lib/email.ts`) but no outbound CRM surface
 - Retention candidates visible but no contact tracking flow

@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import type { TurnoActionState } from "@/app/(admin)/turnos/actions";
 import type { TurnoSummary } from "@/lib/types";
 import { formatARS } from "@/lib/format";
+import MoverTurnoForm from "@/components/turnos/MoverTurnoForm";
 
 type MedioPagoOption = {
   id: string;
@@ -22,6 +23,8 @@ type TurnoCardProps = {
   rechazarAction: (prevState: TurnoActionState, formData: FormData) => Promise<TurnoActionState>;
   cobrarAction: (prevState: TurnoActionState, formData: FormData) => Promise<TurnoActionState>;
   clienteLlegoAction?: (prevState: TurnoActionState) => Promise<TurnoActionState>;
+  moverAction?: (prevState: TurnoActionState, formData: FormData) => Promise<TurnoActionState>;
+  horasParaMover?: (fecha: string) => Promise<{ horas: string[]; error?: string }>;
   mediosPago?: MedioPagoOption[];
   servicios?: ServicioOption[];
   compact?: boolean;
@@ -136,6 +139,8 @@ export default function TurnoCard({
   rechazarAction,
   cobrarAction,
   clienteLlegoAction,
+  moverAction,
+  horasParaMover,
   mediosPago = [],
   servicios = [],
   compact = false,
@@ -144,6 +149,8 @@ export default function TurnoCard({
   const detailId = `turno-card-detail-${turno.id}`;
   const [showReject, setShowReject] = useState(false);
   const [showCobrar, setShowCobrar] = useState(false);
+  const [showMover, setShowMover] = useState(false);
+  const puedeMover = Boolean(moverAction && horasParaMover);
   const [isExpanded, setIsExpanded] = useState(false);
   const [shouldRenderDetails, setShouldRenderDetails] = useState(false);
   const [cobrarServicioId, setCobrarServicioId] = useState("");
@@ -188,6 +195,8 @@ export default function TurnoCard({
     }
     prevRejectPendingRef.current = rejectPending;
   }, [rejectPending, rejectState.error]);
+
+  const closeMover = useCallback(() => setShowMover(false), []);
 
   const actionError =
     confirmState.error ?? cobrarState.error ?? rejectState.error ?? llegoState.error;
@@ -571,10 +580,39 @@ export default function TurnoCard({
                             {showCobrar ? "Cancelar cobro" : "Cobrar turno"}
                           </button>
                         ) : null}
+                        <button
+                          type="button"
+                          onClick={() => setShowReject((current) => !current)}
+                          disabled={actionPending}
+                          className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800 px-4 text-sm font-medium text-zinc-300 hover:border-zinc-600 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {showReject ? "No cancelar" : "Cancelar turno"}
+                        </button>
                       </>
+                    ) : null}
+
+                    {puedeMover && (localEstado === "pendiente" || localEstado === "confirmado") ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowMover((current) => !current)}
+                        disabled={actionPending}
+                        className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-sky-400/30 bg-sky-500/10 px-4 text-sm font-semibold text-sky-200 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {showMover ? "No mover" : "Mover"}
+                      </button>
                     ) : null}
                   </div>
                 </div>
+
+                {showMover && moverAction && horasParaMover ? (
+                  <MoverTurnoForm
+                    fechaActual={turno.fecha}
+                    horaActual={turno.horaInicio}
+                    horasParaMover={horasParaMover}
+                    moverAction={moverAction}
+                    onClose={closeMover}
+                  />
+                ) : null}
 
                 {showCobrar && canCobrar ? (
                   <form
@@ -693,6 +731,7 @@ export default function TurnoCard({
                     </div>
                     <textarea
                       name="motivoCancelacion"
+                      aria-label="Motivo de la cancelación"
                       rows={3}
                       required
                       minLength={3}

@@ -13,6 +13,7 @@ import {
   findClientByPhone,
   getBarberoAgendaProfile,
   getFechaHoyArgentina,
+  getHorasParaMover,
   isFechaCerrada,
   isHorarioLibre,
 } from "@/lib/turnos";
@@ -589,4 +590,65 @@ export async function quitarDiaEspecialAction(id: string): Promise<void> {
   await db.delete(barberoDiaEspecial).where(eq(barberoDiaEspecial.id, id));
   const agendaBarbero = dia.barberoId ? await getBarberoAgendaProfile(dia.barberoId) : null;
   revalidarAgenda(agendaBarbero?.publicSlug);
+}
+
+const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function puedeMoverse(estado: string) {
+  return estado === "pendiente" || estado === "confirmado";
+}
+
+/** Horas libres para mover un turno ese día (mismo barbero y duración). */
+export async function horasParaMoverAction(
+  turnoId: string,
+  fecha: string
+): Promise<{ horas: string[]; error?: string }> {
+  const { turno, allowed } = await getManagedTurno(turnoId);
+  if (!turno || !allowed) return { horas: [], error: "Solo podés mover tus propios turnos." };
+  if (!puedeMoverse(turno.estado)) return { horas: [], error: "Ese turno ya no se puede mover." };
+  if (!FECHA_RE.test(fecha) || fecha < getFechaHoyArgentina()) return { horas: [] };
+
+  const horas = await getHorasParaMover(turno, fecha);
+  // El horario que ya tiene no es un cambio.
+  const actual = turno.horaInicio.slice(0, 5);
+  return { horas: fecha === turno.fecha ? horas.filter((h) => h !== actual) : horas };
+}
+
+export async function moverTurnoAction(
+  turnoId: string,
+  _prevState: TurnoActionState,
+  formData: FormData
+): Promise<TurnoActionState> {
+  const fecha = String(formData.get("fecha") ?? "");
+  const hora = String(formData.get("hora") ?? "").slice(0, 5);
+  if (!FECHA_RE.test(fecha) || !HORA_REGEX.test(hora)) {
+    return { error: "Elegí el día y la hora nuevos." };
+  }
+
+  const { turno, allowed } = await getManagedTurno(turnoId);
+  if (!turno) return { error: "Turno no encontrado." };
+  if (!allowed) return { error: "Solo podés mover tus propios turnos." };
+  if (!puedeMoverse(turno.estado)) return { error: "Ese turno ya no se puede mover." };
+
+  // Se vuelve a mirar justo antes de guardar: entre que se eligió y se tocó "Mover" alguien pudo tomarlo.
+  const horas = await getHorasParaMover(turno, fecha);
+  if (!horas.includes(hora)) {
+    return { error: "Ese horario ya no está libre. Elegí otro." };
+  }
+
+  try {
+    await db
+      .update(turnos)
+      .set({ fecha, horaInicio: normalizeTimeInput(hora), updatedAt: new Date() })
+      .where(eq(turnos.id, turnoId));
+  } catch (err) {
+    // turnos_slot_activo_unico_idx: otro turno activo arrancó a esa hora en el medio.
+    if ((err as { code?: string }).code === "23505") return { error: "Ese horario ya no está libre. Elegí otro." };
+    throw err;
+  }
+
+  revalidatePath("/turnos");
+  revalidatePath("/hoy");
+  revalidatePath("/marciano/turnos");
+  return { success: "Turno movido." };
 }

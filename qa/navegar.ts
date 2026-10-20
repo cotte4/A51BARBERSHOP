@@ -32,7 +32,7 @@ const PERSONAS: Record<Persona, { email?: string; login?: string; celular: boole
   marciano: { email: "qa-marciano@a51.test", login: "/marciano/login", celular: true },
 };
 
-type Objetivo = string | { role: string; name: string };
+type Objetivo = string | { role: string; name: string; exact?: boolean };
 type Accion =
   | { login: true }
   | { goto: string }
@@ -53,7 +53,7 @@ function qaPassword(): string {
 
 async function tocar(page: Page, objetivo: Objetivo) {
   if (typeof objetivo !== "string") {
-    await page.getByRole(objetivo.role as Parameters<Page["getByRole"]>[0], { name: objetivo.name }).first().click();
+    await page.getByRole(objetivo.role as Parameters<Page["getByRole"]>[0], { name: objetivo.name, exact: objetivo.exact }).first().click();
     return;
   }
   for (const role of ["button", "link", "tab", "menuitem", "option"] as const) {

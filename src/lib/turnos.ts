@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, count, desc, eq, gte, inArray, isNotNull, isNull, lte, or } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or } from "drizzle-orm";
 import { db } from "@/db";
 import {
   barberoDiaEspecial,
@@ -145,7 +145,8 @@ export async function isFechaCerrada(fecha: string): Promise<boolean> {
 type Agenda = Awaited<ReturnType<typeof cargarAgenda>>;
 
 /** Todo lo que hace falta para calcular turnos libres de esos barberos entre dos fechas, en 4 consultas. */
-async function cargarAgenda(barberoIds: string[], desde: string, hasta: string) {
+// `ignorarTurnoId`: al mover un turno, el lugar que ocupa hoy no cuenta como tomado.
+async function cargarAgenda(barberoIds: string[], desde: string, hasta: string, ignorarTurnoId?: string) {
   if (barberoIds.length === 0) {
     return { semanal: [], especiales: [], tomados: [], cerradas: new Set<string>() };
   }
@@ -189,7 +190,8 @@ async function cargarAgenda(barberoIds: string[], desde: string, hasta: string) 
           inArray(turnos.barberoId, barberoIds),
           gte(turnos.fecha, desde),
           lte(turnos.fecha, hasta),
-          inArray(turnos.estado, ["pendiente", "confirmado"])
+          inArray(turnos.estado, ["pendiente", "confirmado"]),
+          ignorarTurnoId ? ne(turnos.id, ignorarTurnoId) : undefined
         )
       ),
     db
@@ -259,12 +261,21 @@ export async function isHorarioLibre(
   barberoId: string,
   fecha: string,
   hora: string,
-  duracionMinutos: number
+  duracionMinutos: number,
+  ignorarTurnoId?: string
 ): Promise<boolean> {
-  const agenda = await cargarAgenda([barberoId], fecha, fecha);
+  const agenda = await cargarAgenda([barberoId], fecha, fecha, ignorarTurnoId);
   return libresDelDia(agenda, barberoId, fecha, duracionMinutos).includes(hora.slice(0, 5));
 }
 
+/** Horas a las que se puede mover un turno ese día: mismo barbero, misma duración, sin contarse a sí mismo. */
+export async function getHorasParaMover(
+  turno: { id: string; barberoId: string; duracionMinutos: number },
+  fecha: string
+): Promise<string[]> {
+  const agenda = await cargarAgenda([turno.barberoId], fecha, fecha, turno.id);
+  return libresDelDia(agenda, turno.barberoId, fecha, turno.duracionMinutos);
+}
 
 export async function getServiciosPublicos() {
   return db
