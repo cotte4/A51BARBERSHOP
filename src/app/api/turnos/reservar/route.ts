@@ -15,7 +15,8 @@ const extraSchema = z.object({
 
 const reservaSchema = z.object({
   slug: z.string().min(1),
-  slotId: z.string().uuid(),
+  // "fecha|hora" (src/lib/horario.ts), lo valida createTurnoReserva.
+  slotId: z.string().regex(/^\d{4}-\d{2}-\d{2}\|\d{2}:\d{2}$/),
   serviceId: z.string().uuid(),
   clienteNombre: z.string().trim().min(2),
   clienteTelefonoRaw: z.string().trim().optional().or(z.literal("")),

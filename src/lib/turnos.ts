@@ -1,17 +1,27 @@
 import { createHash } from "node:crypto";
-import { and, count, desc, eq, gte, inArray, isNotNull, lte } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, isNull, lte, or } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  barberoDiaEspecial,
+  barberoHorarioSemanal,
   barberos,
   cierresCaja,
   clients,
   productos,
   servicios,
   turnos,
-  turnosDisponibilidad,
   turnosExtras,
   turnosReservaIntentos,
 } from "@/db/schema";
+import {
+  DIAS_RESERVA_ADELANTE,
+  PASO_TURNOS_MIN,
+  armarHorarioId,
+  calcularTurnosLibres,
+  horaAMinutos,
+  rangosDelDia,
+  sumarDias,
+} from "@/lib/horario";
 
 export const TURNO_DURACIONES = [45, 60] as const;
 
@@ -35,8 +45,23 @@ export function getFechaMananaArgentina(): string {
   return getFechaArgentina(1);
 }
 
+export function getFechaLimiteReservaArgentina(): string {
+  return getFechaArgentina(DIAS_RESERVA_ADELANTE);
+}
+
+/** Reserva pública y portal: desde mañana y hasta DIAS_RESERVA_ADELANTE días. */
 export function canReserveOnPublicFecha(fecha: string): boolean {
-  return fecha >= getFechaMananaArgentina();
+  return fecha >= getFechaMananaArgentina() && fecha <= getFechaLimiteReservaArgentina();
+}
+
+function minutoActualArgentina(): number {
+  const hora = new Date().toLocaleTimeString("en-GB", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  return horaAMinutos(hora);
 }
 
 export function normalizeHora(hora: string): string {
@@ -117,9 +142,84 @@ export async function isFechaCerrada(fecha: string): Promise<boolean> {
   return !!cierre;
 }
 
-function timeToMinutes(hora: string): number {
-  const [h, m] = hora.split(":").map(Number);
-  return (h ?? 0) * 60 + (m ?? 0);
+type Agenda = Awaited<ReturnType<typeof cargarAgenda>>;
+
+/** Todo lo que hace falta para calcular turnos libres de esos barberos entre dos fechas, en 4 consultas. */
+async function cargarAgenda(barberoIds: string[], desde: string, hasta: string) {
+  if (barberoIds.length === 0) {
+    return { semanal: [], especiales: [], tomados: [], cerradas: new Set<string>() };
+  }
+
+  const [semanal, especiales, tomados, cierres] = await Promise.all([
+    db
+      .select({
+        barberoId: barberoHorarioSemanal.barberoId,
+        diaSemana: barberoHorarioSemanal.diaSemana,
+        desde: barberoHorarioSemanal.desde,
+        hasta: barberoHorarioSemanal.hasta,
+      })
+      .from(barberoHorarioSemanal)
+      .where(inArray(barberoHorarioSemanal.barberoId, barberoIds)),
+    db
+      .select({
+        barberoId: barberoDiaEspecial.barberoId,
+        fecha: barberoDiaEspecial.fecha,
+        cerrado: barberoDiaEspecial.cerrado,
+        desde: barberoDiaEspecial.desde,
+        hasta: barberoDiaEspecial.hasta,
+      })
+      .from(barberoDiaEspecial)
+      .where(
+        and(
+          gte(barberoDiaEspecial.fecha, desde),
+          lte(barberoDiaEspecial.fecha, hasta),
+          or(isNull(barberoDiaEspecial.barberoId), inArray(barberoDiaEspecial.barberoId, barberoIds))
+        )
+      ),
+    db
+      .select({
+        barberoId: turnos.barberoId,
+        fecha: turnos.fecha,
+        horaInicio: turnos.horaInicio,
+        duracionMinutos: turnos.duracionMinutos,
+      })
+      .from(turnos)
+      .where(
+        and(
+          inArray(turnos.barberoId, barberoIds),
+          gte(turnos.fecha, desde),
+          lte(turnos.fecha, hasta),
+          inArray(turnos.estado, ["pendiente", "confirmado"])
+        )
+      ),
+    db
+      .select({ fecha: cierresCaja.fecha })
+      .from(cierresCaja)
+      .where(and(gte(cierresCaja.fecha, desde), lte(cierresCaja.fecha, hasta))),
+  ]);
+
+  return { semanal, especiales, tomados, cerradas: new Set(cierres.map((c) => c.fecha)) };
+}
+
+/** Horas libres de un barbero un día. Un día pasado o con la caja cerrada no tiene turnos. */
+function libresDelDia(agenda: Agenda, barberoId: string, fecha: string, duracionMinutos: number): string[] {
+  const hoy = getFechaHoyArgentina();
+  if (fecha < hoy || agenda.cerradas.has(fecha)) return [];
+
+  const rangos = rangosDelDia({
+    fecha,
+    semanal: agenda.semanal.filter((fila) => fila.barberoId === barberoId),
+    especiales: agenda.especiales.filter(
+      (e) => e.fecha === fecha && (e.barberoId === null || e.barberoId === barberoId)
+    ),
+  });
+
+  return calcularTurnosLibres({
+    rangos,
+    tomados: agenda.tomados.filter((t) => t.barberoId === barberoId && t.fecha === fecha),
+    duracionMinutos,
+    noAntesDe: fecha === hoy ? minutoActualArgentina() : undefined,
+  });
 }
 
 export async function getTurnosDisponibles(
@@ -127,73 +227,44 @@ export async function getTurnosDisponibles(
   fecha: string,
   duracionMinutos?: number
 ) {
-  if (await isFechaCerrada(fecha)) {
-    return [];
-  }
+  const duracion = duracionMinutos ?? PASO_TURNOS_MIN;
+  const agenda = await cargarAgenda([barberoId], fecha, fecha);
 
-  const [slots, ocupados] = await Promise.all([
-    db
-      .select({
-        id: turnosDisponibilidad.id,
-        fecha: turnosDisponibilidad.fecha,
-        horaInicio: turnosDisponibilidad.horaInicio,
-        duracionMinutos: turnosDisponibilidad.duracionMinutos,
-      })
-      .from(turnosDisponibilidad)
-      .where(and(eq(turnosDisponibilidad.barberoId, barberoId), eq(turnosDisponibilidad.fecha, fecha))),
-    db
-      .select({
-        horaInicio: turnos.horaInicio,
-      })
-      .from(turnos)
-      .where(
-        and(
-          eq(turnos.barberoId, barberoId),
-          eq(turnos.fecha, fecha),
-          inArray(turnos.estado, ["pendiente", "confirmado"])
-        )
-      ),
-  ]);
-
-  const ocupadas = new Set(ocupados.map((slot) => normalizeHora(slot.horaInicio)));
-
-  const todosOrdenados = slots
-    .map((slot) => ({ ...slot, horaInicio: normalizeHora(slot.horaInicio) }))
-    .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
-
-  if (!duracionMinutos) {
-    return todosOrdenados.filter((slot) => !ocupadas.has(slot.horaInicio));
-  }
-
-  // Para cada slot libre, verificar si slots consecutivos libres cubren la duración del servicio
-  const disponibles: typeof todosOrdenados = [];
-
-  for (let i = 0; i < todosOrdenados.length; i++) {
-    const startSlot = todosOrdenados[i];
-    if (ocupadas.has(startSlot.horaInicio)) continue;
-
-    const startMin = timeToMinutes(startSlot.horaInicio);
-    const requiredEnd = startMin + duracionMinutos;
-    let coveredUntil = startMin;
-
-    for (let j = i; j < todosOrdenados.length; j++) {
-      const slot = todosOrdenados[j];
-      const slotStart = timeToMinutes(slot.horaInicio);
-
-      if (slotStart > coveredUntil) break; // hay un hueco — no se puede encadenar
-      if (ocupadas.has(slot.horaInicio)) break; // slot tomado
-
-      coveredUntil = Math.max(coveredUntil, slotStart + slot.duracionMinutos);
-
-      if (coveredUntil >= requiredEnd) {
-        disponibles.push(startSlot);
-        break;
-      }
-    }
-  }
-
-  return disponibles;
+  return libresDelDia(agenda, barberoId, fecha, duracion).map((hora) => ({
+    id: armarHorarioId(fecha, hora),
+    fecha,
+    horaInicio: hora,
+    duracionMinutos: duracion,
+  }));
 }
+
+/** El primer día con lugar desde `desdeFecha` (incluido), dentro de los días que se puede reservar. */
+export async function getProximoDiaConLugar(
+  barberoId: string,
+  desdeFecha: string,
+  duracionMinutos: number
+): Promise<string | null> {
+  const hasta = getFechaLimiteReservaArgentina();
+  if (desdeFecha > hasta) return null;
+
+  const agenda = await cargarAgenda([barberoId], desdeFecha, hasta);
+  for (let fecha = desdeFecha; fecha <= hasta; fecha = sumarDias(fecha, 1)) {
+    if (libresDelDia(agenda, barberoId, fecha, duracionMinutos).length > 0) return fecha;
+  }
+  return null;
+}
+
+/** Verificación justo antes de guardar un turno: ¿ese arranque sigue libre para esa duración? */
+export async function isHorarioLibre(
+  barberoId: string,
+  fecha: string,
+  hora: string,
+  duracionMinutos: number
+): Promise<boolean> {
+  const agenda = await cargarAgenda([barberoId], fecha, fecha);
+  return libresDelDia(agenda, barberoId, fecha, duracionMinutos).includes(hora.slice(0, 5));
+}
+
 
 export async function getServiciosPublicos() {
   return db
@@ -339,19 +410,6 @@ export async function getTurnosVisibleList(
   }));
 }
 
-export async function getDisponibilidadAdminList(barberoId: string, fromFecha: string) {
-  return db
-    .select({
-      id: turnosDisponibilidad.id,
-      fecha: turnosDisponibilidad.fecha,
-      horaInicio: turnosDisponibilidad.horaInicio,
-      duracionMinutos: turnosDisponibilidad.duracionMinutos,
-    })
-    .from(turnosDisponibilidad)
-    .where(and(eq(turnosDisponibilidad.barberoId, barberoId), gte(turnosDisponibilidad.fecha, fromFecha)))
-    .orderBy(turnosDisponibilidad.fecha, turnosDisponibilidad.horaInicio);
-}
-
 export async function getBarberosActivosTurnos() {
   return db
     .select({
@@ -363,76 +421,77 @@ export async function getBarberosActivosTurnos() {
     .orderBy(barberos.nombre);
 }
 
+/** Huecos libres de un día para "Tomar" en /turnos, de a PASO_TURNOS_MIN, para uno o todos los barberos activos. */
 export async function getDisponibilidadLibrePorFecha(fecha: string, barberoId?: string) {
-  if (await isFechaCerrada(fecha)) {
-    return [];
-  }
+  const activos = await db
+    .select({ id: barberos.id, nombre: barberos.nombre })
+    .from(barberos)
+    .where(and(eq(barberos.activo, true), barberoId ? eq(barberos.id, barberoId) : undefined))
+    .orderBy(barberos.nombre);
 
-  const [slots, ocupados] = await Promise.all([
-    db
-      .select({
-        id: turnosDisponibilidad.id,
-        barberoId: turnosDisponibilidad.barberoId,
-        barberoNombre: barberos.nombre,
-        fecha: turnosDisponibilidad.fecha,
-        horaInicio: turnosDisponibilidad.horaInicio,
-        duracionMinutos: turnosDisponibilidad.duracionMinutos,
-      })
-      .from(turnosDisponibilidad)
-      .innerJoin(barberos, eq(barberos.id, turnosDisponibilidad.barberoId))
-      .where(
-        and(
-          eq(turnosDisponibilidad.fecha, fecha),
-          eq(barberos.activo, true),
-          barberoId ? eq(turnosDisponibilidad.barberoId, barberoId) : undefined
-        )
-      )
-      .orderBy(turnosDisponibilidad.horaInicio, barberos.nombre),
-    db
-      .select({
-        barberoId: turnos.barberoId,
-        horaInicio: turnos.horaInicio,
-      })
-      .from(turnos)
-      .where(
-        and(
-          eq(turnos.fecha, fecha),
-          barberoId ? eq(turnos.barberoId, barberoId) : undefined,
-          inArray(turnos.estado, ["pendiente", "confirmado"])
-        )
-      ),
-  ]);
-
-  const ocupadas = new Set(
-    ocupados.map((slot) => `${slot.barberoId}:${normalizeHora(slot.horaInicio)}`)
+  const agenda = await cargarAgenda(
+    activos.map((b) => b.id),
+    fecha,
+    fecha
   );
 
-  return slots
-    .filter((slot) => !ocupadas.has(`${slot.barberoId}:${normalizeHora(slot.horaInicio)}`))
-    .map((slot) => ({
-      ...slot,
-      horaInicio: normalizeHora(slot.horaInicio),
-    }));
+  return activos
+    .flatMap((barbero) =>
+      libresDelDia(agenda, barbero.id, fecha, PASO_TURNOS_MIN).map((hora) => ({
+        id: `${barbero.id}:${armarHorarioId(fecha, hora)}`,
+        barberoId: barbero.id,
+        barberoNombre: barbero.nombre,
+        fecha,
+        horaInicio: hora,
+        duracionMinutos: PASO_TURNOS_MIN,
+      }))
+    )
+    .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
 }
 
-export async function getTurnosOcupadosDesde(barberoId: string, fromFecha: string) {
-  return db
-    .select({
-      id: turnos.id,
-      fecha: turnos.fecha,
-      horaInicio: turnos.horaInicio,
-      estado: turnos.estado,
-    })
-    .from(turnos)
-    .where(
-      and(
-        eq(turnos.barberoId, barberoId),
-        gte(turnos.fecha, fromFecha),
-        inArray(turnos.estado, ["confirmado", "completado"])
+/** Horario semanal y próximos días especiales (del barbero y del local), para la pantalla "Mi horario". */
+export async function getHorarioBarbero(barberoId: string) {
+  const hoy = getFechaHoyArgentina();
+  const [semanal, especiales] = await Promise.all([
+    db
+      .select({
+        diaSemana: barberoHorarioSemanal.diaSemana,
+        desde: barberoHorarioSemanal.desde,
+        hasta: barberoHorarioSemanal.hasta,
+      })
+      .from(barberoHorarioSemanal)
+      .where(eq(barberoHorarioSemanal.barberoId, barberoId))
+      .orderBy(barberoHorarioSemanal.diaSemana, barberoHorarioSemanal.desde),
+    db
+      .select({
+        id: barberoDiaEspecial.id,
+        barberoId: barberoDiaEspecial.barberoId,
+        fecha: barberoDiaEspecial.fecha,
+        cerrado: barberoDiaEspecial.cerrado,
+        desde: barberoDiaEspecial.desde,
+        hasta: barberoDiaEspecial.hasta,
+        nota: barberoDiaEspecial.nota,
+      })
+      .from(barberoDiaEspecial)
+      .where(
+        and(
+          gte(barberoDiaEspecial.fecha, hoy),
+          or(isNull(barberoDiaEspecial.barberoId), eq(barberoDiaEspecial.barberoId, barberoId))
+        )
       )
-    )
-    .orderBy(desc(turnos.fecha), desc(turnos.horaInicio));
+      .orderBy(barberoDiaEspecial.fecha),
+  ]);
+
+  return {
+    semanal: semanal.map((f) => ({ ...f, desde: f.desde.slice(0, 5), hasta: f.hasta.slice(0, 5) })),
+    especiales: especiales.map((e) => ({
+      ...e,
+      desde: e.desde?.slice(0, 5) ?? null,
+      hasta: e.hasta?.slice(0, 5) ?? null,
+    })),
+  };
 }
+
 
 export async function getCancelacionesStats(
   fromFecha: string,

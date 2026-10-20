@@ -1,7 +1,8 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { productos, servicios, turnos, turnosDisponibilidad, turnosExtras } from "@/db/schema";
-import { canReserveOnPublicFecha, isFechaCerrada } from "@/lib/turnos";
+import { productos, servicios, turnos, turnosExtras } from "@/db/schema";
+import { leerHorarioId } from "@/lib/horario";
+import { canReserveOnPublicFecha, isHorarioLibre } from "@/lib/turnos";
 import type { TurnoExtraInput } from "@/lib/types";
 
 export type TurnoClientContext = {
@@ -41,22 +42,22 @@ export async function createTurnoReserva(
 ): Promise<CreateTurnoReservaResult> {
   const extras = input.extras ?? [];
 
-  const [slotRows, servicioRows, extrasActivos] = await Promise.all([
-    db
-      .select({
-        id: turnosDisponibilidad.id,
-        fecha: turnosDisponibilidad.fecha,
-        horaInicio: turnosDisponibilidad.horaInicio,
-        duracionMinutos: turnosDisponibilidad.duracionMinutos,
-      })
-      .from(turnosDisponibilidad)
-      .where(
-        and(
-          eq(turnosDisponibilidad.id, input.slotId),
-          eq(turnosDisponibilidad.barberoId, input.barberoId)
-        )
-      )
-      .limit(1),
+  // El horario llega como "fecha|hora" (src/lib/horario.ts): se vuelve a calcular acá, justo antes
+  // de guardar, porque entre que el cliente lo vio y lo confirmó otro pudo haberlo tomado.
+  const slot = leerHorarioId(input.slotId);
+  if (!slot) {
+    return { ok: false, status: 400, message: "Ese horario no es valido. Elegi otro." };
+  }
+
+  if (!canReserveOnPublicFecha(slot.fecha)) {
+    return {
+      ok: false,
+      status: 409,
+      message: "Los turnos se reservan desde mañana y hasta 30 dias adelante.",
+    };
+  }
+
+  const [servicioRows, extrasActivos] = await Promise.all([
     db
       .select({
         id: servicios.id,
@@ -82,48 +83,12 @@ export async function createTurnoReserva(
           ),
   ]);
 
-  const slot = slotRows[0];
-  if (!slot) {
-    return { ok: false, status: 409, message: "Ese horario ya no esta disponible." };
-  }
-
-  if (!canReserveOnPublicFecha(slot.fecha)) {
-    return {
-      ok: false,
-      status: 409,
-      message: "La reserva publica solo acepta turnos desde manana en adelante.",
-    };
-  }
-
   const servicio = servicioRows[0];
   if (!servicio) {
     return { ok: false, status: 400, message: "Ese servicio ya no esta disponible." };
   }
 
-  if (await isFechaCerrada(slot.fecha)) {
-    return { ok: false, status: 409, message: "Ese dia ya esta cerrado y no acepta reservas." };
-  }
-
-  // La disponibilidad ya filtra por slots consecutivos — aquí sólo bloqueamos si el slot
-  // único no alcanza Y no hay forma de que fuera válido (duracion del slot > duracion del servicio
-  // significa que podría caber, pero slots más chicos pueden encadenarse igual).
-  // Sólo rechazamos si el slot es estrictamente menor y no hay puente lógico posible.
-  // El caso multi-slot lo maneja el algoritmo de disponibilidad; aquí confiamos en él.
-
-  const [ocupado] = await db
-    .select({ id: turnos.id })
-    .from(turnos)
-    .where(
-      and(
-        eq(turnos.barberoId, input.barberoId),
-        eq(turnos.fecha, slot.fecha),
-        eq(turnos.horaInicio, slot.horaInicio),
-        inArray(turnos.estado, ["pendiente", "confirmado"])
-      )
-    )
-    .limit(1);
-
-  if (ocupado) {
+  if (!(await isHorarioLibre(input.barberoId, slot.fecha, slot.hora, servicio.duracionMinutos))) {
     return { ok: false, status: 409, message: "Ese horario acaba de ocuparse. Elegi otro." };
   }
 
@@ -147,7 +112,7 @@ export async function createTurnoReserva(
         clienteTelefonoNormalizado: input.clientContext?.phoneNormalized ?? null,
         clientId: input.clientContext?.clientId ?? null,
         fecha: slot.fecha,
-        horaInicio: slot.horaInicio,
+        horaInicio: slot.hora,
         duracionMinutos: servicio.duracionMinutos,
         servicioId: servicio.id,
         precioEsperado: servicio.precioBase,
@@ -173,7 +138,7 @@ export async function createTurnoReserva(
       ok: true,
       turnoId: turno.id,
       fecha: slot.fecha,
-      horaInicio: slot.horaInicio,
+      horaInicio: slot.hora,
     };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);

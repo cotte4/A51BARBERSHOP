@@ -102,6 +102,14 @@ Pinky nunca usó la app porque vio Caja "muy complicada" (en prod hay 28 atencio
 - **Landing y jukebox con movimiento (2026-10-17)**: cuota $5.100 (default de `torneos.cuota_ars`, migración 0047). `/torneo`: el ovni chupa la pelota y la escupe cada ~9,5 s (`abduccion` en `_EscenaOvni.tsx`, también en la tele), alien rosa neón, inscripción con nombre y apellido. Efectos de Motion Primitives portados sin librería en `src/components/motion/` (TextEffect, BorderTrail, Magnetic). `/jukebox`: el vinilo se raya con el dedo/mouse (`Maquina` en `_JukeboxClient.tsx`).
 - **La música sí está implementada**: `clienteLlegoAction` ya dispara la reproducción (el punto de "Known bugs" sobre música quedó viejo).
 
+### Horario semanal y turnos libres (desde 2026-10-20)
+- Los turnos libres **se calculan**, no se cargan: `barbero_horario_semanal` (rangos por día de la semana, se repiten) + `barbero_dia_especial` (una fecha: "no se trabaja" u otro horario; sin barbero = feriado del local) + turnos pendientes/confirmados. Lógica pura y testeada en `src/lib/horario.ts` (`rangosDelDia`, `calcularTurnosLibres`; tests en `src/tests/integration/horario.test.ts`); la carga de la base en `cargarAgenda()` de `src/lib/turnos.ts`.
+- Arranques cada 30 min (`PASO_TURNOS_MIN`); reserva pública y portal desde mañana hasta 30 días (`DIAS_RESERVA_ADELANTE`). El solapamiento se mide por intervalo: un turno de 60 a las 11 bloquea las 11:30 (antes no).
+- El id de un horario libre es `"fecha|hora"` (`armarHorarioId`/`leerHorarioId`): reservar recalcula y valida con `isHorarioLibre()` justo antes de guardar. "Tomar" en `/turnos` usa la duración del servicio elegido.
+- Pantalla: `/turnos/disponibilidad` = "Mi horario" (cada barbero el suyo; la dueña elige barbero con `?barbero=` y carga feriados del local). Si un día no tiene lugar, la reserva ofrece "Ver el <próximo día con lugar>".
+- `turnos_disponibilidad` (filas por fecha, se vencían: en prod se acabaron en mayo) quedó sin uso; borrarla en una migración posterior. Horario de Pinky (mar–sáb 10–19) sembrado en la migración 0049.
+- QA con agentes-persona contra un branch de Neon: `qa/PERSONAS.md`. Chequeo de esquema vs base: `npm run db:check:esquema`.
+
 ### Known bugs / debt
 - **Music**: `clienteLlegoAction()` ya dispara la reproducción (ver "Torneo FIFA y portal cerrado"). La jukebox pública suena en el Spotify del local (ver "Jukebox sobre Spotify"); falta probarla en el local con el celu bloqueado un rato largo. Detalle: `planning/features/music-auto-jam-completion.md`.
 - Stock ledger is append-only since 2026-07: anulaciones/ediciones insert compensating movements (never DELETE); sales aggregates must sum `-cantidad`, never `Math.abs`. Standalone product sales are anulable by admin from /caja (reversión with `referencia_type = 'stock_movimiento'`).
@@ -118,7 +126,7 @@ Pinky nunca usó la app porque vio Caja "muy complicada" (en prod hay 28 atencio
 - Torneo FIFA (`/torneo`, `/torneo-admin`, `/torneo/pantalla`): **built, pending rehearsal en el local**
 
 ### Functional gaps (not blocking, but relevant for designer)
-- No dedicated reprogramación de turno flow
+- No dedicated reprogramación de turno flow para el staff (el Marciano sí reprograma desde el portal; el barbero no puede mover ni cancelar un turno confirmado: QA 2026-10-20, tema 3)
 - Marciano portal: unclear if client can cancel/reschedule from UI
 - Email notifications exist (`src/lib/email.ts`) but no outbound CRM surface
 - Retention candidates visible but no contact tracking flow

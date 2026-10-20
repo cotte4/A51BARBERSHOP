@@ -56,6 +56,7 @@ export default function MarcianoReservaForm({
     initialServicioId ?? services[0]?.id ?? ""
   );
   const [slots, setSlots] = useState<Slot[]>([]);
+  const [proximoDia, setProximoDia] = useState<string | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState("");
   const [notaCliente, setNotaCliente] = useState(initialNota ?? "");
@@ -92,7 +93,7 @@ export default function MarcianoReservaForm({
           )}&duracion=${servicioActual.duracionMinutos}`,
           { signal: controller.signal }
         );
-        const data = (await response.json()) as { slots?: Slot[]; error?: string };
+        const data = (await response.json()) as { slots?: Slot[]; proximoDia?: string | null; error?: string };
 
         if (!response.ok) {
           throw new Error(data.error ?? "No pudimos cargar los horarios.");
@@ -100,6 +101,7 @@ export default function MarcianoReservaForm({
 
         if (!cancelled) {
           setSlots(data.slots ?? []);
+          setProximoDia(data.proximoDia ?? null);
           setSelectedSlot("");
         }
       } catch (loadErr) {
@@ -332,7 +334,22 @@ export default function MarcianoReservaForm({
             {loadingSlots ? <p className="text-sm text-zinc-400">Buscando horarios...</p> : null}
             {loadError ? <p className="text-sm text-rose-300">{loadError}</p> : null}
             {!loadingSlots && !loadError && slots.length === 0 ? (
-              <p className="text-sm text-zinc-400">No hay horarios disponibles para esa fecha.</p>
+              <div className="text-sm text-zinc-400">
+                {proximoDia ? (
+                  <>
+                    <p>Ese día no hay turnos libres.</p>
+                    <button
+                      type="button"
+                      onClick={() => setFecha(proximoDia)}
+                      className="mt-3 rounded-2xl border border-[#8cff59]/40 bg-[#8cff59]/10 px-4 py-2 font-semibold text-[#d8ffc7] hover:bg-[#8cff59]/20"
+                    >
+                      Ver el {formatDiaConLugar(proximoDia)}
+                    </button>
+                  </>
+                ) : (
+                  <p>No quedan turnos libres en los próximos 30 días. Avisale a la barbería en el local.</p>
+                )}
+              </div>
             ) : null}
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -510,5 +527,15 @@ function formatTurnoDate(value: string) {
     day: "numeric",
     month: "long",
     timeZone: "America/Argentina/Buenos_Aires",
+  });
+}
+
+function formatDiaConLugar(fecha: string) {
+  const [y, m, d] = fecha.split("-").map(Number);
+  return new Date(Date.UTC(y!, m! - 1, d!)).toLocaleDateString("es-AR", {
+    timeZone: "UTC",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
   });
 }

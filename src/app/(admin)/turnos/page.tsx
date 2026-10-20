@@ -161,7 +161,7 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
               href="/turnos/disponibilidad"
               className="rounded-xl border border-[#8cff59]/25 bg-[#8cff59]/10 px-3 py-1.5 text-xs font-semibold text-[#8cff59]"
             >
-              Disponibilidad
+              Mi horario
             </Link>
           ) : (
             <span className="h-8 w-8" aria-hidden="true" />
@@ -251,12 +251,12 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
 
       {timelineSlots.length === 0 ? (
         <div className="mx-4 mt-4 rounded-2xl border border-dashed border-zinc-700 bg-zinc-950/50 p-8 text-center">
-          <p className="text-sm text-zinc-500">Sin turnos ni disponibilidad para este dia.</p>
+          <p className="text-sm text-zinc-500">Sin turnos ni horarios libres para este día.</p>
           <Link
             href="/turnos/disponibilidad"
             className="ghost-button mt-3 inline-flex min-h-[44px] items-center rounded-2xl px-4 text-sm font-semibold"
           >
-            Configurar disponibilidad
+            Cargar horario
           </Link>
         </div>
       ) : (

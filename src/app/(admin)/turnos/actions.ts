@@ -1,19 +1,20 @@
 "use server";
 
-import { and, eq, gte, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { atenciones, barberos, cierresCaja, mediosPago, pantallaEvents, servicios, turnos, turnosDisponibilidad } from "@/db/schema";
+import { atenciones, barberoDiaEspecial, barberoHorarioSemanal, barberos, cierresCaja, mediosPago, pantallaEvents, servicios, turnos } from "@/db/schema";
+import { DIAS_SEMANA } from "@/lib/horario";
 import { handleClienteLlego } from "@/lib/music-engine";
 import { calculateAtencionCommission } from "@/lib/finance/commission";
 import { notifyTurnoStatusChange } from "@/lib/turno-notifications";
 import { canManageTurnoForBarbero, getTurnosActorContext } from "@/lib/turnos-access";
 import {
-  TURNO_DURACIONES,
   findClientByPhone,
   getBarberoAgendaProfile,
   getFechaHoyArgentina,
   isFechaCerrada,
+  isHorarioLibre,
 } from "@/lib/turnos";
 import { getHoraAhoraArgentina, syncMarcianoCorteUsoForAtencionChange } from "@/lib/caja-atencion";
 
@@ -224,151 +225,6 @@ export async function clienteLlegoAction(
   }
 }
 
-export async function crearDisponibilidadAction(
-  barberoId: string,
-  _prevState: TurnoActionState,
-  formData: FormData
-): Promise<TurnoActionState> {
-  const actor = await getTurnosActorContext();
-  if (!actor) {
-    return { error: "Necesitas iniciar sesion para gestionar disponibilidad." };
-  }
-  if (!canManageTurnoForBarbero(actor, barberoId)) {
-    return { error: "Solo podes gestionar tu propia disponibilidad." };
-  }
-
-  const fecha = String(formData.get("fecha") ?? "");
-  const horaInicio = normalizeTimeInput(String(formData.get("horaInicio") ?? ""));
-  const horaFinRaw = String(formData.get("horaFin") ?? "").trim();
-  const horaFin = horaFinRaw ? normalizeTimeInput(horaFinRaw) : "";
-  const duracionMinutos = Number(formData.get("duracionMinutos") ?? 0);
-
-  if (!fecha || !horaInicio || !TURNO_DURACIONES.includes(duracionMinutos as 45 | 60)) {
-    return { error: "Completa fecha, hora y duracion validas." };
-  }
-  if (fecha < getFechaHoyArgentina()) {
-    return { error: "No podes crear disponibilidad en fechas pasadas." };
-  }
-  if (await isFechaCerrada(fecha)) {
-    return { error: "Ese dia ya tiene cierre y no admite nuevos turnos." };
-  }
-
-  const startMinutes = timeToMinutes(horaInicio);
-  const endMinutes = horaFin ? timeToMinutes(horaFin) : startMinutes + duracionMinutos;
-
-  if (endMinutes <= startMinutes) {
-    return { error: "La hora de fin debe ser posterior al inicio." };
-  }
-
-  const generatedSlots = [];
-  for (let cursor = startMinutes; cursor + duracionMinutos <= endMinutes; cursor += duracionMinutos) {
-    generatedSlots.push({
-      barberoId,
-      fecha,
-      horaInicio: minutesToTime(cursor),
-      duracionMinutos,
-    });
-  }
-
-  if (generatedSlots.length === 0) {
-    return { error: "Ese rango no alcanza para generar ningun slot con el intervalo elegido." };
-  }
-
-  let createdCount = 0;
-
-  try {
-    for (const slot of generatedSlots) {
-      const existing = await db
-        .select({ id: turnosDisponibilidad.id })
-        .from(turnosDisponibilidad)
-        .where(
-          and(
-            eq(turnosDisponibilidad.barberoId, slot.barberoId),
-            eq(turnosDisponibilidad.fecha, slot.fecha),
-            eq(turnosDisponibilidad.horaInicio, slot.horaInicio)
-          )
-        )
-        .limit(1);
-
-      if (existing[0]) {
-        continue;
-      }
-
-      await db.insert(turnosDisponibilidad).values(slot);
-      createdCount += 1;
-    }
-  } catch (error) {
-    console.error("Error creando disponibilidad:", error);
-    return { error: "No pude guardar la jornada. Intenta de nuevo." };
-  }
-
-  if (createdCount === 0) {
-    return { error: "Ese rango ya estaba cargado completo." };
-  }
-
-  const agendaBarbero = await getBarberoAgendaProfile(barberoId);
-
-  revalidatePath("/turnos");
-  revalidatePath("/hoy");
-  revalidatePath("/turnos/disponibilidad");
-  if (agendaBarbero?.publicSlug) {
-    revalidatePath(`/reservar/${agendaBarbero.publicSlug}`);
-  }
-  return {
-    success:
-      createdCount === 1
-        ? "Se agrego 1 slot."
-        : `Se generaron ${createdCount} slots para la jornada.`,
-  };
-}
-
-export async function eliminarDisponibilidadAction(slotId: string): Promise<void> {
-  const actor = await getTurnosActorContext();
-  if (!actor) {
-    return;
-  }
-
-  const [slot] = await db
-    .select()
-    .from(turnosDisponibilidad)
-    .where(eq(turnosDisponibilidad.id, slotId))
-    .limit(1);
-  if (!slot) {
-    return;
-  }
-  if (!canManageTurnoForBarbero(actor, slot.barberoId)) {
-    return;
-  }
-
-  const [ocupado] = await db
-    .select({ id: turnos.id })
-    .from(turnos)
-    .where(
-      and(
-        eq(turnos.barberoId, slot.barberoId),
-        eq(turnos.fecha, slot.fecha),
-        eq(turnos.horaInicio, slot.horaInicio),
-        inArray(turnos.estado, ["confirmado", "completado"])
-      )
-    )
-    .limit(1);
-
-  if (ocupado) {
-    return;
-  }
-
-  await db.delete(turnosDisponibilidad).where(eq(turnosDisponibilidad.id, slotId));
-
-  const agendaBarbero = await getBarberoAgendaProfile(slot.barberoId);
-
-  revalidatePath("/turnos");
-  revalidatePath("/hoy");
-  revalidatePath("/turnos/disponibilidad");
-  if (agendaBarbero?.publicSlug) {
-    revalidatePath(`/reservar/${agendaBarbero.publicSlug}`);
-  }
-}
-
 export async function crearTurnoRapidoAction(
   barberoId: string,
   fecha: string,
@@ -405,58 +261,39 @@ export async function crearTurnoRapidoAction(
   }
 
   const horaNormalizada = normalizeTimeInput(horaInicio);
-
-  const [slotDisponible, ocupado, clientMatch] = await Promise.all([
-    db
-      .select({ id: turnosDisponibilidad.id })
-      .from(turnosDisponibilidad)
-      .where(
-        and(
-          eq(turnosDisponibilidad.barberoId, barberoId),
-          eq(turnosDisponibilidad.fecha, fecha),
-          eq(turnosDisponibilidad.horaInicio, horaNormalizada),
-          eq(turnosDisponibilidad.duracionMinutos, duracionMinutos)
-        )
-      )
-      .limit(1),
-    db
-      .select({ id: turnos.id })
-      .from(turnos)
-      .where(
-        and(
-          eq(turnos.barberoId, barberoId),
-          eq(turnos.fecha, fecha),
-          eq(turnos.horaInicio, horaNormalizada),
-          inArray(turnos.estado, ["pendiente", "confirmado"])
-        )
-      )
-      .limit(1),
-    findClientByPhone(clienteTelefonoRaw || null),
-  ]);
-
-  if (!slotDisponible[0]) {
-    return { error: "Ese hueco libre ya no esta disponible." };
-  }
-
-  if (ocupado[0]) {
-    return { error: "Ese horario acaba de ocuparse." };
-  }
-
   const servicioId = String(formData.get("servicioId") ?? "").trim() || null;
   const precioEsperadoRaw = String(formData.get("precioEsperado") ?? "").trim();
   const precioEsperado = precioEsperadoRaw && Number(precioEsperadoRaw) > 0
     ? String(Number(precioEsperadoRaw))
     : null;
 
+  // Con servicio elegido, el turno dura lo que dura el servicio (un corte y barba de 60 tiene que
+  // bloquear también la media hora siguiente); sin servicio, lo que dura el hueco.
+  let duracionTurno = duracionMinutos;
   if (servicioId) {
     const [servicio] = await db
-      .select({ id: servicios.id })
+      .select({ id: servicios.id, duracionMinutos: servicios.duracionMinutos })
       .from(servicios)
       .where(and(eq(servicios.id, servicioId), eq(servicios.activo, true)))
       .limit(1);
     if (!servicio) {
       return { error: "El servicio seleccionado no existe o no está activo." };
     }
+    duracionTurno = servicio.duracionMinutos;
+  }
+
+  const [libre, clientMatch] = await Promise.all([
+    isHorarioLibre(barberoId, fecha, horaNormalizada, duracionTurno),
+    findClientByPhone(clienteTelefonoRaw || null),
+  ]);
+
+  if (!libre) {
+    return {
+      error:
+        duracionTurno > duracionMinutos
+          ? "Ese servicio no entra en ese horario: se pisa con el turno siguiente o con el cierre."
+          : "Ese horario ya no está libre.",
+    };
   }
 
   try {
@@ -468,7 +305,7 @@ export async function crearTurnoRapidoAction(
       clientId: clientMatch?.clientId ?? null,
       fecha,
       horaInicio: horaNormalizada,
-      duracionMinutos,
+      duracionMinutos: duracionTurno,
       servicioId: servicioId ?? null,
       precioEsperado: precioEsperado ?? null,
       estado: "confirmado",
@@ -618,188 +455,138 @@ export async function cobrarYCompletarTurnoAction(
   return {};
 }
 
-export async function crearDisponibilidadLoteAction(
-  barberoId: string,
-  _prevState: TurnoActionState,
-  formData: FormData
-): Promise<TurnoActionState> {
-  const actor = await getTurnosActorContext();
-  if (!actor) return { error: "Necesitas iniciar sesion." };
-  if (!canManageTurnoForBarbero(actor, barberoId)) {
-    return { error: "Solo podes gestionar tu propia disponibilidad." };
-  }
-
-  const diasRaw = String(formData.get("diasSemana") ?? "");
-  const horaInicio = normalizeTimeInput(String(formData.get("horaInicio") ?? ""));
-  const horaFinRaw = String(formData.get("horaFin") ?? "").trim();
-  const horaFin = horaFinRaw ? normalizeTimeInput(horaFinRaw) : "";
-  const duracionMinutos = Number(formData.get("duracionMinutos") ?? 0);
-  const semanas = Math.min(8, Math.max(1, Number(formData.get("semanas") ?? 1)));
-
-  const diasSeleccionados = diasRaw
-    .split(",")
-    .map(Number)
-    .filter((d) => !isNaN(d) && d >= 0 && d <= 6);
-
-  if (diasSeleccionados.length === 0) {
-    return { error: "Elegí al menos un día de la semana." };
-  }
-  if (!horaInicio || !horaFin || !TURNO_DURACIONES.includes(duracionMinutos as 45 | 60)) {
-    return { error: "Completá hora de inicio, fin y duración válidas." };
-  }
-
-  const startMinutes = timeToMinutes(horaInicio);
-  const endMinutes = timeToMinutes(horaFin);
-  if (endMinutes <= startMinutes) {
-    return { error: "La hora de fin debe ser posterior al inicio." };
-  }
-
-  const slotsHorarios: string[] = [];
-  for (let cursor = startMinutes; cursor + duracionMinutos <= endMinutes; cursor += duracionMinutos) {
-    slotsHorarios.push(minutesToTime(cursor));
-  }
-  if (slotsHorarios.length === 0) {
-    return { error: "El rango no alcanza para generar ningún slot con esa duración." };
-  }
-
-  const fechaHoy = getFechaHoyArgentina();
-  const [y, m, d] = fechaHoy.split("-").map(Number);
-  const hoyUTC = new Date(Date.UTC(y!, m! - 1, d!));
-
-  const fechas: string[] = [];
-  for (let i = 1; i <= semanas * 7; i++) {
-    const date = new Date(hoyUTC);
-    date.setUTCDate(hoyUTC.getUTCDate() + i);
-    if (diasSeleccionados.includes(date.getUTCDay())) {
-      fechas.push(date.toISOString().slice(0, 10));
-    }
-  }
-
-  if (fechas.length === 0) {
-    return { error: "No hay fechas que coincidan con esos días en ese rango." };
-  }
-
-  let createdCount = 0;
-  let skippedCierre = 0;
-
-  for (const fecha of fechas) {
-    if (await isFechaCerrada(fecha)) {
-      skippedCierre++;
-      continue;
-    }
-
-    for (const hora of slotsHorarios) {
-      const [existing] = await db
-        .select({ id: turnosDisponibilidad.id })
-        .from(turnosDisponibilidad)
-        .where(
-          and(
-            eq(turnosDisponibilidad.barberoId, barberoId),
-            eq(turnosDisponibilidad.fecha, fecha),
-            eq(turnosDisponibilidad.horaInicio, hora)
-          )
-        )
-        .limit(1);
-
-      if (existing) continue;
-
-      await db.insert(turnosDisponibilidad).values({ barberoId, fecha, horaInicio: hora, duracionMinutos });
-      createdCount++;
-    }
-  }
-
-  const agendaBarbero = await getBarberoAgendaProfile(barberoId);
+function revalidarAgenda(publicSlug?: string | null) {
   revalidatePath("/turnos");
   revalidatePath("/hoy");
   revalidatePath("/turnos/disponibilidad");
-  if (agendaBarbero?.publicSlug) {
-    revalidatePath(`/reservar/${agendaBarbero.publicSlug}`);
-  }
-
-  if (createdCount === 0) {
-    return { error: "Todos esos slots ya estaban cargados." };
-  }
-  const partes = [`Se crearon ${createdCount} slots`];
-  if (skippedCierre > 0) partes.push(`${skippedCierre} días cerrados se saltaron`);
-  return { success: partes.join(". ") + "." };
+  if (publicSlug) revalidatePath(`/reservar/${publicSlug}`);
 }
 
-export async function eliminarDisponibilidadDiaSemanaAction(
+const HORA_REGEX = /^\d{2}:\d{2}$/;
+
+/**
+ * Guarda el horario semanal completo de un barbero (reemplaza al anterior).
+ * El formulario manda, por cada día 0–6, `activo_<dia>` y hasta dos rangos `desde_<dia>_<n>` / `hasta_<dia>_<n>`.
+ */
+export async function guardarHorarioSemanalAction(
   barberoId: string,
   _prevState: TurnoActionState,
   formData: FormData
 ): Promise<TurnoActionState> {
   const actor = await getTurnosActorContext();
-  if (!actor) return { error: "Necesitas iniciar sesion." };
+  if (!actor) return { error: "Necesitás iniciar sesión." };
   if (!canManageTurnoForBarbero(actor, barberoId)) {
-    return { error: "Solo podes gestionar tu propia disponibilidad." };
+    return { error: "Solo podés cambiar tu propio horario." };
   }
 
-  const diaSemana = Number(formData.get("diaSemana") ?? -1);
-  if (isNaN(diaSemana) || diaSemana < 0 || diaSemana > 6) {
-    return { error: "Día de la semana inválido." };
-  }
+  const filas: { barberoId: string; diaSemana: number; desde: string; hasta: string }[] = [];
+  for (let dia = 0; dia <= 6; dia++) {
+    if (formData.get(`activo_${dia}`) !== "on") continue;
 
-  const fechaHoy = getFechaHoyArgentina();
-
-  const todosSlots = await db
-    .select()
-    .from(turnosDisponibilidad)
-    .where(
-      and(
-        eq(turnosDisponibilidad.barberoId, barberoId),
-        gte(turnosDisponibilidad.fecha, fechaHoy)
-      )
-    );
-
-  const matchingSlots = todosSlots.filter((slot) => {
-    const [sy, sm, sd] = slot.fecha.split("-").map(Number);
-    return new Date(Date.UTC(sy!, sm! - 1, sd!)).getUTCDay() === diaSemana;
-  });
-
-  if (matchingSlots.length === 0) {
-    return { error: "No hay slots futuros para ese día de la semana." };
-  }
-
-  let deletedCount = 0;
-  let skippedCount = 0;
-
-  for (const slot of matchingSlots) {
-    const [ocupado] = await db
-      .select({ id: turnos.id })
-      .from(turnos)
-      .where(
-        and(
-          eq(turnos.barberoId, slot.barberoId),
-          eq(turnos.fecha, slot.fecha),
-          eq(turnos.horaInicio, slot.horaInicio),
-          inArray(turnos.estado, ["pendiente", "confirmado"])
-        )
-      )
-      .limit(1);
-
-    if (ocupado) {
-      skippedCount++;
-      continue;
+    const rangos: { desde: string; hasta: string }[] = [];
+    for (const n of [1, 2]) {
+      const desde = String(formData.get(`desde_${dia}_${n}`) ?? "").trim();
+      const hasta = String(formData.get(`hasta_${dia}_${n}`) ?? "").trim();
+      if (!desde && !hasta) continue;
+      if (!HORA_REGEX.test(desde) || !HORA_REGEX.test(hasta) || hasta <= desde) {
+        return { error: `${DIAS_SEMANA[dia]}: el horario tiene que terminar después de empezar.` };
+      }
+      rangos.push({ desde, hasta });
     }
 
-    await db.delete(turnosDisponibilidad).where(eq(turnosDisponibilidad.id, slot.id));
-    deletedCount++;
+    if (rangos.length === 0) {
+      return { error: `${DIAS_SEMANA[dia]} está prendido pero no tiene horario.` };
+    }
+    const [primero, segundo] = rangos.sort((a, b) => a.desde.localeCompare(b.desde));
+    if (primero && segundo && segundo.desde < primero.hasta) {
+      return { error: `${DIAS_SEMANA[dia]}: los dos horarios se pisan.` };
+    }
+    for (const rango of rangos) filas.push({ barberoId, diaSemana: dia, ...rango });
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.delete(barberoHorarioSemanal).where(eq(barberoHorarioSemanal.barberoId, barberoId));
+      if (filas.length > 0) await tx.insert(barberoHorarioSemanal).values(filas);
+    });
+  } catch (error) {
+    console.error("Error guardando horario semanal:", error);
+    return { error: "No pude guardar el horario. Probá de nuevo." };
   }
 
   const agendaBarbero = await getBarberoAgendaProfile(barberoId);
-  revalidatePath("/turnos");
-  revalidatePath("/hoy");
-  revalidatePath("/turnos/disponibilidad");
-  if (agendaBarbero?.publicSlug) {
-    revalidatePath(`/reservar/${agendaBarbero.publicSlug}`);
+  revalidarAgenda(agendaBarbero?.publicSlug);
+  return {
+    success: filas.length === 0 ? "Guardado: no trabajás ningún día." : "Horario guardado.",
+  };
+}
+
+/** "No vengo" u "Otro horario" para una fecha. Con barberoId null (solo admin) vale para todo el local. */
+export async function agregarDiaEspecialAction(
+  barberoId: string | null,
+  _prevState: TurnoActionState,
+  formData: FormData
+): Promise<TurnoActionState> {
+  const actor = await getTurnosActorContext();
+  if (!actor) return { error: "Necesitás iniciar sesión." };
+  if (barberoId === null ? !actor.isAdmin : !canManageTurnoForBarbero(actor, barberoId)) {
+    return { error: "No podés cambiar ese horario." };
   }
 
-  if (deletedCount === 0) {
-    return { error: `No se borró ningún slot. Los ${skippedCount} tienen turnos activos — recházalos primero.` };
+  const fecha = String(formData.get("fecha") ?? "").trim();
+  const tipo = String(formData.get("tipo") ?? "cerrado");
+  const desde = String(formData.get("desde") ?? "").trim();
+  const hasta = String(formData.get("hasta") ?? "").trim();
+  const nota = String(formData.get("nota") ?? "").trim() || null;
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { error: "Elegí la fecha." };
+  if (fecha < getFechaHoyArgentina()) return { error: "Esa fecha ya pasó." };
+  const cerrado = tipo !== "otro";
+  if (!cerrado && (!HORA_REGEX.test(desde) || !HORA_REGEX.test(hasta) || hasta <= desde)) {
+    return { error: "El horario tiene que terminar después de empezar." };
   }
 
-  const partes = [`Se borraron ${deletedCount} slots`];
-  if (skippedCount > 0) partes.push(`${skippedCount} tenían turno y no se tocaron`);
-  return { success: partes.join(". ") + "." };
+  try {
+    await db.transaction(async (tx) => {
+      // Un día especial por fecha: el nuevo reemplaza al anterior.
+      await tx
+        .delete(barberoDiaEspecial)
+        .where(
+          and(
+            eq(barberoDiaEspecial.fecha, fecha),
+            barberoId === null ? isNull(barberoDiaEspecial.barberoId) : eq(barberoDiaEspecial.barberoId, barberoId)
+          )
+        );
+      await tx.insert(barberoDiaEspecial).values({
+        barberoId,
+        fecha,
+        cerrado,
+        desde: cerrado ? null : desde,
+        hasta: cerrado ? null : hasta,
+        nota,
+        createdByUserId: actor.userId,
+      });
+    });
+  } catch (error) {
+    console.error("Error guardando día especial:", error);
+    return { error: "No pude guardar ese día. Probá de nuevo." };
+  }
+
+  const agendaBarbero = barberoId ? await getBarberoAgendaProfile(barberoId) : null;
+  revalidarAgenda(agendaBarbero?.publicSlug);
+  if (barberoId === null) revalidatePath("/reservar", "layout");
+  return { success: "Listo, ese día quedó cargado." };
+}
+
+export async function quitarDiaEspecialAction(id: string): Promise<void> {
+  const actor = await getTurnosActorContext();
+  if (!actor) return;
+
+  const [dia] = await db.select().from(barberoDiaEspecial).where(eq(barberoDiaEspecial.id, id)).limit(1);
+  if (!dia) return;
+  if (dia.barberoId === null ? !actor.isAdmin : !canManageTurnoForBarbero(actor, dia.barberoId)) return;
+
+  await db.delete(barberoDiaEspecial).where(eq(barberoDiaEspecial.id, id));
+  const agendaBarbero = dia.barberoId ? await getBarberoAgendaProfile(dia.barberoId) : null;
+  revalidarAgenda(agendaBarbero?.publicSlug);
 }

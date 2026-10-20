@@ -1,8 +1,9 @@
 import "server-only";
 
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  barberoHorarioSemanal,
   barberos,
   cierresCaja,
   goLiveReadiness,
@@ -10,7 +11,6 @@ import {
   mediosPago,
   productos,
   servicios,
-  turnosDisponibilidad,
 } from "@/db/schema";
 
 export type GoLiveCheck = {
@@ -34,10 +34,7 @@ export async function computeGoLiveChecks(): Promise<GoLiveCheck[]> {
     db.$count(barberos, and(eq(barberos.activo, true), eq(barberos.rol, "barbero"))),
     db.$count(mediosPago, eq(mediosPago.activo, true)),
     db.$count(productos, eq(productos.activo, true)),
-    db.$count(
-      turnosDisponibilidad,
-      isNotNull(turnosDisponibilidad.fecha)
-    ),
+    db.$count(barberoHorarioSemanal),
     db.$count(cierresCaja),
     db.$count(liquidaciones),
   ]);
@@ -69,9 +66,9 @@ export async function computeGoLiveChecks(): Promise<GoLiveCheck[]> {
     },
     {
       id: "turnos-base",
-      label: "Disponibilidad de turnos cargada",
+      label: "Horario semanal cargado",
       passed: disponibilidadFutura > 0,
-      detail: `${disponibilidadFutura} slots de disponibilidad`,
+      detail: `${disponibilidadFutura} franjas de horario semanal`,
     },
     {
       id: "flujo-cierre",

@@ -35,6 +35,7 @@ export default function ReservaForm({
   const [fecha, setFecha] = useState(initialFecha);
   const [selectedServicioId, setSelectedServicioId] = useState(servicios[0]?.id ?? "");
   const [slots, setSlots] = useState<Slot[]>([]);
+  const [proximoDia, setProximoDia] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState("");
   const [nombre, setNombre] = useState("");
@@ -104,7 +105,7 @@ export default function ReservaForm({
           )}&duracion=${servicioActual.duracionMinutos}`,
           { signal: controller.signal },
         );
-        const data = (await response.json()) as { slots?: Slot[]; error?: string };
+        const data = (await response.json()) as { slots?: Slot[]; proximoDia?: string | null; error?: string };
 
         if (!response.ok) {
           throw new Error(data.error ?? "No pudimos cargar horarios.");
@@ -112,6 +113,7 @@ export default function ReservaForm({
 
         if (!ignore) {
           setSlots(data.slots ?? []);
+          setProximoDia(data.proximoDia ?? null);
           setSelectedSlot("");
         }
       } catch (err) {
@@ -465,7 +467,20 @@ export default function ReservaForm({
               <p className="text-sm text-zinc-500">Primero elegi un servicio.</p>
             ) : slots.length === 0 ? (
               <div className="rounded-[22px] border border-white/10 bg-black/20 px-4 py-4 text-sm text-zinc-400">
-                No hay horarios disponibles para esa fecha. Prueba otra fecha de la agenda.
+                {proximoDia ? (
+                  <>
+                    <p>Ese día no hay turnos libres.</p>
+                    <button
+                      type="button"
+                      onClick={() => handleFechaChange(proximoDia)}
+                      className="mt-3 rounded-2xl border border-[#8cff59]/40 bg-[#8cff59]/10 px-4 py-2 font-semibold text-[#d8ffc7] hover:bg-[#8cff59]/20"
+                    >
+                      Ver el {formatDiaConLugar(proximoDia)}
+                    </button>
+                  </>
+                ) : (
+                  <p>No quedan turnos libres en los próximos 30 días. Escribile a la barbería para que te haga un lugar.</p>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
@@ -791,4 +806,14 @@ function SummaryRow({
       <p className="mt-1 text-sm text-zinc-400">{detail}</p>
     </div>
   );
+}
+
+function formatDiaConLugar(fecha: string) {
+  const [y, m, d] = fecha.split("-").map(Number);
+  return new Date(Date.UTC(y!, m! - 1, d!)).toLocaleDateString("es-AR", {
+    timeZone: "UTC",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
 }

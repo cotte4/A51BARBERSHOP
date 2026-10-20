@@ -713,6 +713,51 @@ export const turnosDisponibilidad = pgTable(
   ]
 );
 
+// Horario de trabajo que se repite cada semana: uno o más rangos por día (0 = domingo … 6 = sábado).
+// Los turnos libres se calculan desde acá (src/lib/horario.ts); vale hasta que se cambie.
+export const barberoHorarioSemanal = pgTable(
+  "barbero_horario_semanal",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    barberoId: uuid("barbero_id")
+      .notNull()
+      .references(() => barberos.id, { onDelete: "cascade" }),
+    diaSemana: integer("dia_semana").notNull(),
+    desde: time("desde").notNull(),
+    hasta: time("hasta").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check("barbero_horario_semanal_dia_check", sql`${table.diaSemana} BETWEEN 0 AND 6`),
+    check("barbero_horario_semanal_rango_check", sql`${table.hasta} > ${table.desde}`),
+    index("barbero_horario_semanal_barbero_idx").on(table.barberoId, table.diaSemana),
+  ]
+);
+
+// Una fecha puntual que pisa al horario semanal: "no vengo" (cerrado) u otro horario.
+// Sin barbero vale para todo el local (feriado).
+export const barberoDiaEspecial = pgTable(
+  "barbero_dia_especial",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    barberoId: uuid("barbero_id").references(() => barberos.id, { onDelete: "cascade" }),
+    fecha: date("fecha").notNull(),
+    cerrado: boolean("cerrado").notNull().default(false),
+    desde: time("desde"),
+    hasta: time("hasta"),
+    nota: text("nota"),
+    createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "barbero_dia_especial_rango_check",
+      sql`${table.cerrado} OR (${table.desde} IS NOT NULL AND ${table.hasta} IS NOT NULL AND ${table.hasta} > ${table.desde})`
+    ),
+    index("barbero_dia_especial_fecha_idx").on(table.fecha, table.barberoId),
+  ]
+);
+
 export const turnosReservaIntentos = pgTable(
   "turnos_reserva_intentos",
   {

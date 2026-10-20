@@ -4,6 +4,7 @@ import { canAccessPublicReserva } from "@/lib/public-reserva-access";
 import {
   canReserveOnPublicFecha,
   getFechaMananaArgentina,
+  getProximoDiaConLugar,
   getTurnosDisponibles,
   resolvePublicBarberoBySlug,
 } from "@/lib/turnos";
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
   if (!canReserveOnPublicFecha(parsed.data.fecha)) {
     return Response.json(
       {
-        error: `La reserva publica arranca desde ${getFechaMananaArgentina()}. Elegi una fecha posterior.`,
+        error: `Los turnos se reservan desde el ${getFechaMananaArgentina()} y hasta 30 dias adelante. Elegi otra fecha.`,
       },
       { status: 400 }
     );
@@ -59,5 +60,10 @@ export async function GET(request: Request) {
     parsed.data.fecha,
     parsed.data.duracion
   );
-  return Response.json({ slots });
+  // Día sin lugar: decir cuál es el próximo con turnos, para no dejar al cliente probando de a uno.
+  const proximoDia =
+    slots.length === 0
+      ? await getProximoDiaConLugar(barbero.id, parsed.data.fecha, parsed.data.duracion ?? 30)
+      : null;
+  return Response.json({ slots, proximoDia });
 }
