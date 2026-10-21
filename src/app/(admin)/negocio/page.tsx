@@ -5,9 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import {
   atenciones,
-  barberos,
   gastos,
-  liquidaciones,
   productos,
   stockMovimientos,
 } from "@/db/schema";
@@ -16,6 +14,7 @@ import { formatUSD } from "@/lib/amortizacion";
 import { getEstadoRepago } from "@/lib/repago-service";
 import { SITUACION_LABEL } from "@/components/repago/situacion";
 import { getKpisDia } from "@/lib/dashboard-queries";
+import { getPendienteEquipo } from "@/lib/liquidaciones-service";
 import {
   formatARS,
   formatHeaderDate,
@@ -46,8 +45,7 @@ export default async function NegocioPage() {
 
   const [
     kpisDia,
-    listaBarberos,
-    listaLiquidaciones,
+    pendienteEquipo,
     listaProductos,
     gastosHoyRows,
     repago,
@@ -55,8 +53,8 @@ export default async function NegocioPage() {
     ventasRetailHoyRows,
   ] = await Promise.all([
     getKpisDia(),
-    db.select().from(barberos),
-    db.select().from(liquidaciones).where(eq(liquidaciones.pagado, false)),
+    // Incluye los días trabajados que nadie marcó como pagados (src/lib/liquidaciones-service.ts).
+    getPendienteEquipo(),
     db
       .select({
         id: productos.id,
@@ -101,18 +99,8 @@ export default async function NegocioPage() {
   const ingresoBrutoHoy = totalServiciosHoy + totalRetailHoy;
   const gastosHoy = gastosHoyRows.reduce((sum, row) => sum + toNumber(row.monto), 0);
 
-  const pendientesEquipo = listaBarberos
-    .filter((barbero) => barbero.activo && barbero.rol !== "admin")
-    .map((barbero) => ({
-      id: barbero.id,
-      nombre: barbero.nombre,
-      pendiente: listaLiquidaciones
-        .filter((liquidacion) => liquidacion.barberoId === barbero.id)
-        .reduce((sum, liquidacion) => sum + toNumber(liquidacion.montoAPagar), 0),
-    }))
-    .filter((row) => row.pendiente > 0)
-    .sort((a, b) => b.pendiente - a.pendiente);
-  const totalPendienteBarberos = pendientesEquipo.reduce((sum, row) => sum + row.pendiente, 0);
+  const pendientesEquipo = pendienteEquipo.porBarbero;
+  const totalPendienteBarberos = pendienteEquipo.total;
 
   const stockAlerts = listaProductos
     .filter((producto) => (producto.stockActual ?? 0) <= (producto.stockMinimo ?? 5))

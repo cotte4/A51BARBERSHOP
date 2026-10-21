@@ -3,6 +3,7 @@
 import { useActionState, useDeferredValue, useEffect, useRef, useState } from "react";
 import type { AtencionFormState } from "@/app/(barbero)/caja/actions";
 import BarberoAvatarButton from "@/components/caja/BarberoAvatarButton";
+import { calculateAtencionCommission } from "@/lib/finance/commission";
 import {
   AtencionFormHero,
   AtencionFormNotesSection,
@@ -328,11 +329,14 @@ export default function AtencionForm({
 
   const precioServicio = Number(precioCobrado) || 0;
   const totalCobrar = precioServicio + subtotalProductos;
-  const comisionMpPct = Number(medioPagoSeleccionado?.comisionPorcentaje ?? 0);
-  const comisionMpMonto = (precioServicio * comisionMpPct) / 100;
-  const montoNeto = precioServicio - comisionMpMonto;
-  const comisionBarberoPct = Number(barberoSeleccionado?.porcentajeComision ?? 0);
-  const comisionBarberoMonto = (precioServicio * comisionBarberoPct) / 100;
+  // La misma cuenta que se guarda al cobrar (src/lib/finance/commission.ts), para que la vista previa no mienta.
+  const { comisionMedioPagoPct: comisionMpPct, comisionMedioPagoMonto: comisionMpMonto, montoNeto, comisionBarberoPct, comisionBarberoMonto } =
+    calculateAtencionCommission({
+      precioCobrado: precioServicio,
+      servicioPrecioBase: servicioSeleccionado?.precioBase != null ? Number(servicioSeleccionado.precioBase) : null,
+      comisionMedioPagoPct: Number(medioPagoSeleccionado?.comisionPorcentaje ?? 0),
+      comisionBarberoPct: Number(barberoSeleccionado?.porcentajeComision ?? 0),
+    });
   const mostrarPreview = precioServicio > 0 && medioPagoId !== "";
   const barberoBloqueado = !isAdmin && Boolean(preselectedBarberoId);
   const barberosVisibles = barberoBloqueado

@@ -49,7 +49,7 @@ export default async function CajaPage({
   const inicioDia = new Date(`${fechaHoy}T00:00:00-03:00`);
   const finDia = new Date(`${fechaHoy}T23:59:59-03:00`);
 
-  const [cierres, atencionesDelDia, ventasDelDia, barberosAll, serviciosAll, mediosAll, productosAll, productosVendidosHoy] =
+  const [cierres, atencionesDelDia, ventasDelDia, barberosAll, serviciosAll, mediosAll, productosAll, productosVendidosHoy, teTocaMes] =
     await Promise.all([
       db
         .select({
@@ -101,7 +101,25 @@ export default async function CajaPage({
             )
             // Las ventas restan stock (-1) y las anulaciones lo devuelven (+1): el neto negado son las unidades vendidas.
             .then((filas) => Math.max(0, Number(filas[0]?.unidades ?? 0))),
+      // Lo que le toca al barbero en el mes: su parte guardada en cada cobro (src/lib/finance/commission.ts).
+      isAdmin || !actor?.barberoId
+        ? Promise.resolve(0)
+        : db
+            .select({ total: sql<string>`coalesce(sum(${atenciones.comisionBarberoMonto}), 0)` })
+            .from(atenciones)
+            .where(
+              and(
+                eq(atenciones.barberoId, actor.barberoId),
+                eq(atenciones.anulado, false),
+                gte(atenciones.fecha, `${fechaHoy.slice(0, 7)}-01`),
+                lte(atenciones.fecha, fechaHoy)
+              )
+            )
+            .then((filas) => Number(filas[0]?.total ?? 0)),
     ]);
+  const teTocaHoy = atencionesDelDia
+    .filter((atencion) => !atencion.anulado)
+    .reduce((sum, atencion) => sum + Number(atencion.comisionBarberoMonto ?? 0), 0);
 
   const cierreHoy = cierres[0] ?? null;
   const barberosMap = new Map(barberosAll.map((barbero) => [barbero.id, barbero.nombre]));
@@ -163,6 +181,15 @@ export default async function CajaPage({
             {formatARS(caja.total)}
           </p>
           <p className="mt-2 text-sm text-zinc-300">{detalle}</p>
+          {!isAdmin ? (
+            <p className="mt-3 rounded-2xl border border-[#8cff59]/20 bg-[#8cff59]/8 px-4 py-3 text-sm text-zinc-200">
+              Te toca hoy <span className="font-semibold tabular-nums text-[#8cff59]">{formatARS(teTocaHoy)}</span>
+              {" · "}este mes <span className="font-semibold tabular-nums text-white">{formatARS(teTocaMes)}</span>
+              <span className="mt-1 block text-xs text-zinc-400">
+                Tu porcentaje del corte, más las propinas, menos la comisión de MP o tarjeta.
+              </span>
+            </p>
+          ) : null}
           {productosVendidosHoy > 0 ? (
             <p className="mt-1 text-sm text-zinc-400">
               Además se vendieron {plural(productosVendidosHoy, "producto", "productos")} en el local. Esa plata no

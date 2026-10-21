@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { calculateAtencionCommission } from "@/lib/finance/commission";
 
 describe("commission-helper: calculateAtencionCommission", () => {
-  it("uses servicio precio base as cap for barber commission", () => {
+  // Regla de Was (2026-10-21): la propina es entera del barbero y la comisión de MP la absorbe él.
+  it("gives the barber his % of list price plus the whole tip, minus the payment fee", () => {
     const result = calculateAtencionCommission({
       precioCobrado: 15000,
       servicioPrecioBase: 13000,
@@ -11,9 +12,13 @@ describe("commission-helper: calculateAtencionCommission", () => {
     });
 
     expect(result.baseParaComisionBarbero).toBe(13000);
-    expect(result.comisionBarberoMonto).toBe(7800);
+    expect(result.propinaBarbero).toBe(2000);
     expect(result.comisionMedioPagoMonto).toBe(900);
+    // 60% de 13.000 + 2.000 de propina - 900 de MP
+    expect(result.comisionBarberoMonto).toBe(8900);
     expect(result.montoNeto).toBe(14100);
+    // El local se queda con su 40% del precio de lista, sin pagar la comisión de MP.
+    expect(15000 - result.comisionBarberoMonto - result.comisionMedioPagoMonto).toBe(5200);
   });
 
   it("uses precio cobrado when below base", () => {
@@ -37,8 +42,8 @@ describe("commission-helper: calculateAtencionCommission", () => {
     });
 
     expect(result.baseParaComisionBarbero).toBe(13000);
-    expect(result.comisionBarberoMonto).toBe(7800);
     expect(result.comisionMedioPagoMonto).toBe(390);
+    expect(result.comisionBarberoMonto).toBe(7410);
   });
 
   it("normalizes invalid percentages to zero", () => {
@@ -54,5 +59,16 @@ describe("commission-helper: calculateAtencionCommission", () => {
     expect(result.comisionBarberoMonto).toBe(0);
     expect(result.comisionMedioPagoMonto).toBe(0);
     expect(result.montoNeto).toBe(13000);
+  });
+
+  it("never goes below zero when the fee is bigger than the barber share", () => {
+    const result = calculateAtencionCommission({
+      precioCobrado: 1000,
+      servicioPrecioBase: 1000,
+      comisionBarberoPct: 1,
+      comisionMedioPagoPct: 6,
+    });
+
+    expect(result.comisionBarberoMonto).toBe(0);
   });
 });

@@ -7,6 +7,9 @@ import { db } from "@/db";
 import { barberos, liquidaciones } from "@/db/schema";
 import { formatFecha } from "@/lib/fecha";
 import { formatARS } from "@/lib/format";
+import { getPendienteEquipo } from "@/lib/liquidaciones-service";
+import PagarDiaButton from "./_PagarDiaButton";
+import { pagarDiaAction } from "./actions";
 
 function formatPeriodo(inicio: string | null, fin: string | null) {
   if (inicio && fin && inicio === fin) {
@@ -23,12 +26,16 @@ export default async function LiquidacionesPage() {
     redirect("/caja?sinAcceso=1");
   }
 
-  const lista = await db.select().from(liquidaciones).orderBy(desc(liquidaciones.creadoEn));
+  const [lista, pendienteEquipo] = await Promise.all([
+    db.select().from(liquidaciones).orderBy(desc(liquidaciones.creadoEn)),
+    getPendienteEquipo(),
+  ]);
   const barberosMap = new Map((await db.select().from(barberos)).map((b) => [b.id, b]));
 
   const pendientes = lista.filter((item) => !item.pagado);
   const historial = lista.filter((item) => item.pagado);
-  const totalPendiente = pendientes.reduce((sum, item) => sum + Number(item.montoAPagar ?? 0), 0);
+  // Liquidaciones sin pagar + días trabajados que nadie marcó como pagados.
+  const totalPendiente = pendienteEquipo.total;
   const filas = (items: typeof lista, pagadas: boolean) => (
     <ul className="mt-3 divide-y divide-zinc-800/70">
       {items.map((liq) => (
@@ -65,6 +72,11 @@ export default async function LiquidacionesPage() {
           <p className="font-display mt-1 text-5xl font-bold tabular-nums tracking-tight text-white">
             {formatARS(String(totalPendiente))}
           </p>
+          {pendienteEquipo.porBarbero.length > 0 ? (
+            <p className="mt-2 text-sm text-zinc-300">
+              {pendienteEquipo.porBarbero.map((row) => `${row.nombre} ${formatARS(row.pendiente)}`).join(" · ")}
+            </p>
+          ) : null}
           <Link
             href="/liquidaciones/nueva"
             className="neon-button mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-[20px] px-5 text-base font-semibold"
@@ -72,6 +84,32 @@ export default async function LiquidacionesPage() {
             Nueva liquidación
           </Link>
         </section>
+
+        {pendienteEquipo.diasSinPagar.length > 0 ? (
+          <section className="panel-card rounded-[28px] p-5">
+            <h2 className="font-display text-xl font-semibold text-white">Días sin pagar</h2>
+            <p className="mt-1 text-sm text-zinc-400">
+              Lo que le toca a cada uno por día: su porcentaje del corte, más las propinas, menos la comisión de MP o
+              tarjeta. Cuando le pagues, tocá &quot;Pagado&quot;.
+            </p>
+            <ul className="mt-3 divide-y divide-zinc-800/70">
+              {pendienteEquipo.diasSinPagar.map((dia) => (
+                <li key={`${dia.barberoId}-${dia.fecha}`} className="flex items-center justify-between gap-4 py-3">
+                  <span className="min-w-0">
+                    <span className="block font-medium text-white">{dia.barberoNombre}</span>
+                    <span className="block text-sm text-zinc-400">
+                      {formatFecha(dia.fecha)} · {dia.cortes === 1 ? "1 corte" : `${dia.cortes} cortes`}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-3">
+                    <span className="font-semibold tabular-nums text-white">{formatARS(dia.monto)}</span>
+                    <PagarDiaButton action={pagarDiaAction.bind(null, dia.barberoId, dia.fecha)} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <section className="panel-card rounded-[28px] p-5">
           <h2 className="font-display text-xl font-semibold text-white">Para pagar</h2>

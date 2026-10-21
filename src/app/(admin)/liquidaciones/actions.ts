@@ -6,6 +6,7 @@ import { getAdminActorContext } from "@/lib/dal/authz";
 import {
   generarLiquidacionDesdeInput,
   marcarLiquidacionPagada,
+  pagarDiaBarbero,
 } from "@/lib/liquidaciones-service";
 
 export type LiquidacionFormState = {
@@ -80,5 +81,27 @@ export async function marcarPagada(
 
   revalidatePath(`/liquidaciones/${id}`);
   revalidatePath("/liquidaciones");
+  return {};
+}
+
+export async function pagarDiaAction(
+  barberoId: string,
+  fecha: string,
+  _prevState: MarcarPagadaState,
+  _formData: FormData
+): Promise<MarcarPagadaState> {
+  const actor = await getAdminActorContext();
+  if (!actor) return { error: "Solo el administrador puede marcar pagos." };
+
+  try {
+    const result = await pagarDiaBarbero(barberoId, fecha);
+    if (!result.ok) return { error: result.error };
+  } catch (error) {
+    console.error("Error pagando dia:", error);
+    return { error: "No se pudo marcar el pago. Intentá de nuevo." };
+  }
+
+  revalidatePath("/liquidaciones");
+  revalidatePath("/negocio");
   return {};
 }
