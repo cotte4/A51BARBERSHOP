@@ -67,10 +67,10 @@ export default function LoginPage() {
             <div className="panel-soft mt-5 rounded-[26px] p-4 sm:p-5">
               <p className="eyebrow text-[10px] font-semibold">Acceso interno</p>
               <h1 className="font-display mt-2 text-[2rem] font-bold leading-[0.95] text-white sm:text-[2.35rem]">
-                Base lista
+                Hola
               </h1>
               <p className="mt-3 max-w-sm text-sm leading-6 text-zinc-300">
-                La base esta online. Vos entra.
+                Entrá con tu email y tu contraseña.
               </p>
 
               <div className="mt-4 grid grid-cols-3 gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-300">
@@ -81,7 +81,7 @@ export default function LoginPage() {
                   Turnos
                 </div>
                 <div className="rounded-2xl border border-white/8 bg-black/15 px-3 py-3 text-center">
-                  Gestion
+                  Gestión
                 </div>
               </div>
             </div>
@@ -108,7 +108,7 @@ export default function LoginPage() {
                   htmlFor="password"
                   className="mb-2 block text-sm font-medium text-zinc-300"
                 >
-                  Contrasena
+                  Contraseña
                 </label>
                 <input
                   id="password"
@@ -133,7 +133,7 @@ export default function LoginPage() {
                 disabled={loading}
                 className="neon-button h-12 w-full rounded-2xl text-base font-semibold disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {loading ? "Entrando..." : "Entrar"}
+                {loading ? "Entrando…" : "Entrar"}
               </button>
             </form>
           </div>

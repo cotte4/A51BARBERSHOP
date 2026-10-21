@@ -179,7 +179,7 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
                       htmlFor="phoneRaw"
                       className="mb-1 block text-sm font-medium text-zinc-400"
                     >
-                      Telefono
+                      Teléfono
                     </label>
                     <input
                       id="phoneRaw"
@@ -318,7 +318,7 @@ export default async function ClienteDetallePage({ params }: ClientPageProps) {
                       htmlFor="phoneRaw"
                       className="mb-2 block text-sm font-medium text-zinc-400"
                     >
-                      Telefono
+                      Teléfono
                     </label>
                     <input
                       id="phoneRaw"

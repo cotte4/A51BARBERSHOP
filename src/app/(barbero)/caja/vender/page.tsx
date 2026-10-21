@@ -177,7 +177,7 @@ export default async function VenderProductoPage() {
                   </h2>
                   <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
                     Cuando no hay stock disponible, la venta queda bloqueada para evitar descuadres.
-                    Cargalo desde inventario y volve a esta pantalla.
+                    Cargalo desde inventario y volvé a esta pantalla.
                   </p>
                   <Link
                     href="/inventario"

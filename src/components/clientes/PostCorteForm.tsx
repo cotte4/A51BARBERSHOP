@@ -219,7 +219,7 @@ export default function PostCorteForm({ clientId }: PostCorteFormProps) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-              Sesion
+              Sesión
             </p>
             <h2 className="mt-1 text-lg font-semibold text-white">Cerrar corte y guardar memoria</h2>
           </div>

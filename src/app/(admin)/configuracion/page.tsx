@@ -74,7 +74,7 @@ export default async function ConfiguracionPage() {
           <div className="max-w-3xl">
             <p className="eyebrow">Resumen operativo</p>
             <h2 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-              Configuracion
+              Configuración
             </h2>
             <p className="mt-3 max-w-2xl text-sm text-zinc-400">
               El motor del negocio. Cada modulo tiene su tarjeta abajo.

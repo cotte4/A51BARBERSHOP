@@ -20,7 +20,7 @@ export default async function MusicaPage() {
             <p className="eyebrow text-[#8cff59]">Música</p>
             <p className="mt-3 text-2xl font-semibold text-white">Falta tu perfil de barbero</p>
             <p className="mt-3 max-w-xl text-sm text-zinc-300">
-              Vincula este usuario con un barbero activo para poder usar Jam, Soy DJ y la cola
+              Vinculá este usuario con un barbero activo para poder usar Jam, Soy DJ y la cola
               compartida desde Música.
             </p>
             <Link

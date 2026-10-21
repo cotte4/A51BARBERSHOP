@@ -19,7 +19,7 @@ export default async function MusicaJukeboxPage() {
             <p className="eyebrow text-[#8cff59]">Jukebox</p>
             <p className="mt-3 text-2xl font-semibold text-white">Falta tu perfil de barbero</p>
             <p className="mt-3 max-w-xl text-sm text-zinc-300">
-              Vincula este usuario con un barbero activo para poder manejar el Jukebox del local.
+              Vinculá este usuario con un barbero activo para poder manejar el Jukebox del local.
             </p>
             <Link
               href="/hoy"

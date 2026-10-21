@@ -76,7 +76,7 @@ export default async function PostCortePage({ params }: PostCortePageProps) {
 
       {client.archivedAt ? (
         <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm text-amber-200">
-          Este cliente esta archivado. La visita se puede registrar igual.
+          Este cliente está archivado. La visita se puede registrar igual.
         </div>
       ) : null}
 

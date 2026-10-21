@@ -56,7 +56,7 @@ export default async function ServiciosPage() {
         <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-4">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-400">
-              Configuracion
+              Configuración
             </p>
             <div className="space-y-3">
               <h1 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
