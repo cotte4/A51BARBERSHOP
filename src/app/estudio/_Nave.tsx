@@ -435,7 +435,10 @@ type Props = {
 
 export default function Nave({ audioRef, temaId, sonando }: Props) {
   const contenedor = useRef<HTMLDivElement>(null);
-  const quieto = usarMovimientoReducido();
+  // La nave es lo que se viene a ver y solo corre con play, así que se muestra aunque el sistema pida
+  // menos movimiento (Windows lo pide con "Efectos de animación" apagado). Lo único que se saca es
+  // la sacudida de cámara, que es lo que más marea.
+  const menosMovimiento = usarMovimientoReducido();
   const analisisRef = useRef<Analisis | null>(null);
   const sonandoRef = useRef(sonando);
   const despertarRef = useRef<(() => void) | null>(null);
@@ -459,7 +462,7 @@ export default function Nave({ audioRef, temaId, sonando }: Props) {
 
   useEffect(() => {
     const el = contenedor.current;
-    if (!el || quieto) return;
+    if (!el) return;
 
     let renderer: THREE.WebGLRenderer;
     try {
@@ -593,8 +596,9 @@ export default function Nave({ audioRef, temaId, sonando }: Props) {
       halo.scale.setScalar(10 + graves * 9 + golpe * 4);
       halo.material.opacity = 0.35 + graves * 0.6;
 
-      camara.position.x = (Math.random() - 0.5) * golpe * 0.12;
-      camara.position.y = (Math.random() - 0.5) * golpe * 0.12;
+      const sacudida = menosMovimiento ? 0 : golpe * 0.12;
+      camara.position.x = (Math.random() - 0.5) * sacudida;
+      camara.position.y = (Math.random() - 0.5) * sacudida;
 
       actores = actores.filter((actor) => {
         const p = (reloj - actor.nace) / actor.vida;
@@ -642,7 +646,7 @@ export default function Nave({ audioRef, temaId, sonando }: Props) {
       (estrellas.puntos.material as THREE.Material).dispose();
       liberarEscena(escena, renderer);
     };
-  }, [audioRef, quieto]);
+  }, [audioRef, menosMovimiento]);
 
   return <div ref={contenedor} aria-hidden="true" className="pointer-events-none fixed inset-0" />;
 }
