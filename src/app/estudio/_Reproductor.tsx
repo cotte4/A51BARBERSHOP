@@ -292,37 +292,48 @@ export function BarraReproductor({ reproductor, onNave, naveAbierta }: BarraProp
       {actual ? (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800 bg-zinc-950/95 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur">
           <div className="mx-auto flex max-w-xl flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={onNave} aria-label={naveAbierta ? "Cerrar la nave" : "Ver la nave"} className="shrink-0">
-                <Portada tema={actual} size="md" />
-              </button>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-white">{actual.titulo}</p>
-                <p className="truncate text-sm text-zinc-400">{ARTISTA}</p>
+            {/* Tres columnas iguales a los costados: los controles quedan en el centro exacto. */}
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+              <div className="flex min-w-0 items-center gap-3">
+                <button type="button" onClick={onNave} aria-label={naveAbierta ? "Cerrar la nave" : "Ver la nave"} className="shrink-0">
+                  <Portada tema={actual} size="md" />
+                </button>
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-white">{actual.titulo}</p>
+                  <p className="truncate text-sm text-zinc-400">{ARTISTA}</p>
+                </div>
               </div>
-              <button type="button" onClick={anterior} aria-label="Anterior" className="rounded-full p-2 text-zinc-300 hover:text-white">
-                <SaltoIcon atras />
-              </button>
-              <button
-                type="button"
-                onClick={alternar}
-                aria-label={sonando ? "Pausar" : "Reproducir"}
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-[#8cff59] text-[#07130a]"
-              >
-                {sonando ? <PauseIcon /> : <PlayIcon />}
-              </button>
-              <button type="button" onClick={siguiente} aria-label="Siguiente" className="rounded-full p-2 text-zinc-300 hover:text-white">
-                <SaltoIcon />
-              </button>
-              <button
-                type="button"
-                onClick={onNave}
-                aria-label={naveAbierta ? "Cerrar la nave" : "Ver la nave"}
-                aria-pressed={naveAbierta}
-                className={`rounded-full p-2 ${naveAbierta ? "text-[#8cff59]" : "text-zinc-400 hover:text-white"}`}
-              >
-                <NaveIcon />
-              </button>
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={anterior} aria-label="Anterior" className="rounded-full p-2 text-zinc-300 hover:text-white">
+                  <SaltoIcon atras />
+                </button>
+                <button
+                  type="button"
+                  onClick={alternar}
+                  aria-label={sonando ? "Pausar" : "Reproducir"}
+                  className="flex h-12 w-12 items-center justify-center rounded-full bg-[#8cff59] text-[#07130a]"
+                >
+                  {sonando ? <PauseIcon /> : <PlayIcon />}
+                </button>
+                <button type="button" onClick={siguiente} aria-label="Siguiente" className="rounded-full p-2 text-zinc-300 hover:text-white">
+                  <SaltoIcon />
+                </button>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={onNave}
+                  aria-pressed={naveAbierta}
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold ${
+                    naveAbierta
+                      ? "border-[#8cff59] bg-[#8cff59] text-[#07130a]"
+                      : "border-[#8cff59]/50 text-[#8cff59] hover:bg-[#8cff59]/10"
+                  }`}
+                >
+                  <NaveIcon />
+                  {naveAbierta ? "Salir" : "Nave"}
+                </button>
+              </div>
             </div>
             <div className="flex items-center gap-2 text-xs tabular-nums text-zinc-400">
               <span className="w-9 text-right">{formatDuracion(tiempo)}</span>

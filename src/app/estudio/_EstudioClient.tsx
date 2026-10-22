@@ -120,7 +120,12 @@ export default function EstudioClient({ temas }: { temas: TemaEstudio[] }) {
 
   return (
     <>
-      <div className="relative z-10 flex flex-col gap-6">
+      {/* Mientras suena, la lista se vuelve un vidrio oscuro: la nave se ve atrás. */}
+      <div
+        className={`relative z-10 flex flex-col gap-6 ${
+          reproductor.sonando ? "[&_.panel-card]:bg-none! [&_.panel-card]:bg-zinc-950/55! [&_.panel-card]:backdrop-blur-[3px] [&_.panel-card]:transition-colors" : ""
+        }`}
+      >
         <button type="button" onClick={() => setHoja({ tipo: "nuevo" })} className="neon-button rounded-[20px] px-5 py-3 font-semibold">
           Subir tema
         </button>
