@@ -1,5 +1,7 @@
 import * as THREE from "three";
-import { crearPelota, ROJO_3D, VERDE_3D } from "@/app/torneo/_pelota3d";
+import { mergeGeometries, mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { crearPelota, VERDE_3D } from "@/app/torneo/_pelota3d";
+import { conBorde, crearTexturaAnillo, crearTexturaPlaneta, type ColorCompartido } from "./_naveMateriales";
 
 // Los actores sueltos de la nave: ovnis, aliens, la pelota alien, planetas, ondas y chispas.
 // Nacen al azar en los golpes del tema, viven unos segundos y se van. Las geometrías y los
@@ -21,6 +23,8 @@ export type Actor = {
   propios: THREE.Material[];
   /** Geometría propia, si la tiene. */
   geometria?: THREE.BufferGeometry;
+  /** Lo demás que haya que soltar al irse (buffers de instancias). */
+  liberar?: () => void;
 };
 
 export type Kit = ReturnType<typeof crearKit>;
@@ -29,71 +33,292 @@ export const azar = (min: number, max: number) => min + Math.random() * (max - m
 export const elegir = <T,>(opciones: readonly T[]): T => opciones[Math.floor(Math.random() * opciones.length)];
 export const suave = (x: number) => x * x * (3 - 2 * x);
 
-/** Geometrías y materiales que comparten todos los actores: se crean una vez. */
-export function crearKit() {
-  // Sin mapa de entorno, un metal puro se ve negro: metal a medias y un brillo propio leve.
-  const metal = new THREE.MeshStandardMaterial({ color: 0xc9d1d9, metalness: 0.55, roughness: 0.3, emissive: 0x1b2620, emissiveIntensity: 0.6 });
-  const cupula = new THREE.MeshStandardMaterial({
-    color: 0x0c1f08,
-    emissive: VERDE_3D,
-    emissiveIntensity: 0.9,
-    transparent: true,
-    opacity: 0.85,
-  });
-  const aroRosa = new THREE.MeshStandardMaterial({ color: 0x2a0a22, emissive: ROSA_3D, emissiveIntensity: 1.2 });
-  const luz = new THREE.MeshBasicMaterial({ color: 0xfff6a8 });
-  const pielVerde = new THREE.MeshStandardMaterial({ color: 0x2f6b1d, emissive: VERDE_3D, emissiveIntensity: 0.35, roughness: 0.5 });
-  const pielRosa = new THREE.MeshStandardMaterial({ color: 0x6b1d5a, emissive: ROSA_3D, emissiveIntensity: 0.35, roughness: 0.5 });
-  const ojo = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.08, metalness: 0.4 });
-  const planetaMats = [
-    new THREE.MeshStandardMaterial({ color: 0x3b1a5e, emissive: 0x6a2bd1, emissiveIntensity: 0.35, roughness: 0.8 }),
-    new THREE.MeshStandardMaterial({ color: 0x0e3b3a, emissive: 0x1fd1c0, emissiveIntensity: 0.3, roughness: 0.8 }),
-    new THREE.MeshStandardMaterial({ color: 0x4a1020, emissive: ROJO_3D, emissiveIntensity: 0.3, roughness: 0.8 }),
-  ];
+// ————————————————————————————— Geometría del alien —————————————————————————————
+// Un "grey": cráneo ancho, mentón angosto, ojos almendra enormes. La cabeza tiene el centro en el
+// origen y mide ~2,4 de alto; el cuerpo cuelga abajo (los pies quedan en y ≈ -2,9).
 
-  const geo = {
-    disco: new THREE.SphereGeometry(1, 32, 16),
-    cupula: new THREE.SphereGeometry(0.62, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2),
-    aro: new THREE.TorusGeometry(1.45, 0.06, 8, 48),
-    luz: new THREE.SphereGeometry(0.09, 8, 6),
-    rayo: new THREE.ConeGeometry(1.15, 3.4, 24, 1, true),
-    cabeza: new THREE.SphereGeometry(1, 32, 24),
-    ojo: new THREE.SphereGeometry(1, 24, 16),
-    antena: new THREE.CylinderGeometry(0.03, 0.03, 0.6, 6),
-    bolita: new THREE.SphereGeometry(0.1, 10, 8),
-    planeta: new THREE.SphereGeometry(1, 32, 24),
-    anillo: new THREE.RingGeometry(1.4, 2.1, 64),
-    onda: new THREE.TorusGeometry(1, 0.035, 8, 96),
-  };
-  // La punta del cono queda pegada a la panza del ovni.
-  geo.rayo.translate(0, -1.7, 0);
+const CRANEO = 1.12;
+const MENTON = 1.32;
+/** Donde el cuello entra en la cabeza: el pivote para cabecear. */
+export const CUELLO_Y = -1.15;
 
-  const pelota = crearPelota();
-  const degradeRayo = crearDegradeRayo();
-  const puntoRedondo = crearPuntoRedondo();
-
-  return { metal, cupula, aroRosa, luz, pielVerde, pielRosa, ojo, planetaMats, geo, pelota, degradeRayo, puntoRedondo };
+/** Ancho de la cabeza según la altura en la esfera original (-1 abajo, 1 arriba). */
+function anchoCabeza(y: number) {
+  return y >= 0 ? 1 + 0.05 * Math.sin(y * Math.PI) : 1 - 0.6 * Math.pow(-y, 1.7);
 }
 
-/** Textura vertical para el rayo: fuerte pegado al ovni, se desvanece hacia abajo. */
-function crearDegradeRayo(): THREE.CanvasTexture {
-  const lienzo = document.createElement("canvas");
-  lienzo.width = 4;
-  lienzo.height = 128;
-  const ctx = lienzo.getContext("2d");
-  if (ctx) {
-    const grad = ctx.createLinearGradient(0, 0, 0, 128);
-    // alphaMap lee el canal verde, no el alfa: el degradé va de blanco a negro.
-    grad.addColorStop(0, "rgb(245,245,245)");
-    grad.addColorStop(0.5, "rgb(90,90,90)");
-    grad.addColorStop(1, "rgb(0,0,0)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 4, 128);
+/** Recalcula normales suaves sin la costura de la esfera (sus vértices duplicados). */
+function suavizar(geometria: THREE.BufferGeometry): THREE.BufferGeometry {
+  geometria.deleteAttribute("normal");
+  geometria.deleteAttribute("uv");
+  const unida = mergeVertices(geometria);
+  geometria.dispose();
+  unida.computeVertexNormals();
+  return unida;
+}
+
+function crearGeometriaCabeza(): THREE.BufferGeometry {
+  const esfera = new THREE.SphereGeometry(1, 48, 36);
+  const posiciones = esfera.getAttribute("position");
+  const v = new THREE.Vector3();
+  for (let i = 0; i < posiciones.count; i++) {
+    v.fromBufferAttribute(posiciones, i);
+    const ancho = anchoCabeza(v.y);
+    // Cara apenas aplanada adelante, nuca que sale para atrás arriba; el paso entre las dos es suave.
+    const atras = THREE.MathUtils.smoothstep(-v.z, -0.25, 0.25);
+    const nuca = 1 + 0.12 * THREE.MathUtils.smoothstep(v.y, -0.3, 0.6);
+    const fondo = 0.9 + (nuca - 0.9) * atras;
+    posiciones.setXYZ(i, v.x * ancho, v.y * (v.y > 0 ? CRANEO : MENTON), v.z * ancho * fondo);
   }
-  // En el cono, v = 1 es la punta (arriba): se da vuelta para que lo fuerte quede en el ovni.
-  const textura = new THREE.CanvasTexture(lienzo);
-  textura.flipY = false;
-  return textura;
+  return suavizar(esfera);
+}
+
+/** Ojo almendra: esfera con las puntas afinadas. */
+function crearGeometriaOjo(): THREE.BufferGeometry {
+  const esfera = new THREE.SphereGeometry(1, 32, 20);
+  const posiciones = esfera.getAttribute("position");
+  for (let i = 0; i < posiciones.count; i++) {
+    const x = posiciones.getX(i);
+    posiciones.setY(i, posiciones.getY(i) * (1 - 0.4 * x * x));
+  }
+  return suavizar(esfera);
+}
+
+const rayoGuia = new THREE.Raycaster();
+const guiaOrigen = new THREE.Vector3();
+const guiaHacia = new THREE.Vector3(0, 0, -1);
+
+/** z de la superficie de una geometría vista de frente en (x, y): para apoyar cosas sobre la cara. */
+function frenteDe(geometria: THREE.BufferGeometry, x: number, y: number): number {
+  const malla = new THREE.Mesh(geometria);
+  rayoGuia.set(guiaOrigen.set(x, y, 10), guiaHacia);
+  return rayoGuia.intersectObject(malla)[0]?.point.z ?? 0;
+}
+
+export const OJO = { x: 0.37, y: -0.05, ancho: 0.36, alto: 0.21, hondo: 0.13, inclinacion: 0.42, giro: 0.45 };
+
+function geometriasDeCara(cabeza: THREE.BufferGeometry) {
+  const ojo = crearGeometriaOjo();
+  const ojos: THREE.BufferGeometry[] = [];
+  const brillos: THREE.BufferGeometry[] = [];
+  const centroY = OJO.y;
+  for (const lado of [-1, 1]) {
+    const centro = new THREE.Vector3(lado * OJO.x, centroY, frenteDe(cabeza, lado * OJO.x, centroY) - 0.07);
+    const giro = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, lado * OJO.giro, lado * OJO.inclinacion));
+    const matriz = new THREE.Matrix4().compose(centro, giro, new THREE.Vector3(OJO.ancho, OJO.alto, OJO.hondo));
+    const este = ojo.clone().applyMatrix4(matriz);
+    ojos.push(este);
+    // El reflejo de la luz va del mismo lado en los dos ojos (es una sola luz): arriba a la izquierda.
+    for (const [dx, dy, radio] of [
+      [-0.09, 0.06, 0.048],
+      [0.07, -0.055, 0.022],
+    ] as const) {
+      const x = centro.x + dx;
+      const y = centro.y + dy;
+      const punto = new THREE.SphereGeometry(radio, 12, 8);
+      punto.translate(x, y, frenteDe(este, x, y) - radio * 0.35);
+      brillos.push(punto);
+    }
+  }
+  ojo.dispose();
+
+  // Boquita y dos narinas: casi nada, pero arman la cara.
+  const boca = new THREE.CapsuleGeometry(0.02, 0.14, 3, 8);
+  boca.rotateZ(Math.PI / 2);
+  boca.scale(1, 1, 0.6);
+  boca.translate(0, -0.82, frenteDe(cabeza, 0, -0.82) - 0.006);
+  const narinas = [-1, 1].map((lado) => {
+    const n = new THREE.SphereGeometry(0.022, 8, 6);
+    n.scale(1, 0.6, 0.6);
+    n.translate(lado * 0.055, -0.5, frenteDe(cabeza, lado * 0.055, -0.5) - 0.008);
+    return n;
+  });
+
+  const unir = (partes: THREE.BufferGeometry[]) => {
+    const unida = mergeGeometries(partes);
+    partes.forEach((p) => p.dispose());
+    return unida;
+  };
+  return { ojos: unir(ojos), brillos: unir(brillos), boca: unir([boca, ...narinas]) };
+}
+
+/** Antena derecha con la base en el origen; la izquierda es la misma girada media vuelta. */
+function crearGeometriaAntena() {
+  const curva = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.1, 0.42, 0), new THREE.Vector3(0.36, 0.72, 0));
+  const tallo = new THREE.TubeGeometry(curva, 16, 0.028, 6, false);
+  const bolita = new THREE.SphereGeometry(0.1, 16, 12);
+  bolita.translate(0.36, 0.72, 0);
+  return { tallo, bolita };
+}
+
+/** Brazo colgando desde el hombro (origen): flaco y largo, mano con tres dedos. */
+function crearGeometriaBrazo(): THREE.BufferGeometry {
+  const brazo = new THREE.CapsuleGeometry(0.062, 0.66, 4, 10);
+  brazo.translate(0, -0.4, 0);
+  const mano = new THREE.SphereGeometry(0.1, 14, 10);
+  mano.scale(1, 1.1, 0.75);
+  mano.translate(0, -0.86, 0);
+  const dedos = [-0.45, 0, 0.45].map((angulo) => {
+    const dedo = new THREE.CapsuleGeometry(0.022, 0.1, 3, 6);
+    dedo.rotateZ(angulo);
+    dedo.translate(Math.sin(angulo) * 0.07, -0.98 - Math.cos(angulo) * 0.02, 0);
+    return dedo;
+  });
+  const partes = [brazo, mano, ...dedos];
+  const unida = mergeGeometries(partes);
+  partes.forEach((p) => p.dispose());
+  return unida;
+}
+
+function crearGeometriaPierna(): THREE.BufferGeometry {
+  const pierna = new THREE.CapsuleGeometry(0.08, 0.36, 4, 10);
+  pierna.translate(0, -0.26, 0);
+  const pie = new THREE.SphereGeometry(0.12, 14, 10);
+  pie.scale(0.9, 0.55, 1.5);
+  pie.translate(0, -0.58, 0.06);
+  const unida = mergeGeometries([pierna, pie]);
+  pierna.dispose();
+  pie.dispose();
+  return unida;
+}
+
+/** Torso con cuello (el traje), por torno: pecho angosto, panza de pera. Origen en el centro. */
+function crearGeometriaCuerpo(): THREE.BufferGeometry {
+  const v = (x: number, y: number) => new THREE.Vector2(x, y);
+  const torso = new THREE.LatheGeometry(
+    [v(0, -0.5), v(0.2, -0.48), v(0.3, -0.36), v(0.33, -0.14), v(0.3, 0.1), v(0.25, 0.3), v(0.15, 0.42), v(0.1, 0.5), v(0.09, 0.66), v(0, 0.68)],
+    28
+  );
+  torso.scale(1, 1, 0.8);
+  return torso;
+}
+
+/** Posiciones del cuerpo respecto del centro de la cabeza. */
+export const CUERPO = { y: -1.82, hombroX: 0.29, hombroY: -1.52, caderaX: 0.14, caderaY: -2.24, collarY: -1.36 };
+
+// ————————————————————————————— Geometría del ovni —————————————————————————————
+// Platillo clásico por torno: la panza oscura con el motor, el borde filoso y el casco cromado
+// con un escalón que agarra los reflejos. Arriba, la cúpula de vidrio con un piloto adentro.
+
+const v2 = (x: number, y: number) => new THREE.Vector2(x, y);
+const PANZA_Y = -0.34;
+
+function crearGeometriasOvni() {
+  const panza = new THREE.LatheGeometry(
+    [v2(0, PANZA_Y), v2(0.3, PANZA_Y), v2(0.42, -0.3), v2(0.47, -0.23), v2(0.64, -0.2), v2(1.0, -0.15), v2(1.36, -0.08), v2(1.62, -0.005)],
+    64
+  );
+  const casco = new THREE.LatheGeometry(
+    [v2(1.62, -0.005), v2(1.6, 0.045), v2(1.44, 0.1), v2(1.16, 0.16), v2(1.08, 0.165), v2(1.04, 0.2), v2(0.82, 0.255), v2(0.64, 0.285), v2(0.58, 0.29)],
+    64
+  );
+  const banda = new THREE.TorusGeometry(1.615, 0.04, 10, 96);
+  banda.rotateX(Math.PI / 2);
+  const motor = new THREE.TorusGeometry(0.4, 0.035, 8, 48);
+  motor.rotateX(Math.PI / 2);
+  motor.translate(0, -0.3, 0);
+  const nucleo = new THREE.CircleGeometry(0.3, 32);
+  nucleo.rotateX(Math.PI / 2);
+  nucleo.translate(0, PANZA_Y - 0.004, 0);
+  const cupula = new THREE.SphereGeometry(0.6, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+  cupula.translate(0, 0.27, 0);
+  const luz = new THREE.SphereGeometry(0.05, 10, 8);
+  const rayo = new THREE.ConeGeometry(1.15, 3.4, 32, 1, true);
+  // La punta del cono queda pegada a la panza del ovni.
+  rayo.translate(0, -1.7 + PANZA_Y, 0);
+  return { panza, casco, banda, motor, nucleo, cupula, luz, rayo };
+}
+
+// ————————————————————————————— Kit —————————————————————————————
+
+/** Geometrías y materiales que comparten todos los actores: se crean una vez. */
+export function crearKit() {
+  // El borde de todos los personajes sigue el color A de la paleta (lo actualiza _Nave.tsx).
+  const borde: ColorCompartido = { value: new THREE.Color(VERDE_3D) };
+
+  const casco = conBorde(new THREE.MeshStandardMaterial({ color: 0xc4ccd6, metalness: 0.9, roughness: 0.27, envMapIntensity: 0.85 }), borde, 0.35, 3);
+  const panza = new THREE.MeshStandardMaterial({ color: 0x5b646f, metalness: 0.85, roughness: 0.38 });
+  // La cúpula es vidrio: casi transparente, refleja el estudio y se le prende el borde.
+  const cupula = conBorde(
+    new THREE.MeshPhysicalMaterial({
+      color: 0xc8ffe0,
+      metalness: 0,
+      roughness: 0.04,
+      clearcoat: 1,
+      clearcoatRoughness: 0.03,
+      envMapIntensity: 2,
+      emissive: VERDE_3D,
+      emissiveIntensity: 0.1,
+      transparent: true,
+      opacity: 0.24,
+      depthWrite: false,
+    }),
+    borde,
+    1.1,
+    2.2
+  );
+  const aroRosa = new THREE.MeshStandardMaterial({ color: 0x2a0a22, emissive: ROSA_3D, emissiveIntensity: 1.2 });
+  const luz = new THREE.MeshBasicMaterial({ color: 0xfff6a8 });
+  const motor = new THREE.MeshBasicMaterial({ color: VERDE_3D });
+
+  const pielVerde = conBorde(new THREE.MeshStandardMaterial({ color: 0x46a82a, roughness: 0.5, emissive: 0x0b2406 }), borde, 0.6, 2.4);
+  const pielRosa = conBorde(new THREE.MeshStandardMaterial({ color: 0xb8459f, roughness: 0.5, emissive: 0x26091d }), borde, 0.6, 2.4);
+  const traje = conBorde(new THREE.MeshStandardMaterial({ color: 0x4a5466, metalness: 0.55, roughness: 0.3 }), borde, 0.9, 2.4);
+  // Ojos mojados: negro con barniz, así reflejan el softbox del estudio.
+  const ojo = new THREE.MeshPhysicalMaterial({ color: 0x010203, roughness: 0.2, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0.6 });
+  const brillo = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const boca = new THREE.MeshStandardMaterial({ color: 0x0b1608, roughness: 0.8 });
+
+  const texturasPlaneta = [crearTexturaPlaneta(0x6a3bc4, 1.3), crearTexturaPlaneta(0x1aa89c, 4.1), crearTexturaPlaneta(0xd08a2e, 7.7)];
+  const atmosferas = [0xb48cff, 0x7dfff0, 0xffd38a].map((c) => ({ value: new THREE.Color(c) }));
+  const planetaMats = texturasPlaneta.map((textura, i) =>
+    conBorde(new THREE.MeshStandardMaterial({ map: textura, emissiveMap: textura, emissive: 0xffffff, emissiveIntensity: 0.32, roughness: 0.85 }), atmosferas[i], 1.2, 3)
+  );
+  const texturaAnillo = crearTexturaAnillo();
+
+  const cabeza = crearGeometriaCabeza();
+  const cara = geometriasDeCara(cabeza);
+  const antena = crearGeometriaAntena();
+  const geo = {
+    ...crearGeometriasOvni(),
+    cabeza,
+    ...cara,
+    tallo: antena.tallo,
+    bolita: antena.bolita,
+    brazo: crearGeometriaBrazo(),
+    pierna: crearGeometriaPierna(),
+    cuerpo: crearGeometriaCuerpo(),
+    collar: new THREE.TorusGeometry(0.12, 0.026, 8, 24).rotateX(Math.PI / 2),
+    luzPecho: new THREE.SphereGeometry(0.05, 10, 8),
+    planeta: new THREE.SphereGeometry(1, 48, 32),
+    anillo: new THREE.RingGeometry(1.4, 2.1, 96),
+    onda: new THREE.TorusGeometry(1, 0.035, 8, 96),
+  };
+
+  const pelota = crearPelota();
+  const puntoRedondo = crearPuntoRedondo();
+
+  return {
+    borde,
+    casco,
+    panza,
+    cupula,
+    aroRosa,
+    luz,
+    motor,
+    pielVerde,
+    pielRosa,
+    traje,
+    ojo,
+    brillo,
+    boca,
+    planetaMats,
+    texturasPlaneta,
+    texturaAnillo,
+    geo,
+    pelota,
+    puntoRedondo,
+  };
 }
 
 /** Sin textura, los puntos de three son cuadrados: esto los hace chispas redondas. */
@@ -113,10 +338,13 @@ function crearPuntoRedondo(): THREE.CanvasTexture {
 }
 
 export function liberarKit(kit: Kit) {
-  kit.degradeRayo.dispose();
   kit.puntoRedondo.dispose();
+  kit.texturaAnillo.dispose();
+  kit.texturasPlaneta.forEach((t) => t.dispose());
   Object.values(kit.geo).forEach((g) => g.dispose());
-  [kit.metal, kit.cupula, kit.aroRosa, kit.luz, kit.pielVerde, kit.pielRosa, kit.ojo, ...kit.planetaMats].forEach((m) => m.dispose());
+  [kit.casco, kit.panza, kit.cupula, kit.aroRosa, kit.luz, kit.motor, kit.pielVerde, kit.pielRosa, kit.traje, kit.ojo, kit.brillo, kit.boca, ...kit.planetaMats].forEach(
+    (m) => m.dispose()
+  );
   kit.pelota.grupo.traverse((obj) => {
     if (obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments) {
       obj.geometry.dispose();
@@ -125,54 +353,217 @@ export function liberarKit(kit: Kit) {
   });
 }
 
-export function crearOvni(kit: Kit) {
-  const grupo = new THREE.Group();
-  const disco = new THREE.Mesh(kit.geo.disco, kit.metal);
-  disco.scale.set(1.6, 0.32, 1.6);
-  const cupula = new THREE.Mesh(kit.geo.cupula, kit.cupula);
-  cupula.position.y = 0.12;
-  const aro = new THREE.Mesh(kit.geo.aro, kit.aroRosa);
-  aro.rotation.x = Math.PI / 2;
-  const luces = new THREE.Group();
-  for (let i = 0; i < 8; i++) {
-    const l = new THREE.Mesh(kit.geo.luz, kit.luz);
-    const a = (i / 8) * Math.PI * 2;
-    l.position.set(Math.cos(a) * 1.25, -0.08, Math.sin(a) * 1.25);
-    luces.add(l);
-  }
-  const matRayo = new THREE.MeshBasicMaterial({
-    color: VERDE_3D,
-    alphaMap: kit.degradeRayo,
+// ————————————————————————————— Ovni —————————————————————————————
+
+const LUCES_OVNI = 14;
+
+/**
+ * El rayo tractor: más fuerte pegado al ovni, con los bordes más prendidos que el centro (se lee
+ * como un volumen, no como un cono) y franjas suaves que bajan despacio (< 1 por segundo, bajo
+ * contraste: no es un destello).
+ */
+function crearMaterialRayo() {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uColor: { value: new THREE.Color(VERDE_3D) },
+      uOpacidad: { value: 0.2 },
+      uTiempo: { value: 0 },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      varying vec3 vNormal;
+      varying vec3 vVista;
+      void main() {
+        vUv = uv;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vNormal = normalize(normalMatrix * normal);
+        vVista = normalize(-mv.xyz);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uColor;
+      uniform float uOpacidad;
+      uniform float uTiempo;
+      varying vec2 vUv;
+      varying vec3 vNormal;
+      varying vec3 vVista;
+      void main() {
+        // En el cono, uv.y = 1 es la punta (pegada al ovni) y 0 la base, abajo.
+        float fuerza = pow(vUv.y, 1.4);
+        float borde = 0.35 + 0.65 * pow(1.0 - abs(dot(normalize(vNormal), vVista)), 1.5);
+        float franjas = 0.82 + 0.18 * sin(vUv.y * 38.0 + uTiempo * 2.4);
+        gl_FragColor = vec4(uColor * fuerza * borde * franjas * uOpacidad, 1.0);
+      }`,
     transparent: true,
-    opacity: 0.2,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
-  const rayo = new THREE.Mesh(kit.geo.rayo, matRayo);
-  grupo.add(disco, cupula, aro, luces, rayo);
-  return { grupo, luces, rayo, matRayo };
 }
+
+export type Ovni = ReturnType<typeof crearOvni>;
+
+export function crearOvni(kit: Kit) {
+  const grupo = new THREE.Group();
+  const g = kit.geo;
+  grupo.add(
+    new THREE.Mesh(g.panza, kit.panza),
+    new THREE.Mesh(g.casco, kit.casco),
+    new THREE.Mesh(g.banda, kit.aroRosa),
+    new THREE.Mesh(g.motor, kit.motor),
+    new THREE.Mesh(g.nucleo, kit.motor)
+  );
+
+  // El piloto: una cabecita mirando para todos lados adentro de la cúpula.
+  const piloto = crearCabezaAlien(kit, kit.pielVerde);
+  piloto.grupo.scale.setScalar(0.24);
+  piloto.grupo.position.y = 0.5;
+  grupo.add(piloto.grupo);
+  const cupula = new THREE.Mesh(g.cupula, kit.cupula);
+  cupula.renderOrder = 1;
+  grupo.add(cupula);
+
+  // Las 14 luces son una sola instancia: una llamada de dibujo por ovni, no 14.
+  const luces = new THREE.InstancedMesh(g.luz, kit.luz, LUCES_OVNI);
+  luces.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  const lugares = Array.from({ length: LUCES_OVNI }, (_, i) => {
+    const a = (i / LUCES_OVNI) * Math.PI * 2;
+    return new THREE.Vector3(Math.cos(a) * 1.47, 0.09, Math.sin(a) * 1.47);
+  });
+  const luz = new THREE.Object3D();
+  grupo.add(luces);
+
+  const matRayo = crearMaterialRayo();
+  const rayo = new THREE.Mesh(g.rayo, matRayo);
+  grupo.add(rayo);
+
+  return {
+    grupo,
+    rayo,
+    matRayo,
+    liberar: () => luces.dispose(),
+    /** Dónde están las luces en el mundo (de ahí salen los láseres de la nodriza). */
+    posicionesLuces: () => lugares.map((lugar) => lugar.clone().applyMatrix4(luces.matrixWorld)),
+    /** Luces que corren en ronda, el piloto que mira y las franjas del rayo. */
+    animar: (t: number) => {
+      luces.rotation.y = t * 0.6;
+      lugares.forEach((lugar, i) => {
+        luz.position.copy(lugar);
+        luz.scale.setScalar(0.75 + 0.5 * (0.5 + 0.5 * Math.sin(t * 5 - i * 0.9)));
+        luz.updateMatrix();
+        luces.setMatrixAt(i, luz.matrix);
+      });
+      luces.instanceMatrix.needsUpdate = true;
+      piloto.grupo.rotation.y = Math.sin(t * 1.3) * 0.6;
+      piloto.animar(t);
+      matRayo.uniforms.uTiempo.value = t;
+    },
+  };
+}
+
+// ————————————————————————————— Alien —————————————————————————————
+
+function crearCabezaAlien(kit: Kit, piel: THREE.Material) {
+  const grupo = new THREE.Group();
+  const g = kit.geo;
+  grupo.add(new THREE.Mesh(g.cabeza, piel), new THREE.Mesh(g.boca, kit.boca));
+  // Los ojos van en su propio grupo, a la altura de los ojos: así el parpadeo los aplasta en el lugar.
+  const ojos = new THREE.Group();
+  ojos.position.y = OJO.y;
+  const malla = new THREE.Mesh(g.ojos, kit.ojo);
+  const brillos = new THREE.Mesh(g.brillos, kit.brillo);
+  malla.position.y = brillos.position.y = -OJO.y;
+  ojos.add(malla, brillos);
+  grupo.add(ojos);
+
+  let proximoParpadeo = azar(0.5, 3);
+  return {
+    grupo,
+    animar: (t: number) => {
+      const k = (t - proximoParpadeo) / 0.16;
+      if (k > 1) proximoParpadeo = t + azar(1.8, 4.5);
+      ojos.scale.y = k >= 0 && k <= 1 ? 1 - 0.9 * Math.sin(k * Math.PI) : 1;
+    },
+  };
+}
+
+type Pose = {
+  /** 0..1: cuánto levanta el brazo derecho para saludar. */
+  saluda?: number;
+  /** 0..1: brazos abiertos y piernas que patalean, como nadando en gravedad cero. */
+  nada?: number;
+  /** Graves suavizados: cabeceo y antenas al ritmo. */
+  ritmo: number;
+};
 
 export function crearAlien(kit: Kit) {
   const grupo = new THREE.Group();
+  const g = kit.geo;
   const piel = Math.random() < 0.7 ? kit.pielVerde : kit.pielRosa;
-  const cabeza = new THREE.Mesh(kit.geo.cabeza, piel);
-  cabeza.scale.set(0.85, 1.05, 0.85);
-  grupo.add(cabeza);
-  for (const lado of [-1, 1]) {
-    const ojo = new THREE.Mesh(kit.geo.ojo, kit.ojo);
-    ojo.scale.set(0.36, 0.2, 0.14);
-    ojo.rotation.z = lado * -0.5;
-    ojo.position.set(lado * 0.34, 0.02, 0.74);
-    const antena = new THREE.Mesh(kit.geo.antena, piel);
-    antena.position.set(lado * 0.3, 1.2, 0);
-    antena.rotation.z = lado * -0.35;
-    const bolita = new THREE.Mesh(kit.geo.bolita, kit.aroRosa);
-    bolita.position.set(lado * 0.42, 1.48, 0);
-    grupo.add(ojo, antena, bolita);
-  }
-  return grupo;
+
+  // Cabeza con pivote en el cuello, para cabecear.
+  const cuello = new THREE.Group();
+  cuello.position.y = CUELLO_Y;
+  const cabeza = crearCabezaAlien(kit, piel);
+  cabeza.grupo.position.y = -CUELLO_Y;
+  cuello.add(cabeza.grupo);
+  const antenas = [-1, 1].map((lado) => {
+    const antena = new THREE.Group();
+    antena.position.set(lado * 0.3, 1.03, -0.05);
+    if (lado < 0) antena.rotation.y = Math.PI;
+    antena.add(new THREE.Mesh(g.tallo, piel), new THREE.Mesh(g.bolita, kit.aroRosa));
+    cabeza.grupo.add(antena);
+    return antena;
+  });
+  grupo.add(cuello);
+
+  const cuerpo = new THREE.Mesh(g.cuerpo, kit.traje);
+  cuerpo.position.y = CUERPO.y;
+  const collar = new THREE.Mesh(g.collar, kit.aroRosa);
+  collar.position.y = CUERPO.collarY;
+  const pecho = new THREE.Mesh(g.luzPecho, kit.motor);
+  pecho.position.set(0, -1.72, 0.235);
+  grupo.add(cuerpo, collar, pecho);
+
+  const brazos = [-1, 1].map((lado) => {
+    const hombro = new THREE.Group();
+    hombro.position.set(lado * CUERPO.hombroX, CUERPO.hombroY, 0);
+    hombro.add(new THREE.Mesh(g.brazo, piel));
+    grupo.add(hombro);
+    return hombro;
+  });
+  const piernas = [-1, 1].map((lado) => {
+    const cadera = new THREE.Group();
+    cadera.position.set(lado * CUERPO.caderaX, CUERPO.caderaY, 0);
+    cadera.add(new THREE.Mesh(g.pierna, kit.traje));
+    grupo.add(cadera);
+    return cadera;
+  });
+
+  const fase = Math.random() * Math.PI * 2;
+  return {
+    grupo,
+    animar: (t: number, pose: Pose) => {
+      cabeza.animar(t);
+      const { saluda = 0, nada = 0, ritmo } = pose;
+      cuello.rotation.x = -0.05 + ritmo * 0.25 * Math.abs(Math.sin(t * 4.6 + fase));
+      cuello.rotation.z = Math.sin(t * 1.7 + fase) * 0.08;
+      // Las antenas se balancean con un poco de retraso: parecen blandas.
+      antenas.forEach((a, i) => {
+        a.rotation.z = -0.1 + Math.sin(t * 5 + fase + i * 1.3) * 0.09 + ritmo * 0.12;
+      });
+      // Brazo derecho (lado +1): ángulo positivo = sube por afuera. El izquierdo, al revés.
+      const vaiven = Math.sin(t * 2 + fase);
+      const derecho = 0.15 + vaiven * 0.04 + saluda * (2.45 + Math.sin(t * 9) * 0.35) + nada * (1.05 + Math.sin(t * 2.2 + fase) * 0.3);
+      const izquierdo = 0.15 - vaiven * 0.04 + nada * (1.05 + Math.sin(t * 2.2 + fase + 1) * 0.3);
+      brazos[1].rotation.z = derecho;
+      brazos[0].rotation.z = -izquierdo;
+      piernas.forEach((p, i) => {
+        p.rotation.x = nada * Math.sin(t * 2.4 + fase + i * Math.PI) * 0.4;
+        p.rotation.z = (i === 0 ? -1 : 1) * nada * 0.15;
+      });
+    },
+  };
 }
 
 /** Medio ancho y medio alto visibles a una profundidad z. */
@@ -184,7 +575,8 @@ export function mitadVisible(z: number, aspecto: number) {
 export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): Actor {
   switch (tipo) {
     case "ovni-cruza": {
-      const { grupo, luces, matRayo } = crearOvni(kit);
+      const ovni = crearOvni(kit);
+      const { grupo, matRayo } = ovni;
       const z = azar(-5, 1);
       const m = mitadVisible(z, aspecto);
       const desde = Math.random() < 0.5 ? -1 : 1;
@@ -196,18 +588,21 @@ export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): 
         nace: t,
         vida: azar(4.5, 7),
         propios: [matRayo],
+        liberar: ovni.liberar,
         mover: (p, tt, g) => {
           grupo.position.x = desde * (m.x + 3) * (1 - 2 * p);
           grupo.position.y = y0 + Math.sin(p * Math.PI * 3) * 0.6;
+          // Se inclina hacia donde va, como un platillo de verdad.
           grupo.rotation.z = -desde * 0.25 + Math.sin(tt * 3) * 0.08;
-          luces.rotation.y = tt * 4;
-          luces.children.forEach((l, i) => l.scale.setScalar(1 + Math.sin(tt * 3 + i) * 0.25));
-          matRayo.opacity = 0.05 + g * 0.35;
+          grupo.rotation.x = 0.18;
+          ovni.animar(tt);
+          matRayo.uniforms.uOpacidad.value = 0.05 + g * 0.35;
         },
       };
     }
     case "ovni-baja": {
-      const { grupo, luces, matRayo } = crearOvni(kit);
+      const ovni = crearOvni(kit);
+      const { grupo, matRayo } = ovni;
       const z = azar(-3, 0);
       const m = mitadVisible(z, aspecto);
       const x = azar(-m.x * 0.6, m.x * 0.6);
@@ -218,6 +613,7 @@ export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): 
         nace: t,
         vida: azar(5, 7),
         propios: [matRayo],
+        liberar: ovni.liberar,
         mover: (p, tt, g) => {
           // Baja, se queda abduciendo y se va disparado para arriba.
           const arriba = m.y + 3;
@@ -225,52 +621,61 @@ export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): 
           grupo.position.y =
             p < 0.2 ? arriba + (quieto - arriba) * suave(p / 0.2) : p < 0.8 ? quieto + Math.sin(tt * 2) * 0.15 : quieto + (arriba + 6 - quieto) * suave((p - 0.8) / 0.2);
           grupo.position.x = x + Math.sin(tt * 1.3) * 0.3;
-          luces.rotation.y = tt * 5;
-          luces.children.forEach((l, i) => l.scale.setScalar(1 + Math.sin(tt * 3 + i * 0.8) * 0.25));
+          grupo.rotation.x = 0.12;
+          ovni.animar(tt);
           const abduciendo = p > 0.2 && p < 0.8 ? 1 : 0;
-          matRayo.opacity = abduciendo * (0.12 + g * 0.5);
+          matRayo.uniforms.uOpacidad.value = abduciendo * (0.12 + g * 0.5);
         },
       };
     }
     case "alien-asoma": {
-      const grupo = crearAlien(kit);
+      const alien = crearAlien(kit);
+      const grupo = alien.grupo;
       const z = azar(-2, 0.5);
       const m = mitadVisible(z, aspecto);
-      const x = azar(-m.x * 0.8, m.x * 0.8);
-      const escala = azar(0.7, 1.1);
-      grupo.position.set(x, -m.y - 2, z);
+      const x = azar(-m.x * 0.75, m.x * 0.75);
+      const escala = azar(0.6, 0.85);
+      // Escondido abajo (antenas incluidas) y asomado por encima de la rave y de la barra del player.
+      const oculto = -m.y - 2.1 * escala;
+      const asomado = -m.y * 0.38;
+      grupo.position.set(x, oculto, z);
+      grupo.scale.setScalar(escala);
       return {
         obj: grupo,
         nace: t,
-        vida: azar(3, 4.5),
+        vida: azar(3.5, 5),
         propios: [],
         mover: (p, tt, g) => {
-          // Asoma desde abajo, cabecea al ritmo y se vuelve a esconder.
-          const sube = p < 0.25 ? suave(p / 0.25) : p > 0.75 ? 1 - suave((p - 0.75) / 0.25) : 1;
-          grupo.position.y = -m.y - 2 + sube * 2.9;
-          grupo.rotation.z = Math.sin(tt * 4) * 0.2;
-          grupo.rotation.y = Math.sin(tt * 1.5) * 0.4;
-          grupo.scale.setScalar(escala * (1 + g * 0.18));
+          // Asoma desde abajo, saluda al ritmo y se vuelve a esconder.
+          const sube = p < 0.22 ? suave(p / 0.22) : p > 0.78 ? 1 - suave((p - 0.78) / 0.22) : 1;
+          grupo.position.y = oculto + sube * (asomado - oculto);
+          grupo.rotation.y = Math.sin(tt * 1.5) * 0.35;
+          grupo.rotation.z = Math.sin(tt * 4) * 0.06;
+          grupo.scale.setScalar(escala * (1 + g * 0.06));
+          const saluda = p > 0.2 && p < 0.8 ? suave(Math.min(1, (p - 0.2) / 0.12, (0.8 - p) / 0.12)) : 0;
+          alien.animar(tt, { saluda, ritmo: g });
         },
       };
     }
     case "alien-flota": {
-      const grupo = crearAlien(kit);
+      const alien = crearAlien(kit);
+      const grupo = alien.grupo;
       const z = azar(-6, -1);
       const m = mitadVisible(z, aspecto);
       const desde = Math.random() < 0.5 ? -1 : 1;
-      const y0 = azar(-m.y * 0.6, m.y * 0.6);
-      const giro = azar(0.6, 1.4) * (Math.random() < 0.5 ? -1 : 1);
+      const y0 = azar(-m.y * 0.5, m.y * 0.6);
+      const giro = azar(0.5, 1.1) * (Math.random() < 0.5 ? -1 : 1);
       return {
         obj: grupo,
         nace: t,
         vida: azar(6, 9),
         propios: [],
         mover: (p, tt, g) => {
-          // Gravedad cero: cruza dando vueltas.
-          grupo.position.set(desde * (m.x + 2) * (1 - 2 * p), y0 + Math.sin(tt) * 0.8, z);
-          grupo.rotation.set(tt * giro * 0.7, tt * giro, tt * giro * 0.4);
-          grupo.scale.setScalar(0.6 + g * 0.12);
+          // Gravedad cero: cruza dando vueltas, nadando.
+          grupo.position.set(desde * (m.x + 2.5) * (1 - 2 * p), y0 + Math.sin(tt) * 0.8, z);
+          grupo.rotation.set(Math.sin(tt * 0.6) * 0.6, tt * giro * 0.8, tt * giro * 0.5);
+          grupo.scale.setScalar(0.46 + g * 0.05);
+          alien.animar(tt, { nada: 1, ritmo: g });
         },
       };
     }
@@ -297,10 +702,12 @@ export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): 
       const grupo = new THREE.Group();
       const mat = elegir(kit.planetaMats);
       const esfera = new THREE.Mesh(kit.geo.planeta, mat);
-      const matAnillo = new THREE.MeshBasicMaterial({ color: 0xd9c8ff, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false });
+      esfera.rotation.z = azar(-0.4, 0.4);
+      const matAnillo = new THREE.MeshBasicMaterial({ map: kit.texturaAnillo, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false });
       const anillo = new THREE.Mesh(kit.geo.anillo, matAnillo);
       anillo.rotation.x = Math.PI / 2.4;
-      grupo.add(esfera, anillo);
+      grupo.add(esfera);
+      if (Math.random() < 0.7) grupo.add(anillo);
       const z = -20;
       const m = mitadVisible(z, aspecto);
       const desde = Math.random() < 0.5 ? -1 : 1;
@@ -374,22 +781,35 @@ export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): 
 
 export const TIPOS_GOLPE = ["ovni-cruza", "ovni-baja", "alien-asoma", "alien-asoma", "alien-flota", "pelota"] as const;
 
-export function crearEstrellas(cantidad: number) {
+/** Estrellas redondas en dos tamaños (la mayoría chicas, unas pocas grandes): da profundidad. */
+export function crearEstrellas(cantidad: number, textura: THREE.Texture) {
   const posiciones = new Float32Array(cantidad * 3);
   const colores = new Float32Array(cantidad * 3);
+  const tamanos = new Float32Array(cantidad);
   const verde = new THREE.Color(VERDE_3D);
   const blanco = new THREE.Color(0xffffff);
+  const fria = new THREE.Color(0xbfe0ff);
   for (let i = 0; i < cantidad; i++) {
     posiciones[i * 3] = azar(-40, 40);
     posiciones[i * 3 + 1] = azar(-25, 25);
     posiciones[i * 3 + 2] = azar(-60, CAMARA_Z);
-    const c = Math.random() < 0.2 ? verde : blanco;
+    const r = Math.random();
+    const c = r < 0.18 ? verde : r < 0.4 ? fria : blanco;
     colores.set([c.r, c.g, c.b], i * 3);
+    tamanos[i] = Math.random() < 0.12 ? azar(1.8, 2.6) : azar(0.7, 1.1);
   }
   const geometria = new THREE.BufferGeometry();
   geometria.setAttribute("position", new THREE.BufferAttribute(posiciones, 3));
   geometria.setAttribute("color", new THREE.BufferAttribute(colores, 3));
-  const material = new THREE.PointsMaterial({ size: 0.12, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false });
+  geometria.setAttribute("aTamano", new THREE.BufferAttribute(tamanos, 1));
+  const material = new THREE.PointsMaterial({ size: 0.13, map: textura, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false });
+  // PointsMaterial no trae tamaño por punto: se lo agrega leyendo el atributo aTamano.
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nattribute float aTamano;")
+      .replace("gl_PointSize = size;", "gl_PointSize = size * aTamano;");
+  };
+  material.customProgramCacheKey = () => "estrellas-tamano";
   return { puntos: new THREE.Points(geometria, material), posiciones, geometria };
 }
 
@@ -410,4 +830,3 @@ export function crearHalo(): THREE.Sprite {
   sprite.position.z = -8;
   return sprite;
 }
-

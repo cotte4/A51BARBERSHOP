@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { crearLimitador60, usarMovimientoReducido } from "@/app/torneo/_movimiento";
 import { liberarEscena, VERDE_3D } from "@/app/torneo/_pelota3d";
@@ -23,6 +24,7 @@ import {
   TIPOS_GOLPE,
   type Actor,
 } from "./_naveKit";
+import { crearEntorno, SHADER_TERMINACION } from "./_naveMateriales";
 import { crearLaseres, crearNodriza, crearRave, crearTerreno, crearTunel, type Musica } from "./_naveShow";
 
 // La nave del Estudio: aparece al dar play y se va al pausar. Un show armado con el tema que
@@ -37,6 +39,12 @@ const MAX_ACTORES = 9;
 const MAX_DESTELLOS_POR_SEG = 2;
 // Sin análisis (todavía bajando, o falló) se inventa un pulso de trap: 140 BPM.
 const PERIODO_FALSO = 60 / 140;
+// Resolución adaptativa: arranca alta y, si el equipo no llega a 45 cuadros por segundo durante
+// 2 s seguidos, baja un escalón. Nunca vuelve a subir (así no oscila).
+const CUADROS_MINIMOS = 45;
+const VENTANA_MEDICION = 2;
+const ESCALON_RESOLUCION = 0.25;
+const RESOLUCION_MINIMA = 1;
 
 const PALETAS: [number, number][] = [
   [VERDE_3D, ROSA_3D],
@@ -68,6 +76,8 @@ export default function Nave({ audioRef, temaId, sonando }: Props) {
   // más marea: la sacudida y el vaivén de cámara.
   const menosMovimiento = usarMovimientoReducido();
   const analisisRef = useRef<Analisis | null>(null);
+  // Mientras se analiza el tema el hilo principal está ocupado: esos cuadros no cuentan para medir.
+  const analizandoRef = useRef(false);
   const sonandoRef = useRef(sonando);
   const despertarRef = useRef<(() => void) | null>(null);
 
@@ -78,10 +88,14 @@ export default function Nave({ audioRef, temaId, sonando }: Props) {
 
   useEffect(() => {
     analisisRef.current = null;
+    analizandoRef.current = false;
     if (!temaId) return;
     let vigente = true;
+    analizandoRef.current = true;
     void analizarTema(temaId).then((analisis) => {
-      if (vigente) analisisRef.current = analisis;
+      if (!vigente) return;
+      analisisRef.current = analisis;
+      analizandoRef.current = false;
     });
     return () => {
       vigente = false;
@@ -99,27 +113,47 @@ export default function Nave({ audioRef, temaId, sonando }: Props) {
       return;
     }
     const celular = Math.min(window.innerWidth, window.innerHeight) < 600;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, celular ? 1.25 : 1.5));
+    let resolucion = Math.max(RESOLUCION_MINIMA, Math.min(window.devicePixelRatio || 1, celular ? 1.5 : 2));
+    renderer.setPixelRatio(resolucion);
     renderer.setSize(window.innerWidth, window.innerHeight);
+    // Neutral (Khronos PBR Neutral): respeta el tono y la saturación del neón y solo comprime lo
+    // que se pasa de blanco, en vez de quemarlo.
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.toneMappingExposure = 1.05;
     renderer.domElement.style.opacity = "0";
     el.appendChild(renderer.domElement);
 
     const escena = new THREE.Scene();
     escena.background = new THREE.Color(FONDO);
     escena.fog = new THREE.Fog(FONDO, 22, 78);
+    // Lo que reflejan los metales, los ojos y el vidrio. Se arma una vez.
+    const entorno = crearEntorno(renderer);
+    escena.environment = entorno;
+    escena.environmentIntensity = 0.7;
     const camara = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, 0.1, 120);
     camara.position.set(0, 0.6, CAMARA_Z);
     const mira = new THREE.Vector3(0, 0.6, -6);
 
-    // Brillo neón: lo que más brilla (barras, láseres, anillos) se derrama como luz.
-    const composer = new EffectComposer(renderer);
+    // Antialiasing de verdad (MSAA) en el buffer donde se dibuja la escena: sin esto los bordes
+    // quedan serruchados. Media precisión (HalfFloat) para que el brillo neón no haga escalones.
+    const muestras = Math.min(4, renderer.capabilities.maxSamples);
+    const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: muestras }));
+    // El segundo buffer solo recibe pasos de pantalla completa: no necesita multisampling. Como hay
+    // dos pasos que intercambian buffers (salida y terminación), la escena cae siempre en el primero.
+    composer.renderTarget2.samples = 0;
+    composer.setPixelRatio(resolucion);
+    composer.setSize(window.innerWidth, window.innerHeight);
     composer.addPass(new RenderPass(escena, camara));
-    // Umbral alto: solo se derrama lo que es neón de verdad, no lo iluminado.
+    // Brillo neón: lo que más brilla (barras, láseres, anillos) se derrama como luz. Umbral alto:
+    // solo se derrama lo que es neón de verdad, no lo iluminado.
     const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2), 0.6, 0.4, 0.62);
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
+    const terminacion = new ShaderPass(SHADER_TERMINACION);
+    composer.addPass(terminacion);
 
-    escena.add(new THREE.AmbientLight(0x8fa88a, 0.5));
+    // El entorno ya ilumina parejo: la luz ambiente queda baja y las de color pintan los bordes.
+    escena.add(new THREE.AmbientLight(0x8fa88a, 0.25));
     const luzA = new THREE.PointLight(VERDE_3D, 22, 40);
     luzA.position.set(-6, 5, 6);
     const luzB = new THREE.PointLight(ROSA_3D, 14, 40);
@@ -128,12 +162,12 @@ export default function Nave({ audioRef, temaId, sonando }: Props) {
     luzBlanca.position.set(2, 6, 8);
     escena.add(luzA, luzB, luzBlanca);
 
-    const estrellas = crearEstrellas(1400);
+    const kit = crearKit();
+    const estrellas = crearEstrellas(1400, kit.puntoRedondo);
     escena.add(estrellas.puntos);
     const halo = crearHalo();
     escena.add(halo);
 
-    const kit = crearKit();
     const nodriza = crearNodriza(kit);
     const tunel = crearTunel();
     const terreno = crearTerreno();
@@ -148,7 +182,27 @@ export default function Nave({ audioRef, temaId, sonando }: Props) {
       camara.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
       composer.setSize(window.innerWidth, window.innerHeight);
-      bloom.resolution.set(window.innerWidth / 2, window.innerHeight / 2);
+    };
+    let medidos = 0;
+    let tiempoMedido = 0;
+    const medirRendimiento = (dt: number) => {
+      // Un cuadro trabado suelto (cambio de pestaña, el análisis) no es el equipo: se descarta la ventana.
+      if (analizandoRef.current || dt >= 0.1) {
+        medidos = 0;
+        tiempoMedido = 0;
+        return;
+      }
+      medidos++;
+      tiempoMedido += dt;
+      if (tiempoMedido < VENTANA_MEDICION) return;
+      const cuadrosPorSeg = medidos / tiempoMedido;
+      medidos = 0;
+      tiempoMedido = 0;
+      if (cuadrosPorSeg >= CUADROS_MINIMOS || resolucion <= RESOLUCION_MINIMA) return;
+      resolucion = Math.max(RESOLUCION_MINIMA, resolucion - ESCALON_RESOLUCION);
+      renderer.setPixelRatio(resolucion);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      composer.setPixelRatio(resolucion);
     };
     window.addEventListener("resize", alCambiarTamano);
 
@@ -316,6 +370,7 @@ export default function Nave({ audioRef, temaId, sonando }: Props) {
       if (document.hidden || !toca(ahora)) return;
       const dt = Math.min(0.1, (ahora - relojAnterior) / 1000);
       relojAnterior = ahora;
+      if (sonandoRef.current) medirRendimiento(dt);
       musica.dt = dt;
       musica.reloj += dt;
       musica.aspecto = camara.aspect;
@@ -357,6 +412,7 @@ export default function Nave({ audioRef, temaId, sonando }: Props) {
           escena.remove(actor.obj);
           actor.propios.forEach((m) => m.dispose());
           actor.geometria?.dispose();
+          actor.liberar?.();
           return false;
         }
         actor.mover(p, musica.reloj, musica.brillo);
@@ -409,12 +465,15 @@ export default function Nave({ audioRef, temaId, sonando }: Props) {
       for (const actor of actores) {
         actor.propios.forEach((m) => m.dispose());
         actor.geometria?.dispose();
+        actor.liberar?.();
       }
       piezas.forEach((p) => p.liberar());
       liberarKit(kit);
       estrellas.geometria.dispose();
       (estrellas.puntos.material as THREE.Material).dispose();
+      entorno.dispose();
       bloom.dispose();
+      terminacion.dispose();
       composer.dispose();
       liberarEscena(escena, renderer);
     };
