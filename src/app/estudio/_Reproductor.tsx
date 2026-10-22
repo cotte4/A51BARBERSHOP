@@ -1,10 +1,42 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { TemaEstudio } from "@/lib/estudio";
+import { armarCola, segundosParaEscucha } from "@/lib/estudio-lista";
 import { formatDuracion } from "@/lib/estudio-reglas";
 
 const ARTISTA = "Was & Pinky";
+
+// Aleatorio prendido o apagado: se recuerda en este navegador (si no hay almacenamiento, en memoria).
+const CLAVE_ALEATORIO = "estudio:aleatorio";
+const avisosAleatorio = new Set<() => void>();
+let aleatorioEnMemoria: boolean | null = null;
+
+function leerAleatorio(): boolean {
+  if (aleatorioEnMemoria !== null) return aleatorioEnMemoria;
+  try {
+    return localStorage.getItem(CLAVE_ALEATORIO) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function guardarAleatorio(valor: boolean) {
+  aleatorioEnMemoria = valor;
+  try {
+    localStorage.setItem(CLAVE_ALEATORIO, valor ? "1" : "0");
+  } catch {
+    // Navegación privada: queda en memoria hasta recargar.
+  }
+  avisosAleatorio.forEach((avisar) => avisar());
+}
+
+function suscribirAleatorio(avisar: () => void) {
+  avisosAleatorio.add(avisar);
+  return () => {
+    avisosAleatorio.delete(avisar);
+  };
+}
 
 function audioUrl(id: string) {
   return `/api/estudio/temas/${id}/audio`;
@@ -16,20 +48,36 @@ export function portadaUrl(tema: TemaEstudio) {
 
 export type Reproductor = ReturnType<typeof useReproductor>;
 
+type Opciones = {
+  /** Se llama una vez por pasada cuando un tema sonó lo suficiente para contar como escucha. */
+  alEscuchar?: (id: string) => void;
+};
+
 /**
  * Un solo <audio> para toda la página. El primer play tiene que salir de un toque (iOS),
  * por eso `reproducir` llama a play() en el mismo handler. Pantalla bloqueada, Bluetooth y
  * auto se manejan con la Media Session.
+ *
+ * La cola sale de la lista que se veía al dar play (con su filtro y búsqueda), en orden o mezclada.
  */
-export function useReproductor(temas: TemaEstudio[]) {
+export function useReproductor(temas: TemaEstudio[], { alEscuchar }: Opciones = {}) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [actualId, setActualId] = useState<string | null>(null);
   const [sonando, setSonando] = useState(false);
   const [tiempo, setTiempo] = useState(0);
   const [duracion, setDuracion] = useState(0);
+  const [contexto, setContexto] = useState<string[]>([]);
+  const [cola, setCola] = useState<string[]>([]);
+  const aleatorio = useSyncExternalStore(suscribirAleatorio, leerAleatorio, () => false);
   const reintentoRef = useRef(false);
   // Al recargar un link vencido, la posición se aplica recién cuando hay metadata.
   const retomarDesdeRef = useRef<number | null>(null);
+  // Cuánto sonó de verdad el tema actual en esta pasada (adelantar no suma).
+  const escuchaRef = useRef({ segundos: 0, ultimo: 0, contada: false });
+  const alEscucharRef = useRef(alEscuchar);
+  useEffect(() => {
+    alEscucharRef.current = alEscuchar;
+  }, [alEscuchar]);
 
   const actual = temas.find((tema) => tema.id === actualId) ?? null;
 
@@ -37,6 +85,7 @@ export function useReproductor(temas: TemaEstudio[]) {
     const audio = audioRef.current;
     if (!audio) return;
     reintentoRef.current = false;
+    escuchaRef.current = { segundos: 0, ultimo: 0, contada: false };
     setActualId(id);
     setTiempo(0);
     setDuracion(0);
@@ -44,31 +93,67 @@ export function useReproductor(temas: TemaEstudio[]) {
     void audio.play().catch(() => setSonando(false));
   }, []);
 
+  const pausarOSeguir = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) void audio.play().catch(() => setSonando(false));
+    else audio.pause();
+  }, []);
+
+  /** Toca un tema de la lista. `lista` es lo que se veía (sus ids, en orden): de ahí sale la cola. */
   const reproducir = useCallback(
-    (id: string) => {
-      const audio = audioRef.current;
-      if (!audio) return;
+    (id: string, lista?: string[]) => {
       if (id === actualId) {
-        if (audio.paused) void audio.play().catch(() => setSonando(false));
-        else audio.pause();
+        pausarOSeguir();
         return;
       }
+      const nuevoContexto = lista ?? (contexto.length > 0 ? contexto : temas.map((tema) => tema.id));
+      setContexto(nuevoContexto);
+      setCola(armarCola(nuevoContexto, id, aleatorio));
       cargarYSonar(id);
     },
-    [actualId, cargarYSonar]
+    [actualId, aleatorio, cargarYSonar, contexto, pausarOSeguir, temas]
+  );
+
+  /** El botón grande de la lista: arranca desde el primero (o uno al azar), o pausa si ya suena de acá. */
+  const reproducirLista = useCallback(
+    (lista: string[]) => {
+      if (actualId && lista.includes(actualId)) {
+        pausarOSeguir();
+        return;
+      }
+      const nuevaCola = armarCola(lista, null, aleatorio);
+      if (!nuevaCola[0]) return;
+      setContexto(lista);
+      setCola(nuevaCola);
+      cargarYSonar(nuevaCola[0]);
+    },
+    [actualId, aleatorio, cargarYSonar, pausarOSeguir]
   );
 
   const alternar = useCallback(() => {
-    if (actualId) reproducir(actualId);
-    else if (temas[0]) cargarYSonar(temas[0].id);
-  }, [actualId, cargarYSonar, reproducir, temas]);
+    if (actualId) pausarOSeguir();
+    else reproducirLista(temas.map((tema) => tema.id));
+  }, [actualId, pausarOSeguir, reproducirLista, temas]);
 
-  const indice = actual ? temas.findIndex((tema) => tema.id === actual.id) : -1;
+  const alternarAleatorio = useCallback(() => {
+    const nuevo = !aleatorio;
+    guardarAleatorio(nuevo);
+    // Lo que viene se rearma desde el tema que suena: mezclado, o en el orden de la lista.
+    if (contexto.length > 0) setCola(armarCola(contexto, actualId, nuevo));
+  }, [actualId, aleatorio, contexto]);
+
+  // Lo que queda en la cola y todavía existe (si borran un tema, se saltea).
+  const enCola = useMemo(() => {
+    const existentes = new Set(temas.map((tema) => tema.id));
+    return cola.filter((id) => existentes.has(id) || id === actualId);
+  }, [actualId, cola, temas]);
+  const indice = actualId ? enCola.indexOf(actualId) : -1;
 
   const siguiente = useCallback(() => {
-    const proximo = temas[indice + 1];
+    const proximo = enCola[indice + 1];
     if (proximo) {
-      cargarYSonar(proximo.id);
+      cargarYSonar(proximo);
       return;
     }
     // Terminó el último: queda pausado al principio del mismo tema.
@@ -77,7 +162,7 @@ export function useReproductor(temas: TemaEstudio[]) {
       audio.pause();
       audio.currentTime = 0;
     }
-  }, [cargarYSonar, indice, temas]);
+  }, [cargarYSonar, enCola, indice]);
 
   const anterior = useCallback(() => {
     const audio = audioRef.current;
@@ -85,10 +170,10 @@ export function useReproductor(temas: TemaEstudio[]) {
       audio.currentTime = 0;
       return;
     }
-    const previo = temas[indice - 1];
-    if (previo) cargarYSonar(previo.id);
+    const previo = indice > 0 ? enCola[indice - 1] : undefined;
+    if (previo) cargarYSonar(previo);
     else if (audio) audio.currentTime = 0;
-  }, [cargarYSonar, indice, temas]);
+  }, [cargarYSonar, enCola, indice]);
 
   const irA = useCallback((segundos: number) => {
     const audio = audioRef.current;
@@ -141,7 +226,20 @@ export function useReproductor(temas: TemaEstudio[]) {
       if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
       posicion();
     };
-    const alAvanzar = () => setTiempo(audio.currentTime);
+    const alAvanzar = () => {
+      setTiempo(audio.currentTime);
+      // Escucha: suma solo el avance normal (saltos de más de 1,5 s son adelantar o volver).
+      const escucha = escuchaRef.current;
+      const avance = audio.currentTime - escucha.ultimo;
+      escucha.ultimo = audio.currentTime;
+      if (escucha.contada || audio.paused || avance <= 0 || avance > 1.5) return;
+      escucha.segundos += avance;
+      const id = new URL(audio.src, window.location.href).pathname.split("/")[4];
+      if (id && escucha.segundos >= segundosParaEscucha(audio.duration || 0)) {
+        escucha.contada = true;
+        alEscucharRef.current?.(id);
+      }
+    };
     const alCargar = () => {
       if (retomarDesdeRef.current !== null) {
         audio.currentTime = retomarDesdeRef.current;
@@ -150,7 +248,11 @@ export function useReproductor(temas: TemaEstudio[]) {
       setDuracion(Number.isFinite(audio.duration) ? audio.duration : 0);
       posicion();
     };
-    const alTerminar = () => siguienteRef.current();
+    const alTerminar = () => {
+      // Escucharlo de nuevo entero cuenta otra vez.
+      escuchaRef.current = { segundos: 0, ultimo: 0, contada: false };
+      siguienteRef.current();
+    };
     // El link firmado vence a las 6 h: si falla, se pide uno nuevo y sigue desde donde estaba.
     const alFallar = () => {
       if (reintentoRef.current || !audio.getAttribute("src")) {
@@ -222,7 +324,7 @@ export function useReproductor(temas: TemaEstudio[]) {
     }
   }, [anterior, irA, siguiente]);
 
-  return { audioRef, actual, sonando, tiempo, duracion, reproducir, alternar, siguiente, anterior, irA };
+  return { audioRef, actual, sonando, tiempo, duracion, aleatorio, reproducir, reproducirLista, alternar, alternarAleatorio, siguiente, anterior, irA };
 }
 
 function PlayIcon() {

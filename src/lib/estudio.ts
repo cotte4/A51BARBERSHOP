@@ -1,10 +1,10 @@
 import "server-only";
 
 import { headers } from "next/headers";
-import { desc } from "drizzle-orm";
+import { asc, count, desc, eq } from "drizzle-orm";
 import { issueSignedToken, presignUrl } from "@vercel/blob";
 import { db } from "@/db";
-import { estudioTemas } from "@/db/schema";
+import { estudioEscuchas, estudioTemas } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 // El Estudio es de Was y Pinky, no de un rol: entra quien esté en ESTUDIO_EMAILS.
@@ -57,6 +57,8 @@ export type TemaEstudio = {
   genero: string | null;
   duracionSeg: number | null;
   tienePortada: boolean;
+  /** Veces que sonó (de los dos), ver src/lib/estudio-lista.ts. */
+  escuchas: number;
 };
 
 export async function listarTemas(): Promise<TemaEstudio[]> {
@@ -67,9 +69,13 @@ export async function listarTemas(): Promise<TemaEstudio[]> {
       genero: estudioTemas.genero,
       duracionSeg: estudioTemas.duracionSeg,
       portadaPathname: estudioTemas.portadaPathname,
+      escuchas: count(estudioEscuchas.id),
     })
     .from(estudioTemas)
-    .orderBy(desc(estudioTemas.createdAt));
+    .leftJoin(estudioEscuchas, eq(estudioEscuchas.temaId, estudioTemas.id))
+    .groupBy(estudioTemas.id)
+    // El orden del ranking; a igual puesto, el más nuevo primero.
+    .orderBy(asc(estudioTemas.orden), desc(estudioTemas.createdAt));
 
   return filas.map(({ portadaPathname, ...tema }) => ({ ...tema, tienePortada: !!portadaPathname }));
 }

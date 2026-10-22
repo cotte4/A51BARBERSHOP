@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { asc, desc, eq, max } from "drizzle-orm";
 import { z } from "zod";
 import { del, head } from "@vercel/blob";
 import { db } from "@/db";
-import { estudioTemas } from "@/db/schema";
+import { estudioEscuchas, estudioTemas } from "@/db/schema";
 import { estudioBlobToken, getEstudioActor } from "@/lib/estudio";
+import { ordenarRanking } from "@/lib/estudio-lista";
 import {
   AUDIO_MAX_BYTES,
   AUDIO_PATHNAME,
@@ -78,6 +79,8 @@ export async function crearTemaAction(input: z.input<typeof crearSchema>): Promi
   if (audio.size > AUDIO_MAX_BYTES) return { ok: false, mensaje: "El archivo es demasiado pesado." };
 
   const portadaOk = datos.data.portadaPathname ? await existeEnBlob(datos.data.portadaPathname) : null;
+  // Los temas nuevos entran al final del ranking.
+  const [{ ultimo }] = await db.select({ ultimo: max(estudioTemas.orden) }).from(estudioTemas);
 
   await db.insert(estudioTemas).values({
     titulo: datos.data.titulo,
@@ -86,6 +89,7 @@ export async function crearTemaAction(input: z.input<typeof crearSchema>): Promi
     audioBytes: audio.size,
     duracionSeg: datos.data.duracionSeg,
     portadaPathname: portadaOk ? datos.data.portadaPathname : null,
+    orden: (ultimo ?? -1) + 1,
     subidoPor: actor.userId,
   });
 
@@ -139,5 +143,47 @@ export async function borrarTemaAction(id: string): Promise<EstudioState> {
   await borrarBlobs([borrado.audioPathname, borrado.portadaPathname]);
 
   revalidatePath("/estudio");
+  return { ok: true, mensaje: null };
+}
+
+/** Guarda el ranking como quedó después de arrastrar. Solo escribe los puestos que cambiaron. */
+export async function ordenarTemasAction(ids: string[]): Promise<EstudioState> {
+  if (!(await getEstudioActor())) return NO_PERMISO;
+  const datos = z.array(z.uuid()).max(500).safeParse(ids);
+  if (!datos.success) return { ok: false, mensaje: "No se pudo guardar el orden." };
+
+  const filas = await db
+    .select({ id: estudioTemas.id, orden: estudioTemas.orden })
+    .from(estudioTemas)
+    .orderBy(asc(estudioTemas.orden), desc(estudioTemas.createdAt));
+  const puestoActual = new Map(filas.map((fila) => [fila.id, fila.orden]));
+  const cambios = ordenarRanking(
+    filas.map((fila) => fila.id),
+    datos.data
+  )
+    .map((id, puesto) => ({ id, puesto }))
+    .filter(({ id, puesto }) => puestoActual.get(id) !== puesto);
+
+  if (cambios.length > 0) {
+    await db.transaction(async (tx) => {
+      for (const { id, puesto } of cambios) await tx.update(estudioTemas).set({ orden: puesto }).where(eq(estudioTemas.id, id));
+    });
+  }
+
+  revalidatePath("/estudio");
+  return { ok: true, mensaje: null };
+}
+
+/** Una escucha más (la regla de cuándo cuenta está en el reproductor). No refresca la página: el contador sube en el cliente. */
+export async function sumarEscuchaAction(temaId: string): Promise<EstudioState> {
+  const actor = await getEstudioActor();
+  if (!actor) return NO_PERMISO;
+  if (!z.uuid().safeParse(temaId).success) return { ok: false, mensaje: null };
+  try {
+    await db.insert(estudioEscuchas).values({ temaId, userId: actor.userId });
+  } catch {
+    // El tema se borró mientras sonaba: no hay a quién sumarle.
+    return { ok: false, mensaje: null };
+  }
   return { ok: true, mensaje: null };
 }

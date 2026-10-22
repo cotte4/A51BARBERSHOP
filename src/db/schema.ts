@@ -1859,8 +1859,26 @@ export const estudioTemas = pgTable("estudio_temas", {
   // La lee el navegador antes de guardar; null si no la pudo leer.
   duracionSeg: integer("duracion_seg"),
   portadaPathname: text("portada_pathname"),
+  // Puesto en el ranking (0 = primero). Uno solo, compartido por Was y Pinky; los nuevos van al final.
+  orden: integer("orden").notNull().default(0),
   subidoPor: text("subido_por")
     .notNull()
     .references(() => user.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Una fila por escucha (30 s sonando de verdad, ver src/lib/estudio-lista.ts): quién y cuándo.
+export const estudioEscuchas = pgTable(
+  "estudio_escuchas",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    temaId: uuid("tema_id")
+      .notNull()
+      .references(() => estudioTemas.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("estudio_escuchas_tema_id_idx").on(table.temaId)]
+);
