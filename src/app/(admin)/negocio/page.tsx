@@ -12,6 +12,7 @@ import {
 import { auth } from "@/lib/auth";
 import { formatUSD } from "@/lib/amortizacion";
 import { getEstadoRepago } from "@/lib/repago-service";
+import { puedeEntrarAlEstudio } from "@/lib/estudio";
 import { SITUACION_LABEL } from "@/components/repago/situacion";
 import { getKpisDia } from "@/lib/dashboard-queries";
 import { getPendienteEquipo } from "@/lib/liquidaciones-service";
@@ -36,6 +37,10 @@ const utilityLinks = [
 export default async function NegocioPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const userRole = (session?.user as { role?: string })?.role;
+  // El Estudio va primero, y solo para Was y Pinky.
+  const masLinks: { href: string; label: string }[] = puedeEntrarAlEstudio(session?.user?.email)
+    ? [{ href: "/estudio", label: "Estudio" }, ...utilityLinks]
+    : [...utilityLinks];
 
   if (userRole !== "admin" && userRole !== "asesor") {
     redirect("/caja?sinAcceso=1");
@@ -188,7 +193,7 @@ export default async function NegocioPage() {
         <section className="panel-card rounded-[28px] p-5">
           <h2 className="font-display text-xl font-semibold text-white">Más</h2>
           <ul className="mt-2 divide-y divide-zinc-800/70">
-            {utilityLinks.map((link) => (
+            {masLinks.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}

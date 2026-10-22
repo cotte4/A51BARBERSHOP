@@ -162,6 +162,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Estudio: sin sesión → login. Con sesión, la página decide (404 si no estás en ESTUDIO_EMAILS).
+  if (pathname.startsWith("/estudio")) {
+    return isAuthenticated ? NextResponse.next() : NextResponse.redirect(new URL("/login", request.url));
+  }
+
   if (pathname.startsWith("/musica")) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
@@ -191,6 +196,7 @@ export const config = {
     "/repago/:path*",
     "/turnos/:path*",
     "/musica/:path*",
+    "/estudio/:path*",
     "/mi-resultado/:path*",
     "/gastos-rapidos/:path*",
     "/finanzas/:path*",

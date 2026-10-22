@@ -36,7 +36,7 @@
     "@mediapipe/tasks-vision": "^0.10.34",
     "@neondatabase/serverless": "^1.0.2",
     "@react-pdf/renderer": "^4.3.2",
-    "@vercel/blob": "^2.3.2",
+    "@vercel/blob": "^2.8.2",
     "better-auth": "^1.5.6",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.2",

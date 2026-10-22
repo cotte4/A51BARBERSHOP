@@ -1844,3 +1844,23 @@ export const torneoPartidos = pgTable(
     uniqueIndex("torneo_partidos_slot_idx").on(table.torneoId, table.ronda, table.posicion),
   ]
 );
+
+// ————————————————————————————
+// ESTUDIO — temas de Was y Pinky (privado)
+// ————————————————————————————
+// Los archivos viven en el Blob store privado `a51-estudio` (ESTUDIO_READ_WRITE_TOKEN);
+// acá se guarda solo el pathname. Se leen con links firmados que vencen.
+export const estudioTemas = pgTable("estudio_temas", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  titulo: text("titulo").notNull(),
+  genero: text("genero"),
+  audioPathname: text("audio_pathname").notNull().unique(),
+  audioBytes: integer("audio_bytes").notNull(),
+  // La lee el navegador antes de guardar; null si no la pudo leer.
+  duracionSeg: integer("duracion_seg"),
+  portadaPathname: text("portada_pathname"),
+  subidoPor: text("subido_por")
+    .notNull()
+    .references(() => user.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

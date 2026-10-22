@@ -351,6 +351,13 @@
       "when": 1792525224704,
       "tag": "0049_horario_semanal",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1792701577943,
+      "tag": "0050_brief_angel",
+      "breakpoints": true
     }
   ]
 }
