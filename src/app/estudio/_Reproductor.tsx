@@ -266,7 +266,24 @@ export function Portada({ tema, size }: { tema: TemaEstudio; size: "sm" | "md" }
 }
 
 /** Barra fija abajo: portada, título, controles y la línea de tiempo arrastrable. */
-export function BarraReproductor({ reproductor }: { reproductor: Reproductor }) {
+function NaveIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <ellipse cx="12" cy="13" rx="9" ry="3" />
+      <path d="M8 11.5a4 4 0 0 1 8 0" strokeLinecap="round" />
+      <path d="M9 17l-1.5 3M15 17l1.5 3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+type BarraProps = {
+  reproductor: Reproductor;
+  /** Abre o cierra la nave a pantalla completa. */
+  onNave: () => void;
+  naveAbierta: boolean;
+};
+
+export function BarraReproductor({ reproductor, onNave, naveAbierta }: BarraProps) {
   const { audioRef, actual, sonando, tiempo, duracion, alternar, siguiente, anterior, irA } = reproductor;
 
   return (
@@ -276,7 +293,9 @@ export function BarraReproductor({ reproductor }: { reproductor: Reproductor }) 
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800 bg-zinc-950/95 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur">
           <div className="mx-auto flex max-w-xl flex-col gap-2">
             <div className="flex items-center gap-3">
-              <Portada tema={actual} size="md" />
+              <button type="button" onClick={onNave} aria-label={naveAbierta ? "Cerrar la nave" : "Ver la nave"} className="shrink-0">
+                <Portada tema={actual} size="md" />
+              </button>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold text-white">{actual.titulo}</p>
                 <p className="truncate text-sm text-zinc-400">{ARTISTA}</p>
@@ -294,6 +313,15 @@ export function BarraReproductor({ reproductor }: { reproductor: Reproductor }) 
               </button>
               <button type="button" onClick={siguiente} aria-label="Siguiente" className="rounded-full p-2 text-zinc-300 hover:text-white">
                 <SaltoIcon />
+              </button>
+              <button
+                type="button"
+                onClick={onNave}
+                aria-label={naveAbierta ? "Cerrar la nave" : "Ver la nave"}
+                aria-pressed={naveAbierta}
+                className={`rounded-full p-2 ${naveAbierta ? "text-[#8cff59]" : "text-zinc-400 hover:text-white"}`}
+              >
+                <NaveIcon />
               </button>
             </div>
             <div className="flex items-center gap-2 text-xs tabular-nums text-zinc-400">

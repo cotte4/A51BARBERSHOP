@@ -15,7 +15,7 @@ export default async function EstudioPage() {
 
   return (
     <div className="app-shell min-h-screen">
-      <header className="border-b border-zinc-800/80 bg-zinc-950/90 px-4 py-4 backdrop-blur">
+      <header className="relative z-20 border-b border-zinc-800/80 bg-zinc-950/90 px-4 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-xl items-center justify-between gap-4">
           <BrandMark href="/negocio" subtitle="Estudio" />
           <Link href="/negocio" className="text-sm text-zinc-400 hover:text-[#8cff59]">
@@ -24,8 +24,8 @@ export default async function EstudioPage() {
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-xl flex-col gap-6 px-4 py-6 pb-40">
-        <section>
+      <main className="relative mx-auto flex max-w-xl flex-col gap-6 px-4 py-6 pb-40">
+        <section className="relative z-10">
           <p className="font-display text-4xl font-bold tabular-nums text-white">
             {temas.length}
             <span className="text-zinc-500">/{META_TEMAS}</span>
