@@ -111,6 +111,12 @@ Pinky nunca usó la app porque vio Caja "muy complicada" (en prod hay 28 atencio
 - `turnos_disponibilidad` (filas por fecha, se vencían: en prod se acabaron en mayo) quedó sin uso; borrarla en una migración posterior. Horario de Pinky (mar–sáb 10–19) sembrado en la migración 0049.
 - QA con agentes-persona contra un branch de Neon: `qa/PERSONAS.md`. Chequeo de esquema vs base: `npm run db:check:esquema`.
 
+### Estudio — los temas de Was y Pinky (desde 2026-10-22)
+- `/estudio`, privado: solo los emails de `ESTUDIO_EMAILS` (layout con `notFound()`, APIs con 401). Meta 51 temas. MP3 320 directo de FL en el Blob **privado** `a51-estudio` (`ESTUDIO_READ_WRITE_TOKEN`, no el `BLOB_READ_WRITE_TOKEN` de fotos); el audio se pide a `/api/estudio/temas/[id]/audio`, que responde 302 a un link firmado de 6 h.
+- Se usa como playlist de Spotify: ranking compartido (`estudio_temas.orden`, modo Ordenar con framer-motion `Reorder`), escuchas en `estudio_escuchas` (cuentan a los 30 s sonando de verdad), buscador, chips de género y aleatorio. Reglas puras y testeadas en `src/lib/estudio-lista.ts`.
+- Player (`_Reproductor.tsx`): un solo `<audio>` + Media Session (pantalla bloqueada, Bluetooth). **La reproducción no pasa por Web Audio** (iOS lo suspende con la pantalla bloqueada).
+- La nave (`_Nave.tsx`, `_naveKit.ts`, `_naveShow.ts`, `_naveMateriales.ts`): visualizador three.js que lee `currentTime` contra un análisis precalculado (`_analisis.ts`). Todo procedural, MSAA + entorno PMREM + resolución adaptativa. **Fotosensibilidad**: nada que cambie la luminosidad de un área grande sigue al bombo (usa `brillo`, lento), destellos con tope de 2/s; después de tocarla, medir luminancia cuadro a cuadro (ningún salto ≥ 0,10). Prompt de pulido y método de prueba: `planning/features/estudio-nave-pulido.md`.
+
 ### Known bugs / debt
 - **Music**: `clienteLlegoAction()` ya dispara la reproducción (ver "Torneo FIFA y portal cerrado"). La jukebox pública suena en el Spotify del local (ver "Jukebox sobre Spotify"); falta probarla en el local con el celu bloqueado un rato largo. Detalle: `planning/features/music-auto-jam-completion.md`.
 - Stock ledger is append-only since 2026-07: anulaciones/ediciones insert compensating movements (never DELETE); sales aggregates must sum `-cantidad`, never `Math.abs`. Standalone product sales are anulable by admin from /caja (reversión with `referencia_type = 'stock_movimiento'`).
