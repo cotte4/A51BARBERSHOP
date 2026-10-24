@@ -310,6 +310,47 @@ const BAILARINES = 22;
 
 /** Un bailarín tocado salta alto, da una vuelta y levanta los brazos. */
 const VUELTA_RAVE = 0.7;
+/** La ola cruza a toda la gente en ~1,1 s (de punta a punta son 2 unidades). */
+const OLA_SEG_POR_UNIDAD = 0.55;
+const OLA_ENTRE = 1.4;
+const APLAUSO = 0.4;
+const CAMBIO_DE_LUGAR = 0.9;
+
+// La rave baila de a dos: cada uno tiene pareja (el de al lado), se miran, chocan las caderas en los
+// bombos, chocan las manos en los redoblantes y a veces cambian de lugar girando. Los graves largan
+// olas que cruzan a toda la gente, y cada uno rebota con su banda del espectro (los del medio con
+// los graves, los de las puntas con los agudos), así la fila entera dibuja la música.
+type Bailarin = {
+  orden: number;
+  x: number;
+  z: number;
+  fase: number;
+  escala: number;
+  saltoDesde: number;
+  saltoAlto: number;
+  rosa: boolean;
+  /** 0: brazos arriba en los saltos · 1: puño al ritmo · 2: brazos que van y vienen. */
+  estilo: number;
+  parpadeo: number;
+  /** Brazos suavizados: suben rápido (~80 ms) pero nunca se teletransportan en un cuadro. */
+  alzada: number;
+  puno: number;
+  vueltaDesde: number;
+  /** Para dónde mira (giro suavizado): a la pareja, o al dedo si hay. */
+  mira: number;
+  /** Para qué lado está la pareja: 1 a la derecha, -1 a la izquierda. */
+  hacia: number;
+  pareja: Bailarin | null;
+  aplausoDesde: number;
+  /** Banda del espectro con la que rebota. */
+  banda: number;
+  /** Lo que se mueve en este cuadro por cambiar de lugar con la pareja. */
+  xAhora: number;
+  zExtra: number;
+  giroExtra: number;
+};
+
+type Pareja = { a: Bailarin; b: Bailarin; cambioDesde: number; xa: number; xb: number };
 
 export function crearRave(kit: Kit): Pieza & { cabezas: Float32Array; tocar: (indice: number, reloj: number) => void } {
   const g = kit.geo;
@@ -325,27 +366,50 @@ export function crearRave(kit: Kit): Pieza & { cabezas: Float32Array; tocar: (in
   const grupo = new THREE.Group();
   grupo.add(...partes);
 
-  // Orden de aparición al azar: en un celu parado se muestran menos, pero repartidos por todo el ancho.
-  const ordenes = Array.from({ length: BAILARINES }, (_, i) => i).sort(() => Math.random() - 0.5);
-  const bailarines = Array.from({ length: BAILARINES }, (_, i) => ({
-    orden: ordenes[i],
-    x: (i / (BAILARINES - 1)) * 2 - 1 + azar(-0.03, 0.03),
-    z: azar(0.5, 3.2),
-    fase: Math.random() * Math.PI * 2,
-    escala: azar(0.24, 0.33),
-    saltoDesde: -10,
-    saltoAlto: 0,
-    rosa: Math.random() < 0.3,
-    // 0: brazos arriba en los saltos · 1: puño al ritmo · 2: brazos que van y vienen.
-    estilo: Math.floor(Math.random() * 3),
-    parpadeo: azar(0, 4),
-    // Brazos suavizados: suben rápido (~80 ms) pero nunca se teletransportan en un cuadro.
-    alzada: 0,
-    puno: 0,
-    vueltaDesde: -10,
-    mira: 0,
-  }));
+  // Orden de aparición al azar por pareja: en un celu parado se muestran menos, pero repartidos por
+  // todo el ancho y sin dejar a nadie sin su pareja.
+  const ordenesPareja = Array.from({ length: Math.ceil(BAILARINES / 2) }, (_, i) => i).sort(() => Math.random() - 0.5);
+  const bailarines: Bailarin[] = Array.from({ length: BAILARINES }, (_, i) => {
+    const x = (i / (BAILARINES - 1)) * 2 - 1 + azar(-0.03, 0.03);
+    return {
+      orden: ordenesPareja[Math.floor(i / 2)] * 2 + (i % 2),
+      x,
+      z: azar(0.5, 3.2),
+      fase: Math.random() * Math.PI * 2,
+      escala: azar(0.24, 0.33),
+      saltoDesde: -10,
+      saltoAlto: 0,
+      rosa: Math.random() < 0.3,
+      estilo: Math.floor(Math.random() * 3),
+      parpadeo: azar(0, 4),
+      alzada: 0,
+      puno: 0,
+      vueltaDesde: -10,
+      mira: 0,
+      hacia: 0,
+      pareja: null,
+      aplausoDesde: -10,
+      banda: Math.min(BANDAS - 1, Math.floor(Math.abs(x) * BANDAS)),
+      xAhora: x,
+      zExtra: 0,
+      giroExtra: 0,
+    };
+  });
+  // Parejas: el de al lado, a la misma profundidad y con el mismo compás (así el vaivén es espejado).
+  const parejas: Pareja[] = [];
+  for (let i = 0; i + 1 < BAILARINES; i += 2) {
+    const a = bailarines[i];
+    const b = bailarines[i + 1];
+    b.z = a.z + azar(-0.15, 0.15);
+    b.fase = a.fase;
+    a.pareja = b;
+    b.pareja = a;
+    a.hacia = 1;
+    b.hacia = -1;
+    parejas.push({ a, b, cambioDesde: -10, xa: a.x, xb: b.x });
+  }
   bailarines.sort((a, b) => a.z - b.z);
+  let olaDesde = -10;
   // Centro de cada cabeza en el mundo y su radio (x, y, z, r; r = 0 si no se ve): para tocarlos.
   const centros = new Float32Array(BAILARINES * 4);
 
@@ -375,6 +439,53 @@ export function crearRave(kit: Kit): Pieza & { cabezas: Float32Array; tocar: (in
     },
     actualizar: (m) => {
       const visibles = Math.round(BAILARINES * THREE.MathUtils.clamp(m.aspecto, 0.6, 1));
+
+      // Olas: los graves fuertes largan una que cruza desde una punta (en el drop, desde el medio).
+      const drop = m.drop > 0.95;
+      if ((drop || (m.golpeAhora && m.graves > 0.7 && Math.random() < 0.3)) && m.reloj - olaDesde > OLA_ENTRE) {
+        olaDesde = m.reloj;
+        const origen = drop ? 0 : Math.random() < 0.5 ? -1 : 1;
+        for (const b of bailarines) {
+          b.saltoDesde = m.reloj + Math.abs(b.x - origen) * OLA_SEG_POR_UNIDAD;
+          b.saltoAlto = (drop ? 0.7 : 0.45) * (0.6 + m.graves);
+        }
+      }
+
+      for (const par of parejas) {
+        // Redoblante: algunas parejas chocan las manos.
+        if (m.chasquidoAhora && Math.random() < 0.35) par.a.aplausoDesde = par.b.aplausoDesde = m.reloj;
+        // De vez en cuando, en un bombo, cambian de lugar girando una alrededor de la otra.
+        if (m.golpeAhora && m.reloj - par.cambioDesde > 4 && Math.random() < 0.025 * (0.5 + m.energia)) {
+          par.cambioDesde = m.reloj;
+          par.xa = par.a.x;
+          par.xb = par.b.x;
+        }
+        const c = (m.reloj - par.cambioDesde) / CAMBIO_DE_LUGAR;
+        if (c >= 0 && c < 1) {
+          const s = suave(c);
+          const arco = Math.sin(c * Math.PI) * 0.4;
+          par.a.xAhora = par.xa + (par.xb - par.xa) * s;
+          par.b.xAhora = par.xb + (par.xa - par.xb) * s;
+          par.a.zExtra = arco;
+          par.b.zExtra = -arco;
+          par.a.giroExtra = par.b.giroExtra = s * Math.PI * 2;
+          continue;
+        }
+        if (par.cambioDesde > 0 && par.a.x === par.xa) {
+          // Terminó el cambio: quedan en el lugar del otro, y la pareja ahora está del otro lado.
+          par.a.x = par.xb;
+          par.b.x = par.xa;
+          par.a.hacia = -par.a.hacia;
+          par.b.hacia = -par.b.hacia;
+          par.a.banda = Math.min(BANDAS - 1, Math.floor(Math.abs(par.a.x) * BANDAS));
+          par.b.banda = Math.min(BANDAS - 1, Math.floor(Math.abs(par.b.x) * BANDAS));
+        }
+        par.a.xAhora = par.a.x;
+        par.b.xAhora = par.b.x;
+        par.a.zExtra = par.b.zExtra = 0;
+        par.a.giroExtra = par.b.giroExtra = 0;
+      }
+
       bailarines.forEach((b, i) => {
         centros[i * 4 + 3] = 0;
         if (b.orden >= visibles) {
@@ -383,27 +494,35 @@ export function crearRave(kit: Kit): Pieza & { cabezas: Float32Array; tocar: (in
           brazos.setMatrixAt(i * 2 + 1, oculto);
           return;
         }
-        if (m.golpeAhora && Math.random() < 0.35) {
+        // Algún salto suelto en los bombos, sin pisar una ola que viene en camino.
+        if (m.golpeAhora && b.saltoDesde < m.reloj - 0.45 && Math.random() < 0.12) {
           b.saltoDesde = m.reloj;
           b.saltoAlto = azar(0.3, 0.9) * (0.6 + m.graves);
         }
+        // Con quién baila: su pareja si se ve; si no, solo (0).
+        const conPareja = b.pareja !== null && b.pareja.orden < visibles ? b.hacia : 0;
         const mv = mitadVisible(b.z, m.aspecto);
         const k = (m.reloj - b.saltoDesde) / 0.45;
         const saltando = k >= 0 && k < 1;
         const salto = saltando ? Math.sin(k * Math.PI) * b.saltoAlto : 0;
         const pulso = Math.abs(Math.sin(m.reloj * 4.6 + b.fase));
-        const rebote = pulso * 0.08 * (0.3 + m.graves);
+        // Rebota con el bombo y con su banda: la fila entera dibuja el espectro.
+        const rebote = m.golpe * 0.07 + m.espectro[b.banda] * 0.16;
+        // Choque de caderas: en cada bombo se arriman a la pareja.
+        const arrime = conPareja * m.golpe * 0.06;
 
         // Arriba de la barra del player, que tapa el borde de abajo en el celu.
-        raiz.position.set(b.x * mv.x * 0.92, -mv.y * 0.6 + rebote + salto, b.z);
-        // Con dedo o mouse en pantalla, todos se dan vuelta a mirarlo.
+        raiz.position.set(b.xAhora * mv.x * 0.92 + arrime, -mv.y * 0.6 + rebote + salto, b.z + b.zExtra);
+        // Se miran con la pareja (más cuanto más suenan los medios); con dedo o mouse, todos lo miran a él.
         const metaMira = kit.mirada.activa
           ? THREE.MathUtils.clamp(Math.atan2(kit.mirada.punto.x - raiz.position.x, kit.mirada.punto.z - b.z), -0.8, 0.8)
-          : 0;
+          : conPareja * (0.35 + m.medios * 0.45);
         b.mira += (metaMira - b.mira) * Math.min(1, m.dt * 6);
         const v = (m.reloj - b.vueltaDesde) / VUELTA_RAVE;
         const vuelta = v >= 0 && v < 1 ? suave(v) * Math.PI * 2 : 0;
-        raiz.rotation.set(0, Math.sin(m.reloj + b.fase) * 0.2 * (1 - Math.abs(b.mira)) + b.mira + vuelta, Math.sin(m.reloj * 2 + b.fase) * 0.05);
+        // El vaivén es espejado entre los dos de la pareja (mismo compás, signo contrario).
+        const vaiven = Math.sin(m.reloj * 2 + b.fase) * 0.06 * (conPareja || 1);
+        raiz.rotation.set(0, Math.sin(m.reloj + b.fase) * 0.12 + b.mira + vuelta + b.giroExtra, vaiven);
         raiz.scale.setScalar(b.escala);
         raiz.updateMatrix();
         centros[i * 4] = raiz.position.x;
@@ -432,15 +551,21 @@ export function crearRave(kit: Kit): Pieza & { cabezas: Float32Array; tocar: (in
         matriz.copy(raiz.matrix).multiply(ponerLocal(0, CUERPO.y, 0, 0, 0, 0));
         cuerpos.setMatrixAt(i, matriz);
 
-        // Brazos: en el drop todos arriba (y el que tocaron, mientras gira); si no, cada uno baila a su manera.
-        const metaAlzada = Math.max(Math.min(1, m.drop * 1.6), saltando && b.estilo === 0 ? 1 : 0, v >= 0 && v < 1.6 ? 1 : 0);
+        // Brazos: en el drop todos arriba (y el que tocaron mientras gira, y los que hacen la ola); si
+        // no, cada uno baila a su manera.
+        const enOla = saltando && m.reloj - olaDesde < 2.5;
+        const metaAlzada = Math.max(Math.min(1, m.drop * 1.6), saltando && (b.estilo === 0 || enOla) ? 1 : 0, v >= 0 && v < 1.6 ? 1 : 0);
         const rapidez = Math.min(1, m.dt * 12);
         b.alzada += (metaAlzada - b.alzada) * rapidez;
         b.puno += (m.golpe - b.puno) * Math.min(1, m.dt * 25);
+        // Choque de manos con la pareja: sube el brazo de su lado y baja.
+        const a = (m.reloj - b.aplausoDesde) / APLAUSO;
+        const choque = conPareja !== 0 && a >= 0 && a < 1 ? Math.sin(a * Math.PI) : 0;
         for (const lado of [-1, 1]) {
           let angulo = 0.18 + 0.05 * Math.sin(m.reloj * 2 + b.fase);
           if (b.estilo === 1 && lado === 1) angulo += b.puno * 2.1;
           if (b.estilo === 2) angulo += 0.5 + Math.sin(m.reloj * 4.6 + b.fase + (lado > 0 ? 0 : Math.PI)) * 0.4 * (0.4 + m.medios);
+          if (lado === conPareja) angulo += choque * (1.9 - angulo);
           angulo += b.alzada * (2.5 - angulo + Math.sin(m.reloj * 7 + b.fase + lado) * 0.2);
           matriz.copy(raiz.matrix).multiply(ponerLocal(lado * CUERPO.hombroX, CUERPO.hombroY, 0, 0, 0, lado * angulo));
           const indice = i * 2 + (lado < 0 ? 0 : 1);

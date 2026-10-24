@@ -2,7 +2,7 @@
 
 import type { EstadoJuego } from "./_naveJuego";
 
-// El marcador del jueguito de la nave: vidas, puntos y multiplicador arriba; al perder, el cartel
+// El marcador del jueguito de la nave: vidas, puntos, multiplicador y racha arriba; al perder, el cartel
 // con el récord. Lo demás de la pantalla queda libre para la nave.
 
 const VIDAS = 3;
@@ -32,7 +32,7 @@ type Props = {
 };
 
 export default function Marcador({ estado, sonando, onSalir, onOtraVez }: Props) {
-  const { puntos, vidas, multiplicador, record, termino, recordNuevo } = estado;
+  const { puntos, vidas, multiplicador, racha, record, termino, recordNuevo } = estado;
   // La consigna se ve hasta el primer punto de la partida.
   const consigna = puntos === 0 && vidas === VIDAS && !termino;
 
@@ -47,8 +47,13 @@ export default function Marcador({ estado, sonando, onSalir, onOtraVez }: Props)
           </div>
           <div className="flex flex-col items-center" aria-live="polite">
             <p className="font-display text-5xl font-bold leading-none tabular-nums text-white drop-shadow-[0_0_18px_rgba(140,255,89,0.5)]">{puntos}</p>
-            {multiplicador > 1 ? (
-              <span className="mt-1.5 rounded-full bg-[#8cff59] px-2 py-0.5 text-xs font-bold tabular-nums text-[#07130a]">×{multiplicador}</span>
+            {racha > 0 ? (
+              <div className="mt-1.5 flex items-center gap-1.5">
+                {multiplicador > 1 ? (
+                  <span className="rounded-full bg-[#8cff59] px-2 py-0.5 text-xs font-bold tabular-nums text-[#07130a]">×{multiplicador}</span>
+                ) : null}
+                <span className="text-xs font-semibold tabular-nums text-zinc-300 drop-shadow">Racha {racha}</span>
+              </div>
             ) : null}
             {!sonando && !termino ? <span className="mt-2 rounded-full bg-zinc-950/70 px-3 py-1 text-xs text-zinc-300">En pausa</span> : null}
           </div>
@@ -63,7 +68,7 @@ export default function Marcador({ estado, sonando, onSalir, onOtraVez }: Props)
             </button>
           </div>
         </div>
-        {consigna ? <p className="mt-5 text-center text-sm text-zinc-300 drop-shadow">Esquivá los meteoritos</p> : null}
+        {consigna ? <p className="mt-5 text-center text-sm text-zinc-300 drop-shadow">Esquivá los meteoritos y agarrá los cristales</p> : null}
       </div>
 
       {termino ? (

@@ -5,8 +5,9 @@ import type { ControlNodriza, Musica } from "./_naveShow";
 
 // El jueguito: la nodriza se achica, la manejás con el dedo o el mouse y esquivás los meteoritos
 // que vienen del fondo al ritmo del tema (nacen en los bombos; en el drop, una lluvia con un hueco).
-// Cada meteorito esquivado suma, pasar raspando suma uno más, los orbes suman cinco y la racha
-// multiplica. Tres choques y se termina.
+// Cada meteorito esquivado suma, pasar raspando suma uno más, los cristales suman cinco y la racha
+// multiplica. La racha también llama más meteoritos: cuanto mejor vas, más denso se pone (y un
+// choque la corta, así que se equilibra solo). Tres choques y se termina.
 //
 // Fotosensibilidad: el choque no titila. La nave queda con un escudo tenue que se apaga de a poco,
 // y los meteoritos se achican antes de llegar a la cámara (nunca tapan la pantalla de golpe).
@@ -15,6 +16,8 @@ export type EstadoJuego = {
   puntos: number;
   vidas: number;
   multiplicador: number;
+  /** Esquivados seguidos sin chocar. */
+  racha: number;
   record: number;
   /** Se perdió la última vida: queda el cartel del final. */
   termino: boolean;
@@ -30,8 +33,13 @@ export type EventosJuego = {
 };
 
 const VIDAS = 3;
-const METEORITOS = 28;
+const METEORITOS = 44;
 const ORBES = 6;
+/** Radio del cristal en la compu (en el celu, más chico con la nave). */
+const RADIO_ORBE = 0.6;
+/** Cada tantos esquivados sin chocar, un meteorito más por bombo (hasta EXTRAS_MAX). */
+const RACHA_POR_EXTRA = 10;
+const EXTRAS_MAX = 3;
 const Z_NACE = -64;
 /** Desde acá hasta Z_SE_VA se achican: pasan al lado de la cámara sin taparla. */
 const Z_ACHICA = -1;
@@ -90,7 +98,7 @@ function crearGeometriaRoca(): THREE.BufferGeometry {
 }
 
 type Roca = { activa: boolean; pos: THREE.Vector3; radio: number; vel: number; giro: THREE.Euler; velGiro: THREE.Vector3; paso: boolean };
-type Orbe = { activo: boolean; pos: THREE.Vector3; vel: number; paso: boolean };
+type Orbe = { activo: boolean; pos: THREE.Vector3; vel: number; paso: boolean; fase: number };
 
 export function crearJuego(eventos: EventosJuego) {
   const grupo = new THREE.Group();
@@ -127,10 +135,20 @@ export function crearJuego(eventos: EventosJuego) {
   const marcas = new THREE.InstancedMesh(geometriaMarca, materialMarca, METEORITOS);
   marcas.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(METEORITOS * 3), 3);
 
-  const geometriaOrbe = new THREE.IcosahedronGeometry(0.34, 1);
-  const materialOrbe = new THREE.MeshBasicMaterial();
+  // El cristal que suma: un octaedro estirado (no se confunde con una piedra) con un aro que gira,
+  // del color del tema y sin niebla para que se vea venir desde el fondo. Su marca en el plano de la
+  // nave es del mismo color: dice adónde ir, como la de los meteoritos dice de dónde salir.
+  const geometriaOrbe = new THREE.OctahedronGeometry(0.5, 0);
+  geometriaOrbe.scale(1, 1.35, 1);
+  const materialOrbe = new THREE.MeshBasicMaterial({ fog: false });
   const orbes = new THREE.InstancedMesh(geometriaOrbe, materialOrbe, ORBES);
-  const halosOrbe = new THREE.InstancedMesh(geometriaHalo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide }), ORBES);
+  const materialHaloOrbe = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide, fog: false });
+  const halosOrbe = new THREE.InstancedMesh(geometriaHalo, materialHaloOrbe, ORBES);
+  const geometriaAro = new THREE.TorusGeometry(0.85, 0.045, 8, 48);
+  const materialAro = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+  const aros = new THREE.InstancedMesh(geometriaAro, materialAro, ORBES);
+  const marcasOrbe = new THREE.InstancedMesh(geometriaMarca, materialMarca, ORBES);
+  marcasOrbe.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(ORBES * 3), 3);
 
   const escudo = new THREE.Mesh(
     new THREE.SphereGeometry(1, 32, 20),
@@ -138,7 +156,7 @@ export function crearJuego(eventos: EventosJuego) {
   );
   escudo.visible = false;
 
-  const mallas = [rocas, halos, marcas, orbes, halosOrbe];
+  const mallas = [rocas, halos, marcas, orbes, halosOrbe, aros, marcasOrbe];
   mallas.forEach((malla) => {
     malla.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     malla.frustumCulled = false;
@@ -156,11 +174,10 @@ export function crearJuego(eventos: EventosJuego) {
     velGiro: new THREE.Vector3(),
     paso: false,
   }));
-  const poolOrbes: Orbe[] = Array.from({ length: ORBES }, () => ({ activo: false, pos: new THREE.Vector3(), vel: 0, paso: false }));
+  const poolOrbes: Orbe[] = Array.from({ length: ORBES }, () => ({ activo: false, pos: new THREE.Vector3(), vel: 0, paso: false, fase: 0 }));
 
-  const estado: EstadoJuego = { puntos: 0, vidas: VIDAS, multiplicador: 1, record: 0, termino: false, recordNuevo: false };
+  const estado: EstadoJuego = { puntos: 0, vidas: VIDAS, multiplicador: 1, racha: 0, record: 0, termino: false, recordNuevo: false };
   let activo = false;
-  let racha = 0;
   let jugado = 0;
   let invulnerableHasta = -Infinity;
   let reloj = 0;
@@ -187,8 +204,8 @@ export function crearJuego(eventos: EventosJuego) {
     // En el celu todo es más chico: la escala acompaña a la de la nave.
     roca.radio = azar(0.55, 1.05) * escalaNave;
     roca.pos.set(x, y, Z_NACE);
-    // Más rápido cuanto más fuerte suena y cuanto más dura la partida.
-    roca.vel = 18 + m.energia * 12 + Math.min(jugado, 90) * 0.12;
+    // Más rápido cuanto más fuerte suena, cuanto más dura la partida y cuanto más larga la racha.
+    roca.vel = 18 + m.energia * 12 + Math.min(jugado, 90) * 0.12 + Math.min(estado.racha, 40) * 0.08;
     roca.giro.set(azar(0, 6), azar(0, 6), azar(0, 6));
     roca.velGiro.set(azar(-2, 2), azar(-2, 2), azar(-2, 2));
   };
@@ -201,9 +218,28 @@ export function crearJuego(eventos: EventosJuego) {
     else lanzar(azar(-c.x, c.x), azar(c.abajo, c.arriba), m);
   };
 
+  /** Meteoritos de más por bombo según la racha. */
+  const extras = () => Math.min(EXTRAS_MAX, Math.floor(estado.racha / RACHA_POR_EXTRA));
+
+  /** Un cristal en (x, y) del plano de la nave. Más lento que las piedras: da tiempo a ir a buscarlo. */
+  const lanzarOrbe = (x: number, y: number) => {
+    const orbe = poolOrbes.find((o) => !o.activo);
+    if (!orbe) return;
+    orbe.activo = true;
+    orbe.paso = false;
+    orbe.fase = azar(0, Math.PI * 2);
+    orbe.pos.set(x, y, Z_NACE);
+    orbe.vel = 16;
+  };
+
+  const lanzarOrbeSuelto = () => {
+    const c = campo();
+    lanzarOrbe(azar(-c.x, c.x) * 0.85, azar(c.abajo, c.arriba) * 0.85);
+  };
+
   const chocar = (roca: Roca) => {
     roca.activa = false;
-    racha = 0;
+    estado.racha = 0;
     estado.multiplicador = 1;
     estado.vidas--;
     invulnerableHasta = reloj + INVULNERABLE;
@@ -220,13 +256,16 @@ export function crearJuego(eventos: EventosJuego) {
   };
 
   const esquivar = (roca: Roca, distancia: number, radioNave: number) => {
-    racha++;
-    estado.multiplicador = Math.min(MULTIPLICADOR_MAX, 1 + Math.floor(racha / RACHA_POR_NIVEL));
+    const extrasAntes = extras();
+    estado.racha++;
+    estado.multiplicador = Math.min(MULTIPLICADOR_MAX, 1 + Math.floor(estado.racha / RACHA_POR_NIVEL));
     estado.puntos += estado.multiplicador;
     if (distancia < (roca.radio + radioNave) * 1.5) {
       estado.puntos += estado.multiplicador;
       eventos.alSumar("¡Cerca!", donde.copy(roca.pos).setZ(nave.z));
     }
+    // Avisa cuando la racha llama más meteoritos: que se entienda por qué se puso denso.
+    if (extras() > extrasAntes) eventos.alSumar(`¡Racha ${estado.racha}!`, donde.copy(nave));
     avisar();
   };
 
@@ -248,10 +287,9 @@ export function crearJuego(eventos: EventosJuego) {
     empezar: () => {
       ocultarTodo();
       activo = true;
-      racha = 0;
       jugado = 0;
       invulnerableHasta = -Infinity;
-      Object.assign(estado, { puntos: 0, vidas: VIDAS, multiplicador: 1, record: leerRecord(), termino: false, recordNuevo: false });
+      Object.assign(estado, { puntos: 0, vidas: VIDAS, multiplicador: 1, racha: 0, record: leerRecord(), termino: false, recordNuevo: false });
       grupo.visible = true;
       avisar();
     },
@@ -265,35 +303,38 @@ export function crearJuego(eventos: EventosJuego) {
 
     /**
      * En cada bombo puede salir un meteorito (o dos, si pega fuerte y ya pasó un rato). Arranca
-     * tranquilo y se pone denso: a los ~40 s sale en casi todos los bombos.
+     * tranquilo y se pone denso: a los ~40 s sale en casi todos los bombos. La racha suma: más
+     * chances y, cada RACHA_POR_EXTRA esquivados, uno más por bombo (sin apuntar).
      */
     alGolpear: (fuerza: number, m: Musica) => {
       if (!activo || estado.termino || jugado < CALMA_INICIAL) return;
-      if (Math.random() > Math.min(0.85, 0.3 + jugado / 70)) return;
+      // Hay temas con pocos redoblantes: si no hay un cristal a la vista, a veces sale en el bombo.
+      if (!poolOrbes.some((o) => o.activo) && Math.random() < 0.1) lanzarOrbeSuelto();
+      if (Math.random() > Math.min(0.95, 0.3 + jugado / 70 + estado.racha * 0.015)) return;
       lanzarCerca(m, jugado > 8 && Math.random() < 0.35);
       if (fuerza > 0.8 && jugado > 25 && Math.random() < 0.4) lanzarCerca(m, false);
+      for (let i = extras(); i > 0; i--) if (Math.random() < 0.7) lanzarCerca(m, false);
     },
 
-    /** En los redoblantes, de vez en cuando, un orbe que suma. */
+    /** En los redoblantes, seguido, un cristal que suma. */
     alChasquear: () => {
-      if (!activo || estado.termino || Math.random() > 0.16) return;
-      const orbe = poolOrbes.find((o) => !o.activo);
-      if (!orbe) return;
-      const c = campo();
-      orbe.activo = true;
-      orbe.paso = false;
-      orbe.pos.set(azar(-c.x, c.x), azar(c.abajo, c.arriba), Z_NACE);
-      orbe.vel = 20;
+      if (!activo || estado.termino || jugado < CALMA_INICIAL || Math.random() > 0.35) return;
+      lanzarOrbeSuelto();
     },
 
-    /** El drop: una lluvia de meteoritos con un hueco cerca de la nave. Hay que encontrarlo. */
+    /**
+     * El drop: una lluvia de meteoritos con un hueco cerca de la nave. Hay que encontrarlo, y atrás
+     * de la lluvia viene un cristal justo en el hueco. Con racha, la lluvia es más tupida.
+     */
     alDropear: (m: Musica) => {
       if (!activo || estado.termino || jugado < CALMA_INICIAL) return;
       const c = campo();
       const huecoX = THREE.MathUtils.clamp(nave.x + azar(-2, 2), -c.x * 0.8, c.x * 0.8);
       const huecoY = THREE.MathUtils.clamp(nave.y + azar(-1.5, 1.5), c.abajo * 0.8, c.arriba * 0.8);
       const hueco = 2.6 * escalaNave + 1;
-      for (let i = 0, puestos = 0; i < 40 && puestos < 8; i++) {
+      lanzarOrbe(huecoX, huecoY);
+      const lluvia = 8 + extras() * 2;
+      for (let i = 0, puestos = 0; i < 60 && puestos < lluvia; i++) {
         const x = azar(-c.x, c.x);
         const y = azar(c.abajo, c.arriba);
         if (Math.hypot(x - huecoX, y - huecoY) < hueco) continue;
@@ -319,7 +360,9 @@ export function crearJuego(eventos: EventosJuego) {
       peligro.value.copy(m.colorB);
       materialHalo.color.copy(m.colorB);
       materialOrbe.color.copy(m.colorA).lerp(tmpColor.set(0xffffff), 0.45);
-      (halosOrbe.material as THREE.MeshBasicMaterial).color.copy(m.colorA);
+      materialAro.color.copy(m.colorA).lerp(tmpColor.set(0xffffff), 0.6);
+      materialHaloOrbe.color.copy(m.colorA);
+      const radioOrbe = RADIO_ORBE * escalaNave;
 
       let n = 0;
       for (const roca of pool) {
@@ -380,7 +423,8 @@ export function crearJuego(eventos: EventosJuego) {
         orbe.pos.z += orbe.vel * dt;
         if (!orbe.paso && antes < nave.z && orbe.pos.z >= nave.z) {
           orbe.paso = true;
-          if (!estado.termino && Math.hypot(orbe.pos.x - nave.x, orbe.pos.y - nave.y) < 0.5 + radioNave) {
+          // Agarrarlo es generoso (un círculo, no la elipse del choque): ir a buscarlo tiene que salir.
+          if (!estado.termino && Math.hypot(orbe.pos.x - nave.x, orbe.pos.y - nave.y) < radioOrbe + radioNave) {
             orbe.activo = false;
             const suma = 5 * estado.multiplicador;
             estado.puntos += suma;
@@ -394,19 +438,38 @@ export function crearJuego(eventos: EventosJuego) {
           continue;
         }
         const achica = orbe.pos.z > Z_ACHICA ? 1 - suave((orbe.pos.z - Z_ACHICA) / (Z_SE_VA - Z_ACHICA)) : 1;
+        const escala = escalaNave * achica * (1 + Math.sin(reloj * 4 + orbe.fase) * 0.08);
         tmp.position.copy(orbe.pos);
-        tmp.rotation.set(reloj * 2, reloj * 3, 0);
-        tmp.scale.setScalar(escalaNave * achica * (1 + Math.sin(reloj * 4) * 0.08));
+        tmp.rotation.set(0, reloj * 2.2 + orbe.fase, 0);
+        tmp.scale.setScalar(escala);
         tmp.updateMatrix();
         orbes.setMatrixAt(o, tmp.matrix);
-        tmp.scale.multiplyScalar(0.45);
+        tmp.scale.setScalar(escala * 0.75);
         tmp.updateMatrix();
         halosOrbe.setMatrixAt(o, tmp.matrix);
+        // El aro gira inclinado alrededor del cristal, cabeceando un poco.
+        tmp.rotation.set(1.1 + Math.sin(reloj * 1.3 + orbe.fase) * 0.3, reloj * 1.7 + orbe.fase, 0);
+        tmp.scale.setScalar(escala);
+        tmp.updateMatrix();
+        aros.setMatrixAt(o, tmp.matrix);
+
+        // Su marca se prende antes que la de los meteoritos: hay que tener tiempo de llegar.
+        const falta = nave.z - orbe.pos.z;
+        const prende = orbe.paso ? 0 : THREE.MathUtils.clamp(1 - falta / 32, 0, 1);
+        tmp.position.set(orbe.pos.x, orbe.pos.y, nave.z);
+        tmp.rotation.set(0, 0, 0);
+        tmp.scale.setScalar((radioOrbe + 0.15) * (prende > 0 ? 1.6 - prende * 0.6 : 0));
+        tmp.updateMatrix();
+        marcasOrbe.setMatrixAt(o, tmp.matrix);
+        marcasOrbe.setColorAt(o, tmpColor.copy(m.colorA).multiplyScalar(prende));
         o++;
       }
-      orbes.count = halosOrbe.count = o;
+      orbes.count = halosOrbe.count = aros.count = marcasOrbe.count = o;
       orbes.instanceMatrix.needsUpdate = true;
       halosOrbe.instanceMatrix.needsUpdate = true;
+      aros.instanceMatrix.needsUpdate = true;
+      marcasOrbe.instanceMatrix.needsUpdate = true;
+      if (marcasOrbe.instanceColor) marcasOrbe.instanceColor.needsUpdate = true;
 
       // Escudo después de un choque: tenue y se apaga de a poco, sin titilar.
       const queda = (invulnerableHasta - reloj) / INVULNERABLE;
@@ -429,7 +492,9 @@ export function crearJuego(eventos: EventosJuego) {
       materialMarca.dispose();
       geometriaOrbe.dispose();
       materialOrbe.dispose();
-      (halosOrbe.material as THREE.Material).dispose();
+      materialHaloOrbe.dispose();
+      geometriaAro.dispose();
+      materialAro.dispose();
       escudo.geometry.dispose();
       (escudo.material as THREE.Material).dispose();
       mallas.forEach((malla) => malla.dispose());
