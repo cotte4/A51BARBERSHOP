@@ -1,13 +1,12 @@
 import * as THREE from "three";
 import { BANDAS } from "./_analisis";
-import { azar, crearOvni, CUELLO_Y, CUERPO, mitadVisible, OJO, type Kit } from "./_naveKit";
+import { azar, crearOvni, CUELLO_Y, CUERPO, mitadVisible, OJO, suave, type Kit } from "./_naveKit";
 import { conBorde } from "./_naveMateriales";
 
 // Las piezas fijas del show: siempre están y reaccionan a la música cuadro a cuadro.
 //  - Nodriza: el ovni gigante del centro con un anillo de barras del espectro alrededor.
 //  - Túnel: anillos de neón que vienen hacia la cámara más rápido cuanto más fuerte suena.
-//  - Terreno: una grilla que se arma con el espectro y avanza (los graves al medio, los agudos
-//    en las montañas de los costados).
+//  - (El terreno vive aparte, con sus biomas y estructuras: _naveTerreno.ts.)
 //  - Rave: aliens que cabecean con los graves, saltan en los bombos y levantan los brazos.
 //  - Láseres: salen de las luces de la nodriza en cada redoblante / hi-hat.
 
@@ -58,14 +57,67 @@ function escalaPorAspecto(aspecto: number) {
 /** El pico de cada barra se queda arriba un ratito y cae despacio, como en un ecualizador de verdad. */
 const PICO_SOSTIENE = 0.35;
 const PICO_CAE = 0.55;
+/** Su lugar en el show. El dedo la puede sacar de acá; al soltarla, vuelve sola. */
+const CASA = new THREE.Vector3(0, 1.6, -6);
+/** Radio del platillo (el casco por torno mide 1,62) por la escala de la nodriza. */
+const RADIO_PLATILLO = 1.62 * 1.7;
 
-export function crearNodriza(kit: Kit): Pieza & { luces: () => THREE.Vector3[] } {
+/** Lo que el dedo le hace a la nodriza. Lo escribe _Nave.tsx y la nodriza lo lee en cada cuadro. */
+export type ControlNodriza = {
+  /** A dónde la lleva el dedo (mundo). null = vuelve sola a su lugar. */
+  meta: THREE.Vector3 | null;
+  /** 0..1: cuánto es nave del juego (más chica, sin vaivén ni golpe de escala). */
+  juego: number;
+  /** 0..1: el aro que se llena mientras la mantienen apretada. */
+  carga: number;
+  /** Los escribe la nodriza: su centro y el radio del platillo, en el mundo. */
+  posicion: THREE.Vector3;
+  radio: number;
+};
+
+/** El aro que se llena de las 12 en sentido horario; lo que falta se ve como una huella tenue. */
+function crearMaterialCarga() {
+  return new THREE.ShaderMaterial({
+    uniforms: { uProgreso: { value: 0 }, uColor: { value: new THREE.Color() } },
+    vertexShader: /* glsl */ `
+      varying vec2 vPos;
+      void main() {
+        vPos = position.xy;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform float uProgreso;
+      uniform vec3 uColor;
+      varying vec2 vPos;
+      void main() {
+        float a = fract(0.25 - atan(vPos.y, vPos.x) / 6.2831853);
+        float lleno = step(a, uProgreso);
+        gl_FragColor = vec4(uColor * mix(0.12, 0.9, lleno), 1.0);
+      }`,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+}
+
+export function crearNodriza(kit: Kit): Pieza & { luces: () => THREE.Vector3[]; control: ControlNodriza; girar: () => void } {
   const grupo = new THREE.Group();
-  grupo.position.set(0, 1.6, -6);
+  grupo.position.copy(CASA);
+  const control: ControlNodriza = { meta: null, juego: 0, carga: 0, posicion: grupo.position.clone(), radio: RADIO_PLATILLO };
+  const velocidad = new THREE.Vector3();
+  const destino = new THREE.Vector3();
+  const hacia = new THREE.Vector3();
+  // Al tocarla gira más rápido un rato.
+  let giroExtra = 0;
 
   const ovni = crearOvni(kit);
   ovni.grupo.scale.setScalar(1.7);
   grupo.add(ovni.grupo);
+
+  const materialCarga = crearMaterialCarga();
+  const carga = new THREE.Mesh(new THREE.RingGeometry(3.0, 3.18, 128), materialCarga);
+  carga.visible = false;
+  grupo.add(carga);
 
   // Barras: 32 bandas a la derecha y su espejo a la izquierda; los graves abajo, los agudos arriba.
   const RADIO = 3.6;
@@ -107,12 +159,34 @@ export function crearNodriza(kit: Kit): Pieza & { luces: () => THREE.Vector3[] }
   return {
     obj: grupo,
     luces: ovni.posicionesLuces,
+    control,
+    girar: () => {
+      giroExtra = Math.min(giroExtra + 9, 18);
+    },
     actualizar: (m) => {
-      const escala = escalaPorAspecto(m.aspecto);
-      grupo.scale.setScalar(escala * (1 + m.golpe * 0.06));
-      grupo.position.y = 1.6 + Math.sin(m.reloj * 0.8) * 0.2;
+      const libre = 1 - control.juego;
+      const escala = escalaPorAspecto(m.aspecto) * (1 - control.juego * 0.5);
+      grupo.scale.setScalar(escala * (1 + m.golpe * 0.06 * libre));
 
-      ovni.grupo.rotation.y += m.dt * (0.3 + m.energia * 1.6);
+      // Resorte: firme mientras el dedo la lleva, blando cuando vuelve sola a su lugar.
+      if (control.meta) destino.copy(control.meta);
+      else destino.set(CASA.x, CASA.y + Math.sin(m.reloj * 0.8) * 0.2, CASA.z);
+      const [firmeza, freno] = control.meta ? [90, 16] : [6, 4.5];
+      velocidad.addScaledVector(hacia.subVectors(destino, grupo.position), firmeza * m.dt);
+      velocidad.multiplyScalar(Math.exp(-freno * m.dt));
+      grupo.position.addScaledVector(velocidad, m.dt);
+      // Se inclina hacia donde va, como un platillo de verdad.
+      grupo.rotation.z = THREE.MathUtils.clamp(-velocidad.x * 0.04, -0.45, 0.45);
+      grupo.rotation.x = THREE.MathUtils.clamp(velocidad.y * 0.03, -0.3, 0.3);
+      control.posicion.copy(grupo.position);
+      control.radio = RADIO_PLATILLO * escala;
+
+      carga.visible = control.carga > 0.01;
+      materialCarga.uniforms.uProgreso.value = suave(Math.min(1, control.carga));
+      materialCarga.uniforms.uColor.value.copy(m.colorA).lerp(BLANCO, 0.35);
+
+      giroExtra *= Math.exp(-1.2 * m.dt);
+      ovni.grupo.rotation.y += m.dt * (0.3 + m.energia * 1.6 + giroExtra);
       ovni.grupo.rotation.z = Math.sin(m.reloj * 0.7) * 0.06;
       ovni.grupo.rotation.x = 0.1;
       ovni.animar(m.reloj);
@@ -162,6 +236,8 @@ export function crearNodriza(kit: Kit): Pieza & { luces: () => THREE.Vector3[] }
       if (barras.instanceColor) barras.instanceColor.needsUpdate = true;
       if (picos.instanceColor) picos.instanceColor.needsUpdate = true;
       anilloBarras.rotation.z = Math.sin(m.reloj * 0.15) * 0.15;
+      // En el juego el espectro queda como un aura chica alrededor de la nave.
+      anilloBarras.scale.setScalar(1 - control.juego * 0.3);
 
       materialAro.color.copy(m.colorA);
       materialAro.opacity = 0.25 + m.brillo * 0.3;
@@ -173,6 +249,8 @@ export function crearNodriza(kit: Kit): Pieza & { luces: () => THREE.Vector3[] }
       materialPico.dispose();
       aro.geometry.dispose();
       materialAro.dispose();
+      carga.geometry.dispose();
+      materialCarga.dispose();
       ovni.matRayo.dispose();
       ovni.liberar();
       barras.dispose();
@@ -226,116 +304,14 @@ export function crearTunel(): Pieza {
   };
 }
 
-// ————————————————————————————— Terreno —————————————————————————————
-
-const COLUMNAS = 41;
-const FILAS = 56;
-const ANCHO_TERRENO = 46;
-const LARGO_TERRENO = 84;
-
-/**
- * Piso y grilla en un solo shader: las líneas salen de las coordenadas de la malla (solo filas y
- * columnas, sin las diagonales de un wireframe), con antialiasing por derivadas y un halo suave.
- * Los valles toman el color A y las montañas van hacia el B.
- */
-function crearMaterialTerreno() {
-  return new THREE.ShaderMaterial({
-    uniforms: THREE.UniformsUtils.merge([
-      THREE.UniformsLib.fog,
-      {
-        uColorA: { value: new THREE.Color() },
-        uColorB: { value: new THREE.Color() },
-        uFondo: { value: new THREE.Color(0x030504) },
-        uFuerza: { value: 0.5 },
-        uCeldas: { value: new THREE.Vector2(COLUMNAS - 1, FILAS - 1) },
-      },
-    ]),
-    vertexShader: /* glsl */ `
-      #include <fog_pars_vertex>
-      varying vec2 vUv;
-      varying float vAltura;
-      void main() {
-        vUv = uv;
-        vAltura = position.y;
-        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-        gl_Position = projectionMatrix * mvPosition;
-        #include <fog_vertex>
-      }`,
-    fragmentShader: /* glsl */ `
-      #include <fog_pars_fragment>
-      uniform vec3 uColorA;
-      uniform vec3 uColorB;
-      uniform vec3 uFondo;
-      uniform float uFuerza;
-      uniform vec2 uCeldas;
-      varying vec2 vUv;
-      varying float vAltura;
-      void main() {
-        vec2 celda = vUv * uCeldas;
-        vec2 distancia = abs(fract(celda - 0.5) - 0.5) / fwidth(celda);
-        float cerca = min(distancia.x, distancia.y);
-        float linea = 1.0 - min(cerca / 1.3, 1.0);
-        float halo = 1.0 - min(cerca / 7.0, 1.0);
-        vec3 color = mix(uColorA, uColorB, clamp(vAltura / 3.5, 0.0, 1.0));
-        gl_FragColor = vec4(uFondo + color * uFuerza * (linea + halo * halo * 0.3), 1.0);
-        #include <fog_fragment>
-      }`,
-    fog: true,
-  });
-}
-
-export function crearTerreno(): Pieza {
-  const geometria = new THREE.PlaneGeometry(ANCHO_TERRENO, LARGO_TERRENO, COLUMNAS - 1, FILAS - 1);
-  geometria.rotateX(-Math.PI / 2);
-  const posiciones = geometria.attributes.position as THREE.BufferAttribute;
-  posiciones.setUsage(THREE.DynamicDrawUsage);
-  // Fila 0 = la del fondo; la última = la más cercana a la cámara.
-  const alturas = new Float32Array(COLUMNAS * FILAS);
-
-  const material = crearMaterialTerreno();
-  const grupo = new THREE.Group();
-  grupo.add(new THREE.Mesh(geometria, material));
-  const zBase = TUNEL_HASTA - 1 - LARGO_TERRENO / 2;
-  grupo.position.set(0, -4.4, zBase);
-
-  const separacion = LARGO_TERRENO / (FILAS - 1);
-  let avance = 0;
-  const mitad = (COLUMNAS - 1) / 2;
-
-  return {
-    obj: grupo,
-    actualizar: (m) => {
-      avance += (3 + m.energia * 22) * m.dt;
-      while (avance >= separacion) {
-        avance -= separacion;
-        alturas.copyWithin(COLUMNAS, 0, COLUMNAS * (FILAS - 1));
-        for (let c = 0; c < COLUMNAS; c++) {
-          const xn = Math.abs(c - mitad) / mitad;
-          const banda = Math.min(BANDAS - 1, Math.floor(xn * BANDAS));
-          // Camino plano al medio, montañas que crecen hacia los costados.
-          alturas[c] = m.espectro[banda] * (0.15 + xn * xn * 5) + (Math.random() - 0.5) * 0.08 * xn;
-        }
-      }
-      for (let i = 0; i < alturas.length; i++) posiciones.setY(i, alturas[i]);
-      posiciones.needsUpdate = true;
-      grupo.position.z = zBase + avance;
-      grupo.position.y = -4.4 - m.golpe * 0.15;
-      material.uniforms.uColorA.value.copy(m.colorA).lerp(m.colorB, 0.15 + m.medios * 0.25);
-      material.uniforms.uColorB.value.copy(m.colorB);
-      material.uniforms.uFuerza.value = 0.42 + m.brillo * 0.2;
-    },
-    liberar: () => {
-      geometria.dispose();
-      material.dispose();
-    },
-  };
-}
-
 // ————————————————————————————— Rave —————————————————————————————
 
 const BAILARINES = 22;
 
-export function crearRave(kit: Kit): Pieza {
+/** Un bailarín tocado salta alto, da una vuelta y levanta los brazos. */
+const VUELTA_RAVE = 0.7;
+
+export function crearRave(kit: Kit): Pieza & { cabezas: Float32Array; tocar: (indice: number, reloj: number) => void } {
   const g = kit.geo;
   // Instancias: una sola llamada de dibujo por parte para los 22, así la rave es liviana.
   const piel = conBorde(new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45, emissive: 0x0a1a06 }), kit.borde, 0.8, 2.2);
@@ -366,8 +342,12 @@ export function crearRave(kit: Kit): Pieza {
     // Brazos suavizados: suben rápido (~80 ms) pero nunca se teletransportan en un cuadro.
     alzada: 0,
     puno: 0,
+    vueltaDesde: -10,
+    mira: 0,
   }));
   bailarines.sort((a, b) => a.z - b.z);
+  // Centro de cada cabeza en el mundo y su radio (x, y, z, r; r = 0 si no se ve): para tocarlos.
+  const centros = new Float32Array(BAILARINES * 4);
 
   const raiz = new THREE.Object3D();
   const local = new THREE.Object3D();
@@ -385,9 +365,18 @@ export function crearRave(kit: Kit): Pieza {
 
   return {
     obj: grupo,
+    cabezas: centros,
+    tocar: (indice, reloj) => {
+      const b = bailarines[indice];
+      if (!b) return;
+      b.saltoDesde = reloj;
+      b.saltoAlto = azar(1.3, 1.8);
+      b.vueltaDesde = reloj;
+    },
     actualizar: (m) => {
       const visibles = Math.round(BAILARINES * THREE.MathUtils.clamp(m.aspecto, 0.6, 1));
       bailarines.forEach((b, i) => {
+        centros[i * 4 + 3] = 0;
         if (b.orden >= visibles) {
           for (const parte of [cabezas, ojos, brillos, cuerpos]) parte.setMatrixAt(i, oculto);
           brazos.setMatrixAt(i * 2, oculto);
@@ -407,9 +396,20 @@ export function crearRave(kit: Kit): Pieza {
 
         // Arriba de la barra del player, que tapa el borde de abajo en el celu.
         raiz.position.set(b.x * mv.x * 0.92, -mv.y * 0.6 + rebote + salto, b.z);
-        raiz.rotation.set(0, Math.sin(m.reloj + b.fase) * 0.2, Math.sin(m.reloj * 2 + b.fase) * 0.05);
+        // Con dedo o mouse en pantalla, todos se dan vuelta a mirarlo.
+        const metaMira = kit.mirada.activa
+          ? THREE.MathUtils.clamp(Math.atan2(kit.mirada.punto.x - raiz.position.x, kit.mirada.punto.z - b.z), -0.8, 0.8)
+          : 0;
+        b.mira += (metaMira - b.mira) * Math.min(1, m.dt * 6);
+        const v = (m.reloj - b.vueltaDesde) / VUELTA_RAVE;
+        const vuelta = v >= 0 && v < 1 ? suave(v) * Math.PI * 2 : 0;
+        raiz.rotation.set(0, Math.sin(m.reloj + b.fase) * 0.2 * (1 - Math.abs(b.mira)) + b.mira + vuelta, Math.sin(m.reloj * 2 + b.fase) * 0.05);
         raiz.scale.setScalar(b.escala);
         raiz.updateMatrix();
+        centros[i * 4] = raiz.position.x;
+        centros[i * 4 + 1] = raiz.position.y;
+        centros[i * 4 + 2] = raiz.position.z;
+        centros[i * 4 + 3] = b.escala * 1.4;
 
         tmpColor.copy(b.rosa ? m.colorB : m.colorA).multiplyScalar(0.55 + m.brillo * 0.12);
 
@@ -432,8 +432,8 @@ export function crearRave(kit: Kit): Pieza {
         matriz.copy(raiz.matrix).multiply(ponerLocal(0, CUERPO.y, 0, 0, 0, 0));
         cuerpos.setMatrixAt(i, matriz);
 
-        // Brazos: en el drop todos arriba; si no, cada uno baila a su manera.
-        const metaAlzada = Math.max(Math.min(1, m.drop * 1.6), saltando && b.estilo === 0 ? 1 : 0);
+        // Brazos: en el drop todos arriba (y el que tocaron, mientras gira); si no, cada uno baila a su manera.
+        const metaAlzada = Math.max(Math.min(1, m.drop * 1.6), saltando && b.estilo === 0 ? 1 : 0, v >= 0 && v < 1.6 ? 1 : 0);
         const rapidez = Math.min(1, m.dt * 12);
         b.alzada += (metaAlzada - b.alzada) * rapidez;
         b.puno += (m.golpe - b.puno) * Math.min(1, m.dt * 25);

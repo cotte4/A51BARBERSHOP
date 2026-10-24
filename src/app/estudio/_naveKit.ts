@@ -13,8 +13,20 @@ export const ROSA_3D = 0xff4fd8;
 export const FOV = 60;
 export const CAMARA_Z = 10;
 
+/**
+ * Qué es un actor: decide cómo reacciona cuando lo tocan (ver _naveToque.ts). "efecto" = ondas y
+ * chispas, que no se tocan.
+ */
+export type ClaseActor = "alien" | "ovni" | "pelota" | "planeta" | "vaca" | "satelite" | "cometa" | "portal" | "efecto";
+
 export type Actor = {
   obj: THREE.Object3D;
+  clase: ClaseActor;
+  /**
+   * Radio para tocarlo, en unidades del grupo (sin su escala): _Nave lo multiplica por `obj.scale.x`.
+   * Medido desde `obj.position`. 0 = no se toca.
+   */
+  radio: number;
   nace: number;
   vida: number;
   /** p va de 0 a 1 a lo largo de la vida del actor. */
@@ -25,7 +37,26 @@ export type Actor = {
   geometria?: THREE.BufferGeometry;
   /** Lo demás que haya que soltar al irse (buffers de instancias). */
   liberar?: () => void;
+  /** Lo que hace por su cuenta cuando lo tocan (festejar, saludar); el empujón lo pone _naveToque. */
+  reaccionar?: (t: number) => void;
 };
+
+/**
+ * A dónde mira la gente de la nave: el punto del dedo o del mouse, un poco adelante de la escena.
+ * Lo actualiza _Nave.tsx cada cuadro; `activa` es false cuando no hay puntero.
+ */
+export type Mirada = { activa: boolean; punto: THREE.Vector3 };
+
+const tmpMirada = new THREE.Vector3();
+
+/** Giro (y) e inclinación (x) para que algo en `objeto` mire al punto de la mirada, con tope. */
+function anguloHacia(objeto: THREE.Object3D, mirada: Mirada, tope: number): [number, number] {
+  objeto.updateWorldMatrix(true, false);
+  const local = objeto.worldToLocal(tmpMirada.copy(mirada.punto));
+  const giro = THREE.MathUtils.clamp(Math.atan2(local.x, local.z), -tope, tope);
+  const inclinacion = THREE.MathUtils.clamp(-Math.atan2(local.y, Math.hypot(local.x, local.z)), -tope * 0.5, tope * 0.5);
+  return [giro, inclinacion];
+}
 
 export type Kit = ReturnType<typeof crearKit>;
 
@@ -297,6 +328,7 @@ export function crearKit() {
 
   const pelota = crearPelota();
   const puntoRedondo = crearPuntoRedondo();
+  const mirada: Mirada = { activa: false, punto: new THREE.Vector3() };
 
   return {
     borde,
@@ -318,6 +350,7 @@ export function crearKit() {
     geo,
     pelota,
     puntoRedondo,
+    mirada,
   };
 }
 
@@ -389,8 +422,10 @@ function crearMaterialRayo() {
       varying vec3 vVista;
       void main() {
         // En el cono, uv.y = 1 es la punta (pegada al ovni) y 0 la base, abajo.
-        float fuerza = pow(vUv.y, 1.4);
-        float borde = 0.35 + 0.65 * pow(1.0 - abs(dot(normalize(vNormal), vVista)), 1.5);
+        float fuerza = pow(max(vUv.y, 0.0), 1.4);
+        // max(0): por redondeo el dot puede pasar de 1, y la potencia de un negativo es NaN. Un solo
+        // píxel NaN el bloom lo desparrama y el cuadro sale entero en negro (un parpadeo).
+        float borde = 0.35 + 0.65 * pow(max(0.0, 1.0 - abs(dot(normalize(vNormal), vVista))), 1.5);
         float franjas = 0.82 + 0.18 * sin(vUv.y * 38.0 + uTiempo * 2.4);
         gl_FragColor = vec4(uColor * fuerza * borde * franjas * uOpacidad, 1.0);
       }`,
@@ -432,6 +467,8 @@ export function crearOvni(kit: Kit) {
   });
   const luz = new THREE.Object3D();
   grupo.add(luces);
+  // El piloto gira la cabeza hacia el dedo con un poco de retraso, como si lo siguiera con la vista.
+  let giroPiloto = 0;
 
   const matRayo = crearMaterialRayo();
   const rayo = new THREE.Mesh(g.rayo, matRayo);
@@ -454,7 +491,9 @@ export function crearOvni(kit: Kit) {
         luces.setMatrixAt(i, luz.matrix);
       });
       luces.instanceMatrix.needsUpdate = true;
-      piloto.grupo.rotation.y = Math.sin(t * 1.3) * 0.6;
+      const meta = kit.mirada.activa ? anguloHacia(grupo, kit.mirada, 1.4)[0] : Math.sin(t * 1.3) * 0.6;
+      giroPiloto += (meta - giroPiloto) * 0.12;
+      piloto.grupo.rotation.y = giroPiloto;
       piloto.animar(t);
       matRayo.uniforms.uTiempo.value = t;
     },
@@ -492,6 +531,10 @@ type Pose = {
   saluda?: number;
   /** 0..1: brazos abiertos y piernas que patalean, como nadando en gravedad cero. */
   nada?: number;
+  /** 0..1: los dos brazos arriba sacudiéndose (cuando lo tocan). */
+  festeja?: number;
+  /** Gira la cabeza hacia el dedo o el mouse (kit.mirada). */
+  mira?: boolean;
   /** Graves suavizados: cabeceo y antenas al ritmo. */
   ritmo: number;
 };
@@ -541,12 +584,19 @@ export function crearAlien(kit: Kit) {
   });
 
   const fase = Math.random() * Math.PI * 2;
+  // Hacia dónde mira, suavizado: la cabeza sigue al dedo sin saltos.
+  let giro = 0;
+  let inclinacion = 0;
   return {
     grupo,
     animar: (t: number, pose: Pose) => {
       cabeza.animar(t);
-      const { saluda = 0, nada = 0, ritmo } = pose;
-      cuello.rotation.x = -0.05 + ritmo * 0.25 * Math.abs(Math.sin(t * 4.6 + fase));
+      const { saluda = 0, nada = 0, festeja = 0, mira = false, ritmo } = pose;
+      const [metaGiro, metaInclinacion] = mira && kit.mirada.activa ? anguloHacia(grupo, kit.mirada, 0.9) : [0, 0];
+      giro += (metaGiro - giro) * 0.1;
+      inclinacion += (metaInclinacion - inclinacion) * 0.1;
+      cuello.rotation.y = giro;
+      cuello.rotation.x = -0.05 + inclinacion + ritmo * 0.25 * Math.abs(Math.sin(t * 4.6 + fase));
       cuello.rotation.z = Math.sin(t * 1.7 + fase) * 0.08;
       // Las antenas se balancean con un poco de retraso: parecen blandas.
       antenas.forEach((a, i) => {
@@ -554,10 +604,12 @@ export function crearAlien(kit: Kit) {
       });
       // Brazo derecho (lado +1): ángulo positivo = sube por afuera. El izquierdo, al revés.
       const vaiven = Math.sin(t * 2 + fase);
+      const sacudida = festeja * (2.6 + Math.sin(t * 14) * 0.3);
       const derecho = 0.15 + vaiven * 0.04 + saluda * (2.45 + Math.sin(t * 9) * 0.35) + nada * (1.05 + Math.sin(t * 2.2 + fase) * 0.3);
       const izquierdo = 0.15 - vaiven * 0.04 + nada * (1.05 + Math.sin(t * 2.2 + fase + 1) * 0.3);
-      brazos[1].rotation.z = derecho;
-      brazos[0].rotation.z = -izquierdo;
+      // Festejar manda sobre lo demás: los dos brazos arriba.
+      brazos[1].rotation.z = derecho + (sacudida - derecho) * festeja;
+      brazos[0].rotation.z = -(izquierdo + (sacudida - izquierdo) * festeja);
       piernas.forEach((p, i) => {
         p.rotation.x = nada * Math.sin(t * 2.4 + fase + i * Math.PI) * 0.4;
         p.rotation.z = (i === 0 ? -1 : 1) * nada * 0.15;
@@ -570,6 +622,12 @@ export function crearAlien(kit: Kit) {
 export function mitadVisible(z: number, aspecto: number) {
   const alto = Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * (CAMARA_Z - z);
   return { x: alto * aspecto, y: alto };
+}
+
+/** 0..1..0 durante 1,2 s después de que lo tocaron: entra y sale suave. */
+function festejoDesde(desde: number, t: number) {
+  const k = (t - desde) / 1.2;
+  return k < 0 || k > 1 ? 0 : suave(Math.min(1, k / 0.15, (1 - k) / 0.25));
 }
 
 export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): Actor {
@@ -585,6 +643,8 @@ export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): 
       grupo.scale.setScalar(azar(0.55, 0.95));
       return {
         obj: grupo,
+        clase: "ovni",
+        radio: 1.7,
         nace: t,
         vida: azar(4.5, 7),
         propios: [matRayo],
@@ -610,6 +670,8 @@ export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): 
       grupo.scale.setScalar(azar(0.6, 0.8));
       return {
         obj: grupo,
+        clase: "ovni",
+        radio: 1.7,
         nace: t,
         vida: azar(5, 7),
         propios: [matRayo],
@@ -640,20 +702,26 @@ export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): 
       const asomado = -m.y * 0.38;
       grupo.position.set(x, oculto, z);
       grupo.scale.setScalar(escala);
+      let festejo = -10;
       return {
         obj: grupo,
+        clase: "alien",
+        radio: 1.5,
         nace: t,
         vida: azar(3.5, 5),
         propios: [],
+        reaccionar: (tt) => {
+          festejo = tt;
+        },
         mover: (p, tt, g) => {
-          // Asoma desde abajo, saluda al ritmo y se vuelve a esconder.
+          // Asoma desde abajo, saluda al ritmo y se vuelve a esconder. Si hay dedo, lo mira.
           const sube = p < 0.22 ? suave(p / 0.22) : p > 0.78 ? 1 - suave((p - 0.78) / 0.22) : 1;
           grupo.position.y = oculto + sube * (asomado - oculto);
-          grupo.rotation.y = Math.sin(tt * 1.5) * 0.35;
+          grupo.rotation.y = Math.sin(tt * 1.5) * (kit.mirada.activa ? 0.1 : 0.35);
           grupo.rotation.z = Math.sin(tt * 4) * 0.06;
           grupo.scale.setScalar(escala * (1 + g * 0.06));
           const saluda = p > 0.2 && p < 0.8 ? suave(Math.min(1, (p - 0.2) / 0.12, (0.8 - p) / 0.12)) : 0;
-          alien.animar(tt, { saluda, ritmo: g });
+          alien.animar(tt, { saluda, festeja: festejoDesde(festejo, tt), mira: true, ritmo: g });
         },
       };
     }
@@ -665,17 +733,24 @@ export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): 
       const desde = Math.random() < 0.5 ? -1 : 1;
       const y0 = azar(-m.y * 0.5, m.y * 0.6);
       const giro = azar(0.5, 1.1) * (Math.random() < 0.5 ? -1 : 1);
+      let festejo = -10;
       return {
         obj: grupo,
+        clase: "alien",
+        radio: 1.8,
         nace: t,
         vida: azar(6, 9),
         propios: [],
+        reaccionar: (tt) => {
+          festejo = tt;
+        },
         mover: (p, tt, g) => {
           // Gravedad cero: cruza dando vueltas, nadando.
           grupo.position.set(desde * (m.x + 2.5) * (1 - 2 * p), y0 + Math.sin(tt) * 0.8, z);
           grupo.rotation.set(Math.sin(tt * 0.6) * 0.6, tt * giro * 0.8, tt * giro * 0.5);
           grupo.scale.setScalar(0.46 + g * 0.05);
-          alien.animar(tt, { nada: 1, ritmo: g });
+          const festeja = festejoDesde(festejo, tt);
+          alien.animar(tt, { nada: 1 - festeja, festeja, ritmo: g });
         },
       };
     }
@@ -688,6 +763,8 @@ export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): 
       grupo.scale.setScalar(azar(0.5, 0.9));
       return {
         obj: grupo,
+        clase: "pelota",
+        radio: 1.05,
         nace: t,
         vida: azar(2.5, 3.5),
         propios: [],
@@ -716,6 +793,8 @@ export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): 
       grupo.scale.setScalar(azar(1.4, 2.2));
       return {
         obj: grupo,
+        clase: "planeta",
+        radio: 1.1,
         nace: t,
         vida: azar(14, 20),
         propios: [matAnillo],
@@ -748,6 +827,8 @@ export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): 
       puntos.position.z = -1;
       return {
         obj: puntos,
+        clase: "efecto",
+        radio: 0,
         nace: t,
         vida: 1.1,
         propios: [mat],
@@ -767,6 +848,8 @@ export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): 
       onda.position.z = -2;
       return {
         obj: onda,
+        clase: "efecto",
+        radio: 0,
         nace: t,
         vida: 1.3,
         propios: [mat],

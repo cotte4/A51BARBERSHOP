@@ -367,7 +367,6 @@ export function Portada({ tema, size }: { tema: TemaEstudio; size: "sm" | "md" }
   );
 }
 
-/** Barra fija abajo: portada, título, controles y la línea de tiempo arrastrable. */
 function NaveIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
@@ -378,21 +377,68 @@ function NaveIcon() {
   );
 }
 
+function PlaylistIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M4 6h12M4 11h12M4 16h6" strokeLinecap="round" />
+      <path d="M14.5 14v6l5-3-5-3Z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SubirIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="m6 14 6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 type BarraProps = {
   reproductor: Reproductor;
   /** Abre o cierra la nave a pantalla completa. */
   onNave: () => void;
   naveAbierta: boolean;
+  /** En modo nave la barra se baja sola; queda una manija para sacarla. */
+  escondida?: boolean;
+  onMostrar?: () => void;
+  /** true mientras el mouse, el dedo o el foco están en la barra: no se esconde en el medio de un uso. */
+  onSostener?: (sostiene: boolean) => void;
 };
 
-export function BarraReproductor({ reproductor, onNave, naveAbierta }: BarraProps) {
+/** Barra fija abajo: portada, título, controles y la línea de tiempo arrastrable. */
+export function BarraReproductor({ reproductor, onNave, naveAbierta, escondida = false, onMostrar, onSostener }: BarraProps) {
   const { audioRef, actual, sonando, tiempo, duracion, alternar, siguiente, anterior, irA } = reproductor;
 
   return (
     <>
       <audio ref={audioRef} preload="metadata" />
+      {actual && naveAbierta ? (
+        <button
+          type="button"
+          onClick={onMostrar}
+          aria-label="Mostrar los controles"
+          tabIndex={escondida ? 0 : -1}
+          className={`fixed bottom-[max(env(safe-area-inset-bottom),14px)] left-1/2 z-40 -translate-x-1/2 rounded-full border border-white/15 bg-zinc-950/55 px-5 py-1.5 text-zinc-300 backdrop-blur transition-opacity duration-300 hover:text-[#8cff59] ${
+            escondida ? "opacity-100" : "pointer-events-none opacity-0"
+          }`}
+        >
+          <SubirIcon />
+        </button>
+      ) : null}
       {actual ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800 bg-zinc-950/95 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur">
+        <div
+          inert={escondida}
+          onPointerEnter={() => onSostener?.(true)}
+          onPointerLeave={() => onSostener?.(false)}
+          onFocus={() => onSostener?.(true)}
+          onBlur={(evento) => {
+            if (!evento.currentTarget.contains(evento.relatedTarget)) onSostener?.(false);
+          }}
+          className={`fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800 bg-zinc-950/95 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur transition-transform duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+            escondida ? "translate-y-full" : ""
+          }`}
+        >
           <div className="mx-auto flex max-w-xl flex-col gap-2">
             {/* Tres columnas iguales a los costados: los controles quedan en el centro exacto. */}
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -422,18 +468,18 @@ export function BarraReproductor({ reproductor, onNave, naveAbierta }: BarraProp
                 </button>
               </div>
               <div className="flex justify-end">
+                {/* En la nave, este mismo botón es la vuelta a la lista. */}
                 <button
                   type="button"
                   onClick={onNave}
-                  aria-pressed={naveAbierta}
                   className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold ${
                     naveAbierta
-                      ? "border-[#8cff59] bg-[#8cff59] text-[#07130a]"
+                      ? "border-white/20 text-zinc-100 hover:border-[#8cff59]/60 hover:text-[#8cff59]"
                       : "border-[#8cff59]/50 text-[#8cff59] hover:bg-[#8cff59]/10"
                   }`}
                 >
-                  <NaveIcon />
-                  {naveAbierta ? "Salir" : "Nave"}
+                  {naveAbierta ? <PlaylistIcon /> : <NaveIcon />}
+                  {naveAbierta ? "Playlist" : "Nave"}
                 </button>
               </div>
             </div>

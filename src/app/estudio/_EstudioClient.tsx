@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { TemaEstudio } from "@/lib/estudio";
 import { filtrarTemas } from "@/lib/estudio-lista";
 import { ordenarTemasAction, sumarEscuchaAction } from "./actions";
@@ -16,6 +16,25 @@ import { esMp3 } from "./_subir";
 const Nave = dynamic(() => import("./_Nave"), { ssr: false });
 
 type Hoja = { tipo: "nuevo"; archivo?: File } | { tipo: "editar"; tema: TemaEstudio } | null;
+
+// En la nave la barra del player se baja sola a los 3,5 s; en la compu sale al acercar el mouse abajo.
+const BARRA_SE_ESCONDE_MS = 3500;
+const ZONA_BARRA_PX = 110;
+// La pista de qué se puede hacer en la nave sale las primeras veces que se entra, en este navegador.
+const CLAVE_PISTA = "estudio:pistaNave";
+const VECES_PISTA = 3;
+const PISTA_MS = 5000;
+
+function pistaPendiente(): boolean {
+  try {
+    const vistas = Number(localStorage.getItem(CLAVE_PISTA)) || 0;
+    if (vistas >= VECES_PISTA) return false;
+    localStorage.setItem(CLAVE_PISTA, String(vistas + 1));
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function PlayIcon() {
   return (
@@ -104,6 +123,11 @@ export default function EstudioClient({ temas }: { temas: TemaEstudio[] }) {
   const [avisoArrastre, setAvisoArrastre] = useState<string | null>(null);
   const [yaSono, setYaSono] = useState(false);
   const [inmersivo, setInmersivo] = useState(false);
+  const [jugando, setJugando] = useState(false);
+  const [barraFuera, setBarraFuera] = useState(true);
+  const [pista, setPista] = useState(false);
+  const esconderRef = useRef<number | null>(null);
+  const sosteniendoRef = useRef(false);
   const [busqueda, setBusqueda] = useState("");
   const [genero, setGenero] = useState<string | null>(null);
   // null = lista normal; un arreglo = el ranking mientras se ordena.
@@ -184,14 +208,65 @@ export default function EstudioClient({ temas }: { temas: TemaEstudio[] }) {
     };
   }, [recibir]);
 
+  const programarEsconder = useCallback(() => {
+    if (esconderRef.current !== null) window.clearTimeout(esconderRef.current);
+    esconderRef.current = window.setTimeout(() => {
+      if (!sosteniendoRef.current) setBarraFuera(false);
+    }, BARRA_SE_ESCONDE_MS);
+  }, []);
+
+  const mostrarBarra = useCallback(() => {
+    setBarraFuera(true);
+    programarEsconder();
+  }, [programarEsconder]);
+
+  const sostenerBarra = useCallback(
+    (sostiene: boolean) => {
+      sosteniendoRef.current = sostiene;
+      if (sostiene && esconderRef.current !== null) window.clearTimeout(esconderRef.current);
+      if (!sostiene) programarEsconder();
+    },
+    [programarEsconder]
+  );
+
+  const alternarNave = () => {
+    if (inmersivo) {
+      setInmersivo(false);
+      return;
+    }
+    setInmersivo(true);
+    // Al entrar la barra se ve un momento (para saber que está) y después se baja.
+    mostrarBarra();
+    if (pistaPendiente()) {
+      setPista(true);
+      window.setTimeout(() => setPista(false), PISTA_MS);
+    }
+  };
+
   useEffect(() => {
     if (!inmersivo) return;
     const alTeclear = (evento: KeyboardEvent) => {
-      if (evento.key === "Escape") setInmersivo(false);
+      // Jugando, Esc sale del juego (lo maneja la nave), no de la nave.
+      if (evento.key === "Escape" && !jugando) setInmersivo(false);
+    };
+    // En la compu, la barra sale al acercar el mouse abajo (jugando no: el mouse maneja la nave).
+    const alMover = (evento: PointerEvent) => {
+      if (evento.pointerType === "mouse" && !jugando && evento.clientY > window.innerHeight - ZONA_BARRA_PX) mostrarBarra();
     };
     window.addEventListener("keydown", alTeclear);
-    return () => window.removeEventListener("keydown", alTeclear);
-  }, [inmersivo]);
+    window.addEventListener("pointermove", alMover);
+    return () => {
+      window.removeEventListener("keydown", alTeclear);
+      window.removeEventListener("pointermove", alMover);
+    };
+  }, [inmersivo, jugando, mostrarBarra]);
+
+  useEffect(
+    () => () => {
+      if (esconderRef.current !== null) window.clearTimeout(esconderRef.current);
+    },
+    []
+  );
 
   const empezarAOrdenar = () => {
     // El ranking se ordena sobre la lista completa.
@@ -217,6 +292,8 @@ export default function EstudioClient({ temas }: { temas: TemaEstudio[] }) {
 
   const actual = reproductor.actual;
   const suenaEstaLista = !!actual && reproductor.sonando && idsVisibles.includes(actual.id);
+  // En la nave la barra se esconde mientras suena; en pausa queda a mano (para darle play).
+  const barraEscondida = inmersivo && reproductor.sonando && (jugando || !barraFuera);
 
   return (
     <>
@@ -384,30 +461,36 @@ export default function EstudioClient({ temas }: { temas: TemaEstudio[] }) {
         <>
           {inmersivo ? <div className="fixed inset-0 z-[29] bg-[#040705]" /> : null}
           <div className={`pointer-events-none fixed inset-0 ${inmersivo ? "z-30" : "z-0"}`}>
-            <Nave audioRef={reproductor.audioRef} temaId={actual?.id ?? null} sonando={reproductor.sonando} />
+            <Nave
+              audioRef={reproductor.audioRef}
+              temaId={actual?.id ?? null}
+              sonando={reproductor.sonando}
+              interactiva={inmersivo}
+              onJuego={setJugando}
+            />
           </div>
         </>
       ) : null}
 
-      {inmersivo && actual ? (
-        <div className="fixed inset-x-0 top-0 z-[31] px-4 pt-[max(env(safe-area-inset-top),16px)]">
-          <div className="mx-auto flex max-w-xl items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="truncate font-display text-3xl font-bold text-white drop-shadow-[0_0_18px_rgba(140,255,89,0.45)]">{actual.titulo}</p>
-              <p className="text-sm text-zinc-300">Was &amp; Pinky{actual.genero ? ` · ${actual.genero}` : ""}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setInmersivo(false)}
-              className="shrink-0 rounded-full border border-zinc-700 bg-zinc-950/70 px-4 py-2 text-sm text-zinc-200 hover:text-[#8cff59]"
-            >
-              Volver
-            </button>
-          </div>
-        </div>
+      {inmersivo ? (
+        <p
+          aria-hidden={!pista}
+          className={`pointer-events-none fixed inset-x-4 top-[max(env(safe-area-inset-top),16px)] z-[31] mx-auto w-fit rounded-full bg-zinc-950/65 px-4 py-2 text-center text-sm text-zinc-200 backdrop-blur transition-opacity duration-500 ${
+            pista && !jugando ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          Tocá todo · Mantené apretada la nave para jugar
+        </p>
       ) : null}
 
-      <BarraReproductor reproductor={reproductor} onNave={() => setInmersivo((valor) => !valor)} naveAbierta={inmersivo} />
+      <BarraReproductor
+        reproductor={reproductor}
+        onNave={alternarNave}
+        naveAbierta={inmersivo}
+        escondida={barraEscondida}
+        onMostrar={mostrarBarra}
+        onSostener={sostenerBarra}
+      />
 
       {arrastrando ? (
         <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-6">
