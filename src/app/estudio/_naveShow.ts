@@ -1,13 +1,17 @@
 import * as THREE from "three";
+import { NAVE_INICIAL, type ModeloNave } from "@/lib/estudio-naves";
 import { BANDAS } from "./_analisis";
-import { azar, crearOvni, CUELLO_Y, CUERPO, mitadVisible, OJO, suave, type Kit } from "./_naveKit";
+import { crearNave, elegirModelo, vaivenDe, type Nave, type Vaiven } from "./_naveFlota";
+import { azar, CUELLO_Y, CUERPO, mitadVisible, nuevoVaiven, OJO, orientarNave, PANZA_Y, suave, type Kit } from "./_naveKit";
 import { conBorde } from "./_naveMateriales";
 
 // Las piezas fijas del show: siempre están y reaccionan a la música cuadro a cuadro.
-//  - Nodriza: el ovni gigante del centro con un anillo de barras del espectro alrededor.
+//  - Nodriza: la nave elegida en el hangar, gigante en el centro, con un anillo de barras del
+//    espectro alrededor. Cambia de modelo sin rearmarse (la vieja se va girando, la nueva entra).
 //  - Túnel: anillos de neón que vienen hacia la cámara más rápido cuanto más fuerte suena.
 //  - (El terreno vive aparte, con sus biomas y estructuras: _naveTerreno.ts.)
-//  - Rave: aliens que cabecean con los graves, saltan en los bombos y levantan los brazos.
+//  - Rave: aliens que cabecean con los graves, saltan en los bombos y levantan los brazos. Cada
+//    tanto baja una nave, se lleva a uno por el rayo (sube a saltos, en los bombos) y lo devuelve.
 //  - Láseres: salen de las luces de la nodriza en cada redoblante / hi-hat.
 
 /** Lo que suena en este cuadro, ya suavizado. Lo arma _Nave.tsx. */
@@ -59,8 +63,16 @@ const PICO_SOSTIENE = 0.35;
 const PICO_CAE = 0.55;
 /** Su lugar en el show. El dedo la puede sacar de acá; al soltarla, vuelve sola. */
 const CASA = new THREE.Vector3(0, 1.6, -6);
-/** Radio del platillo (el casco por torno mide 1,62) por la escala de la nodriza. */
-const RADIO_PLATILLO = 1.62 * 1.7;
+/** La nave de la nodriza, agrandada: el platillo (1,62 de radio) queda en 2,75. */
+const ESCALA_NAVE = 1.7;
+/** Segundos del cambio de nave: la de antes se va girando y achicándose, la nueva entra girando. */
+const CAMBIO_NAVE = 1.1;
+/**
+ * Las que giran sobre su eje todo el tiempo (cuanto más suena, más rápido). El anillo y el cigarro
+ * no: de perfil se ven finitos. Se mecen con su vaivén y el toque les da unas vueltas.
+ */
+const GIRA_SOLA: Record<ModeloNave, boolean> = { platillo: true, trompo: true, anillo: false, cigarro: false, triangulo: true, enjambre: true };
+const VUELTA = Math.PI * 2;
 
 /** Lo que el dedo le hace a la nodriza. Lo escribe _Nave.tsx y la nodriza lo lee en cada cuadro. */
 export type ControlNodriza = {
@@ -70,10 +82,31 @@ export type ControlNodriza = {
   juego: number;
   /** 0..1: el aro que se llena mientras la mantienen apretada. */
   carga: number;
-  /** Los escribe la nodriza: su centro y el radio del platillo, en el mundo. */
+  /** Los escribe la nodriza: su centro y el radio del casco de su nave, en el mundo (para chocar). */
   posicion: THREE.Vector3;
   radio: number;
+  /** Hasta dónde llega algo de la nave en el mundo (los drones del enjambre): para tocarla. */
+  alcance: number;
+  /** El modelo de la nave (lo escribe la nodriza; durante un cambio ya es el nuevo). */
+  modelo: ModeloNave;
 };
+
+export type Nodriza = Pieza & {
+  /** Dónde están las luces de la nave en el mundo (de ahí salen los láseres). */
+  luces: () => THREE.Vector3[];
+  control: ControlNodriza;
+  /** Un toque: gira más rápido un rato. */
+  girar: () => void;
+  /** Cambia la nave sin rearmar la pieza (el espectro y el aro de carga quedan). */
+  cambiarModelo: (modelo: ModeloNave) => void;
+};
+
+/** Crece con un rebotecito al final (sale de 0, se pasa apenas de 1 y vuelve). */
+function conRebote(x: number) {
+  const c = 1.2;
+  const u = x - 1;
+  return 1 + (c + 1) * u * u * u + c * u * u;
+}
 
 /** El aro que se llena de las 12 en sentido horario; lo que falta se ve como una huella tenue. */
 function crearMaterialCarga() {
@@ -100,19 +133,39 @@ function crearMaterialCarga() {
   });
 }
 
-export function crearNodriza(kit: Kit): Pieza & { luces: () => THREE.Vector3[]; control: ControlNodriza; girar: () => void } {
+export function crearNodriza(kit: Kit, modelo: ModeloNave = NAVE_INICIAL): Nodriza {
   const grupo = new THREE.Group();
   grupo.position.copy(CASA);
-  const control: ControlNodriza = { meta: null, juego: 0, carga: 0, posicion: grupo.position.clone(), radio: RADIO_PLATILLO };
+  let nave: Nave = crearNave(kit, modelo);
+  nave.grupo.scale.setScalar(ESCALA_NAVE);
+  grupo.add(nave.grupo);
+  const control: ControlNodriza = {
+    meta: null,
+    juego: 0,
+    carga: 0,
+    posicion: grupo.position.clone(),
+    radio: nave.radio * ESCALA_NAVE,
+    alcance: nave.alcance * ESCALA_NAVE,
+    modelo,
+  };
   const velocidad = new THREE.Vector3();
   const destino = new THREE.Vector3();
   const hacia = new THREE.Vector3();
   // Al tocarla gira más rápido un rato.
   let giroExtra = 0;
+  // El giro de las que giran solas, y las vueltas del toque de las que no (vuelven a quedar de frente).
+  let giroLibre = 0;
+  let vueltaToque = 0;
+  const vaiven = nuevoVaiven();
 
-  const ovni = crearOvni(kit);
-  ovni.grupo.scale.setScalar(1.7);
-  grupo.add(ovni.grupo);
+  // El cambio de nave: el pedido espera al próximo cuadro (hace falta el reloj) y, si hay uno en curso,
+  // a que termine.
+  let pedido: ModeloNave | null = null;
+  let saliente: Nave | null = null;
+  let cambioDesde = 0;
+  let giroSaliente = 0;
+  // Donde estaba la de antes al empezar el cambio (con su vaivén): se va desde ahí, sin salto.
+  const desdeSaliente = new THREE.Vector3();
 
   const materialCarga = crearMaterialCarga();
   const carga = new THREE.Mesh(new THREE.RingGeometry(3.0, 3.18, 128), materialCarga);
@@ -158,15 +211,45 @@ export function crearNodriza(kit: Kit): Pieza & { luces: () => THREE.Vector3[]; 
 
   return {
     obj: grupo,
-    luces: ovni.posicionesLuces,
+    // Siempre la nave de ahora (en un cambio, la nueva).
+    luces: () => nave.posicionesLuces(),
     control,
     girar: () => {
       giroExtra = Math.min(giroExtra + 9, 18);
     },
+    cambiarModelo: (otro) => {
+      pedido = otro;
+    },
     actualizar: (m) => {
+      // Los actores sueltos leen la música de acá (ecualizador, disparos en los chasquidos).
+      kit.sonido = m;
       const libre = 1 - control.juego;
       const escala = escalaPorAspecto(m.aspecto) * (1 - control.juego * 0.5);
       grupo.scale.setScalar(escala * (1 + m.golpe * 0.06 * libre));
+
+      if (pedido !== null && saliente === null) {
+        if (pedido !== nave.modelo) {
+          saliente = nave;
+          giroSaliente = saliente.grupo.rotation.y;
+          desdeSaliente.copy(saliente.grupo.position);
+          nave = crearNave(kit, pedido);
+          nave.grupo.scale.setScalar(0.001);
+          grupo.add(nave.grupo);
+          cambioDesde = m.reloj;
+          control.modelo = pedido;
+        }
+        pedido = null;
+      }
+      // k: 0 → 1 a lo largo del cambio (1 = sin cambio en curso).
+      let k = 1;
+      if (saliente) {
+        k = THREE.MathUtils.clamp((m.reloj - cambioDesde) / CAMBIO_NAVE, 0, 1);
+        if (k >= 1) {
+          grupo.remove(saliente.grupo);
+          saliente.liberar();
+          saliente = null;
+        }
+      }
 
       // Resorte: firme mientras el dedo la lleva, blando cuando vuelve sola a su lugar.
       if (control.meta) destino.copy(control.meta);
@@ -179,19 +262,56 @@ export function crearNodriza(kit: Kit): Pieza & { luces: () => THREE.Vector3[]; 
       grupo.rotation.z = THREE.MathUtils.clamp(-velocidad.x * 0.04, -0.45, 0.45);
       grupo.rotation.x = THREE.MathUtils.clamp(velocidad.y * 0.03, -0.3, 0.3);
       control.posicion.copy(grupo.position);
-      control.radio = RADIO_PLATILLO * escala;
+      // En un cambio, el radio pasa de una nave a la otra de a poco (el juego choca con esto).
+      const mezcla = saliente ? suave(k) : 1;
+      const radioNave = saliente ? THREE.MathUtils.lerp(saliente.radio, nave.radio, mezcla) : nave.radio;
+      const alcanceNave = saliente ? THREE.MathUtils.lerp(saliente.alcance, nave.alcance, mezcla) : nave.alcance;
+      control.radio = radioNave * ESCALA_NAVE * escala;
+      control.alcance = alcanceNave * ESCALA_NAVE * escala;
 
       carga.visible = control.carga > 0.01;
+      // El aro de carga abraza al casco de la nave que haya (medido para el platillo).
+      carga.scale.setScalar(Math.max(0.75, radioNave / 1.62));
       materialCarga.uniforms.uProgreso.value = suave(Math.min(1, control.carga));
       materialCarga.uniforms.uColor.value.copy(m.colorA).lerp(BLANCO, 0.35);
 
       giroExtra *= Math.exp(-1.2 * m.dt);
-      ovni.grupo.rotation.y += m.dt * (0.3 + m.energia * 1.6 + giroExtra);
-      ovni.grupo.rotation.z = Math.sin(m.reloj * 0.7) * 0.06;
-      ovni.grupo.rotation.x = 0.1;
-      ovni.animar(m.reloj);
-      ovni.matRayo.uniforms.uOpacidad.value = 0.08 + m.brillo * 0.22;
-      ovni.matRayo.uniforms.uColor.value.copy(m.colorA);
+      // La nueva entra girando y frena justo en su lugar (sus vueltas extra terminan en una vuelta entera).
+      const llega = THREE.MathUtils.clamp((k - 0.3) / 0.7, 0, 1);
+      const giroEntrada = saliente ? (1 - suave(llega)) * VUELTA * 2 : 0;
+      vaivenDe(nave.modelo, m.reloj, 0, vaiven);
+      if (GIRA_SOLA[nave.modelo]) {
+        giroLibre += m.dt * (0.3 + m.energia * 1.6 + giroExtra);
+        nave.grupo.rotation.y = giroLibre + giroEntrada;
+      } else {
+        // No gira sola: el toque le da unas vueltas y, cuando se le pasa, vuelve a quedar de frente.
+        vueltaToque += m.dt * giroExtra;
+        if (giroExtra < 0.5) vueltaToque += (Math.round(vueltaToque / VUELTA) * VUELTA - vueltaToque) * Math.min(1, m.dt * 2.5);
+        nave.grupo.rotation.y = vaiven.giroY * libre + vueltaToque + giroEntrada;
+      }
+      // Su forma de volar, a media escala (entera, el triángulo se saldría del aro del espectro). Jugando
+      // no: la nave tiene que estar donde la ves.
+      const desvio = ESCALA_NAVE * 0.5 * libre;
+      nave.grupo.position.set(vaiven.x * desvio, vaiven.y * desvio, 0);
+      nave.grupo.rotation.z = Math.sin(m.reloj * 0.7) * 0.06 + vaiven.giroZ * libre;
+      nave.grupo.rotation.x = 0.1;
+      nave.grupo.scale.setScalar(ESCALA_NAVE * (saliente ? Math.max(0.001, conRebote(llega)) : 1));
+      // Las luces son un ecualizador: cada una sigue una banda.
+      nave.animar(m.reloj, m.espectro);
+      nave.matRayo.uniforms.uOpacidad.value = 0.08 + m.brillo * 0.22;
+      nave.matRayo.uniforms.uColor.value.copy(m.colorA);
+
+      if (saliente) {
+        // La de antes se achica cada vez más rápido, girando, y sube un poco: se la lleva el giro.
+        const sale = Math.min(1, k / 0.5);
+        giroSaliente += m.dt * (2 + sale * 16);
+        saliente.grupo.rotation.y = giroSaliente;
+        saliente.grupo.position.set(desdeSaliente.x, desdeSaliente.y + sale * sale * 0.35, desdeSaliente.z);
+        saliente.grupo.scale.setScalar(ESCALA_NAVE * Math.max(0.001, 1 - sale * sale));
+        saliente.animar(m.reloj, m.espectro);
+        saliente.matRayo.uniforms.uOpacidad.value = (0.08 + m.brillo * 0.22) * (1 - sale);
+        saliente.matRayo.uniforms.uColor.value.copy(m.colorA);
+      }
 
       // Materiales del kit: todos los ovnis y aliens siguen la paleta juntos.
       kit.borde.value.copy(m.colorA);
@@ -251,8 +371,8 @@ export function crearNodriza(kit: Kit): Pieza & { luces: () => THREE.Vector3[]; 
       materialAro.dispose();
       carga.geometry.dispose();
       materialCarga.dispose();
-      ovni.matRayo.dispose();
-      ovni.liberar();
+      nave.liberar();
+      saliente?.liberar();
       barras.dispose();
       picos.dispose();
     },
@@ -352,7 +472,56 @@ type Bailarin = {
 
 type Pareja = { a: Bailarin; b: Bailarin; cambioDesde: number; xa: number; xb: number };
 
-export function crearRave(kit: Kit): Pieza & { cabezas: Float32Array; tocar: (indice: number, reloj: number) => void } {
+// La abducción: baja una nave sobre un bailarín, prende el rayo y lo sube a saltos (en los bombos),
+// lo tiene arriba girando con los brazos en alto, lo baja a su lugar y se va. Segundos de cada parte:
+const ABDUCCION = { baja: 1.4, prende: 0.6, subeMax: 5, arriba: 2.6, devuelve: 1.6, apaga: 0.5, seVa: 1.3 };
+const ESCALA_ABDUCTORA = 0.38;
+/** El rayo de la abductora es más largo y ancho que el de siempre: llega de arriba de la gente hasta el piso. */
+const LARGO_RAYO = 2;
+const ANCHO_RAYO = 1.3;
+/** Del centro de la cabeza de un bailarín (en su escala) hasta el borde de abajo del torso y la coronilla. */
+const PIES_RAVE = -2.35;
+const CORONILLA = 1.15;
+
+type Abduccion = {
+  bailarin: Bailarin;
+  nave: Nave;
+  desde: number;
+  /** 0..1: cuánto subió (suavizado) y hasta dónde quiere llegar (crece a saltos en los bombos). */
+  alto: number;
+  meta: number;
+  /** Desde dónde baja (alto al empezar a devolverlo). */
+  altoBaja: number;
+  /** Cuánto sube en el mundo (lo calcula cada cuadro: depende de la pantalla). */
+  subida: number;
+  /** 0..1: cuánto lo agarra el rayo (mientras, no rebota ni salta con la gente). */
+  agarre: number;
+  /** El desvío de la nave, que lo lleva colgado. */
+  dx: number;
+  giro: number;
+  /** -1 = todavía no. */
+  arribaDesde: number;
+  bajaDesde: number;
+  dejoDesde: number;
+  fase: number;
+  rumbo: number;
+  vaiven: Vaiven;
+};
+
+export type Rave = Pieza & {
+  /** Centro de cada cabeza en el mundo y su radio (x, y, z, r; r = 0 si no se ve): para tocarlos. */
+  cabezas: Float32Array;
+  tocar: (indice: number, reloj: number) => void;
+  /**
+   * Baja una nave y se lleva a ese bailarín por el rayo (el mismo índice que `cabezas`; -1 = uno
+   * cualquiera de los que se ven). false si ya hay una abducción en curso o ese no se puede.
+   */
+  abducir: (indice: number, reloj: number) => boolean;
+  /** Prende o apaga las abducciones solas (una cada 25–45 s, en un bombo). Jugando, apagarlas. */
+  abducirSola: (si: boolean) => void;
+};
+
+export function crearRave(kit: Kit): Rave {
   const g = kit.geo;
   // Instancias: una sola llamada de dibujo por parte para los 22, así la rave es liviana.
   const piel = conBorde(new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45, emissive: 0x0a1a06 }), kit.borde, 0.8, 2.2);
@@ -427,6 +596,137 @@ export function crearRave(kit: Kit): Pieza & { cabezas: Float32Array; tocar: (in
     return local.matrix;
   };
 
+  // ————— Abducción —————
+  let abduccion: Abduccion | null = null;
+  let abducirSola = true;
+  /** Cuándo puede venir la próxima sola (-1: se decide en el primer bombo). */
+  let proximaAbduccion = -1;
+  // Los que se ven en la pantalla de ahora (para elegir a quién llevarse).
+  let visiblesAhora = BAILARINES;
+
+  const parejaDe = (b: Bailarin) => parejas.find((par) => par.a === b || par.b === b) ?? null;
+  const cambiandoDeLugar = (b: Bailarin, reloj: number) => {
+    const par = parejaDe(b);
+    return par !== null && reloj - par.cambioDesde < CAMBIO_DE_LUGAR;
+  };
+
+  const abducir = (indice: number, reloj: number): boolean => {
+    if (abduccion) return false;
+    let b: Bailarin | undefined;
+    if (indice >= 0) {
+      b = bailarines[indice];
+    } else {
+      // Uno que se vea bien: no en las puntas (en un celu parado se cortaría) ni cambiando de lugar.
+      const candidatos = bailarines.filter((c) => c.orden < visiblesAhora && Math.abs(c.x) < 0.75 && !cambiandoDeLugar(c, reloj));
+      b = candidatos.length > 0 ? candidatos[Math.floor(Math.random() * candidatos.length)] : undefined;
+    }
+    if (!b || b.orden >= visiblesAhora || cambiandoDeLugar(b, reloj)) return false;
+
+    const nave = crearNave(kit, elegirModelo(kit));
+    nave.grupo.scale.setScalar(ESCALA_ABDUCTORA);
+    // El rayo se estira desde la panza (la punta del cono queda pegada a la nave).
+    nave.rayo.scale.set(ANCHO_RAYO, LARGO_RAYO, ANCHO_RAYO);
+    nave.rayo.position.y = nave.bajo - PANZA_Y * LARGO_RAYO;
+    nave.matRayo.uniforms.uOpacidad.value = 0;
+    // Se ubica en el próximo cuadro: hasta entonces no se dibuja (si no, saldría un cuadro en el centro).
+    nave.grupo.visible = false;
+    grupo.add(nave.grupo);
+    abduccion = {
+      bailarin: b,
+      nave,
+      desde: reloj,
+      alto: 0,
+      meta: 0,
+      altoBaja: 0,
+      subida: 0,
+      agarre: 0,
+      dx: 0,
+      giro: 0,
+      arribaDesde: -1,
+      bajaDesde: -1,
+      dejoDesde: -1,
+      fase: Math.random() * Math.PI * 2,
+      rumbo: Math.random() < 0.5 ? -1 : 1,
+      vaiven: nuevoVaiven(),
+    };
+    return true;
+  };
+
+  /** Cada cuadro: la nave, el rayo y cuánto subió el bailarín. Va antes de ubicar a la gente. */
+  const moverAbduccion = (m: Musica, ab: Abduccion) => {
+    const b = ab.bailarin;
+    const A = ABDUCCION;
+    const tau = m.reloj - ab.desde;
+    const mv = mitadVisible(b.z, m.aspecto);
+    const s = ESCALA_ABDUCTORA;
+    const baseX = b.xAhora * mv.x * 0.92;
+    const baseY = -mv.y * 0.6;
+    // El rayo llega justo hasta abajo del bailarín; la nave queda arriba, a lo largo del rayo.
+    const pies = baseY + PIES_RAVE * b.escala;
+    const panza = pies + 3.4 * LARGO_RAYO * s * 0.95;
+    const yNave = panza - ab.nave.bajo * s;
+    const yAfuera = 0.6 + mv.y + 1.6;
+    // Sube hasta media altura del rayo (más arriba el cono es finito y quedaría afuera).
+    ab.subida = Math.max(0, panza - 0.12 - (baseY + CORONILLA * b.escala)) * 0.72;
+
+    // El rayo prende y apaga con fundido y su brillo sigue la curva lenta.
+    const luz =
+      ab.dejoDesde < 0
+        ? suave(THREE.MathUtils.clamp((tau - A.baja + 0.25) / A.prende, 0, 1))
+        : 1 - suave(THREE.MathUtils.clamp((m.reloj - ab.dejoDesde) / A.apaga, 0, 1));
+    ab.agarre = luz;
+
+    if (ab.bajaDesde < 0) {
+      // Sube a saltos: cada bombo lo empuja un poco y entre bombo y bombo sube despacio igual.
+      if (tau > A.baja + A.prende * 0.5) {
+        ab.meta = Math.min(1, ab.meta + m.dt * 0.07 + (m.golpeAhora ? 0.2 : 0));
+        if (tau > A.baja + A.prende + A.subeMax) ab.meta = 1;
+      }
+      ab.alto += (ab.meta - ab.alto) * Math.min(1, m.dt * 4);
+      if (ab.arribaDesde < 0 && ab.alto > 0.985) ab.arribaDesde = m.reloj;
+      if (ab.arribaDesde >= 0 && m.reloj - ab.arribaDesde > A.arriba) {
+        ab.bajaDesde = m.reloj;
+        ab.altoBaja = ab.alto;
+      }
+    } else if (ab.dejoDesde < 0) {
+      const k = THREE.MathUtils.clamp((m.reloj - ab.bajaDesde) / A.devuelve, 0, 1);
+      ab.alto = ab.altoBaja * (1 - suave(k));
+      if (k >= 1) {
+        ab.dejoDesde = m.reloj;
+        ab.alto = 0;
+      }
+    }
+    // Arriba gira despacio; al bajar termina la vuelta, así queda mirando como antes.
+    ab.giro += m.dt * 1.6 * ab.alto;
+    if (ab.bajaDesde >= 0) ab.giro += (Math.round(ab.giro / (Math.PI * 2)) * Math.PI * 2 - ab.giro) * Math.min(1, m.dt * 3);
+
+    // La nave: baja desde arriba de la pantalla, se queda (con su vaivén a medias, para no soltar al
+    // bailarín) y, cuando lo dejó, se va para arriba acelerando.
+    let y: number;
+    if (ab.dejoDesde < 0) {
+      y = yAfuera + (yNave - yAfuera) * suave(THREE.MathUtils.clamp(tau / A.baja, 0, 1));
+    } else {
+      const k = THREE.MathUtils.clamp((m.reloj - ab.dejoDesde - A.apaga * 0.6) / A.seVa, 0, 1);
+      y = yNave + (yAfuera + 2 - yNave) * k * k;
+    }
+    vaivenDe(ab.nave.modelo, m.reloj, ab.fase, ab.vaiven);
+    ab.dx = ab.vaiven.x * s * 0.3;
+    ab.nave.grupo.visible = true;
+    ab.nave.grupo.position.set(baseX + ab.dx, y + ab.vaiven.y * s * 0.3, b.z);
+    orientarNave(ab.nave.grupo, ab.nave.modelo, ab.rumbo, 0, ab.vaiven);
+    ab.nave.grupo.rotation.x = 0.12;
+    ab.nave.animar(m.reloj, m.espectro);
+    ab.nave.matRayo.uniforms.uOpacidad.value = luz * (0.16 + m.brillo * 0.4);
+    ab.nave.matRayo.uniforms.uColor.value.copy(m.colorA);
+
+    if (ab.dejoDesde >= 0 && m.reloj - ab.dejoDesde > A.apaga * 0.6 + A.seVa) {
+      grupo.remove(ab.nave.grupo);
+      ab.nave.liberar();
+      abduccion = null;
+      proximaAbduccion = m.reloj + azar(25, 45);
+    }
+  };
+
   return {
     obj: grupo,
     cabezas: centros,
@@ -437,8 +737,13 @@ export function crearRave(kit: Kit): Pieza & { cabezas: Float32Array; tocar: (in
       b.saltoAlto = azar(1.3, 1.8);
       b.vueltaDesde = reloj;
     },
+    abducir,
+    abducirSola: (si) => {
+      abducirSola = si;
+    },
     actualizar: (m) => {
       const visibles = Math.round(BAILARINES * THREE.MathUtils.clamp(m.aspecto, 0.6, 1));
+      visiblesAhora = visibles;
 
       // Olas: los graves fuertes largan una que cruza desde una punta (en el drop, desde el medio).
       const drop = m.drop > 0.95;
@@ -446,16 +751,27 @@ export function crearRave(kit: Kit): Pieza & { cabezas: Float32Array; tocar: (in
         olaDesde = m.reloj;
         const origen = drop ? 0 : Math.random() < 0.5 ? -1 : 1;
         for (const b of bailarines) {
+          // El que ya está en el aire termina su salto (si no, caería al piso de un cuadro al otro).
+          const enElAire = m.reloj - b.saltoDesde < 0.45 && m.reloj >= b.saltoDesde;
+          if (enElAire) continue;
           b.saltoDesde = m.reloj + Math.abs(b.x - origen) * OLA_SEG_POR_UNIDAD;
           b.saltoAlto = (drop ? 0.7 : 0.45) * (0.6 + m.graves);
         }
       }
 
+      // Abducción sola: cada tanto, en un bombo (no en el drop, que ya tiene lo suyo).
+      if (abducirSola && abduccion === null && m.golpeAhora && m.drop < 0.3) {
+        if (proximaAbduccion < 0) proximaAbduccion = m.reloj + azar(10, 20);
+        else if (m.reloj >= proximaAbduccion && !abducir(-1, m.reloj)) proximaAbduccion = m.reloj + 3;
+      }
+
       for (const par of parejas) {
         // Redoblante: algunas parejas chocan las manos.
         if (m.chasquidoAhora && Math.random() < 0.35) par.a.aplausoDesde = par.b.aplausoDesde = m.reloj;
-        // De vez en cuando, en un bombo, cambian de lugar girando una alrededor de la otra.
-        if (m.golpeAhora && m.reloj - par.cambioDesde > 4 && Math.random() < 0.025 * (0.5 + m.energia)) {
+        // De vez en cuando, en un bombo, cambian de lugar girando una alrededor de la otra (no si a uno
+        // se lo está llevando una nave).
+        const ocupada = abduccion !== null && (abduccion.bailarin === par.a || abduccion.bailarin === par.b);
+        if (m.golpeAhora && !ocupada && m.reloj - par.cambioDesde > 4 && Math.random() < 0.025 * (0.5 + m.energia)) {
           par.cambioDesde = m.reloj;
           par.xa = par.a.x;
           par.xb = par.b.x;
@@ -486,6 +802,9 @@ export function crearRave(kit: Kit): Pieza & { cabezas: Float32Array; tocar: (in
         par.a.giroExtra = par.b.giroExtra = 0;
       }
 
+      if (abduccion) moverAbduccion(m, abduccion);
+      const llevado = abduccion;
+
       bailarines.forEach((b, i) => {
         centros[i * 4 + 3] = 0;
         if (b.orden >= visibles) {
@@ -510,9 +829,18 @@ export function crearRave(kit: Kit): Pieza & { cabezas: Float32Array; tocar: (in
         const rebote = m.golpe * 0.07 + m.espectro[b.banda] * 0.16;
         // Choque de caderas: en cada bombo se arriman a la pareja.
         const arrime = conPareja * m.golpe * 0.06;
+        // Si se lo lleva el rayo: deja de bailar con la gente, sube colgado de la nave y flota girando.
+        const ab = llevado !== null && llevado.bailarin === b ? llevado : null;
+        const agarre = ab ? ab.agarre : 0;
+        const suelto = 1 - agarre;
+        const flota = ab ? ab.alto * ab.subida + Math.sin(m.reloj * 2.3 + b.fase) * 0.05 * ab.alto : 0;
 
         // Arriba de la barra del player, que tapa el borde de abajo en el celu.
-        raiz.position.set(b.xAhora * mv.x * 0.92 + arrime, -mv.y * 0.6 + rebote + salto, b.z + b.zExtra);
+        raiz.position.set(
+          b.xAhora * mv.x * 0.92 + arrime * suelto + (ab ? ab.dx * ab.alto : 0),
+          -mv.y * 0.6 + (rebote + salto) * suelto + flota,
+          b.z + b.zExtra
+        );
         // Se miran con la pareja (más cuanto más suenan los medios); con dedo o mouse, todos lo miran a él.
         const metaMira = kit.mirada.activa
           ? THREE.MathUtils.clamp(Math.atan2(kit.mirada.punto.x - raiz.position.x, kit.mirada.punto.z - b.z), -0.8, 0.8)
@@ -522,7 +850,9 @@ export function crearRave(kit: Kit): Pieza & { cabezas: Float32Array; tocar: (in
         const vuelta = v >= 0 && v < 1 ? suave(v) * Math.PI * 2 : 0;
         // El vaivén es espejado entre los dos de la pareja (mismo compás, signo contrario).
         const vaiven = Math.sin(m.reloj * 2 + b.fase) * 0.06 * (conPareja || 1);
-        raiz.rotation.set(0, Math.sin(m.reloj + b.fase) * 0.12 + b.mira + vuelta + b.giroExtra, vaiven);
+        // Colgado del rayo se mece como sin gravedad.
+        const mecido = ab ? Math.sin(m.reloj * 1.7 + b.fase) * 0.2 * ab.alto : 0;
+        raiz.rotation.set(0, Math.sin(m.reloj + b.fase) * 0.12 + b.mira + vuelta + b.giroExtra + (ab ? ab.giro : 0), vaiven * suelto + mecido);
         raiz.scale.setScalar(b.escala);
         raiz.updateMatrix();
         centros[i * 4] = raiz.position.x;
@@ -554,7 +884,8 @@ export function crearRave(kit: Kit): Pieza & { cabezas: Float32Array; tocar: (in
         // Brazos: en el drop todos arriba (y el que tocaron mientras gira, y los que hacen la ola); si
         // no, cada uno baila a su manera.
         const enOla = saltando && m.reloj - olaDesde < 2.5;
-        const metaAlzada = Math.max(Math.min(1, m.drop * 1.6), saltando && (b.estilo === 0 || enOla) ? 1 : 0, v >= 0 && v < 1.6 ? 1 : 0);
+        // El que se lleva el rayo, con los brazos arriba todo el viaje.
+        const metaAlzada = Math.max(Math.min(1, m.drop * 1.6), saltando && (b.estilo === 0 || enOla) ? 1 : 0, v >= 0 && v < 1.6 ? 1 : 0, agarre);
         const rapidez = Math.min(1, m.dt * 12);
         b.alzada += (metaAlzada - b.alzada) * rapidez;
         b.puno += (m.golpe - b.puno) * Math.min(1, m.dt * 25);
@@ -581,6 +912,7 @@ export function crearRave(kit: Kit): Pieza & { cabezas: Float32Array; tocar: (in
     liberar: () => {
       piel.dispose();
       partes.forEach((p) => p.dispose());
+      abduccion?.nave.liberar();
     },
   };
 }

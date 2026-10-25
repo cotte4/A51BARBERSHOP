@@ -1,6 +1,10 @@
 import * as THREE from "three";
 import { mergeGeometries, mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { crearPelota, VERDE_3D } from "@/app/torneo/_pelota3d";
+import type { ModeloNave } from "@/lib/estudio-naves";
+// _naveFlota también importa de acá (cabeza del piloto, rayo): el ciclo es seguro porque ninguno de
+// los dos usa al otro al cargarse, solo adentro de funciones.
+import { crearNave, elegirModelo, vaivenDe, type MoldeNave, type Nave, type TinteNave, type Vaiven } from "./_naveFlota";
 import { conBorde, crearTexturaAnillo, crearTexturaPlaneta, type ColorCompartido } from "./_naveMateriales";
 
 // Los actores sueltos de la nave: ovnis, aliens, la pelota alien, planetas, ondas y chispas.
@@ -47,10 +51,17 @@ export type Actor = {
  */
 export type Mirada = { activa: boolean; punto: THREE.Vector3 };
 
+/**
+ * Lo que suena, para los actores sueltos (su `mover` no recibe la música). Es el mismo objeto
+ * `Musica` de _Nave.tsx: la nodriza lo apunta en `kit.sonido` en cada cuadro. Con él las luces de
+ * las naves hacen de ecualizador y la batalla de fondo dispara en los chasquidos.
+ */
+export type Sonido = { espectro: Float32Array; brillo: number; golpeAhora: boolean; chasquidoAhora: boolean };
+
 const tmpMirada = new THREE.Vector3();
 
 /** Giro (y) e inclinación (x) para que algo en `objeto` mire al punto de la mirada, con tope. */
-function anguloHacia(objeto: THREE.Object3D, mirada: Mirada, tope: number): [number, number] {
+export function anguloHacia(objeto: THREE.Object3D, mirada: Mirada, tope: number): [number, number] {
   objeto.updateWorldMatrix(true, false);
   const local = objeto.worldToLocal(tmpMirada.copy(mirada.punto));
   const giro = THREE.MathUtils.clamp(Math.atan2(local.x, local.z), -tope, tope);
@@ -232,7 +243,8 @@ export const CUERPO = { y: -1.82, hombroX: 0.29, hombroY: -1.52, caderaX: 0.14, 
 // con un escalón que agarra los reflejos. Arriba, la cúpula de vidrio con un piloto adentro.
 
 const v2 = (x: number, y: number) => new THREE.Vector2(x, y);
-const PANZA_Y = -0.34;
+/** Donde termina la panza del platillo: de ahí sale el rayo (la punta del cono queda acá). */
+export const PANZA_Y = -0.34;
 
 function crearGeometriasOvni() {
   const panza = new THREE.LatheGeometry(
@@ -329,6 +341,12 @@ export function crearKit() {
   const pelota = crearPelota();
   const puntoRedondo = crearPuntoRedondo();
   const mirada: Mirada = { activa: false, punto: new THREE.Vector3() };
+  // Las naves dominantes del tema que suena (las escribe _Nave.tsx con el mundo del tema): elegirModelo
+  // sale de acá la mayoría de las veces.
+  const flota: ModeloNave[] = ["platillo"];
+  // Lo de la flota se arma la primera vez que hace falta (_naveFlota.ts) y queda para todas las naves.
+  const moldes = new Map<ModeloNave, MoldeNave>();
+  const tintes = new Map<number, TinteNave>();
 
   return {
     borde,
@@ -351,6 +369,11 @@ export function crearKit() {
     pelota,
     puntoRedondo,
     mirada,
+    flota,
+    moldes,
+    tintes,
+    // Lo apunta la nodriza al objeto de la música en cada cuadro; null hasta el primero.
+    sonido: null as Sonido | null,
   };
 }
 
@@ -378,6 +401,13 @@ export function liberarKit(kit: Kit) {
   [kit.casco, kit.panza, kit.cupula, kit.aroRosa, kit.luz, kit.motor, kit.pielVerde, kit.pielRosa, kit.traje, kit.ojo, kit.brillo, kit.boca, ...kit.planetaMats].forEach(
     (m) => m.dispose()
   );
+  kit.moldes.forEach((molde) => molde.propias.forEach((g) => g.dispose()));
+  kit.moldes.clear();
+  kit.tintes.forEach((tinte) => {
+    tinte.aro.dispose();
+    tinte.luz.dispose();
+  });
+  kit.tintes.clear();
   kit.pelota.grupo.traverse((obj) => {
     if (obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments) {
       obj.geometry.dispose();
@@ -387,15 +417,16 @@ export function liberarKit(kit: Kit) {
 }
 
 // ————————————————————————————— Ovni —————————————————————————————
-
-const LUCES_OVNI = 14;
+// Las naves viven en _naveFlota.ts (seis modelos de la misma familia). El ovni de siempre es el
+// platillo: crearOvni queda para los que no eligen modelo. Los del show salen de la flota del tema
+// (elegirModelo) y vuelan cada uno a su manera (vaivenDe + orientarNave).
 
 /**
  * El rayo tractor: más fuerte pegado al ovni, con los bordes más prendidos que el centro (se lee
  * como un volumen, no como un cono) y franjas suaves que bajan despacio (< 1 por segundo, bajo
  * contraste: no es un destello).
  */
-function crearMaterialRayo() {
+export function crearMaterialRayo() {
   return new THREE.ShaderMaterial({
     uniforms: {
       uColor: { value: new THREE.Color(VERDE_3D) },
@@ -436,73 +467,38 @@ function crearMaterialRayo() {
   });
 }
 
-export type Ovni = ReturnType<typeof crearOvni>;
+export type Ovni = Nave;
 
-export function crearOvni(kit: Kit) {
-  const grupo = new THREE.Group();
-  const g = kit.geo;
-  grupo.add(
-    new THREE.Mesh(g.panza, kit.panza),
-    new THREE.Mesh(g.casco, kit.casco),
-    new THREE.Mesh(g.banda, kit.aroRosa),
-    new THREE.Mesh(g.motor, kit.motor),
-    new THREE.Mesh(g.nucleo, kit.motor)
-  );
-
-  // El piloto: una cabecita mirando para todos lados adentro de la cúpula.
-  const piloto = crearCabezaAlien(kit, kit.pielVerde);
-  piloto.grupo.scale.setScalar(0.24);
-  piloto.grupo.position.y = 0.5;
-  grupo.add(piloto.grupo);
-  const cupula = new THREE.Mesh(g.cupula, kit.cupula);
-  cupula.renderOrder = 1;
-  grupo.add(cupula);
-
-  // Las 14 luces son una sola instancia: una llamada de dibujo por ovni, no 14.
-  const luces = new THREE.InstancedMesh(g.luz, kit.luz, LUCES_OVNI);
-  luces.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  const lugares = Array.from({ length: LUCES_OVNI }, (_, i) => {
-    const a = (i / LUCES_OVNI) * Math.PI * 2;
-    return new THREE.Vector3(Math.cos(a) * 1.47, 0.09, Math.sin(a) * 1.47);
-  });
-  const luz = new THREE.Object3D();
-  grupo.add(luces);
-  // El piloto gira la cabeza hacia el dedo con un poco de retraso, como si lo siguiera con la vista.
-  let giroPiloto = 0;
-
-  const matRayo = crearMaterialRayo();
-  const rayo = new THREE.Mesh(g.rayo, matRayo);
-  grupo.add(rayo);
-
-  return {
-    grupo,
-    rayo,
-    matRayo,
-    liberar: () => luces.dispose(),
-    /** Dónde están las luces en el mundo (de ahí salen los láseres de la nodriza). */
-    posicionesLuces: () => lugares.map((lugar) => lugar.clone().applyMatrix4(luces.matrixWorld)),
-    /** Luces que corren en ronda, el piloto que mira y las franjas del rayo. */
-    animar: (t: number) => {
-      luces.rotation.y = t * 0.6;
-      lugares.forEach((lugar, i) => {
-        luz.position.copy(lugar);
-        luz.scale.setScalar(0.75 + 0.5 * (0.5 + 0.5 * Math.sin(t * 5 - i * 0.9)));
-        luz.updateMatrix();
-        luces.setMatrixAt(i, luz.matrix);
-      });
-      luces.instanceMatrix.needsUpdate = true;
-      const meta = kit.mirada.activa ? anguloHacia(grupo, kit.mirada, 1.4)[0] : Math.sin(t * 1.3) * 0.6;
-      giroPiloto += (meta - giroPiloto) * 0.12;
-      piloto.grupo.rotation.y = giroPiloto;
-      piloto.animar(t);
-      matRayo.uniforms.uTiempo.value = t;
-    },
-  };
+export function crearOvni(kit: Kit): Nave {
+  return crearNave(kit, "platillo");
 }
+
+/** El cigarro y el triángulo tienen la nariz en +x: miran para donde van. Las demás son redondas. */
+export function tieneNariz(modelo: ModeloNave): boolean {
+  return modelo === "cigarro" || modelo === "triangulo";
+}
+
+/**
+ * Orienta una nave de la flota que va hacia `rumbo` (1 = +x, -1 = -x) y le suma los giros de su
+ * vaivén (ya calculado con vaivenDe). Las de nariz se dan vuelta para mirar a donde van y el vaivén
+ * les sube y baja la nariz; las redondas se inclinan `banco` (radianes, con signo). rotation.x no se
+ * toca: cada uno la pone para mostrar el techo.
+ */
+export function orientarNave(grupo: THREE.Object3D, modelo: ModeloNave, rumbo: number, banco: number, vaiven: Vaiven) {
+  if (tieneNariz(modelo)) {
+    grupo.rotation.y = (rumbo < 0 ? Math.PI : 0) + vaiven.giroY;
+    grupo.rotation.z = vaiven.giroZ;
+  } else {
+    grupo.rotation.y = vaiven.giroY;
+    grupo.rotation.z = banco + vaiven.giroZ;
+  }
+}
+
+export const nuevoVaiven = (): Vaiven => ({ x: 0, y: 0, giroY: 0, giroZ: 0 });
 
 // ————————————————————————————— Alien —————————————————————————————
 
-function crearCabezaAlien(kit: Kit, piel: THREE.Material) {
+export function crearCabezaAlien(kit: Kit, piel: THREE.Material) {
   const grupo = new THREE.Group();
   const g = kit.geo;
   grupo.add(new THREE.Mesh(g.cabeza, piel), new THREE.Mesh(g.boca, kit.boca));
@@ -633,59 +629,75 @@ function festejoDesde(desde: number, t: number) {
 export function nacerActor(tipo: string, kit: Kit, t: number, aspecto: number): Actor {
   switch (tipo) {
     case "ovni-cruza": {
-      const ovni = crearOvni(kit);
-      const { grupo, matRayo } = ovni;
+      // Una nave de la flota del tema (o cualquiera, a veces) cruza la pantalla con su forma de volar.
+      const nave = crearNave(kit, elegirModelo(kit));
+      const { grupo, matRayo } = nave;
       const z = azar(-5, 1);
       const m = mitadVisible(z, aspecto);
       const desde = Math.random() < 0.5 ? -1 : 1;
+      const rumbo = -desde;
       const y0 = azar(-m.y * 0.3, m.y * 0.7);
+      const escala = azar(0.55, 0.95);
+      const fase = Math.random() * Math.PI * 2;
+      const vaiven = nuevoVaiven();
       grupo.position.z = z;
-      grupo.scale.setScalar(azar(0.55, 0.95));
+      grupo.scale.setScalar(escala);
       return {
         obj: grupo,
         clase: "ovni",
-        radio: 1.7,
+        radio: nave.alcance + 0.05,
         nace: t,
         vida: azar(4.5, 7),
         propios: [matRayo],
-        liberar: ovni.liberar,
+        liberar: nave.liberar,
         mover: (p, tt, g) => {
-          grupo.position.x = desde * (m.x + 3) * (1 - 2 * p);
-          grupo.position.y = y0 + Math.sin(p * Math.PI * 3) * 0.6;
-          // Se inclina hacia donde va, como un platillo de verdad.
-          grupo.rotation.z = -desde * 0.25 + Math.sin(tt * 3) * 0.08;
+          vaivenDe(nave.modelo, tt, fase, vaiven);
+          grupo.position.x = desde * (m.x + 3) * (1 - 2 * p) + rumbo * vaiven.x * escala;
+          grupo.position.y = y0 + Math.sin(p * Math.PI * 3) * 0.6 + vaiven.y * escala;
+          // Las redondas se inclinan hacia donde van, como un platillo de verdad; las de nariz miran para allá.
+          orientarNave(grupo, nave.modelo, rumbo, -desde * 0.25, vaiven);
           grupo.rotation.x = 0.18;
-          ovni.animar(tt);
+          nave.animar(tt, kit.sonido?.espectro);
           matRayo.uniforms.uOpacidad.value = 0.05 + g * 0.35;
         },
       };
     }
     case "ovni-baja": {
-      const ovni = crearOvni(kit);
-      const { grupo, matRayo } = ovni;
+      const nave = crearNave(kit, elegirModelo(kit));
+      const { grupo, matRayo } = nave;
       const z = azar(-3, 0);
       const m = mitadVisible(z, aspecto);
       const x = azar(-m.x * 0.6, m.x * 0.6);
+      const escala = azar(0.6, 0.8);
+      // Quieta no va a ningún lado: las de nariz miran para un costado cualquiera.
+      const rumbo = Math.random() < 0.5 ? -1 : 1;
+      const fase = Math.random() * Math.PI * 2;
+      const vaiven = nuevoVaiven();
       grupo.position.set(x, m.y + 3, z);
-      grupo.scale.setScalar(azar(0.6, 0.8));
+      grupo.scale.setScalar(escala);
       return {
         obj: grupo,
         clase: "ovni",
-        radio: 1.7,
+        radio: nave.alcance + 0.05,
         nace: t,
         vida: azar(5, 7),
         propios: [matRayo],
-        liberar: ovni.liberar,
+        liberar: nave.liberar,
         mover: (p, tt, g) => {
-          // Baja, se queda abduciendo y se va disparado para arriba.
+          // Baja, se queda abduciendo y se va disparado para arriba. El vaivén va a medias: el rayo
+          // tiene que quedar más o menos en el mismo lugar.
+          vaivenDe(nave.modelo, tt, fase, vaiven);
           const arriba = m.y + 3;
           const quieto = m.y * 0.35;
           grupo.position.y =
-            p < 0.2 ? arriba + (quieto - arriba) * suave(p / 0.2) : p < 0.8 ? quieto + Math.sin(tt * 2) * 0.15 : quieto + (arriba + 6 - quieto) * suave((p - 0.8) / 0.2);
-          grupo.position.x = x + Math.sin(tt * 1.3) * 0.3;
+            (p < 0.2 ? arriba + (quieto - arriba) * suave(p / 0.2) : p < 0.8 ? quieto + Math.sin(tt * 2) * 0.15 : quieto + (arriba + 6 - quieto) * suave((p - 0.8) / 0.2)) +
+            vaiven.y * escala * 0.5;
+          grupo.position.x = x + Math.sin(tt * 1.3) * 0.3 + vaiven.x * escala * 0.5;
+          orientarNave(grupo, nave.modelo, rumbo, 0, vaiven);
           grupo.rotation.x = 0.12;
-          ovni.animar(tt);
-          const abduciendo = p > 0.2 && p < 0.8 ? 1 : 0;
+          nave.animar(tt, kit.sonido?.espectro);
+          // El rayo prende y apaga con fundido (~0,4 s), nunca de un cuadro al otro.
+          const abduciendo = p < 0.18 ? 0 : p < 0.26 ? suave((p - 0.18) / 0.08) : p < 0.74 ? 1 : p < 0.82 ? 1 - suave((p - 0.74) / 0.08) : 0;
           matRayo.uniforms.uOpacidad.value = abduciendo * (0.12 + g * 0.5);
         },
       };

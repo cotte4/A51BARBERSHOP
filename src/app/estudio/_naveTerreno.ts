@@ -478,7 +478,8 @@ type Bioma = {
 
 type Crater = { activo: boolean; c: number; f: number; radio: number; hondo: number };
 
-export function crearTerreno(kit: Kit): Pieza & { cambiarBioma: (nombre?: NombreBioma) => void } {
+/** `inicial`: el bioma con el que arranca el piso (el del mundo del tema); sin él, uno al azar. */
+export function crearTerreno(kit: Kit, inicial?: NombreBioma): Pieza & { cambiarBioma: (nombre?: NombreBioma) => void } {
   const geometria = new THREE.PlaneGeometry(ANCHO_TERRENO, LARGO_TERRENO, COLUMNAS - 1, FILAS - 1);
   geometria.rotateX(-Math.PI / 2);
   const posiciones = geometria.attributes.position as THREE.BufferAttribute;
@@ -623,7 +624,7 @@ export function crearTerreno(kit: Kit): Pieza & { cambiarBioma: (nombre?: Nombre
     }),
   };
 
-  let actual = biomas[elegir(BIOMAS)];
+  let actual = biomas[inicial ?? elegir(BIOMAS)];
   let anterior = actual;
   let transicion = 1;
   let filaGlobal = 0;
