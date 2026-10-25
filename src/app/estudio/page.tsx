@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { listarTemas } from "@/lib/estudio";
+import { notFound } from "next/navigation";
+import { getEstudioActor, listarTemas } from "@/lib/estudio";
+import { resumenJuego } from "@/lib/estudio-juego";
 import BrandMark from "@/components/BrandMark";
 import EstudioClient from "./_EstudioClient";
 
@@ -9,7 +11,12 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Estudio · A51" };
 
 export default async function EstudioPage() {
-  const temas = await listarTemas();
+  // El layout ya corta a los de afuera, pero se arma en paralelo con la página: el récord y la nave
+  // son de cada uno, así que acá también hace falta saber quién es.
+  const actor = await getEstudioActor();
+  if (!actor) notFound();
+
+  const [temas, juego] = await Promise.all([listarTemas(), resumenJuego(actor)]);
 
   return (
     <div className="app-shell min-h-screen">
@@ -23,7 +30,7 @@ export default async function EstudioPage() {
       </header>
 
       <main className="relative mx-auto flex max-w-xl flex-col gap-6 px-4 py-6 pb-40">
-        <EstudioClient temas={temas} />
+        <EstudioClient temas={temas} juego={juego} />
       </main>
     </div>
   );

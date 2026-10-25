@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
@@ -9,10 +10,14 @@ import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { crearLimitador60, usarMovimientoReducido } from "@/app/torneo/_movimiento";
 import { liberarEscena, VERDE_3D } from "@/app/torneo/_pelota3d";
+import type { ResumenJuego } from "@/lib/estudio-juego";
+import { MODELOS, nuevasDesbloqueadas, type ModeloNave } from "@/lib/estudio-naves";
 import { analizarTema, BANDAS, CUADROS_POR_SEG, primerEventoDesde, type Analisis } from "./_analisis";
+import Hangar from "./_Hangar";
 import Marcador from "./_Marcador";
-import { crearNebulosa, nacerEscena, SORTEO_COSTADO, type TipoCostado } from "./_naveEscenas";
-import { crearJuego, type EstadoJuego } from "./_naveJuego";
+import { crearFormacion, crearNebulosa, ESCENAS_GRANDES, nacerEscena, SORTEO_COSTADO, type TextoFormacion } from "./_naveEscenas";
+import { crearNave, prepararFlota } from "./_naveFlota";
+import { crearJuego, type EstadoJuego, type OpcionesPartida, type ResultadoPartida } from "./_naveJuego";
 import {
   azar,
   CAMARA_Z,
@@ -28,6 +33,7 @@ import {
   type Actor,
 } from "./_naveKit";
 import { crearEntorno, SHADER_TERMINACION } from "./_naveMateriales";
+import { mundoDeTema, PALETAS, type MundoTema } from "./_naveMundo";
 import { crearLaseres, crearNodriza, crearRave, crearTunel, type Musica } from "./_naveShow";
 import { crearTerreno } from "./_naveTerreno";
 import { crearOnditas, crearToques, type Limites } from "./_naveToque";
@@ -35,19 +41,24 @@ import { crearOnditas, crearToques, type Limites } from "./_naveToque";
 // La nave del Estudio: aparece al dar play y se va al pausar. Un show armado con el tema que
 // suena (ver _analisis.ts): la nodriza con el espectro alrededor, el túnel, el terreno, la rave
 // de aliens y los láseres, más ovnis, aliens, la pelota alien y planetas que salen al azar en
-// los bombos. En cada drop cambia la paleta y explota todo.
+// los bombos. En cada drop cambia la paleta, la flota escribe "51" o "A" en el cielo y explota todo.
+//
+// Cada tema tiene su mundo (_naveMundo.ts): arranca con su paleta, su bioma y sus naves dominantes.
+// La nodriza es la nave que cada uno eligió en el hangar, en el show y en el juego.
 //
 // En modo nave (pantalla completa) se toca todo: los actores reaccionan (_naveToque.ts), el mouse
 // que pasa o el dedo que barre los empuja, la gente mira al puntero, la nodriza se arrastra y,
-// mantenida apretada, arranca el jueguito de esquivar meteoritos (_naveJuego.ts).
+// mantenida apretada, arranca el jueguito de esquivar meteoritos (_naveJuego.ts). Al terminar, el
+// cartel guarda el récord del tema y abre el hangar.
 
 const FONDO = 0x040705;
 const MAX_ACTORES = 12;
 // Escenas de los costados (_naveEscenas.ts): llevan su propio tope, así no le quitan lugar a los del
-// centro. Las grandes (cada una trae ovnis o un alien) van de a dos como mucho.
+// centro. Las grandes (cada una trae naves o un alien) van de a dos como mucho.
 const MAX_ESCENAS = 4;
 const MAX_ESCENAS_GRANDES = 2;
-const ESCENAS_GRANDES: readonly TipoCostado[] = ["portal", "escuadron", "satelite", "vaca", "jetpack"];
+/** Cuadros que se dibujan las naves de muestra (invisibles) para que three compile sus programas al arrancar. */
+const CUADROS_PRECALENTAR = 2;
 // Fotosensibilidad (WCAG 2.3.1 pide no más de 3 destellos por segundo): láseres, ondas, chispas
 // y drops comparten un tope de 2 por segundo; lo que se pasa, se saltea.
 const MAX_DESTELLOS_POR_SEG = 2;
@@ -79,15 +90,6 @@ const GANANCIA_DEDO = 1.3;
 
 type Modo = "nada" | "nodriza" | "arrastre" | "barrer" | "juego";
 
-const PALETAS: [number, number][] = [
-  [VERDE_3D, ROSA_3D],
-  [0x2de2ff, 0xa05bff],
-  [ROSA_3D, 0xffd23f],
-  [VERDE_3D, 0x2de2ff],
-  // Sin rojos saturados: son los que más riesgo tienen en destellos.
-  [0x7dffb2, 0x5b8cff],
-];
-
 /**
  * Una banda del ecualizador: sube rápido (~50 ms) y baja despacio. No sube de golpe en un cuadro:
  * las barras son un área grande y un salto instantáneo en cada bombo se siente como destello.
@@ -109,9 +111,18 @@ type Props = {
   interactiva: boolean;
   /** Avisa cuando empieza o termina el juego (mientras, la barra del player no sale). */
   onJuego?: (jugando: boolean) => void;
+  /** El jueguito en la base: la nave elegida (la nodriza), el mejor récord y los récords de cada tema. */
+  resumen: ResumenJuego;
+  /**
+   * Terminó una partida: la guarda sin frenar nada. Devuelve las naves que destrabó según la base,
+   * o null si no se pudo guardar (el cartel se queda con la cuenta local).
+   */
+  onPartida: (temaId: string, resultado: ResultadoPartida) => Promise<ModeloNave[] | null>;
+  /** "Usar esta" del hangar: cambia la nave al toque y la guarda; si no se pudo, rechaza con el motivo. */
+  onElegirNave: (modelo: ModeloNave) => Promise<void>;
 };
 
-export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }: Props) {
+export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, resumen, onPartida, onElegirNave }: Props) {
   const contenedor = useRef<HTMLDivElement>(null);
   const capaEtiquetas = useRef<HTMLDivElement>(null);
   // La nave es lo que se viene a ver y solo corre con play, así que se muestra aunque el sistema pida
@@ -125,9 +136,20 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
   const despertarRef = useRef<(() => void) | null>(null);
   const interactivaRef = useRef(interactiva);
   const onJuegoRef = useRef(onJuego);
+  // El efecto de three lee estos en cada cuadro (el tema, la nave elegida) o al terminar una partida.
+  const temaIdRef = useRef(temaId);
+  const resumenRef = useRef(resumen);
+  const onPartidaRef = useRef(onPartida);
+  const hangarRef = useRef(false);
   // Los botones del marcador (React) llaman al juego, que vive adentro del efecto de three.
   const accionesRef = useRef<{ salir: () => void; otraVez: () => void } | null>(null);
   const [juego, setJuego] = useState<EstadoJuego | null>(null);
+  // Las naves que destrabó la partida que acaba de terminar (el cartel las anuncia).
+  const [desbloqueos, setDesbloqueos] = useState<ModeloNave[]>([]);
+  const [hangar, setHangar] = useState(false);
+  const cerrarHangar = useCallback(() => setHangar(false), []);
+  // Solo existe en modo nave y desde el cartel del juego.
+  const hangarAbierto = hangar && interactiva && juego !== null;
 
   useEffect(() => {
     sonandoRef.current = sonando;
@@ -143,6 +165,19 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
   }, [onJuego]);
 
   useEffect(() => {
+    resumenRef.current = resumen;
+  }, [resumen]);
+
+  useEffect(() => {
+    onPartidaRef.current = onPartida;
+  }, [onPartida]);
+
+  useEffect(() => {
+    hangarRef.current = hangarAbierto;
+  }, [hangarAbierto]);
+
+  useEffect(() => {
+    temaIdRef.current = temaId;
     analisisRef.current = null;
     analizandoRef.current = false;
     if (!temaId) return;
@@ -219,19 +254,42 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
     escena.add(luzA, luzB, luzBlanca);
 
     const kit = crearKit();
+    // El mundo del tema que suena (paleta, bioma y flota) está desde el primer cuadro.
+    const mundoInicial = temaIdRef.current ? mundoDeTema(temaIdRef.current) : null;
+    if (mundoInicial) kit.flota = mundoInicial.flota;
+    // Las geometrías de los 6 modelos se arman ahora, mientras la nave aparece: el show saca naves de
+    // cualquier modelo y armar una en medio de un tema es un tirón (el triángulo es la más cara).
+    prepararFlota(kit);
     const estrellas = crearEstrellas(1400, kit.puntoRedondo);
     escena.add(estrellas.puntos);
     const halo = crearHalo();
     escena.add(halo);
 
     const nebulosa = crearNebulosa();
-    const nodriza = crearNodriza(kit);
+    const nodriza = crearNodriza(kit, resumenRef.current.naveElegida);
     const tunel = crearTunel();
-    const terreno = crearTerreno(kit);
+    const terreno = crearTerreno(kit, mundoInicial?.bioma);
     const rave = crearRave(kit);
     const laseres = crearLaseres();
-    const piezas = [nebulosa, tunel, terreno, nodriza, rave, laseres];
+    const formacion = crearFormacion(kit);
+    const piezas = [nebulosa, tunel, terreno, nodriza, rave, laseres, formacion];
     piezas.forEach((p) => escena.add(p.obj));
+
+    // Una nave de cada modelo, tan chica que no se ve y detrás de la nodriza: en los primeros cuadros
+    // three compila sus programas (el enjambre trae uno propio) y después se sueltan. Así la primera
+    // nave de cada modelo que cruza el show no traba.
+    const navesMuestra = MODELOS.map((modelo) => crearNave(kit, modelo));
+    const precalentar = new THREE.Group();
+    precalentar.position.set(0, 1.6, -8);
+    precalentar.scale.setScalar(0.001);
+    navesMuestra.forEach((muestra) => precalentar.add(muestra.grupo));
+    escena.add(precalentar);
+    let cuadrosPrecalentados = 0;
+    const soltarMuestras = () => {
+      if (!precalentar.parent) return;
+      escena.remove(precalentar);
+      navesMuestra.forEach((muestra) => muestra.liberar());
+    };
     let actores: Actor[] = [];
     const toques = crearToques();
     const onditas = crearOnditas(kit.geo.onda);
@@ -247,7 +305,8 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
     let tiempoMedido = 0;
     const medirRendimiento = (dt: number) => {
       // Un cuadro trabado suelto (cambio de pestaña, el análisis) no es el equipo: se descarta la ventana.
-      if (analizandoRef.current || dt >= 0.1) {
+      // Con el hangar abierto tampoco: la nave anda a media marcha a propósito y el hangar dibuja lo suyo.
+      if (analizandoRef.current || hangarRef.current || dt >= 0.1) {
         medidos = 0;
         tiempoMedido = 0;
         return;
@@ -266,6 +325,7 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
     };
     window.addEventListener("resize", alCambiarTamano);
 
+    let paleta = mundoInicial?.paleta ?? 0;
     const musica: Musica = {
       reloj: 0,
       dt: 0,
@@ -280,17 +340,29 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
       drop: 0,
       golpeAhora: false,
       chasquidoAhora: false,
-      colorA: new THREE.Color(PALETAS[0][0]),
-      colorB: new THREE.Color(PALETAS[0][1]),
+      colorA: new THREE.Color(PALETAS[paleta][0]),
+      colorB: new THREE.Color(PALETAS[paleta][1]),
       aspecto: camara.aspect,
     };
-    let paleta = 0;
-    const metaA = new THREE.Color(PALETAS[0][0]);
-    const metaB = new THREE.Color(PALETAS[0][1]);
+    // Los actores que nacen antes del primer cuadro de la nodriza (que lo apunta siempre) ya tienen ecualizador.
+    kit.sonido = musica;
+    const metaA = new THREE.Color(PALETAS[paleta][0]);
+    const metaB = new THREE.Color(PALETAS[paleta][1]);
     const cambiarPaleta = () => {
       paleta = (paleta + 1 + Math.floor(Math.random() * (PALETAS.length - 1))) % PALETAS.length;
       metaA.set(PALETAS[paleta][0]);
       metaB.set(PALETAS[paleta][1]);
+    };
+
+    // Cambió el tema: su mundo entra de a poco (la paleta se funde en ~1 s, el bioma llega desde el
+    // horizonte) y las naves que más se ven pasan a ser las suyas.
+    let temaDelMundo = temaIdRef.current;
+    const aplicarMundo = (mundo: MundoTema) => {
+      kit.flota = mundo.flota;
+      paleta = mundo.paleta;
+      metaA.set(PALETAS[paleta][0]);
+      metaB.set(PALETAS[paleta][1]);
+      terreno.cambiarBioma(mundo.bioma);
     };
 
     const destellos: number[] = [];
@@ -325,6 +397,7 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
         if (grandes.has(actor)) grandesEnCurso++;
       }
       if (enCurso >= MAX_ESCENAS) return;
+      // ESCENAS_GRANDES incluye la batalla: 2 o 3 naves completas también cuentan para el tope.
       let tipo = elegir(SORTEO_COSTADO);
       const grande = ESCENAS_GRANDES.includes(tipo);
       if (grande && grandesEnCurso >= MAX_ESCENAS_GRANDES) tipo = Math.random() < 0.5 ? "cometa" : "fugaces";
@@ -440,7 +513,8 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
       }
       return mejor;
     };
-    const tocaNodriza = (x: number, y: number, tolerancia: number) => cercania(nodriza.control.posicion, nodriza.control.radio, x, y, tolerancia) < 1;
+    // Con el alcance (no el radio del casco): los drones del enjambre también son la nave.
+    const tocaNodriza = (x: number, y: number, tolerancia: number) => cercania(nodriza.control.posicion, nodriza.control.alcance, x, y, tolerancia) < 1;
     /** Lo que se ve del plano de la nodriza, con margen: de ahí no se la puede sacar. */
     const limitarAlCampo = (v: THREE.Vector3) => {
       const alto = mitadAlto(v.z);
@@ -460,19 +534,62 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
 
     // ————— Juego —————
     let sacudidaJuego = 0;
-    const partida = crearJuego({
-      alCambiar: (estado) => setJuego(estado),
-      alChocar: (donde) => {
-        sacudidaJuego = 1;
-        nodriza.girar();
-        if (puedeDestellar()) sumar("chispas", true)?.obj.position.copy(donde);
+    // El tema de la partida en curso: el récord es de ese tema aunque en el medio empiece otro.
+    let temaPartida: string | null = null;
+    // Para no pisar el cartel de una partida nueva con la respuesta (tardía) de la base sobre la anterior.
+    let numeroPartida = 0;
+    const partida = crearJuego(
+      {
+        alCambiar: (estado) => setJuego(estado),
+        alChocar: (donde) => {
+          sacudidaJuego = 1;
+          nodriza.girar();
+          if (puedeDestellar()) sumar("chispas", true)?.obj.position.copy(donde);
+        },
+        alSumar: (texto, donde) => mostrarEtiqueta(texto, donde),
+        alTerminar: (resultado) => {
+          const tema = temaPartida;
+          const esta = numeroPartida;
+          // El cartel anuncia al toque lo que se destrabó, con la cuenta local; cuando contesta la base
+          // (que sabe de las partidas en otros equipos), manda la base.
+          const antes = resumenRef.current.mejorRecord;
+          setDesbloqueos(nuevasDesbloqueadas(antes, Math.max(antes, resultado.puntos)));
+          if (!tema) return;
+          void onPartidaRef.current(tema, resultado).then((nuevas) => {
+            if (nuevas && esta === numeroPartida) setDesbloqueos((previas) => (mismasNaves(previas, nuevas) ? previas : nuevas));
+          });
+        },
       },
-      alSumar: (texto, donde) => mostrarEtiqueta(texto, donde),
-    });
+      kit
+    );
     escena.add(partida.obj);
 
+    /** Con qué se juega: tu nave del hangar, tu récord y el del otro en el tema que suena. */
+    const opcionesPartida = (): OpcionesPartida => {
+      const { naveElegida, records } = resumenRef.current;
+      const record = temaPartida ? records[temaPartida] : undefined;
+      return { modelo: naveElegida, record: record?.mio ?? null, rival: record?.rival ?? null };
+    };
+    /**
+     * Arranca una partida (la primera o "Otra vez"). Siempre con las opciones de ahora: si en el cartel se
+     * eligió otra nave o empezó otro tema, la partida nueva ya es con eso (y el récord, el recién hecho).
+     */
+    const arrancar = () => {
+      temaPartida = temaIdRef.current;
+      numeroPartida++;
+      setDesbloqueos([]);
+      setHangar(false);
+      const opciones = opcionesPartida();
+      // La nodriza tiene que ser la nave con la que se juega (si ya lo es, no hace nada).
+      nodriza.cambiarModelo(opciones.modelo);
+      partida.empezar(opciones);
+    };
+
     const empezarPartida = () => {
-      partida.empezar();
+      arrancar();
+      // El cielo queda para el juego: sin texto de la flota ni naves bajando sobre la gente.
+      formacion.deshacer();
+      rave.abducirSola(false);
       p.modo = "juego";
       nodriza.control.carga = 0;
       // La nave arranca donde estaba: con el dedo, se mueve desde ahí.
@@ -487,14 +604,16 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
     const terminarPartida = () => {
       partida.terminar();
       nodriza.control.meta = null;
+      rave.abducirSola(true);
       if (p.modo === "juego") p.modo = "nada";
       setJuego(null);
+      setHangar(false);
       onJuegoRef.current?.(false);
     };
     accionesRef.current = {
       salir: terminarPartida,
       otraVez: () => {
-        partida.empezar();
+        arrancar();
         naveInicio.copy(nodriza.control.posicion);
       },
     };
@@ -715,6 +834,9 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
     let ultimaAparicion = 0;
     let ultimoPlaneta = -Infinity;
     let golpeFalso = -1;
+    let textoFormacion: TextoFormacion = "51";
+    // Con el hangar abierto en la compu, la nave de atrás dibuja un cuadro de cada dos.
+    let salteo = 0;
     let relojAnterior = performance.now();
     const toca = crearLimitador60();
     const destino = new THREE.Vector3();
@@ -760,6 +882,8 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
         partida.alDropear(musica);
         return;
       }
+      // La flota escribe en el cielo, una vez "51" y otra "A" (si todavía hay una arriba, esta vez no).
+      if (formacion.armar(textoFormacion)) textoFormacion = textoFormacion === "51" ? "A" : "51";
       if (puedeDestellar()) sumar("onda");
       sumar(elegir(["ovni-baja", "pelota"] as const));
       // Y una escena extra en el costado que toca.
@@ -834,6 +958,17 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
     const animar = (ahora: number) => {
       cuadro = requestAnimationFrame(animar);
       if (document.hidden || !toca(ahora)) return;
+      // Con el hangar abierto hay dos lienzos 3D: la nave de atrás afloja. En el celu el hangar la tapa
+      // entera, así que se queda quieta (y al cerrarlo la nave nueva entra a la vista); en la compu se
+      // ve alrededor, así que sigue a media marcha.
+      if (hangarRef.current) {
+        if (celular) {
+          relojAnterior = ahora;
+          return;
+        }
+        salteo = 1 - salteo;
+        if (salteo === 1) return;
+      }
       const dt = Math.min(0.1, (ahora - relojAnterior) / 1000);
       relojAnterior = ahora;
       if (sonandoRef.current) medirRendimiento(dt);
@@ -859,6 +994,14 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
       }
 
       seguirPuntero(dt, ahora / 1000);
+      if (temaIdRef.current !== temaDelMundo) {
+        temaDelMundo = temaIdRef.current;
+        if (temaDelMundo) aplicarMundo(mundoDeTema(temaDelMundo));
+      }
+      // La nave del hangar: si cambió, la nodriza se transforma. En medio de una partida no (la habilidad
+      // es la de la nave con la que empezó): espera al cartel del final.
+      const elegida = resumenRef.current.naveElegida;
+      if (elegida !== nodriza.control.modelo && (!partida.activo || partida.termino)) nodriza.cambiarModelo(elegida);
       // Al empezar el juego la nodriza se achica de a poco, y al terminar vuelve.
       nodriza.control.juego += ((partida.activo ? 1 : 0) - nodriza.control.juego) * Math.min(1, dt * 4);
 
@@ -947,6 +1090,7 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
       opacidad += ((activo ? 1 : 0) - opacidad) * 0.06;
       renderer.domElement.style.opacity = opacidad.toFixed(3);
       composer.render();
+      if (cuadrosPrecalentados < CUADROS_PRECALENTAR && ++cuadrosPrecalentados === CUADROS_PRECALENTAR) soltarMuestras();
 
       // En pausa, cuando ya se apagó, deja de dibujar (no gasta batería).
       if (!activo && opacidad < 0.01) {
@@ -976,7 +1120,14 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
       el.removeEventListener("pointerup", alSoltar);
       el.removeEventListener("pointercancel", alSoltar);
       el.removeEventListener("pointerleave", alSalirDelLienzo);
-      if (partida.activo) onJuegoRef.current?.(false);
+      // Una partida a medias con puntos se guarda igual: terminar la avisa (liberar no).
+      if (partida.activo) {
+        partida.terminar();
+        onJuegoRef.current?.(false);
+      }
+      setJuego(null);
+      setHangar(false);
+      soltarMuestras();
       for (const actor of actores) {
         actor.propios.forEach((m) => m.dispose());
         actor.geometria?.dispose();
@@ -1020,10 +1171,24 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego }
         <Marcador
           estado={juego}
           sonando={sonando}
+          desbloqueos={desbloqueos}
           onSalir={() => accionesRef.current?.salir()}
           onOtraVez={() => accionesRef.current?.otraVez()}
+          onHangar={() => setHangar(true)}
         />
       ) : null}
+      {/* El hangar va directo al body: así queda arriba de la barra del player y fuera de esta capa, que
+          no recibe toques. Se monta solo mientras está abierto (al cerrarse suelta su lienzo 3D). */}
+      {hangarAbierto
+        ? createPortal(
+            <Hangar elegida={resumen.naveElegida} mejorRecord={resumen.mejorRecord} onElegir={onElegirNave} onCerrar={cerrarHangar} />,
+            document.body
+          )
+        : null}
     </>
   );
+}
+
+function mismasNaves(a: readonly ModeloNave[], b: readonly ModeloNave[]) {
+  return a.length === b.length && a.every((modelo, i) => modelo === b[i]);
 }

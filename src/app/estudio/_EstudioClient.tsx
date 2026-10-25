@@ -3,8 +3,11 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { TemaEstudio } from "@/lib/estudio";
+import type { RecordPropio, ResumenJuego } from "@/lib/estudio-juego";
 import { filtrarTemas } from "@/lib/estudio-lista";
-import { ordenarTemasAction, sumarEscuchaAction } from "./actions";
+import type { ModeloNave } from "@/lib/estudio-naves";
+import { elegirNaveAction, guardarPartidaAction, ordenarTemasAction, sumarEscuchaAction } from "./actions";
+import type { ResultadoPartida } from "./_naveJuego";
 import Cabecera from "./_Cabecera";
 import HojaTema from "./_HojaTema";
 import { ColaSubida, useColaSubida } from "./_ColaSubida";
@@ -102,7 +105,24 @@ function hayArchivos(evento: DragEvent) {
 
 const pastilla = "flex items-center gap-1.5 rounded-full border border-zinc-700 px-3 py-1.5 text-sm font-semibold text-zinc-200 hover:border-[#8cff59]/60 hover:text-[#8cff59]";
 
-export default function EstudioClient({ temas }: { temas: TemaEstudio[] }) {
+/** El mejor de dos récords. A igual puntaje queda el primero: el récord es de quien llegó antes. */
+function mejorDeDos(a: RecordPropio | null, b: RecordPropio | null): RecordPropio | null {
+  if (!a) return b;
+  if (!b) return a;
+  return b.puntos > a.puntos ? b : a;
+}
+
+/** El resumen con una partida recién terminada, sin esperar a la base. */
+function conPartida(resumen: ResumenJuego, temaId: string, { puntos, modelo }: ResultadoPartida): ResumenJuego {
+  const previo = resumen.records[temaId] ?? { mio: null, rival: null };
+  return {
+    ...resumen,
+    mejorRecord: Math.max(resumen.mejorRecord, puntos),
+    records: { ...resumen.records, [temaId]: { ...previo, mio: mejorDeDos(previo.mio, { puntos, modelo }) } },
+  };
+}
+
+export default function EstudioClient({ temas, juego }: { temas: TemaEstudio[]; juego: ResumenJuego }) {
   // Escuchas de esta visita: el contador sube al toque, sin esperar a recargar la página.
   const [escuchasNuevas, setEscuchasNuevas] = useState<Record<string, number>>({});
   const [temasVistos, setTemasVistos] = useState(temas);
@@ -115,6 +135,54 @@ export default function EstudioClient({ temas }: { temas: TemaEstudio[] }) {
     setEscuchasNuevas((previas) => ({ ...previas, [id]: (previas[id] ?? 0) + 1 }));
     void sumarEscuchaAction(id);
   }, []);
+
+  // El jueguito de la nave (récords por tema y nave elegida). Las actions no refrescan la página (eso
+  // cortaría el show): lo que devuelven se guarda acá. Si el servidor manda un resumen nuevo, manda ese.
+  const [resumen, setResumen] = useState(juego);
+  const [juegoVisto, setJuegoVisto] = useState(juego);
+  if (juego !== juegoVisto) {
+    setJuegoVisto(juego);
+    setResumen(juego);
+  }
+  // La partida que se está guardando: elegir una nave la espera, porque la base la destraba con ese récord.
+  const guardandoRef = useRef<Promise<unknown>>(Promise.resolve());
+
+  const alTerminarPartida = useCallback((temaId: string, resultado: ResultadoPartida): Promise<ModeloNave[] | null> => {
+    // Una partida en 0 no es récord de nadie: ni se muestra ni se guarda.
+    if (resultado.puntos <= 0) return Promise.resolve(null);
+    // Al toque, sin esperar a la base: "Otra vez" y el hangar ya cuentan con esta partida.
+    setResumen((previo) => conPartida(previo, temaId, resultado));
+    const guardado = guardarPartidaAction({ temaId, puntos: resultado.puntos, modelo: resultado.modelo })
+      .then((r) => {
+        if (!r.ok) return null;
+        setResumen((previo) => ({
+          ...previo,
+          mejorRecord: Math.max(previo.mejorRecord, r.mejorRecord),
+          // El de la base, salvo que acá ya haya uno mejor (una partida posterior que todavía se guarda).
+          records: { ...previo.records, [temaId]: { mio: mejorDeDos(r.record.mio, previo.records[temaId]?.mio ?? null), rival: r.record.rival } },
+        }));
+        return r.nuevas;
+      })
+      // Sin conexión: el juego sigue igual, con la cuenta local.
+      .catch(() => null);
+    guardandoRef.current = guardado;
+    return guardado;
+  }, []);
+
+  const naveElegida = resumen.naveElegida;
+  const elegirNave = useCallback(
+    async (modelo: ModeloNave) => {
+      const anterior = naveElegida;
+      // Optimista: la nodriza cambia ya. Si la base no la acepta, vuelve la de antes y el hangar dice por qué.
+      setResumen((previo) => ({ ...previo, naveElegida: modelo }));
+      await guardandoRef.current;
+      const r = await elegirNaveAction(modelo).catch(() => null);
+      if (r?.ok) return;
+      setResumen((previo) => (previo.naveElegida === modelo ? { ...previo, naveElegida: anterior } : previo));
+      throw new Error(r?.mensaje ?? "No se pudo guardar la nave. Probá de nuevo.");
+    },
+    [naveElegida]
+  );
 
   const reproductor = useReproductor(temas, { alEscuchar });
   const cola = useColaSubida();
@@ -467,6 +535,9 @@ export default function EstudioClient({ temas }: { temas: TemaEstudio[] }) {
               sonando={reproductor.sonando}
               interactiva={inmersivo}
               onJuego={setJugando}
+              resumen={resumen}
+              onPartida={alTerminarPartida}
+              onElegirNave={elegirNave}
             />
           </div>
         </>
