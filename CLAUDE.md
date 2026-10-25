@@ -119,9 +119,14 @@ Pinky nunca usó la app porque vio Caja "muy complicada" (en prod hay 28 atencio
 - **Modo nave interactivo (2026-10-24)**, plan en `planning/features/estudio-nave-interactiva.md`:
   - UI: sin título ni "Volver" arriba; el botón de la barra dice "Playlist" (vuelve a la lista). En modo nave la barra se baja sola a los 3,5 s (sale con la manija de abajo o, en compu, acercando el mouse); en pausa queda visible. Pista "Tocá todo · Mantené apretada la nave para jugar" las primeras 3 veces.
   - Tocar (solo en modo nave): cada actor tiene `clase` y `radio`; `_naveToque.ts` pone empujones con resorte y la reacción por clase. La pelota tocada pasa a física (jueguitos, cuenta toques). Mouse que pasa o dedo que barre empujan; la gente (aliens, rave, piloto) mira al puntero (`kit.mirada`).
-  - Nodriza: se arrastra y vuelve sola; mantenerla apretada 0,75 s arranca el juego (`_naveJuego.ts` + `_Marcador.tsx`): meteoritos en los bombos, lluvia con hueco en el drop, orbes, 3 vidas, récord en `localStorage`.
+  - Nodriza: se arrastra y vuelve sola; mantenerla apretada 0,75 s arranca el juego (`_naveJuego.ts` + `_Marcador.tsx`): meteoritos en los bombos, lluvia con hueco en el drop, orbes, 3 vidas, récord por tema en la base (ver "Flota").
   - Piso con 5 biomas y 9 estructuras (`_naveTerreno.ts`), escenas de los costados y nebulosa (`_naveEscenas.ts`).
-  - **Shaders: nada de `pow` de algo que pueda ser negativo ni dividir por `fwidth()` sin tope.** Un solo píxel NaN, el bloom lo desparrama y el cuadro sale entero en negro (un parpadeo). Pasó con el rayo de los ovnis (`1.0 - abs(dot)` < 0 por redondeo) y se encontró midiendo luminancia por cuadro con `readPixels` justo después de `composer.render()`.
+- **Flota, hangar y récord por tema (2026-10-24)**, plan en `planning/features/estudio-nave-flota.md`:
+  - 6 modelos en `_naveFlota.ts` (`crearNave(kit, modelo)`; `crearOvni` = platillo). Fichas, habilidades y escalones de destrabe en `src/lib/estudio-naves.ts` (puro: lo usa también el server). Los escalones son tentativos: ajustarlos cuando Was y Pinky jueguen.
+  - Mundo por tema: `mundoDeTema(temaId)` en `_naveMundo.ts` (paleta, bioma inicial, naves dominantes en `kit.flota`).
+  - Juego: habilidad por nave, ayudas (`_naveAyudas.ts`), jefe en el drop (`_naveJefe.ts`), escoltas con racha 20 (`_naveEscoltas.ts`). Hangar (`_Hangar.tsx`) solo desde el cartel de fin del juego. Sin cámara lenta: rompe el sincronismo con los bombos.
+  - Récord por tema y nave elegida en la base: `estudio_partidas` y `estudio_hangar` (migración 0052), consultas en `src/lib/estudio-juego.ts`. El destrabe se valida en el server. El récord viejo de `localStorage` no se migró.
+- **Shaders de la nave: nada de `pow` de algo que pueda ser negativo ni dividir por `fwidth()` sin tope.** Un solo píxel NaN, el bloom lo desparrama y el cuadro sale entero en negro (un parpadeo). Pasó con el rayo de los ovnis (`1.0 - abs(dot)` < 0 por redondeo) y se encontró midiendo luminancia por cuadro con `readPixels` justo después de `composer.render()`.
 
 ### Known bugs / debt
 - **Music**: `clienteLlegoAction()` ya dispara la reproducción (ver "Torneo FIFA y portal cerrado"). La jukebox pública suena en el Spotify del local (ver "Jukebox sobre Spotify"); falta probarla en el local con el celu bloqueado un rato largo. Detalle: `planning/features/music-auto-jam-completion.md`.
