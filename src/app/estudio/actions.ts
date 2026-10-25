@@ -195,11 +195,14 @@ export async function sumarEscuchaAction(temaId: string): Promise<EstudioState> 
 
 /** Tope de cordura: una partida real no llega ni cerca. */
 const PUNTOS_MAX = 1_000_000;
+/** Lo mismo con los temas por los que pasó una partida (500 temas son más de un día jugando). */
+const TEMAS_MAX = 500;
 
 const partidaSchema = z.object({
   temaId: z.uuid(),
   puntos: z.number().int().min(0).max(PUNTOS_MAX),
   modelo: z.custom<ModeloNave>((valor) => esModeloNave(valor)),
+  temas: z.number().int().min(1).max(TEMAS_MAX),
 });
 
 export type PartidaGuardada =
@@ -214,13 +217,13 @@ export type PartidaGuardada =
     }
   | { ok: false; mensaje: string };
 
-export async function guardarPartidaAction(input: { temaId: string; puntos: number; modelo: ModeloNave }): Promise<PartidaGuardada> {
+export async function guardarPartidaAction(input: { temaId: string; puntos: number; modelo: ModeloNave; temas: number }): Promise<PartidaGuardada> {
   const actor = await getEstudioActor();
   if (!actor) return { ok: false, mensaje: "No tenés permiso." };
 
   const datos = partidaSchema.safeParse(input);
   if (!datos.success) return { ok: false, mensaje: "No se pudo guardar la partida." };
-  const { temaId, puntos, modelo } = datos.data;
+  const { temaId, puntos, modelo, temas } = datos.data;
 
   // Todo lo de antes en paralelo; con eso y esta partida sale la respuesta sin volver a leer.
   const [[tema], mejorAntes, recordAntes] = await Promise.all([
@@ -231,14 +234,14 @@ export async function guardarPartidaAction(input: { temaId: string; puntos: numb
   if (!tema) return { ok: false, mensaje: "Ese tema ya no existe." };
 
   try {
-    await db.insert(estudioPartidas).values({ temaId, userId: actor.userId, puntos, modelo });
+    await db.insert(estudioPartidas).values({ temaId, userId: actor.userId, puntos, modelo, temas });
   } catch {
     // Lo más probable: el tema se borró justo ahora.
     return { ok: false, mensaje: "No se pudo guardar la partida." };
   }
 
   // A igual puntaje queda la anterior: el récord es de quien llegó primero (igual que en la consulta).
-  const mio = recordAntes.mio && recordAntes.mio.puntos >= puntos ? recordAntes.mio : { puntos, modelo };
+  const mio = recordAntes.mio && recordAntes.mio.puntos >= puntos ? recordAntes.mio : { puntos, modelo, temas };
   const mejorRecord = Math.max(mejorAntes, puntos);
   return {
     ok: true,

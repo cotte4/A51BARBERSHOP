@@ -500,6 +500,8 @@ type Props = {
    */
   onElegir: (modelo: ModeloNave) => void | Promise<void>;
   onCerrar: () => void;
+  /** Abierto desde la pausa: la partida sigue con su nave y la nueva se usa desde la próxima. */
+  enPartida?: boolean;
 };
 
 const PASO_TECLA: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
@@ -508,7 +510,7 @@ function mensajeDe(error: unknown): string {
   return error instanceof Error && error.message ? error.message : "No se pudo guardar. Probá de nuevo.";
 }
 
-export default function Hangar({ elegida, mejorRecord, onElegir, onCerrar }: Props) {
+export default function Hangar({ elegida, mejorRecord, onElegir, onCerrar, enPartida = false }: Props) {
   const ids = useId();
   const menosMovimiento = usarMovimientoReducido();
   const raiz = useRef<HTMLDivElement>(null);
@@ -624,7 +626,7 @@ export default function Hangar({ elegida, mejorRecord, onElegir, onCerrar }: Pro
         setGuardando(true);
         await resultado;
       }
-      setAviso(`Listo: ahora volás ${conLaNave(modelo)}.`);
+      setAviso(enPartida ? `Listo: desde la próxima partida volás ${conLaNave(modelo)}.` : `Listo: ahora volás ${conLaNave(modelo)}.`);
     } catch (e) {
       setError(mensajeDe(e));
     } finally {

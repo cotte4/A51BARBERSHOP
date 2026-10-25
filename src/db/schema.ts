@@ -1899,10 +1899,13 @@ export const estudioPartidas = pgTable(
     puntos: integer("puntos").notNull(),
     // Uno de MODELOS (src/lib/estudio-naves.ts); lo valida la action, así sumar naves no pide migración.
     modelo: text("modelo").notNull().$type<ModeloNave>(),
+    // Una partida sigue cuando termina el tema: es del tema donde arrancó y cuenta por cuántos pasó.
+    temas: integer("temas").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     check("estudio_partidas_puntos_check", sql`${table.puntos} >= 0`),
+    check("estudio_partidas_temas_check", sql`${table.temas} >= 1`),
     index("estudio_partidas_tema_user_idx").on(table.temaId, table.userId),
   ]
 );

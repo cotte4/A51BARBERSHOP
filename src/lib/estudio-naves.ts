@@ -36,7 +36,7 @@ export const FICHAS: Record<ModeloNave, FichaNave> = {
   anillo: {
     nombre: "Anillo",
     habilidad: "iman",
-    descripcion: "Un imán acerca los cristales que pasan cerca.",
+    descripcion: "Un imán acerca las estrellas que pasan cerca.",
     recordParaDesbloquear: 300,
   },
   cigarro: {

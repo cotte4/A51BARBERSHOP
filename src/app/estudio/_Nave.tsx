@@ -47,9 +47,11 @@ import { crearOnditas, crearToques, type Limites } from "./_naveToque";
 // La nodriza es la nave que cada uno eligió en el hangar, en el show y en el juego.
 //
 // En modo nave (pantalla completa) se toca todo: los actores reaccionan (_naveToque.ts), el mouse
-// que pasa o el dedo que barre los empuja, la gente mira al puntero, la nodriza se arrastra y,
-// mantenida apretada, arranca el jueguito de esquivar meteoritos (_naveJuego.ts). Al terminar, el
-// cartel guarda el récord del tema y abre el hangar.
+// que pasa o el dedo que barre los empuja, la gente mira al puntero, a los aliens de la rave se los
+// levanta, se los tira y se los voltea como bolos, la nodriza se arrastra y, mantenida apretada (o
+// con "Jugar"), arranca el jueguito de esquivar meteoritos (_naveJuego.ts). Arriba quedan siempre la
+// vuelta a la playlist y el hangar. La partida sigue de tema en tema; al terminar, el cartel guarda
+// el récord del tema donde arrancó y abre el hangar.
 
 const FONDO = 0x040705;
 const MAX_ACTORES = 12;
@@ -87,8 +89,32 @@ const Z_MIRADA = 5;
 const Z_NODRIZA = -6;
 /** Juego con el dedo: la nave se mueve un poco más que el dedo, así no hace falta cruzar la pantalla. */
 const GANANCIA_DEDO = 1.3;
+/** Un alien apretado este rato (o arrastrado) se levanta; soltado antes, es un toque y salta. */
+const AGARRE_DEMORA = 0.18;
+/** El dedo que barre a esta velocidad (px/s) voltea a los aliens que cruza, como bolos. */
+const RAPIDEZ_BOLO = 500;
+/** Ancho del cuerpo de un alien para tocarlo (en su escala) y radio del dedo que lo voltea (px). */
+const ANCHO_CUERPO = 0.6;
+const RADIO_BOLO = { mouse: 18, dedo: 28 };
+/** Después de terminar, el mismo tema "volvió a empezar" si suena a menos de esto del principio (s). */
+const VUELTA_AL_PRINCIPIO = 1.5;
 
-type Modo = "nada" | "nodriza" | "arrastre" | "barrer" | "juego";
+type Modo = "nada" | "nodriza" | "arrastre" | "barrer" | "bailarin" | "agarre" | "juego";
+
+/** El id del tema que tiene cargado el <audio> (su src es /api/estudio/temas/<id>/audio). */
+function temaDelSrc(src: string): string | null {
+  const partes = src.split("/api/estudio/temas/")[1];
+  return partes ? (partes.split("/")[0] ?? null) : null;
+}
+
+/** Distancia de (x, y) al segmento a–b (en píxeles de pantalla). */
+function distanciaASegmento(x: number, y: number, ax: number, ay: number, bx: number, by: number) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const largo2 = dx * dx + dy * dy;
+  const k = largo2 > 0 ? THREE.MathUtils.clamp(((x - ax) * dx + (y - ay) * dy) / largo2, 0, 1) : 0;
+  return Math.hypot(x - (ax + dx * k), y - (ay + dy * k));
+}
 
 /**
  * Una banda del ecualizador: sube rápido (~50 ms) y baja despacio. No sube de golpe en un cuadro:
@@ -120,9 +146,39 @@ type Props = {
   onPartida: (temaId: string, resultado: ResultadoPartida) => Promise<ModeloNave[] | null>;
   /** "Usar esta" del hangar: cambia la nave al toque y la guarda; si no se pudo, rechaza con el motivo. */
   onElegirNave: (modelo: ModeloNave) => Promise<void>;
+  /** El botón "Playlist" del modo nave: vuelve a la lista. */
+  onCerrar?: () => void;
 };
 
-export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, resumen, onPartida, onElegirNave }: Props) {
+const botonHud =
+  "pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/15 bg-zinc-950/60 px-3.5 py-2 text-sm font-semibold text-zinc-100 backdrop-blur hover:border-[#8cff59]/60 hover:text-[#8cff59]";
+
+function VolverIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="m14.5 6-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function HangarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M3 20V9.5L12 4l9 5.5V20" strokeLinejoin="round" />
+      <path d="M7 20v-6.5h10V20M7 16.5h10" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function JugarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+      <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" />
+    </svg>
+  );
+}
+
+export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, resumen, onPartida, onElegirNave, onCerrar }: Props) {
   const contenedor = useRef<HTMLDivElement>(null);
   const capaEtiquetas = useRef<HTMLDivElement>(null);
   // La nave es lo que se viene a ver y solo corre con play, así que se muestra aunque el sistema pida
@@ -141,15 +197,17 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
   const resumenRef = useRef(resumen);
   const onPartidaRef = useRef(onPartida);
   const hangarRef = useRef(false);
-  // Los botones del marcador (React) llaman al juego, que vive adentro del efecto de three.
-  const accionesRef = useRef<{ salir: () => void; otraVez: () => void } | null>(null);
+  // Los botones del marcador y del modo nave (React) llaman al juego, que vive adentro del efecto de three.
+  const accionesRef = useRef<{ salir: () => void; otraVez: () => void; jugar: () => void; pausar: (si: boolean) => void } | null>(null);
   const [juego, setJuego] = useState<EstadoJuego | null>(null);
   // Las naves que destrabó la partida que acaba de terminar (el cartel las anuncia).
   const [desbloqueos, setDesbloqueos] = useState<ModeloNave[]>([]);
   const [hangar, setHangar] = useState(false);
   const cerrarHangar = useCallback(() => setHangar(false), []);
-  // Solo existe en modo nave y desde el cartel del juego.
-  const hangarAbierto = hangar && interactiva && juego !== null;
+  // Solo existe en modo nave: desde su botón, desde la pausa o desde el cartel del final.
+  const hangarAbierto = hangar && interactiva;
+  // Los botones del modo nave (volver, hangar, jugar): jugando, el marcador tiene los suyos.
+  const hud = interactiva && juego === null && !hangarAbierto;
 
   useEffect(() => {
     sonandoRef.current = sonando;
@@ -452,6 +510,8 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
       inicioY: 0,
       inicio: 0,
       modo: "nada" as Modo,
+      /** El alien de la rave que se apretó o se está llevando (-1 = ninguno). */
+      bailarin: -1,
     };
     const rayo = new THREE.Raycaster();
     const ndc = new THREE.Vector2();
@@ -499,19 +559,58 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
       }
       return mejor;
     };
+    /** El alien de la rave bajo (x, y): por la cabeza o por el cuerpo (de la cabeza a los pies). */
     const buscarBailarin = (x: number, y: number, tolerancia: number): number => {
       let mejor = -1;
       let mejorCercania = 1;
       const c = rave.cabezas;
+      const pies = rave.pies;
       for (let i = 0; i < c.length; i += 4) {
         if (c[i + 3] <= 0) continue;
-        const k = cercania(centro.set(c[i], c[i + 1], c[i + 2]), c[i + 3], x, y, tolerancia);
+        centro.set(c[i], c[i + 1], c[i + 2]);
+        let k = cercania(centro, c[i + 3], x, y, tolerancia);
+        const cabeza = aPantalla(centro);
+        if (cabeza.adelante) {
+          const cx = cabeza.x;
+          const cy = cabeza.y;
+          const ancho = (c[i + 3] / 1.4) * ANCHO_CUERPO * pxPorUnidad(centro) + tolerancia;
+          const j = (i / 4) * 3;
+          const pie = aPantalla(punto.set(pies[j], pies[j + 1], pies[j + 2]));
+          k = Math.min(k, distanciaASegmento(x, y, cx, cy, pie.x, pie.y) / ancho);
+        }
         if (k < mejorCercania) {
           mejorCercania = k;
           mejor = i / 4;
         }
       }
       return mejor;
+    };
+    /**
+     * El dedo que barre rápido voltea a los aliens que cruza (para el lado al que va). Se mira todo el
+     * trecho que hizo el dedo en este cuadro, no solo dónde quedó: rápido, salta más que un cuerpo.
+     */
+    const voltearBailarines = (velX: number, rapidez: number) => {
+      const radio = p.mouse ? RADIO_BOLO.mouse : RADIO_BOLO.dedo;
+      const c = rave.cabezas;
+      const pies = rave.pies;
+      const fuerzaBolo = THREE.MathUtils.clamp((rapidez - RAPIDEZ_BOLO) / 2500, 0.2, 1);
+      const pasos = Math.min(12, Math.ceil(Math.hypot(p.x - p.antesX, p.y - p.antesY) / radio));
+      for (let i = 0; i < c.length; i += 4) {
+        if (c[i + 3] <= 0) continue;
+        const cabeza = aPantalla(centro.set(c[i], c[i + 1], c[i + 2]));
+        if (!cabeza.adelante) continue;
+        const cx = cabeza.x;
+        const cy = cabeza.y;
+        const j = (i / 4) * 3;
+        const pie = aPantalla(punto.set(pies[j], pies[j + 1], pies[j + 2]));
+        for (let k = 0; k <= pasos; k++) {
+          const f = pasos > 0 ? k / pasos : 1;
+          if (distanciaASegmento(p.antesX + (p.x - p.antesX) * f, p.antesY + (p.y - p.antesY) * f, cx, cy, pie.x, pie.y) < radio) {
+            rave.empujar(i / 4, velX >= 0 ? 1 : -1, fuerzaBolo, musica.reloj);
+            break;
+          }
+        }
+      }
     };
     // Con el alcance (no el radio del casco): los drones del enjambre también son la nave.
     const tocaNodriza = (x: number, y: number, tolerancia: number) => cercania(nodriza.control.posicion, nodriza.control.alcance, x, y, tolerancia) < 1;
@@ -586,6 +685,9 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
     };
 
     const empezarPartida = () => {
+      // Si había un alien en la mano (otro dedo), se suelta: el dedo ahora es de la nave.
+      if (p.modo === "agarre") rave.soltar(musica.reloj);
+      p.bailarin = -1;
       arrancar();
       // El cielo queda para el juego: sin texto de la flota ni naves bajando sobre la gente.
       formacion.deshacer();
@@ -616,6 +718,11 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
         arrancar();
         naveInicio.copy(nodriza.control.posicion);
       },
+      // El botón "Jugar" del modo nave: lo mismo que mantener apretada la nodriza.
+      jugar: () => {
+        if (!partida.activo && opacidad >= 0.5) empezarPartida();
+      },
+      pausar: (si) => partida.pausar(si),
     };
 
     // ————— Lo que hace el dedo —————
@@ -696,6 +803,15 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
         agarre.subVectors(nodriza.control.posicion, aMundo(p.x, p.y, nodriza.control.posicion.z, punto));
         return;
       }
+      // Un alien de la rave: un toque corto lo hace saltar; mantenido o arrastrado, se levanta.
+      if (!buscarActor(p.x, p.y, tolerancia)) {
+        const bailarin = buscarBailarin(p.x, p.y, tolerancia);
+        if (bailarin >= 0 && rave.sePuedeAgarrar(bailarin, musica.reloj)) {
+          p.modo = "bailarin";
+          p.bailarin = bailarin;
+          return;
+        }
+      }
       p.modo = "barrer";
       if (tocarAlgo(p.x, p.y, tolerancia)) return;
       onditas.lanzar(aMundo(p.x, p.y, Z_ONDITA, punto), musica.colorA, musica.reloj);
@@ -725,6 +841,10 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
         disparar();
       }
       if (p.modo === "arrastre") nodriza.control.meta = null;
+      // El alien: si no llegó a levantarse fue un toque (salta); si estaba en la mano, sale con el envión.
+      if (p.modo === "bailarin") rave.tocar(p.bailarin, musica.reloj);
+      if (p.modo === "agarre") rave.soltar(musica.reloj);
+      p.bailarin = -1;
       nodriza.control.carga = 0;
       p.apretado = false;
       p.id = -1;
@@ -737,7 +857,10 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
     };
 
     const alTeclear = (evento: KeyboardEvent) => {
-      if (evento.key === "Escape" && partida.activo) terminarPartida();
+      if (evento.key !== "Escape" || !partida.activo) return;
+      // Jugando, Esc pausa (y otra vez sigue); en el cartel del final, sale.
+      if (partida.termino) terminarPartida();
+      else partida.pausar(!partida.pausado);
     };
 
     el.addEventListener("pointerdown", alApretar);
@@ -759,6 +882,8 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
       if (!interactivaRef.current) {
         if (partida.activo) terminarPartida();
         if (p.modo === "arrastre") nodriza.control.meta = null;
+        if (p.modo === "agarre") rave.soltar(musica.reloj);
+        p.bailarin = -1;
         p.presente = false;
         p.apretado = false;
         p.modo = "nada";
@@ -775,7 +900,14 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
         nodriza.control.meta = limitarAlCampo(aMundo(p.x, p.y, Z_NODRIZA, destinoNodriza).add(agarre).setZ(Z_NODRIZA));
       }
 
-      if (partida.activo && !partida.termino) {
+      // El alien apretado se levanta al moverse el dedo o al rato; en la mano, va adonde va el dedo.
+      if (p.modo === "bailarin" && (Math.hypot(p.x - p.inicioX, p.y - p.inicioY) > TOLERANCIA_ARRASTRE || ahora - p.inicio > AGARRE_DEMORA)) {
+        p.modo = "agarre";
+        rave.agarrar(p.bailarin, aMundo(p.x, p.y, rave.profundidad(p.bailarin), punto), musica.reloj);
+      }
+      if (p.modo === "agarre") rave.arrastrar(aMundo(p.x, p.y, rave.profundidad(p.bailarin), punto));
+
+      if (partida.activo && !partida.termino && !partida.pausado) {
         if (p.mouse && p.presente) {
           // Mouse: la nave va a donde está el cursor.
           nodriza.control.meta = limitarAlCampo(aMundo(p.x, p.y, Z_NODRIZA, destinoNodriza));
@@ -790,12 +922,15 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
       kit.mirada.activa = p.presente && !partida.activo;
       if (kit.mirada.activa) aMundo(p.x, p.y, Z_MIRADA, kit.mirada.punto);
 
-      // El mouse que pasa cerca corre a los actores; el dedo que barre los arrastra en su dirección.
+      // El mouse que pasa cerca corre a los actores; el dedo que barre los arrastra en su dirección (y,
+      // si va rápido, voltea a los aliens de la rave que cruza).
       const barriendo = p.modo === "barrer" && p.apretado;
       if (!partida.activo && p.presente && dt > 0 && (barriendo || (p.mouse && !p.apretado))) {
         const radio = p.mouse ? RADIO_EMPUJE.mouse : RADIO_EMPUJE.dedo;
         const velX = (p.x - p.antesX) / dt;
         const velY = (p.y - p.antesY) / dt;
+        const rapidez = Math.hypot(velX, velY);
+        if (barriendo && rapidez > RAPIDEZ_BOLO) voltearBailarines(velX, rapidez);
         for (const actor of actores) {
           // La pelota en jueguitos solo responde a toques: si no, el mouse quieto abajo la sostiene.
           if (actor.radio <= 0 || toques.toques(actor) > 0) continue;
@@ -816,11 +951,12 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
       p.antesY = p.y;
 
       if (p.mouse) {
-        if (partida.activo && !partida.termino) ponerCursor("none");
-        else if (p.modo === "arrastre") ponerCursor("grabbing");
-        else if (!p.presente || p.apretado) ponerCursor("default");
+        if (partida.activo && !partida.termino && !partida.pausado) ponerCursor("none");
+        else if (p.modo === "arrastre" || p.modo === "agarre") ponerCursor("grabbing");
+        else if (!p.presente || p.apretado || partida.activo) ponerCursor("default");
         else if (tocaNodriza(p.x, p.y, TOLERANCIA.mouse)) ponerCursor("grab");
-        else ponerCursor(buscarActor(p.x, p.y, TOLERANCIA.mouse) || buscarBailarin(p.x, p.y, TOLERANCIA.mouse) >= 0 ? "pointer" : "default");
+        else if (buscarActor(p.x, p.y, TOLERANCIA.mouse)) ponerCursor("pointer");
+        else ponerCursor(buscarBailarin(p.x, p.y, TOLERANCIA.mouse) >= 0 ? "grab" : "default");
       }
     };
 
@@ -830,6 +966,13 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
     let indiceGolpe = 0;
     let indiceChasquido = 0;
     let indiceDrop = 0;
+    // El análisis al que apuntan los índices: cuando llega el de otro tema, se buscan de nuevo.
+    let analisisLeido: Analisis | null = null;
+    // El tema que tiene cargado el <audio> (para la partida que sigue de tema en tema) y si ya se lo vio
+    // llegar al final. Se lee del <audio> y no de las props: cambia un cuadro antes que React.
+    let srcVisto = "";
+    let temaDelAudio: string | null = null;
+    let temaTerminado = false;
     let golpesSinDrop = 0;
     let ultimaAparicion = 0;
     let ultimoPlaneta = -Infinity;
@@ -909,7 +1052,11 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
           const v = activo ? (analisis.espectro[i * BANDAS + b] ?? 0) : 0;
           musica.espectro[b] = seguirBanda(musica.espectro[b], v, musica.dt);
         }
-        if (Math.abs(t - tiempoAnterior) > 0.6) {
+        // Un salto en el tiempo (adelantar, volver) o el análisis de otro tema: los índices se buscan de
+        // nuevo. Sin lo segundo, el tema que seguía arrancaba con los del anterior y no llegaba ningún
+        // bombo (el juego se quedaba sin meteoritos y el puntaje, colgado).
+        if (analisis !== analisisLeido || Math.abs(t - tiempoAnterior) > 0.6) {
+          analisisLeido = analisis;
           indiceGolpe = primerEventoDesde(analisis.golpes, t);
           indiceChasquido = primerEventoDesde(analisis.chasquidos, t);
           indiceDrop = primerEventoDesde(analisis.drops, t);
@@ -955,6 +1102,38 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
       musica.brillo += (metaBrillo - musica.brillo) * (metaBrillo > musica.brillo ? 0.1 : 0.05);
     };
 
+    /**
+     * La partida sigue de tema en tema: si el <audio> cargó otro tema, o el mismo volvió a empezar
+     * después de terminar (una lista de uno, repitiendo), suma un tema (con premio si el anterior
+     * terminó solo y no lo saltearon).
+     */
+    const seguirTema = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (audio.src !== srcVisto) {
+        srcVisto = audio.src;
+        const nuevo = temaDelSrc(audio.src);
+        if (nuevo !== temaDelAudio) {
+          // El primero que se ve no es un cambio: es el tema con el que se abrió la nave.
+          if (temaDelAudio !== null && partida.activo) partida.cambioDeTema(temaTerminado);
+          temaDelAudio = nuevo;
+          temaTerminado = false;
+          return;
+        }
+      }
+      if (temaTerminado && audio.currentTime < VUELTA_AL_PRINCIPIO) {
+        if (partida.activo) partida.cambioDeTema(true);
+        temaTerminado = false;
+      }
+    };
+    // Que un tema terminó solo lo dice el <audio>. El player ya cargó el que sigue en ese mismo evento:
+    // ningún cuadro llega a ver el final, por eso no alcanza con mirar el tiempo.
+    const audioDelShow = audioRef.current;
+    const alTerminarTema = () => {
+      temaTerminado = true;
+    };
+    audioDelShow?.addEventListener("ended", alTerminarTema);
+
     const animar = (ahora: number) => {
       cuadro = requestAnimationFrame(animar);
       if (document.hidden || !toca(ahora)) return;
@@ -998,6 +1177,7 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
         temaDelMundo = temaIdRef.current;
         if (temaDelMundo) aplicarMundo(mundoDeTema(temaDelMundo));
       }
+      seguirTema();
       // La nave del hangar: si cambió, la nodriza se transforma. En medio de una partida no (la habilidad
       // es la de la nave con la que empezó): espera al cartel del final.
       const elegida = resumenRef.current.naveElegida;
@@ -1115,6 +1295,7 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
       cancelAnimationFrame(cuadro);
       window.removeEventListener("resize", alCambiarTamano);
       window.removeEventListener("keydown", alTeclear);
+      audioDelShow?.removeEventListener("ended", alTerminarTema);
       el.removeEventListener("pointerdown", alApretar);
       el.removeEventListener("pointermove", alMover);
       el.removeEventListener("pointerup", alSoltar);
@@ -1175,13 +1356,48 @@ export default function Nave({ audioRef, temaId, sonando, interactiva, onJuego, 
           onSalir={() => accionesRef.current?.salir()}
           onOtraVez={() => accionesRef.current?.otraVez()}
           onHangar={() => setHangar(true)}
+          onPausa={(si) => accionesRef.current?.pausar(si)}
         />
+      ) : null}
+      {/* Modo nave: arriba, la vuelta a la lista y el hangar; abajo, Jugar (con la barra del player
+          arriba, queda tapado: es una hoja sobre la escena). */}
+      {hud ? (
+        <div className="pointer-events-none fixed inset-x-0 top-0 z-10 px-4 pt-[max(env(safe-area-inset-top),16px)]">
+          <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
+            <button type="button" onClick={onCerrar} className={botonHud}>
+              <VolverIcon />
+              Playlist
+            </button>
+            <button type="button" onClick={() => setHangar(true)} className={botonHud}>
+              <HangarIcon />
+              Hangar
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {hud && sonando ? (
+        <div className="pointer-events-none fixed inset-x-0 bottom-[calc(max(env(safe-area-inset-bottom),14px)+52px)] z-10 flex justify-center">
+          <button
+            type="button"
+            onClick={() => accionesRef.current?.jugar()}
+            className="pointer-events-auto flex items-center gap-2 rounded-full bg-[#8cff59] px-5 py-2.5 font-semibold text-[#07130a] shadow-[0_8px_24px_rgba(140,255,89,0.25)] hover:scale-105"
+          >
+            <JugarIcon />
+            Jugar
+          </button>
+        </div>
       ) : null}
       {/* El hangar va directo al body: así queda arriba de la barra del player y fuera de esta capa, que
           no recibe toques. Se monta solo mientras está abierto (al cerrarse suelta su lienzo 3D). */}
       {hangarAbierto
         ? createPortal(
-            <Hangar elegida={resumen.naveElegida} mejorRecord={resumen.mejorRecord} onElegir={onElegirNave} onCerrar={cerrarHangar} />,
+            <Hangar
+              elegida={resumen.naveElegida}
+              mejorRecord={resumen.mejorRecord}
+              onElegir={onElegirNave}
+              onCerrar={cerrarHangar}
+              enPartida={juego !== null && !juego.termino}
+            />,
             document.body
           )
         : null}

@@ -9,7 +9,8 @@ import { esModeloNave, NAVE_INICIAL, navesDesbloqueadas, type ModeloNave } from 
 // El jueguito de la nave en la base: el récord de cada uno por tema (Was vs Pinky, con la nave usada)
 // y la nave elegida en el hangar, que sigue a la persona del celu a la compu.
 
-export type RecordPropio = { puntos: number; modelo: ModeloNave };
+/** `temas`: por cuántos temas pasó la partida (sigue cuando termina el tema; es del tema donde arrancó). */
+export type RecordPropio = { puntos: number; modelo: ModeloNave; temas: number };
 export type RecordRival = RecordPropio & { /** El primer nombre ("Pinky"). */ nombre: string };
 export type RecordTema = { mio: RecordPropio | null; rival: RecordRival | null };
 
@@ -31,7 +32,7 @@ function primerNombre(nombre: string): string {
   return nombre.trim().split(/\s+/)[0] || nombre;
 }
 
-type MejorFila = { temaId: string; userId: string; puntos: number; modelo: string; nombre: string; email: string };
+type MejorFila = { temaId: string; userId: string; puntos: number; modelo: string; temas: number; nombre: string; email: string };
 
 /**
  * La mejor partida de cada persona en cada tema (o en uno solo), en una consulta. A igual puntaje
@@ -44,6 +45,7 @@ function mejoresPartidas(temaId?: string): Promise<MejorFila[]> {
       userId: estudioPartidas.userId,
       puntos: estudioPartidas.puntos,
       modelo: estudioPartidas.modelo,
+      temas: estudioPartidas.temas,
       nombre: user.name,
       email: user.email,
     })
@@ -61,7 +63,7 @@ function armarRecords(filas: MejorFila[], userId: string): Record<string, Record
   const records: Record<string, RecordTema> = {};
   for (const fila of filas) {
     const record = (records[fila.temaId] ??= { mio: null, rival: null });
-    const partida = { puntos: fila.puntos, modelo: leerModelo(fila.modelo) };
+    const partida = { puntos: fila.puntos, modelo: leerModelo(fila.modelo), temas: fila.temas };
     if (fila.userId === userId) {
       record.mio = partida;
     } else if (puedeEntrarAlEstudio(fila.email) && (!record.rival || fila.puntos > record.rival.puntos)) {

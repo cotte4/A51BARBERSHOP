@@ -51,6 +51,8 @@ export type Reproductor = ReturnType<typeof useReproductor>;
 type Opciones = {
   /** Se llama una vez por pasada cuando un tema sonó lo suficiente para contar como escucha. */
   alEscuchar?: (id: string) => void;
+  /** Al terminar el último tema vuelve a empezar la lista (jugando: la partida sigue de tema en tema). */
+  repetir?: boolean;
 };
 
 /**
@@ -60,7 +62,7 @@ type Opciones = {
  *
  * La cola sale de la lista que se veía al dar play (con su filtro y búsqueda), en orden o mezclada.
  */
-export function useReproductor(temas: TemaEstudio[], { alEscuchar }: Opciones = {}) {
+export function useReproductor(temas: TemaEstudio[], { alEscuchar, repetir = false }: Opciones = {}) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [actualId, setActualId] = useState<string | null>(null);
   const [sonando, setSonando] = useState(false);
@@ -78,6 +80,10 @@ export function useReproductor(temas: TemaEstudio[], { alEscuchar }: Opciones = 
   useEffect(() => {
     alEscucharRef.current = alEscuchar;
   }, [alEscuchar]);
+  const repetirRef = useRef(repetir);
+  useEffect(() => {
+    repetirRef.current = repetir;
+  }, [repetir]);
 
   const actual = temas.find((tema) => tema.id === actualId) ?? null;
 
@@ -156,13 +162,22 @@ export function useReproductor(temas: TemaEstudio[], { alEscuchar }: Opciones = 
       cargarYSonar(proximo);
       return;
     }
+    // Terminó el último y hay que seguir: la lista vuelve a empezar (mezclada de nuevo si es aleatorio).
+    if (repetirRef.current && enCola.length > 0) {
+      const nuevaCola = armarCola(contexto.length > 0 ? contexto : enCola, null, aleatorio);
+      if (nuevaCola[0]) {
+        setCola(nuevaCola);
+        cargarYSonar(nuevaCola[0]);
+        return;
+      }
+    }
     // Terminó el último: queda pausado al principio del mismo tema.
     const audio = audioRef.current;
     if (audio) {
       audio.pause();
       audio.currentTime = 0;
     }
-  }, [cargarYSonar, enCola, indice]);
+  }, [aleatorio, cargarYSonar, contexto, enCola, indice]);
 
   const anterior = useCallback(() => {
     const audio = audioRef.current;
@@ -404,16 +419,18 @@ type BarraProps = {
   onMostrar?: () => void;
   /** true mientras el mouse, el dedo o el foco están en la barra: no se esconde en el medio de un uso. */
   onSostener?: (sostiene: boolean) => void;
+  /** Jugando no hay manija: la barra no sale, y la manija tapaba el dedo que maneja la nave. */
+  sinManija?: boolean;
 };
 
 /** Barra fija abajo: portada, título, controles y la línea de tiempo arrastrable. */
-export function BarraReproductor({ reproductor, onNave, naveAbierta, escondida = false, onMostrar, onSostener }: BarraProps) {
+export function BarraReproductor({ reproductor, onNave, naveAbierta, escondida = false, onMostrar, onSostener, sinManija = false }: BarraProps) {
   const { audioRef, actual, sonando, tiempo, duracion, alternar, siguiente, anterior, irA } = reproductor;
 
   return (
     <>
       <audio ref={audioRef} preload="metadata" />
-      {actual && naveAbierta ? (
+      {actual && naveAbierta && !sinManija ? (
         <button
           type="button"
           onClick={onMostrar}

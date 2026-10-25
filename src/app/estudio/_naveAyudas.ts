@@ -13,7 +13,7 @@ export const TIPOS_AYUDA = ["escudo", "iman", "laser"] as const;
 export type TipoAyuda = (typeof TIPOS_AYUDA)[number];
 
 /**
- * Un color por ayuda, distinto del cristal (que va con el color A del tema): la cápsula, su marca,
+ * Un color por ayuda, distinto de la estrella (que va con el color A del tema): la cápsula, su marca,
  * la burbuja, el campo y el ícono del marcador usan el mismo.
  */
 export const COLOR_AYUDA: Record<TipoAyuda, number> = {
@@ -56,7 +56,7 @@ function crearNucleos(): Record<TipoAyuda, THREE.BufferGeometry> {
 
 /**
  * La cápsula de una ayuda: una pastilla de vidrio acostada, con dos aros de neón y el ícono adentro,
- * del color de la ayuda. No se confunde con el cristal (un rombo del color del tema con un aro). Hay
+ * del color de la ayuda. No se confunde con la estrella (cinco puntas del color del tema). Hay
  * una sola en pantalla a la vez: cambia de materiales según el tipo.
  */
 export function crearCapsula() {
@@ -151,7 +151,7 @@ export function crearCapsula() {
       marca.visible = prende > 0;
       if (prende > 0) {
         marca.position.set(pos.x, pos.y, zPlano);
-        // Como la de los cristales: se cierra sobre el lugar a medida que la cápsula llega.
+        // Como la de las estrellas: se cierra sobre el lugar a medida que la cápsula llega.
         marca.scale.setScalar((radioMarca + 0.15) * (1.6 - prende * 0.6));
         (marca.material as THREE.MeshBasicMaterial).opacity = 0.55 * prende;
       }
@@ -297,12 +297,12 @@ const suaveNivel = (x: number) => x * x * (3 - 2 * x);
 
 // ————————————————————————————— Campo del imán —————————————————————————————
 
-/** Hilos como mucho a la vez (cristales y la cápsula que el imán está trayendo). */
+/** Hilos como mucho a la vez (estrellas y la cápsula que el imán está trayendo). */
 const HILOS = 8;
 
 /**
  * El imán: un aro punteado en el plano de la nave que marca hasta dónde llega (gira lento) y un
- * hilo tenue a cada cristal que está trayendo, más claro cuanto más tira.
+ * hilo tenue a cada estrella que está trayendo, más claro cuanto más tira.
  */
 export function crearCampoIman() {
   const grupo = new THREE.Group();
@@ -372,7 +372,7 @@ export function crearCampoIman() {
       posiciones[i + 3] = hasta.x;
       posiciones[i + 4] = hasta.y;
       posiciones[i + 5] = hasta.z;
-      // Más claro del lado del cristal, se pierde hacia la nave.
+      // Más claro del lado de la estrella, se pierde hacia la nave.
       const k = 0.55 * THREE.MathUtils.clamp(fuerza, 0, 1) * nivel;
       colores[i] = color.r * k;
       colores[i + 1] = color.g * k;

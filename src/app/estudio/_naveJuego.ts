@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { FICHAS, NAVE_INICIAL, type Habilidad, type ModeloNave } from "@/lib/estudio-naves";
 import { COLOR_AYUDA, crearBurbuja, crearCampoIman, crearCapsula, crearLaserJuego, NOMBRE_AYUDA, RADIO_CAPSULA, TIPOS_AYUDA, type TipoAyuda } from "./_naveAyudas";
 import { crearChispas } from "./_naveChispas";
@@ -13,9 +14,16 @@ export type { TipoAyuda } from "./_naveAyudas";
 
 // El jueguito: la nodriza (tu nave del hangar) se achica, la manejás con el dedo o el mouse y
 // esquivás los meteoritos que vienen del fondo al ritmo del tema (nacen en los bombos). Cada
-// meteorito esquivado suma, pasar raspando suma uno más, los cristales suman cinco y la racha
+// meteorito esquivado suma, pasar raspando suma uno más, las estrellas suman cinco y la racha
 // multiplica. La racha también llama más meteoritos: cuanto mejor vas, más denso se pone (y un
 // choque la corta, así que se equilibra solo). Tres choques y se termina.
+//
+// Meteoritos y estrellas tienen los colores del tema (cambian en cada drop), así que se distinguen
+// por todo lo demás: la piedra es oscura, con brasa y un halo redondo, y su marca es una señal de
+// prohibido; la estrella tiene puntas, núcleo blanco y un destello en cruz, y su marca es un blanco.
+//
+// La partida no termina con el tema: sigue en el que viene (con premio si aguantaste el tema hasta
+// el final) y cuenta por cuántos pasó. El récord es del tema donde arrancó.
 //
 // Además:
 // - Cada nave trae su habilidad (FICHAS): el trompo un escudo que se recarga, el anillo un imán, el
@@ -24,14 +32,14 @@ export type { TipoAyuda } from "./_naveAyudas";
 //   las habilidades. Salen a veces en los redoblantes y en los drops.
 // - En el drop viene el jefe (_naveJefe.ts): tira patrones al ritmo; aguantarlo sin chocar da premio
 //   y romperlo a tiros (con láser) da el premio grande. Mientras está, no hay lluvia.
-// - Con racha alta se suman dos escoltas que agarran cristales; si chocás, se van.
+// - Con racha alta se suman dos escoltas que agarran estrellas; si chocás, se van.
 //
 // Fotosensibilidad: el choque no titila. La nave queda con un escudo tenue que se apaga de a poco,
 // los meteoritos se achican antes de llegar a la cámara, el láser va a 2 por segundo como mucho y
 // las explosiones son chispas sin flash.
 
-/** Un récord del tema: los puntos y con qué nave se hicieron. */
-export type RecordJuego = { puntos: number; modelo: ModeloNave };
+/** Un récord del tema: los puntos, con qué nave se hicieron y por cuántos temas pasó la partida. */
+export type RecordJuego = { puntos: number; modelo: ModeloNave; temas: number };
 /** El récord del otro (Was o Pinky) en este tema. */
 export type RivalJuego = RecordJuego & { nombre: string };
 
@@ -44,7 +52,7 @@ export type OpcionesPartida = {
   rival: RivalJuego | null;
 };
 
-export type ResultadoPartida = { puntos: number; modelo: ModeloNave };
+export type ResultadoPartida = { puntos: number; modelo: ModeloNave; temas: number };
 
 export type EstadoJuego = {
   puntos: number;
@@ -52,6 +60,15 @@ export type EstadoJuego = {
   multiplicador: number;
   /** Esquivados seguidos sin chocar. */
   racha: number;
+  /** Por cuántos temas pasó la partida (arranca en 1). */
+  temas: number;
+  /** La pausa del juego (el botón del marcador): todo quieto aunque el tema siga sonando. */
+  pausa: boolean;
+  /**
+   * La leyenda del arranque (qué se esquiva y qué se agarra), con los colores que tienen ahora en
+   * pantalla. null cuando ya pasó.
+   */
+  leyenda: { estrella: string; peligro: string } | null;
   /** La nave con la que se juega. */
   modelo: ModeloNave;
   /** Tu récord en este tema. Si lo pasás al perder, queda el nuevo (y `recordNuevo`). */
@@ -86,8 +103,15 @@ export type EventosJuego = {
 const VIDAS = 3;
 const METEORITOS = 56;
 const ORBES = 6;
-/** Radio del cristal en la compu (en el celu, más chico con la nave). */
+/** Radio de la estrella en la compu (en el celu, más chica con la nave). */
 const RADIO_ORBE = 0.6;
+/** Aguantar un tema hasta el final da premio, si la partida estuvo al menos TEMA_MINIMO segundos en él. */
+const PREMIO_TEMA = 100;
+const TEMA_MINIMO = 30;
+/** La leyenda del arranque se ve los primeros segundos de juego (antes se iba con el primer punto). */
+const LEYENDA_DURA = 6;
+/** Al volver de la pausa, un ratito sin choques: lo que estaba por pegar no te agarra desprevenido. */
+const GRACIA_PAUSA = 1;
 /** Cada tantos esquivados sin chocar, un meteorito más por bombo (hasta EXTRAS_MAX). */
 const RACHA_POR_EXTRA = 10;
 const EXTRAS_MAX = 3;
@@ -147,6 +171,8 @@ const JEFE_CADA = 25;
 const CAPSULA_CADA = 12;
 /** Imán: hasta dónde llega (radio) y cuánto acerca (unidades por segundo), en la compu. */
 const IMAN = { habilidad: { radio: 3.4, fuerza: 5 }, ayuda: { radio: 6.5, fuerza: 12 } };
+/** El destello en cruz de la estrella, en radios de la estrella: gira despacio y respira apenas. */
+const DESTELLO = { tam: 3.4, giro: 0.5 };
 /** Los meteoritos del jefe cuentan como esquivados solo si pasan cerca: una fila entera no son diez puntos. */
 const CERCA_JEFE = 3;
 
@@ -178,6 +204,96 @@ function crearGeometriaRoca(): THREE.BufferGeometry {
   geometria.setAttribute("color", new THREE.BufferAttribute(brasa, 3));
   geometria.computeVertexNormals();
   return geometria;
+}
+
+/**
+ * La estrella que suma: cinco puntas con volumen (una pirámide chata para cada lado del contorno). El
+ * color por vértice oscurece las puntas: el centro queda más claro y se lee como algo que brilla.
+ */
+function crearGeometriaEstrella(): THREE.BufferGeometry {
+  const PUNTAS = 5;
+  const AFUERA = 0.62;
+  const ADENTRO = 0.27;
+  const HONDO = 0.2;
+  const posiciones: number[] = [];
+  const colores: number[] = [];
+  const contorno = (k: number): [number, number] => {
+    const a = Math.PI / 2 + (k / (PUNTAS * 2)) * Math.PI * 2;
+    const r = k % 2 === 0 ? AFUERA : ADENTRO;
+    return [Math.cos(a) * r, Math.sin(a) * r];
+  };
+  for (const lado of [1, -1]) {
+    for (let k = 0; k < PUNTAS * 2; k++) {
+      const [x1, y1] = contorno(k);
+      const [x2, y2] = contorno(k + 1);
+      posiciones.push(0, 0, HONDO * lado, x1, y1, 0, x2, y2, 0);
+      const tinta1 = k % 2 === 0 ? 0.6 : 0.82;
+      const tinta2 = k % 2 === 0 ? 0.82 : 0.6;
+      colores.push(1, 1, 1, tinta1, tinta1, tinta1, tinta2, tinta2, tinta2);
+    }
+  }
+  const geometria = new THREE.BufferGeometry();
+  geometria.setAttribute("position", new THREE.Float32BufferAttribute(posiciones, 3));
+  geometria.setAttribute("color", new THREE.Float32BufferAttribute(colores, 3));
+  return geometria;
+}
+
+/** El destello en cruz de la estrella: cuatro rayos finitos que se afinan hacia la punta y un resplandor chico. */
+function crearTexturaDestello(): THREE.CanvasTexture {
+  const LADO = 128;
+  const lienzo = document.createElement("canvas");
+  lienzo.width = LADO;
+  lienzo.height = LADO;
+  const ctx = lienzo.getContext("2d");
+  if (ctx) {
+    const c = LADO / 2;
+    const resplandor = ctx.createRadialGradient(c, c, 0, c, c, c * 0.38);
+    resplandor.addColorStop(0, "rgba(255,255,255,0.85)");
+    resplandor.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = resplandor;
+    ctx.fillRect(0, 0, LADO, LADO);
+    const ancho = 5;
+    for (const vertical of [false, true]) {
+      const rayo = vertical ? ctx.createLinearGradient(c, 0, c, LADO) : ctx.createLinearGradient(0, c, LADO, c);
+      rayo.addColorStop(0, "rgba(255,255,255,0)");
+      rayo.addColorStop(0.5, "rgba(255,255,255,0.95)");
+      rayo.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = rayo;
+      ctx.beginPath();
+      if (vertical) {
+        ctx.moveTo(c - ancho, c);
+        ctx.lineTo(c, 0);
+        ctx.lineTo(c + ancho, c);
+        ctx.lineTo(c, LADO);
+      } else {
+        ctx.moveTo(c, c - ancho);
+        ctx.lineTo(0, c);
+        ctx.lineTo(c, c + ancho);
+        ctx.lineTo(LADO, c);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  const textura = new THREE.CanvasTexture(lienzo);
+  textura.colorSpace = THREE.SRGBColorSpace;
+  return textura;
+}
+
+/** Marca de un meteorito en el plano de la nave: un aro con una cruz adentro (salí de ahí). */
+function crearMarcaPeligro(): THREE.BufferGeometry {
+  const piezas = [new THREE.RingGeometry(0.86, 1, 48), ...[Math.PI / 4, -Math.PI / 4].map((giro) => new THREE.PlaneGeometry(1.5, 0.13).rotateZ(giro))];
+  const marca = mergeGeometries(piezas);
+  piezas.forEach((g) => g.dispose());
+  return marca;
+}
+
+/** Marca de una estrella: un blanco, aro y punto (andá ahí). */
+function crearMarcaEstrella(): THREE.BufferGeometry {
+  const piezas = [new THREE.RingGeometry(0.86, 1, 48), new THREE.CircleGeometry(0.34, 32)];
+  const marca = mergeGeometries(piezas);
+  piezas.forEach((g) => g.dispose());
+  return marca;
 }
 
 type Roca = {
@@ -226,25 +342,34 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
   // Sin niebla: el halo se ve desde que nace, y avisa que algo viene aunque la piedra todavía no se lea.
   const materialHalo = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide, fog: false });
   const halos = new THREE.InstancedMesh(geometriaHalo, materialHalo, METEORITOS);
-  // Marca en el plano de la nave: dónde va a cruzar cada meteorito. Aparece a medida que se acerca.
-  const geometriaMarca = new THREE.RingGeometry(0.86, 1, 48);
+  // Marca en el plano de la nave: dónde va a cruzar cada meteorito (una señal de prohibido). Aparece a
+  // medida que se acerca.
+  const geometriaMarcaPeligro = crearMarcaPeligro();
   const materialMarca = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false });
-  const marcas = new THREE.InstancedMesh(geometriaMarca, materialMarca, METEORITOS);
+  const marcas = new THREE.InstancedMesh(geometriaMarcaPeligro, materialMarca, METEORITOS);
   marcas.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(METEORITOS * 3), 3);
 
-  // El cristal que suma: un octaedro estirado (no se confunde con una piedra) con un aro que gira,
-  // del color del tema y sin niebla para que se vea venir desde el fondo. Su marca en el plano de la
-  // nave es del mismo color: dice adónde ir, como la de los meteoritos dice de dónde salir.
-  const geometriaOrbe = new THREE.OctahedronGeometry(0.5, 0);
-  geometriaOrbe.scale(1, 1.35, 1);
-  const materialOrbe = new THREE.MeshBasicMaterial({ fog: false });
-  const orbes = new THREE.InstancedMesh(geometriaOrbe, materialOrbe, ORBES);
-  const materialHaloOrbe = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide, fog: false });
-  const halosOrbe = new THREE.InstancedMesh(geometriaHalo, materialHaloOrbe, ORBES);
-  const geometriaAro = new THREE.TorusGeometry(0.85, 0.045, 8, 48);
-  const materialAro = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
-  const aros = new THREE.InstancedMesh(geometriaAro, materialAro, ORBES);
-  const marcasOrbe = new THREE.InstancedMesh(geometriaMarca, materialMarca, ORBES);
+  // La estrella que suma: cinco puntas del color del tema con un núcleo blanco y un destello en cruz,
+  // sin niebla para que se vea venir desde el fondo. Nada de halo redondo, que es de los meteoritos.
+  // Su marca en el plano de la nave es un blanco del mismo color: dice adónde ir.
+  const geometriaEstrella = crearGeometriaEstrella();
+  const materialOrbe = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, fog: false });
+  const orbes = new THREE.InstancedMesh(geometriaEstrella, materialOrbe, ORBES);
+  const materialNucleo = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, fog: false });
+  const nucleos = new THREE.InstancedMesh(geometriaEstrella, materialNucleo, ORBES);
+  const texturaDestello = crearTexturaDestello();
+  const geometriaDestello = new THREE.PlaneGeometry(1, 1);
+  const materialDestello = new THREE.MeshBasicMaterial({
+    map: texturaDestello,
+    transparent: true,
+    opacity: 0.75,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    fog: false,
+  });
+  const destellosOrbe = new THREE.InstancedMesh(geometriaDestello, materialDestello, ORBES);
+  const geometriaMarcaEstrella = crearMarcaEstrella();
+  const marcasOrbe = new THREE.InstancedMesh(geometriaMarcaEstrella, materialMarca, ORBES);
   marcasOrbe.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(ORBES * 3), 3);
 
   const escudo = new THREE.Mesh(
@@ -253,7 +378,7 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
   );
   escudo.visible = false;
 
-  const mallas = [rocas, halos, marcas, orbes, halosOrbe, aros, marcasOrbe];
+  const mallas = [rocas, halos, marcas, orbes, nucleos, destellosOrbe, marcasOrbe];
   mallas.forEach((malla) => {
     malla.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     malla.frustumCulled = false;
@@ -295,6 +420,9 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
     vidas: VIDAS,
     multiplicador: 1,
     racha: 0,
+    temas: 1,
+    pausa: false,
+    leyenda: null,
     modelo: NAVE_INICIAL,
     record: null,
     rival: null,
@@ -305,7 +433,12 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
     jefe: null,
   };
   let activo = false;
+  let pausa = false;
   let jugado = 0;
+  /** Lo jugado en el tema que suena: aguantarlo da premio solo si la partida estuvo un rato en él. */
+  let jugadoEnTema = 0;
+  /** La leyenda toma los colores del primer cuadro de la partida. */
+  let leyendaPendiente = false;
   let invulnerableHasta = -Infinity;
   let graciaHasta = -Infinity;
   let reloj = 0;
@@ -364,7 +497,7 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
   const reportar = () => {
     if (reportado) return;
     reportado = true;
-    eventos.alTerminar({ puntos: estado.puntos, modelo });
+    eventos.alTerminar({ puntos: estado.puntos, modelo, temas: estado.temas });
   };
 
   const tomarRoca = (m: Musica, delJefe: boolean) => {
@@ -415,7 +548,7 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
   /** Meteoritos de más por bombo según la racha. */
   const extras = () => Math.min(EXTRAS_MAX, Math.floor(estado.racha / RACHA_POR_EXTRA));
 
-  /** Un cristal en (x, y) del plano de la nave. Más lento que las piedras: da tiempo a ir a buscarlo. */
+  /** Una estrella en (x, y) del plano de la nave. Más lenta que las piedras: da tiempo a ir a buscarla. */
   const lanzarOrbe = (x: number, y: number) => {
     const orbe = poolOrbes.find((o) => !o.activo);
     if (!orbe) return;
@@ -458,7 +591,7 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
   };
 
   /**
-   * El imán: acerca lo que viene (cristal o cápsula) a la nave, más fuerte cuanto más cerca del plano
+   * El imán: acerca lo que viene (estrella o cápsula) a la nave, más fuerte cuanto más cerca del plano
    * y del costado de la nave. Devuelve cuánto tiró (0..1), para el hilo.
    */
   const atraer = (pos: THREE.Vector3, paso: boolean, dt: number): number => {
@@ -481,7 +614,7 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
   const perder = () => {
     estado.termino = true;
     if (estado.puntos > (estado.record?.puntos ?? 0)) {
-      estado.record = { puntos: estado.puntos, modelo };
+      estado.record = { puntos: estado.puntos, modelo, temas: estado.temas };
       estado.recordNuevo = true;
     }
     if (jefeEnCurso) {
@@ -685,6 +818,9 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
     get termino() {
       return estado.termino;
     },
+    get pausado() {
+      return pausa;
+    },
 
     /**
      * Arranca una partida. Sin `opciones` (el "Otra vez"), repite nave y rival y usa tu récord de
@@ -700,7 +836,10 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
       habilidad = FICHAS[modelo].habilidad;
       ocultarTodo();
       activo = true;
+      pausa = false;
       jugado = 0;
+      jugadoEnTema = 0;
+      leyendaPendiente = true;
       invulnerableHasta = -Infinity;
       graciaHasta = -Infinity;
       reportado = false;
@@ -725,6 +864,9 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
         vidas: VIDAS,
         multiplicador: 1,
         racha: 0,
+        temas: 1,
+        pausa: false,
+        leyenda: null,
         modelo,
         termino: false,
         recordNuevo: false,
@@ -741,8 +883,34 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
       if (activo && estado.puntos > 0) reportar();
       reportado = true;
       activo = false;
+      pausa = false;
       ocultarTodo();
       grupo.visible = false;
+    },
+
+    /** La pausa del marcador: todo queda quieto y los bombos no tiran nada. Al volver, un ratito sin choques. */
+    pausar: (si: boolean) => {
+      if (!activo || estado.termino || pausa === si) return;
+      pausa = si;
+      estado.pausa = si;
+      if (!si) graciaHasta = reloj + GRACIA_PAUSA;
+      avisar();
+    },
+
+    /**
+     * Empezó otro tema (o el mismo de nuevo) en medio de la partida: sigue, y suma uno a los temas.
+     * Si el anterior terminó solo y la partida estuvo un rato en él, premio.
+     */
+    cambioDeTema: (llegoAlFinal: boolean) => {
+      if (!activo || estado.termino) return;
+      estado.temas++;
+      if (llegoAlFinal && jugadoEnTema >= TEMA_MINIMO) {
+        const premio = PREMIO_TEMA * estado.multiplicador;
+        estado.puntos += premio;
+        eventos.alSumar(`¡Tema superado! +${premio}`, donde.copy(nave));
+      }
+      jugadoEnTema = 0;
+      avisar();
     },
 
     /**
@@ -752,14 +920,14 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
      * bombos son de él. El láser (triángulo o ayuda) también va con los bombos.
      */
     alGolpear: (fuerza: number, m: Musica) => {
-      if (!activo || estado.termino || jugado < CALMA_INICIAL) return;
+      if (!activo || pausa || estado.termino || jugado < CALMA_INICIAL) return;
       bombos++;
       if (tieneLaser() && bombos % (ayuda?.tipo === "laser" ? 1 : 4) === 0) dispararLaser();
       if (jefe.presente) {
         if (jefe.peleando) dispararJefe(m);
         return;
       }
-      // Hay temas con pocos redoblantes: si no hay un cristal a la vista, a veces sale en el bombo.
+      // Hay temas con pocos redoblantes: si no hay una estrella a la vista, a veces sale en el bombo.
       if (!poolOrbes.some((o) => o.activo) && Math.random() < 0.1) lanzarOrbeSuelto();
       if (Math.random() > Math.min(0.95, 0.3 + jugado / 70 + estado.racha * 0.015)) return;
       lanzarCerca(m, jugado > 8 && Math.random() < 0.35);
@@ -767,9 +935,9 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
       for (let i = extras(); i > 0; i--) if (Math.random() < 0.7) lanzarCerca(m, false);
     },
 
-    /** En los redoblantes, seguido, un cristal que suma; de vez en cuando, una cápsula de ayuda. */
+    /** En los redoblantes, seguido, una estrella que suma; de vez en cuando, una cápsula de ayuda. */
     alChasquear: () => {
-      if (!activo || estado.termino || jugado < CALMA_INICIAL) return;
+      if (!activo || pausa || estado.termino || jugado < CALMA_INICIAL) return;
       if (puedeCapsula() && Math.random() < 0.06) {
         lanzarCapsulaSuelta();
         return;
@@ -780,11 +948,11 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
 
     /**
      * El drop: viene el jefe (si ya pasó la calma y no hubo otro hace poco). Si no, una lluvia de
-     * meteoritos con un hueco cerca de la nave: hay que encontrarlo, y atrás de la lluvia viene un
-     * cristal (o a veces una cápsula) justo en el hueco. Con racha, la lluvia es más tupida.
+     * meteoritos con un hueco cerca de la nave: hay que encontrarlo, y atrás de la lluvia viene una
+     * estrella (o a veces una cápsula) justo en el hueco. Con racha, la lluvia es más tupida.
      */
     alDropear: (m: Musica) => {
-      if (!activo || estado.termino || jugado < CALMA_INICIAL || jefe.presente) return;
+      if (!activo || pausa || estado.termino || jugado < CALMA_INICIAL || jefe.presente) return;
       if (jugado >= JEFE_DESDE && jugado - ultimoJefe >= JEFE_CADA) {
         llamarJefe();
         return;
@@ -807,7 +975,7 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
 
     /**
      * Mueve todo y mira los cruces con el plano de la nave. `avanza` es false con el tema en pausa:
-     * el juego queda congelado.
+     * el juego queda congelado (igual que con la pausa del juego).
      */
     actualizar: (m: Musica, control: ControlNodriza, avanza: boolean) => {
       if (!activo) return;
@@ -820,16 +988,28 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
       radioNave = control.radio * 0.85;
       rx = radioNave * CHOQUE[modelo].x;
       ry = radioNave * CHOQUE[modelo].y;
-      const dt = avanza ? m.dt : 0;
+      const dt = avanza && !pausa ? m.dt : 0;
       reloj += dt;
-      if (!estado.termino) jugado += dt;
+      if (!estado.termino) {
+        jugado += dt;
+        jugadoEnTema += dt;
+      }
 
       peligro.value.copy(m.colorB);
       materialHalo.color.copy(m.colorB);
-      materialOrbe.color.copy(m.colorA).lerp(tmpColor.set(0xffffff), 0.45);
-      materialAro.color.copy(m.colorA).lerp(tmpColor.set(0xffffff), 0.6);
-      materialHaloOrbe.color.copy(m.colorA);
+      materialOrbe.color.copy(m.colorA).lerp(tmpColor.set(0xffffff), 0.3);
+      materialDestello.color.copy(m.colorA).lerp(tmpColor.set(0xffffff), 0.5);
       const radioOrbe = RADIO_ORBE * escalaNave;
+
+      // La leyenda del marcador, con los colores de ahora: se ve los primeros segundos.
+      if (leyendaPendiente) {
+        leyendaPendiente = false;
+        estado.leyenda = { estrella: `#${materialOrbe.color.getHexString()}`, peligro: `#${m.colorB.getHexString()}` };
+        avisar();
+      } else if (estado.leyenda && jugado > LEYENDA_DURA) {
+        estado.leyenda = null;
+        avisar();
+      }
 
       // ————— Tiempos: la ayuda que se acaba y el escudo del trompo que se recarga —————
       if (ayuda) {
@@ -911,7 +1091,7 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
       marcas.instanceMatrix.needsUpdate = true;
       if (marcas.instanceColor) marcas.instanceColor.needsUpdate = true;
 
-      // ————— Cristales (el imán los curva hacia la nave; las escoltas también los agarran) —————
+      // ————— Estrellas (el imán las curva hacia la nave; las escoltas también las agarran) —————
       campoIman.empezarHilos();
       let o = 0;
       for (const orbe of poolOrbes) {
@@ -942,19 +1122,23 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
         }
         const achica = orbe.pos.z > Z_ACHICA ? 1 - suave((orbe.pos.z - Z_ACHICA) / (Z_SE_VA - Z_ACHICA)) : 1;
         const escala = escalaNave * achica * (1 + Math.sin(reloj * 4 + orbe.fase) * 0.08);
+        // Gira en el plano de la pantalla (las puntas siempre se leen) y cabecea apenas.
         tmp.position.copy(orbe.pos);
-        tmp.rotation.set(0, reloj * 2.2 + orbe.fase, 0);
+        tmp.rotation.set(Math.sin(reloj * 1.3 + orbe.fase) * 0.35, Math.sin(reloj * 1.1 + orbe.fase) * 0.35, reloj * 1.8 + orbe.fase);
         tmp.scale.setScalar(escala);
         tmp.updateMatrix();
         orbes.setMatrixAt(o, tmp.matrix);
-        tmp.scale.setScalar(escala * 0.75);
+        // El núcleo blanco, chico y un poco adelante: es lo que el brillo neón derrama.
+        tmp.position.z += 0.15 * escala;
+        tmp.scale.setScalar(escala * 0.42);
         tmp.updateMatrix();
-        halosOrbe.setMatrixAt(o, tmp.matrix);
-        // El aro gira inclinado alrededor del cristal, cabeceando un poco.
-        tmp.rotation.set(1.1 + Math.sin(reloj * 1.3 + orbe.fase) * 0.3, reloj * 1.7 + orbe.fase, 0);
-        tmp.scale.setScalar(escala);
+        nucleos.setMatrixAt(o, tmp.matrix);
+        // El destello en cruz, de frente a la cámara: gira despacio al revés y respira poco (es chico).
+        tmp.position.copy(orbe.pos);
+        tmp.rotation.set(0, 0, orbe.fase - reloj * DESTELLO.giro);
+        tmp.scale.setScalar(escala * DESTELLO.tam * (0.92 + Math.sin(reloj * 2.6 + orbe.fase) * 0.08));
         tmp.updateMatrix();
-        aros.setMatrixAt(o, tmp.matrix);
+        destellosOrbe.setMatrixAt(o, tmp.matrix);
 
         // Su marca se prende antes que la de los meteoritos: hay que tener tiempo de llegar.
         const falta = nave.z - orbe.pos.z;
@@ -967,10 +1151,10 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
         marcasOrbe.setColorAt(o, tmpColor.copy(m.colorA).multiplyScalar(prende));
         o++;
       }
-      orbes.count = halosOrbe.count = aros.count = marcasOrbe.count = o;
+      orbes.count = nucleos.count = destellosOrbe.count = marcasOrbe.count = o;
       orbes.instanceMatrix.needsUpdate = true;
-      halosOrbe.instanceMatrix.needsUpdate = true;
-      aros.instanceMatrix.needsUpdate = true;
+      nucleos.instanceMatrix.needsUpdate = true;
+      destellosOrbe.instanceMatrix.needsUpdate = true;
       marcasOrbe.instanceMatrix.needsUpdate = true;
       if (marcasOrbe.instanceColor) marcasOrbe.instanceColor.needsUpdate = true;
 
@@ -983,7 +1167,7 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
         const radioCapsula = RADIO_CAPSULA * escalaNave;
         if (!capsula.paso && antes < nave.z && capsula.pos.z >= nave.z) {
           capsula.paso = true;
-          // Generosa, como el cristal: con el ancho de la nave, aunque sea finita.
+          // Generosa, como la estrella: con el ancho de la nave, aunque sea finita.
           if (!estado.termino && Math.hypot(capsula.pos.x - nave.x, capsula.pos.y - nave.y) < radioCapsula + Math.max(rx, radioNave * 0.9)) {
             capsula.activa = false;
             activarAyuda(capsula.tipo);
@@ -1056,13 +1240,15 @@ export function crearJuego(eventos: EventosJuego, kit: Kit) {
       materialRoca.dispose();
       geometriaHalo.dispose();
       materialHalo.dispose();
-      geometriaMarca.dispose();
+      geometriaMarcaPeligro.dispose();
+      geometriaMarcaEstrella.dispose();
       materialMarca.dispose();
-      geometriaOrbe.dispose();
+      geometriaEstrella.dispose();
       materialOrbe.dispose();
-      materialHaloOrbe.dispose();
-      geometriaAro.dispose();
-      materialAro.dispose();
+      materialNucleo.dispose();
+      geometriaDestello.dispose();
+      materialDestello.dispose();
+      texturaDestello.dispose();
       escudo.geometry.dispose();
       (escudo.material as THREE.Material).dispose();
       mallas.forEach((malla) => malla.dispose());

@@ -12,6 +12,8 @@ import { conBorde } from "./_naveMateriales";
 //  - (El terreno vive aparte, con sus biomas y estructuras: _naveTerreno.ts.)
 //  - Rave: aliens que cabecean con los graves, saltan en los bombos y levantan los brazos. Cada
 //    tanto baja una nave, se lleva a uno por el rayo (sube a saltos, en los bombos) y lo devuelve.
+//    Con el dedo se los agarra (cuelgan de la cabeza como péndulo), se los tira (pican, se marean y
+//    vuelven caminando; si salen por arriba, una nave los trae) y se los voltea como bolos, en cadena.
 //  - Láseres: salen de las luces de la nodriza en cada redoblante / hi-hat.
 
 /** Lo que suena en este cuadro, ya suavizado. Lo arma _Nave.tsx. */
@@ -436,10 +438,63 @@ const OLA_ENTRE = 1.4;
 const APLAUSO = 0.4;
 const CAMBIO_DE_LUGAR = 0.9;
 
+// El dedo (lo conecta _Nave.tsx): agarrados cuelgan de la cabeza como un péndulo; tirados vuelan con
+// gravedad, pican, se marean y vuelven caminando a su lugar; empujados caen como bolos, en cadena.
+/** Resorte que lleva la cabeza al dedo: llega en ~0,2 s sin pasarse y después lo sigue firme. */
+const RESORTE_DEDO = { firmeza: 480, freno: 37 };
+/**
+ * Colgado, el cuerpo se mece como un péndulo (`largo`: la parte del cuerpo hasta su centro). La
+ * aceleración del dedo lo empuja a medias y la velocidad lo deja atrás: con todo, cualquier tirón le
+ * daba la vuelta entera. `acelMax` es el tope de esos empujones.
+ */
+const PENDULO = { largo: 0.6, freno: 2.2, empuje: 0.35, arrastre: 1.2, acelMax: 80 };
+const GRAVEDAD_RAVE = 20;
+/** Pasos de física de a lo sumo esto: a 30 cuadros por segundo el resorte firme se desarmaría. */
+const PASO_FISICA = 1 / 120;
+/** Cuántos cuadros del dedo se guardan para medir su velocidad. */
+const MUESTRAS_DEDO = 16;
+/** El tiro sale con la velocidad del dedo en sus últimos 75 ms: si frenó antes de soltar, cae casi derecho. */
+const VENTANA_TIRO = 0.075;
+/** Para seguir al dedo alcanza una ventana más corta (responde antes). */
+const VENTANA_RESORTE = 0.045;
+const TIRO_MAX = 30;
+/** Cuánto gira (rad/s) por cada unidad por segundo de costado del tiro, en el sentido del tiro. */
+const GIRO_POR_VELOCIDAD = 0.45;
+const REBOTE_PARED = 0.55;
+/** En el piso pica una o dos veces: lo que conserva de la velocidad, y el piquecito mínimo. */
+const REBOTE_PISO = 0.42;
+const PIQUE_MIN = 2.2;
+const MAREO = 0.9;
+/** Vuelve a saltitos y, aunque esté lejos, no tarda más que `tardaMax` segundos. */
+const CAMINA = { rapidez: 1.5, saltito: 0.09, largoSaltito: 0.32, tardaMax: 2.6 };
+/** El salto al llegar a su lugar, y el saltito al levantarse después de caerse. */
+const SALTO_CONTENTO = 0.9;
+const SALTITO_LEVANTA = 0.5;
+/**
+ * El bolo, sobre los pies: el empujón arranca entre `empujon` y `empujon + extra` rad/s, queda acostado
+ * a `acostado` rad (con un rebotecito), se queda `queda` s y se levanta en `levanta` s. Al pasar
+ * `vecino` rad tumba al de al lado, si lo alcanza.
+ */
+const VOLTEO = { empujon: 1, extra: 3, acostado: 1.45, rebote: 0.35, queda: 0.7, levanta: 0.55, vecino: 0.75 };
+/** Uno que vuela bajo tumba a los parados que roza: tan cerca de costado y hasta tan alto sobre las cabezas. */
+const ROCE = { ancho: 0.24, alto: 0.5 };
+/** Se fue por arriba cuando todo el cuerpo pasó este margen sobre el borde de la pantalla. */
+const SALIDA_ARRIBA = 0.6;
+/** Al cambiar de estado la pose no salta: la diferencia se apaga sola (constante de tiempo; ~0,2 s en total). */
+const MEZCLA_POSE = 0.06;
+
+const clamp = THREE.MathUtils.clamp;
+/** La diferencia entre dos ángulos por el lado corto (-π..π). */
+function difAngulo(a: number, b: number) {
+  const d = a - b;
+  return d - Math.round(d / VUELTA) * VUELTA;
+}
+
 // La rave baila de a dos: cada uno tiene pareja (el de al lado), se miran, chocan las caderas en los
 // bombos, chocan las manos en los redoblantes y a veces cambian de lugar girando. Los graves largan
 // olas que cruzan a toda la gente, y cada uno rebota con su banda del espectro (los del medio con
-// los graves, los de las puntas con los agudos), así la fila entera dibuja la música.
+// los graves, los de las puntas con los agudos), así la fila entera dibuja la música. Con el dedo se
+// los saca del baile (ver `Fuera`); mientras uno está afuera, su pareja no cambia de lugar con él.
 type Bailarin = {
   orden: number;
   x: number;
@@ -461,6 +516,7 @@ type Bailarin = {
   /** Para qué lado está la pareja: 1 a la derecha, -1 a la izquierda. */
   hacia: number;
   pareja: Bailarin | null;
+  par: Pareja | null;
   aplausoDesde: number;
   /** Banda del espectro con la que rebota. */
   banda: number;
@@ -468,13 +524,118 @@ type Bailarin = {
   xAhora: number;
   zExtra: number;
   giroExtra: number;
+  /** Mitad visible del mundo a su profundidad (de este cuadro). */
+  mvx: number;
+  mvy: number;
+  fuera: Fuera;
 };
 
 type Pareja = { a: Bailarin; b: Bailarin; cambioDesde: number; xa: number; xb: number };
 
+/** Fuera del baile: lo lleva el dedo, vuela, está mareado, vuelve caminando o lo voltearon. */
+type Estado = "baila" | "agarrado" | "vuela" | "mareado" | "vuelve" | "volteado";
+
+type Fuera = {
+  estado: Estado;
+  desde: number;
+  /** Cabeza en el mundo (a su profundidad) y su velocidad. La pone la física; bailando no se usa. */
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  /** Giro del cuerpo en el plano de la pantalla y su velocidad: colgado es el péndulo; volando, el del tiro. */
+  giro: number;
+  giroVel: number;
+  /** Mareado: a qué vuelta entera se endereza. */
+  giroMeta: number;
+  piques: number;
+  /** Volviendo: desde dónde salió, cuántos saltitos da y a qué velocidad. */
+  caminaDesde: number;
+  saltitos: number;
+  rapidez: number;
+  /** Volteado: para qué lado, cuánto está caído sobre los pies, en qué parte va y con qué fuerza lo empujaron. */
+  lado: 1 | -1;
+  angulo: number;
+  anguloVel: number;
+  fase: "cae" | "acostado" | "levanta";
+  faseDesde: number;
+  rebotes: number;
+  fuerza: number;
+  tumboVecino: boolean;
+  /** Lo que pide el estado de ahora: para dónde mirar, brazos arriba, pataleo y a qué ritmo. */
+  miraMeta: number;
+  alzadaMeta: number;
+  pataleoMeta: number;
+  ritmo: number;
+  /** Suavizados (nunca saltan): el pataleo, el bamboleo de la cabeza mareada y cuánto baila a su manera. */
+  pataleo: number;
+  faseBrazos: number;
+  mareo: number;
+  baile: number;
+  contentoDesde: number;
+  /** La última pose dibujada, y lo que falta mezclar desde ella después de cambiar de estado. */
+  ultX: number;
+  ultY: number;
+  ultRy: number;
+  ultRz: number;
+  mezclaPendiente: boolean;
+  mezclaX: number;
+  mezclaY: number;
+  mezclaRy: number;
+  mezclaRz: number;
+};
+
+const nuevoFuera = (): Fuera => ({
+  estado: "baila",
+  desde: -10,
+  x: 0,
+  y: 0,
+  vx: 0,
+  vy: 0,
+  giro: 0,
+  giroVel: 0,
+  giroMeta: 0,
+  piques: 0,
+  caminaDesde: 0,
+  saltitos: 1,
+  rapidez: CAMINA.rapidez,
+  lado: 1,
+  angulo: 0,
+  anguloVel: 0,
+  fase: "cae",
+  faseDesde: -10,
+  rebotes: 0,
+  fuerza: 0,
+  tumboVecino: false,
+  miraMeta: 0,
+  alzadaMeta: 0,
+  pataleoMeta: 0,
+  ritmo: 0,
+  pataleo: 0,
+  faseBrazos: 0,
+  mareo: 0,
+  baile: 1,
+  contentoDesde: -10,
+  ultX: 0,
+  ultY: 0,
+  ultRy: 0,
+  ultRz: 0,
+  mezclaPendiente: false,
+  mezclaX: 0,
+  mezclaY: 0,
+  mezclaRy: 0,
+  mezclaRz: 0,
+});
+
 // La abducción: baja una nave sobre un bailarín, prende el rayo y lo sube a saltos (en los bombos),
 // lo tiene arriba girando con los brazos en alto, lo baja a su lugar y se va. Segundos de cada parte:
 const ABDUCCION = { baja: 1.4, prende: 0.6, subeMax: 5, arriba: 2.6, devuelve: 1.6, apaga: 0.5, seVa: 1.3 };
+/**
+ * La que trae de vuelta a uno que tiraron por arriba de la pantalla: baja con él ya colgado del rayo
+ * (arranca `masAlto` más arriba, así él también entra desde afuera), el rayo prende en `prende` s y lo
+ * tiene arriba solo `arriba` s. Después lo baja como al final de una abducción.
+ */
+const DEVOLUCION = { masAlto: 1.4, prende: 0.3, arriba: 0.9 };
 const ESCALA_ABDUCTORA = 0.38;
 /** El rayo de la abductora es más largo y ancho que el de siempre: llega de arriba de la gente hasta el piso. */
 const LARGO_RAYO = 2;
@@ -506,11 +667,16 @@ type Abduccion = {
   fase: number;
   rumbo: number;
   vaiven: Vaiven;
+  /** Lo trae de vuelta (lo tiraron por arriba): baja con él colgado, `extraY` más arriba que su lugar en el rayo. */
+  devolucion: boolean;
+  extraY: number;
 };
 
 export type Rave = Pieza & {
-  /** Centro de cada cabeza en el mundo y su radio (x, y, z, r; r = 0 si no se ve): para tocarlos. */
+  /** Centro de cada cabeza en el mundo y su radio (x, y, z, r; r = 0 si no se ve): para tocarlos (también en el aire). */
   cabezas: Float32Array;
+  /** Pies de cada bailarín en el mundo (x, y, z por bailarín, mismo índice que cabezas): el otro extremo del cuerpo. */
+  pies: Float32Array;
   tocar: (indice: number, reloj: number) => void;
   /**
    * Baja una nave y se lleva a ese bailarín por el rayo (el mismo índice que `cabezas`; -1 = uno
@@ -519,6 +685,18 @@ export type Rave = Pieza & {
   abducir: (indice: number, reloj: number) => boolean;
   /** Prende o apaga las abducciones solas (una cada 25–45 s, en un bombo). Jugando, apagarlas. */
   abducirSola: (si: boolean) => void;
+  /** Si al bailarín se lo puede levantar ahora. */
+  sePuedeAgarrar: (indice: number, reloj: number) => boolean;
+  /** Lo levanta el dedo, que está en `punto` (mundo). Uno a la vez: si había otro agarrado, lo suelta. */
+  agarrar: (indice: number, punto: THREE.Vector3, reloj: number) => void;
+  /** Adónde va el dedo en este cuadro (mundo, ya proyectado a la profundidad del bailarín; la z se ignora). */
+  arrastrar: (punto: THREE.Vector3) => void;
+  /** Lo suelta: sale con la velocidad que traía (la mide la rave). Sin nadie agarrado, no hace nada. */
+  soltar: (reloj: number) => void;
+  /** A qué profundidad (z del mundo) está ese bailarín: ahí proyecta el dedo _Nave. */
+  profundidad: (indice: number) => number;
+  /** Lo voltea como un bolo para `lado` (1 = +x, -1 = -x). `fuerza` 0..1 (de la velocidad del dedo). */
+  empujar: (indice: number, lado: 1 | -1, fuerza: number, reloj: number) => void;
 };
 
 export function crearRave(kit: Kit): Rave {
@@ -540,10 +718,12 @@ export function crearRave(kit: Kit): Rave {
   const ordenesPareja = Array.from({ length: Math.ceil(BAILARINES / 2) }, (_, i) => i).sort(() => Math.random() - 0.5);
   const bailarines: Bailarin[] = Array.from({ length: BAILARINES }, (_, i) => {
     const x = (i / (BAILARINES - 1)) * 2 - 1 + azar(-0.03, 0.03);
+    const z = azar(0.5, 3.2);
+    const mv = mitadVisible(z, 1);
     return {
       orden: ordenesPareja[Math.floor(i / 2)] * 2 + (i % 2),
       x,
-      z: azar(0.5, 3.2),
+      z,
       fase: Math.random() * Math.PI * 2,
       escala: azar(0.24, 0.33),
       saltoDesde: -10,
@@ -557,11 +737,15 @@ export function crearRave(kit: Kit): Rave {
       mira: 0,
       hacia: 0,
       pareja: null,
+      par: null,
       aplausoDesde: -10,
       banda: Math.min(BANDAS - 1, Math.floor(Math.abs(x) * BANDAS)),
       xAhora: x,
       zExtra: 0,
       giroExtra: 0,
+      mvx: mv.x,
+      mvy: mv.y,
+      fuera: nuevoFuera(),
     };
   });
   // Parejas: el de al lado, a la misma profundidad y con el mismo compás (así el vaivén es espejado).
@@ -575,14 +759,21 @@ export function crearRave(kit: Kit): Rave {
     b.pareja = a;
     a.hacia = 1;
     b.hacia = -1;
-    parejas.push({ a, b, cambioDesde: -10, xa: a.x, xb: b.x });
+    const par: Pareja = { a, b, cambioDesde: -10, xa: a.x, xb: b.x };
+    a.par = par;
+    b.par = par;
+    parejas.push(par);
   }
   bailarines.sort((a, b) => a.z - b.z);
   let olaDesde = -10;
   // Centro de cada cabeza en el mundo y su radio (x, y, z, r; r = 0 si no se ve): para tocarlos.
   const centros = new Float32Array(BAILARINES * 4);
+  const pies = new Float32Array(BAILARINES * 3);
 
   const raiz = new THREE.Object3D();
+  // El giro de costado (z) va en el plano de la pantalla aunque mire para un lado: así el péndulo, el
+  // giro del tiro y el bolo se leen de frente (con el orden de siempre se achicaban de perfil).
+  raiz.rotation.order = "ZYX";
   const local = new THREE.Object3D();
   const cabeza = new THREE.Matrix4();
   const matriz = new THREE.Matrix4();
@@ -604,24 +795,10 @@ export function crearRave(kit: Kit): Rave {
   // Los que se ven en la pantalla de ahora (para elegir a quién llevarse).
   let visiblesAhora = BAILARINES;
 
-  const parejaDe = (b: Bailarin) => parejas.find((par) => par.a === b || par.b === b) ?? null;
-  const cambiandoDeLugar = (b: Bailarin, reloj: number) => {
-    const par = parejaDe(b);
-    return par !== null && reloj - par.cambioDesde < CAMBIO_DE_LUGAR;
-  };
+  const cambiandoDeLugar = (b: Bailarin, reloj: number) => b.par !== null && reloj - b.par.cambioDesde < CAMBIO_DE_LUGAR;
+  const llevadoPorNave = (b: Bailarin) => abduccion !== null && abduccion.bailarin === b;
 
-  const abducir = (indice: number, reloj: number): boolean => {
-    if (abduccion) return false;
-    let b: Bailarin | undefined;
-    if (indice >= 0) {
-      b = bailarines[indice];
-    } else {
-      // Uno que se vea bien: no en las puntas (en un celu parado se cortaría) ni cambiando de lugar.
-      const candidatos = bailarines.filter((c) => c.orden < visiblesAhora && Math.abs(c.x) < 0.75 && !cambiandoDeLugar(c, reloj));
-      b = candidatos.length > 0 ? candidatos[Math.floor(Math.random() * candidatos.length)] : undefined;
-    }
-    if (!b || b.orden >= visiblesAhora || cambiandoDeLugar(b, reloj)) return false;
-
+  const nuevaAbduccion = (b: Bailarin, reloj: number, devolucion: boolean): Abduccion => {
     const nave = crearNave(kit, elegirModelo(kit));
     nave.grupo.scale.setScalar(ESCALA_ABDUCTORA);
     // El rayo se estira desde la panza (la punta del cono queda pegada a la nave).
@@ -631,15 +808,16 @@ export function crearRave(kit: Kit): Rave {
     // Se ubica en el próximo cuadro: hasta entonces no se dibuja (si no, saldría un cuadro en el centro).
     nave.grupo.visible = false;
     grupo.add(nave.grupo);
-    abduccion = {
+    return {
       bailarin: b,
       nave,
       desde: reloj,
-      alto: 0,
-      meta: 0,
+      // La que lo devuelve ya lo trae arriba, agarrado.
+      alto: devolucion ? 1 : 0,
+      meta: devolucion ? 1 : 0,
       altoBaja: 0,
       subida: 0,
-      agarre: 0,
+      agarre: devolucion ? 1 : 0,
       dx: 0,
       giro: 0,
       arribaDesde: -1,
@@ -648,7 +826,25 @@ export function crearRave(kit: Kit): Rave {
       fase: Math.random() * Math.PI * 2,
       rumbo: Math.random() < 0.5 ? -1 : 1,
       vaiven: nuevoVaiven(),
+      devolucion,
+      extraY: 0,
     };
+  };
+
+  const abducir = (indice: number, reloj: number): boolean => {
+    if (abduccion) return false;
+    let b: Bailarin | undefined;
+    if (indice >= 0) {
+      b = bailarines[indice];
+    } else {
+      // Uno que se vea bien: no en las puntas (en un celu parado se cortaría), ni cambiando de lugar, ni afuera.
+      const candidatos = bailarines.filter(
+        (c) => c.orden < visiblesAhora && Math.abs(c.x) < 0.75 && c.fuera.estado === "baila" && !cambiandoDeLugar(c, reloj)
+      );
+      b = candidatos.length > 0 ? candidatos[Math.floor(Math.random() * candidatos.length)] : undefined;
+    }
+    if (!b || b.orden >= visiblesAhora || b.fuera.estado !== "baila" || cambiandoDeLugar(b, reloj)) return false;
+    abduccion = nuevaAbduccion(b, reloj, false);
     return true;
   };
 
@@ -662,29 +858,34 @@ export function crearRave(kit: Kit): Rave {
     const baseX = b.xAhora * mv.x * 0.92;
     const baseY = -mv.y * 0.6;
     // El rayo llega justo hasta abajo del bailarín; la nave queda arriba, a lo largo del rayo.
-    const pies = baseY + PIES_RAVE * b.escala;
-    const panza = pies + 3.4 * LARGO_RAYO * s * 0.95;
+    const yPies = baseY + PIES_RAVE * b.escala;
+    const panza = yPies + 3.4 * LARGO_RAYO * s * 0.95;
     const yNave = panza - ab.nave.bajo * s;
     const yAfuera = 0.6 + mv.y + 1.6;
+    // La que lo devuelve arranca más arriba: él viene colgado abajo y también tiene que entrar desde afuera.
+    const yDesde = yAfuera + (ab.devolucion ? DEVOLUCION.masAlto : 0);
     // Sube hasta media altura del rayo (más arriba el cono es finito y quedaría afuera).
     ab.subida = Math.max(0, panza - 0.12 - (baseY + CORONILLA * b.escala)) * 0.72;
 
-    // El rayo prende y apaga con fundido y su brillo sigue la curva lenta.
-    const luz =
-      ab.dejoDesde < 0
-        ? suave(THREE.MathUtils.clamp((tau - A.baja + 0.25) / A.prende, 0, 1))
-        : 1 - suave(THREE.MathUtils.clamp((m.reloj - ab.dejoDesde) / A.apaga, 0, 1));
-    ab.agarre = luz;
+    // El rayo prende y apaga con fundido y su brillo sigue la curva lenta. La que lo devuelve lo trae
+    // agarrado desde el principio: prende enseguida (fuera de la pantalla) y lo tiene hasta dejarlo.
+    const prende = ab.devolucion
+      ? suave(THREE.MathUtils.clamp(tau / DEVOLUCION.prende, 0, 1))
+      : suave(THREE.MathUtils.clamp((tau - A.baja + 0.25) / A.prende, 0, 1));
+    const luz = ab.dejoDesde < 0 ? prende : 1 - suave(THREE.MathUtils.clamp((m.reloj - ab.dejoDesde) / A.apaga, 0, 1));
+    ab.agarre = ab.devolucion && ab.dejoDesde < 0 ? 1 : luz;
 
     if (ab.bajaDesde < 0) {
       // Sube a saltos: cada bombo lo empuja un poco y entre bombo y bombo sube despacio igual.
-      if (tau > A.baja + A.prende * 0.5) {
+      if (!ab.devolucion && tau > A.baja + A.prende * 0.5) {
         ab.meta = Math.min(1, ab.meta + m.dt * 0.07 + (m.golpeAhora ? 0.2 : 0));
         if (tau > A.baja + A.prende + A.subeMax) ab.meta = 1;
       }
       ab.alto += (ab.meta - ab.alto) * Math.min(1, m.dt * 4);
-      if (ab.arribaDesde < 0 && ab.alto > 0.985) ab.arribaDesde = m.reloj;
-      if (ab.arribaDesde >= 0 && m.reloj - ab.arribaDesde > A.arriba) {
+      // La que lo devuelve ya lo trae arriba: cuenta desde que llegó sobre su lugar.
+      const llego = !ab.devolucion || tau >= A.baja;
+      if (ab.arribaDesde < 0 && llego && ab.alto > 0.985) ab.arribaDesde = m.reloj;
+      if (ab.arribaDesde >= 0 && m.reloj - ab.arribaDesde > (ab.devolucion ? DEVOLUCION.arriba : A.arriba)) {
         ab.bajaDesde = m.reloj;
         ab.altoBaja = ab.alto;
       }
@@ -704,11 +905,13 @@ export function crearRave(kit: Kit): Rave {
     // bailarín) y, cuando lo dejó, se va para arriba acelerando.
     let y: number;
     if (ab.dejoDesde < 0) {
-      y = yAfuera + (yNave - yAfuera) * suave(THREE.MathUtils.clamp(tau / A.baja, 0, 1));
+      y = yDesde + (yNave - yDesde) * suave(THREE.MathUtils.clamp(tau / A.baja, 0, 1));
     } else {
       const k = THREE.MathUtils.clamp((m.reloj - ab.dejoDesde - A.apaga * 0.6) / A.seVa, 0, 1);
       y = yNave + (yAfuera + 2 - yNave) * k * k;
     }
+    // Bajando con él colgado: lo que a la nave le falta para llegar, él lo tiene de más.
+    ab.extraY = ab.devolucion && ab.dejoDesde < 0 ? y - yNave : 0;
     vaivenDe(ab.nave.modelo, m.reloj, ab.fase, ab.vaiven);
     ab.dx = ab.vaiven.x * s * 0.3;
     ab.nave.grupo.visible = true;
@@ -727,12 +930,416 @@ export function crearRave(kit: Kit): Rave {
     }
   };
 
+  // ————— El dedo: agarrar, tirar, voltear —————
+  /** El que lleva el dedo ahora (uno a la vez). */
+  let agarrado: Bailarin | null = null;
+  const dedo = new THREE.Vector2();
+  const dedoAntes = new THREE.Vector2();
+  const dedoVel = new THREE.Vector2();
+  const tiro = new THREE.Vector2();
+  // Por dónde pasó el dedo en los últimos cuadros, con un reloj propio (suma los dt: en pausa no corre).
+  const muestraT = new Float64Array(MUESTRAS_DEDO);
+  const muestraX = new Float32Array(MUESTRAS_DEDO);
+  const muestraY = new Float32Array(MUESTRAS_DEDO);
+  let muestras = 0;
+  let muestraSig = 0;
+  let tiempoDedo = 0;
+
+  const anotarDedo = (x: number, y: number) => {
+    muestraT[muestraSig] = tiempoDedo;
+    muestraX[muestraSig] = x;
+    muestraY[muestraSig] = y;
+    muestraSig = (muestraSig + 1) % MUESTRAS_DEDO;
+    muestras = Math.min(MUESTRAS_DEDO, muestras + 1);
+  };
+  /** La velocidad del dedo en la última `ventana` de segundos (de punta a punta: si se quedó quieto, 0). */
+  const velocidadDedo = (ventana: number, salida: THREE.Vector2) => {
+    salida.set(0, 0);
+    if (muestras < 2) return salida;
+    const ultima = (muestraSig - 1 + MUESTRAS_DEDO) % MUESTRAS_DEDO;
+    let desde = ultima;
+    for (let n = 1; n < muestras; n++) {
+      desde = (ultima - n + MUESTRAS_DEDO) % MUESTRAS_DEDO;
+      if (muestraT[ultima] - muestraT[desde] >= ventana) break;
+    }
+    const lapso = muestraT[ultima] - muestraT[desde];
+    if (lapso > 1e-3) salida.set((muestraX[ultima] - muestraX[desde]) / lapso, (muestraY[ultima] - muestraY[desde]) / lapso);
+    return salida;
+  };
+
+  /** Cambia de estado. La pose no salta: arranca de la última dibujada y llega sola a la nueva. */
+  const cambiar = (b: Bailarin, estado: Estado, reloj: number) => {
+    b.fuera.estado = estado;
+    b.fuera.desde = reloj;
+    b.fuera.mezclaPendiente = true;
+  };
+  /** Vuelve al baile en el acto (se dejó de ver, o se lo lleva una nave fuera de la pantalla). */
+  const volverAlBaile = (b: Bailarin, reloj: number) => {
+    const f = b.fuera;
+    f.estado = "baila";
+    f.desde = reloj;
+    f.mezclaPendiente = false;
+    f.mezclaX = f.mezclaY = f.mezclaRy = f.mezclaRz = 0;
+    f.giro = f.giroVel = 0;
+    f.mareo = f.pataleo = 0;
+    if (agarrado === b) agarrado = null;
+  };
+
+  /** Se ve, está bailando (no afuera ni volteado) y no lo ocupa otra cosa: se lo puede voltear. */
+  const sePuedeVoltear = (b: Bailarin, indice: number, reloj: number) =>
+    b.orden < visiblesAhora && centros[indice * 4 + 3] > 0 && b.fuera.estado === "baila" && !llevadoPorNave(b) && !cambiandoDeLugar(b, reloj);
+
+  /** Volteado, la cabeza gira alrededor de los pies, que quedan en su lugar. */
+  const posarVolteado = (b: Bailarin) => {
+    const f = b.fuera;
+    const largo = -PIES_RAVE * b.escala;
+    const pieX = b.xAhora * b.mvx * 0.92;
+    const pieY = -b.mvy * 0.6 - largo;
+    f.x = pieX + f.lado * largo * Math.sin(f.angulo);
+    f.y = pieY + largo * Math.cos(f.angulo);
+    f.giro = -f.lado * f.angulo;
+  };
+
+  const empujar = (indice: number, lado: 1 | -1, fuerza: number, reloj: number) => {
+    const b = bailarines[indice];
+    if (!b || !sePuedeVoltear(b, indice, reloj)) return;
+    const f = b.fuera;
+    const k = Number.isFinite(fuerza) ? clamp(fuerza, 0, 1) : 0.5;
+    f.lado = lado;
+    f.angulo = 0;
+    f.anguloVel = VOLTEO.empujon + k * VOLTEO.extra;
+    f.fase = "cae";
+    f.rebotes = 0;
+    f.fuerza = k;
+    f.tumboVecino = false;
+    cambiar(b, "volteado", reloj);
+    posarVolteado(b);
+  };
+
+  /** Como un bolo: el más cercano que sigue parado para ese lado, si la cabeza del que cae lo alcanza. */
+  const tumbarVecino = (b: Bailarin, reloj: number) => {
+    const f = b.fuera;
+    const pieX = b.xAhora * b.mvx * 0.92;
+    // Hasta la coronilla (lo que de verdad le pega al de al lado): en la compu están más separados que
+    // el largo hasta el centro de la cabeza y la fila no caía en cadena.
+    let alcance = (CORONILLA - PIES_RAVE) * b.escala;
+    let vecino = -1;
+    for (let j = 0; j < BAILARINES; j++) {
+      const otro = bailarines[j];
+      if (otro === b || !sePuedeVoltear(otro, j, reloj)) continue;
+      const d = (centros[j * 4] - pieX) * f.lado;
+      if (d > 0 && d < alcance) {
+        alcance = d;
+        vecino = j;
+      }
+    }
+    if (vecino >= 0) empujar(vecino, f.lado, Math.max(0.35, f.fuerza * 0.85), reloj);
+  };
+
+  /** Uno que vuela bajito tumba a los parados que pasa rozando, para donde va. */
+  const rozar = (b: Bailarin, reloj: number) => {
+    const f = b.fuera;
+    // En la escala del escenario (x / mitad visible): cuenta lo que se ve encimado aunque estén a otra profundidad.
+    const u = f.x / b.mvx;
+    for (let j = 0; j < BAILARINES; j++) {
+      const otro = bailarines[j];
+      if (otro === b || !sePuedeVoltear(otro, j, reloj)) continue;
+      const dx = centros[j * 4] / otro.mvx - u;
+      if (Math.abs(dx) * b.mvx >= ROCE.ancho) continue;
+      const lado = Math.abs(f.vx) > 0.8 ? (f.vx > 0 ? 1 : -1) : dx >= 0 ? 1 : -1;
+      empujar(j, lado, clamp(Math.abs(f.vx) / 15 + 0.3, 0.3, 1), reloj);
+      f.vx *= 0.85;
+    }
+  };
+
+  const llegar = (b: Bailarin, reloj: number) => {
+    cambiar(b, "baila", reloj);
+    b.fuera.contentoDesde = reloj;
+    b.saltoDesde = reloj;
+    b.saltoAlto = SALTO_CONTENTO;
+  };
+  const empezarACaminar = (b: Bailarin, reloj: number) => {
+    const f = b.fuera;
+    const distancia = Math.abs(b.xAhora * b.mvx * 0.92 - f.x);
+    if (distancia < 0.03) {
+      llegar(b, reloj);
+      return;
+    }
+    f.caminaDesde = f.x;
+    f.saltitos = Math.max(1, Math.round(distancia / CAMINA.largoSaltito));
+    f.rapidez = Math.max(CAMINA.rapidez, distancia / CAMINA.tardaMax);
+    cambiar(b, "vuelve", reloj);
+  };
+  const marear = (b: Bailarin, reloj: number) => {
+    const f = b.fuera;
+    f.vy = 0;
+    // Se endereza a la vuelta entera más cercana contando para dónde venía girando.
+    f.giroMeta = Math.round((f.giro + f.giroVel * 0.15) / VUELTA) * VUELTA;
+    cambiar(b, "mareado", reloj);
+  };
+  /** Lo tiraron por arriba de la pantalla: una abductora lo trae colgado del rayo y lo deja en su lugar. */
+  const devolver = (b: Bailarin, reloj: number) => {
+    // Está fuera de la pantalla: vuelve al baile sin mezclar la pose (cuelga de la nave desde ya).
+    volverAlBaile(b, reloj);
+    b.fuera.baile = 0;
+    abduccion = nuevaAbduccion(b, reloj, true);
+  };
+
+  const sePuedeAgarrar = (indice: number, reloj: number) => {
+    const b = bailarines[indice];
+    if (!b) return false;
+    // r > 0: se dibujó en el último cuadro (se ve).
+    return b.orden < visiblesAhora && centros[indice * 4 + 3] > 0 && !llevadoPorNave(b) && !cambiandoDeLugar(b, reloj);
+  };
+
+  const soltar = (reloj: number) => {
+    const b = agarrado;
+    if (!b) return;
+    agarrado = null;
+    const f = b.fuera;
+    velocidadDedo(VENTANA_TIRO, tiro);
+    if (tiro.length() > TIRO_MAX) tiro.setLength(TIRO_MAX);
+    // Apoyado en el piso y casi quieto no es un tiro: vuelve caminando, sin marearse.
+    if (f.y + b.mvy * 0.6 < 0.08 && tiro.length() < 2) {
+      empezarACaminar(b, reloj);
+      return;
+    }
+    f.vx = tiro.x;
+    f.vy = tiro.y;
+    // Gira para donde lo tiraron (y algo del péndulo que traía).
+    f.giroVel = -f.vx * GIRO_POR_VELOCIDAD + f.giroVel * 0.3;
+    f.piques = 0;
+    cambiar(b, "vuela", reloj);
+  };
+
+  const agarrar = (indice: number, punto: THREE.Vector3, reloj: number) => {
+    if (!sePuedeAgarrar(indice, reloj)) return;
+    const b = bailarines[indice];
+    if (agarrado && agarrado !== b) soltar(reloj);
+    const f = b.fuera;
+    if (f.estado !== "agarrado") {
+      // Lo levanta de donde esté y con lo que se venía moviendo (volando o cayéndose), sin saltos.
+      if (f.estado === "vuela") {
+        f.vx = clamp(f.vx, -12, 12);
+        f.vy = clamp(f.vy, -12, 12);
+        f.giroVel = clamp(f.giroVel, -8, 8);
+      } else {
+        f.vx = 0;
+        f.vy = 0;
+        f.giroVel = f.estado === "volteado" ? -f.lado * f.anguloVel : 0;
+      }
+      f.x = f.ultX;
+      f.y = f.ultY;
+      f.giro = difAngulo(f.ultRz, 0);
+      cambiar(b, "agarrado", reloj);
+    }
+    agarrado = b;
+    dedo.set(punto.x, punto.y);
+    dedoAntes.copy(dedo);
+    muestras = 0;
+    anotarDedo(punto.x, punto.y);
+  };
+
+  /** Cada cuadro, antes que la nave y que ubicar a la gente: lo que le pasa al que salió del baile. */
+  const moverFuera = (b: Bailarin, m: Musica) => {
+    const f = b.fuera;
+    const dt = m.dt;
+    const piso = -b.mvy * 0.6;
+    const costado = b.mvx * 0.92;
+    const largo = -PIES_RAVE * b.escala;
+    const t = m.reloj - f.desde;
+    // Pasos chicos: con el dt de un cuadro lento el resorte firme y el péndulo se desarmarían.
+    const pasos = dt > 0 ? Math.min(12, Math.ceil(dt / PASO_FISICA)) : 0;
+    const h = pasos > 0 ? dt / pasos : 0;
+    f.miraMeta = 0;
+    f.alzadaMeta = 0;
+    f.pataleoMeta = 0;
+    f.ritmo = 12;
+
+    switch (f.estado) {
+      case "baila":
+        break;
+      case "agarrado": {
+        // Lo que se ve de su plano: de acá no se lo puede sacar (ni meterlo en el piso).
+        const techo = 0.6 + b.mvy * 0.95 - CORONILLA * b.escala;
+        const l = PENDULO.largo * largo;
+        velocidadDedo(VENTANA_RESORTE, dedoVel);
+        for (let s = 0; s < pasos; s++) {
+          const u = (s + 1) / pasos;
+          const metaX = clamp(dedoAntes.x + (dedo.x - dedoAntes.x) * u, -costado, costado);
+          const metaY = clamp(dedoAntes.y + (dedo.y - dedoAntes.y) * u, piso, techo);
+          // Con la velocidad del dedo sumada al freno: si el dedo corre, la cabeza no se queda atrás.
+          const ax = RESORTE_DEDO.firmeza * (metaX - f.x) + RESORTE_DEDO.freno * (dedoVel.x - f.vx);
+          const ay = RESORTE_DEDO.firmeza * (metaY - f.y) + RESORTE_DEDO.freno * (dedoVel.y - f.vy);
+          f.vx += ax * h;
+          f.vy += ay * h;
+          f.x += f.vx * h;
+          f.y += f.vy * h;
+          if (Math.abs(f.x) > costado) {
+            f.x = Math.sign(f.x) * costado;
+            f.vx = 0;
+          }
+          if (f.y < piso || f.y > techo) {
+            f.y = clamp(f.y, piso, techo);
+            f.vy = 0;
+          }
+          // El cuerpo cuelga de la cabeza: se queda atrás cuando arranca o corre, y se pasa cuando frena.
+          const empujeX = clamp(PENDULO.empuje * ax + PENDULO.arrastre * f.vx, -PENDULO.acelMax, PENDULO.acelMax);
+          const empujeY = clamp(PENDULO.empuje * ay, -GRAVEDAD_RAVE * 0.6, PENDULO.acelMax);
+          const torque = -((GRAVEDAD_RAVE + empujeY) * Math.sin(f.giro) + empujeX * Math.cos(f.giro)) / l;
+          f.giroVel += (torque - PENDULO.freno * f.giroVel) * h;
+          f.giro += f.giroVel * h;
+        }
+        dedoAntes.copy(dedo);
+        f.alzadaMeta = 1;
+        f.pataleoMeta = 1;
+        f.ritmo = 24;
+        break;
+      }
+      case "vuela": {
+        for (let s = 0; s < pasos && f.estado === "vuela"; s++) {
+          f.vy -= GRAVEDAD_RAVE * h;
+          f.x += f.vx * h;
+          f.y += f.vy * h;
+          f.giro += f.giroVel * h;
+          if (Math.abs(f.x) > costado && f.x * f.vx > 0) {
+            f.x = Math.sign(f.x) * costado;
+            f.vx = -f.vx * REBOTE_PARED;
+            f.giroVel *= -0.6;
+          }
+          if (f.y < piso && f.vy < 0) {
+            f.y = piso;
+            f.piques++;
+            // El primer pique siempre (aunque lo hayan soltado bajito); el segundo, si le queda envión.
+            const sube = -f.vy * REBOTE_PISO;
+            if (f.piques === 1 || (f.piques === 2 && sube > 1.5)) {
+              f.vy = Math.max(sube, f.piques === 1 ? PIQUE_MIN : 0);
+              f.vx *= 0.7;
+              f.giroVel *= 0.5;
+            } else {
+              marear(b, m.reloj);
+            }
+          }
+        }
+        if (f.estado !== "vuela") break;
+        // Se fue por arriba: si no hay otra nave en curso (ni se está jugando), una lo trae de vuelta.
+        if (f.y - largo > 0.6 + b.mvy + SALIDA_ARRIBA && abduccion === null && abducirSola) {
+          devolver(b, m.reloj);
+          break;
+        }
+        if (f.y - piso < ROCE.alto) rozar(b, m.reloj);
+        f.alzadaMeta = 1;
+        f.pataleoMeta = 0.7;
+        f.ritmo = 15;
+        break;
+      }
+      case "mareado": {
+        for (let s = 0; s < pasos; s++) {
+          f.vx *= Math.exp(-8 * h);
+          f.x = clamp(f.x + f.vx * h, -costado, costado);
+          // Se endereza con un resorte (si venía girando rápido, se pasa un poco y vuelve).
+          f.giroVel += (60 * (f.giroMeta - f.giro) - 11 * f.giroVel) * h;
+          f.giro += f.giroVel * h;
+        }
+        f.y = piso;
+        const k = Math.min(1, t / MAREO);
+        f.mareo = Math.min(1, t / 0.12) * (1 - suave(k));
+        f.pataleoMeta = 0.15;
+        f.ritmo = 5;
+        if (k >= 1) {
+          // Las vueltas enteras no se ven: se descuentan para que no se acumulen.
+          f.giro -= f.giroMeta;
+          f.giroMeta = 0;
+          empezarACaminar(b, m.reloj);
+        }
+        break;
+      }
+      case "vuelve": {
+        const casa = b.xAhora * b.mvx * 0.92;
+        const dir = casa >= f.caminaDesde ? 1 : -1;
+        const total = Math.max(1e-3, Math.abs(casa - f.caminaDesde));
+        f.x += dir * f.rapidez * dt;
+        const llego = (casa - f.x) * dir <= 0;
+        if (llego) f.x = casa;
+        // Los saltitos terminan justo en su lugar (un número entero de saltitos en el camino).
+        const paso = clamp(Math.abs(f.x - f.caminaDesde) / total, 0, 1) * f.saltitos * Math.PI;
+        f.y = piso + Math.abs(Math.sin(paso)) * CAMINA.saltito;
+        // Se bambolea de un pie al otro con cada saltito.
+        f.giro = Math.sin(paso) * 0.1;
+        f.miraMeta = dir * 1.15;
+        f.pataleoMeta = 0.3;
+        f.ritmo = (f.rapidez * f.saltitos * Math.PI) / total;
+        if (llego) llegar(b, m.reloj);
+        break;
+      }
+      case "volteado": {
+        if (f.fase === "cae") {
+          // Péndulo invertido sobre los pies: arranca con el empujón y acelera al caer.
+          const caida = GRAVEDAD_RAVE / (PENDULO.largo * largo);
+          for (let s = 0; s < pasos && f.fase === "cae"; s++) {
+            f.anguloVel += caida * Math.sin(f.angulo) * h;
+            f.angulo += f.anguloVel * h;
+            if (f.angulo >= VOLTEO.acostado) {
+              f.angulo = VOLTEO.acostado;
+              if (f.rebotes === 0 && f.anguloVel > 1.5) {
+                f.anguloVel *= -VOLTEO.rebote;
+                f.rebotes = 1;
+              } else {
+                f.anguloVel = 0;
+                f.fase = "acostado";
+                f.faseDesde = m.reloj;
+              }
+            }
+          }
+          if (!f.tumboVecino && f.angulo > VOLTEO.vecino) {
+            f.tumboVecino = true;
+            tumbarVecino(b, m.reloj);
+          }
+          f.alzadaMeta = 0.6;
+          f.pataleoMeta = 0.5;
+          f.ritmo = 18;
+        } else if (f.fase === "acostado") {
+          if (m.reloj - f.faseDesde > VOLTEO.queda) {
+            f.fase = "levanta";
+            f.faseDesde = m.reloj;
+          }
+          f.alzadaMeta = 0.3;
+          f.pataleoMeta = 0.35;
+        } else {
+          const k = clamp((m.reloj - f.faseDesde) / VOLTEO.levanta, 0, 1);
+          f.angulo = VOLTEO.acostado * (1 - suave(k));
+          if (k >= 1) {
+            cambiar(b, "baila", m.reloj);
+            b.saltoDesde = m.reloj;
+            b.saltoAlto = SALTITO_LEVANTA;
+          }
+        }
+        posarVolteado(b);
+        break;
+      }
+    }
+
+    if (f.estado !== "mareado") f.mareo *= Math.exp(-12 * dt);
+    f.pataleo += (f.pataleoMeta - f.pataleo) * Math.min(1, dt * 10);
+    f.faseBrazos += f.ritmo * dt;
+    f.baile += ((f.estado === "baila" ? 1 : 0) - f.baile) * Math.min(1, dt * 8);
+  };
+
   return {
     obj: grupo,
     cabezas: centros,
+    pies,
     tocar: (indice, reloj) => {
       const b = bailarines[indice];
       if (!b) return;
+      const f = b.fuera;
+      if (f.estado === "vuela") {
+        // En el aire el toque lo hace subir otro poco y girar más.
+        f.vy = Math.max(f.vy, 0) + 5;
+        f.giroVel += f.vx >= 0 ? -9 : 9;
+        return;
+      }
+      if (f.estado !== "baila") return;
       b.saltoDesde = reloj;
       b.saltoAlto = azar(1.3, 1.8);
       b.vueltaDesde = reloj;
@@ -741,9 +1348,25 @@ export function crearRave(kit: Kit): Rave {
     abducirSola: (si) => {
       abducirSola = si;
     },
+    sePuedeAgarrar,
+    agarrar,
+    arrastrar: (punto) => {
+      if (agarrado) dedo.set(punto.x, punto.y);
+    },
+    soltar,
+    profundidad: (indice) => {
+      const b = bailarines[indice];
+      return b ? b.z + b.zExtra : 0;
+    },
+    empujar,
     actualizar: (m) => {
       const visibles = Math.round(BAILARINES * THREE.MathUtils.clamp(m.aspecto, 0.6, 1));
       visiblesAhora = visibles;
+      // El dedo: dónde está en este cuadro (para medir con qué velocidad lo tiran).
+      if (m.dt > 0) {
+        tiempoDedo += m.dt;
+        if (agarrado) anotarDedo(dedo.x, dedo.y);
+      }
 
       // Olas: los graves fuertes largan una que cruza desde una punta (en el drop, desde el medio).
       const drop = m.drop > 0.95;
@@ -753,7 +1376,7 @@ export function crearRave(kit: Kit): Rave {
         for (const b of bailarines) {
           // El que ya está en el aire termina su salto (si no, caería al piso de un cuadro al otro).
           const enElAire = m.reloj - b.saltoDesde < 0.45 && m.reloj >= b.saltoDesde;
-          if (enElAire) continue;
+          if (enElAire || b.fuera.estado !== "baila") continue;
           b.saltoDesde = m.reloj + Math.abs(b.x - origen) * OLA_SEG_POR_UNIDAD;
           b.saltoAlto = (drop ? 0.7 : 0.45) * (0.6 + m.graves);
         }
@@ -769,8 +1392,9 @@ export function crearRave(kit: Kit): Rave {
         // Redoblante: algunas parejas chocan las manos.
         if (m.chasquidoAhora && Math.random() < 0.35) par.a.aplausoDesde = par.b.aplausoDesde = m.reloj;
         // De vez en cuando, en un bombo, cambian de lugar girando una alrededor de la otra (no si a uno
-        // se lo está llevando una nave).
-        const ocupada = abduccion !== null && (abduccion.bailarin === par.a || abduccion.bailarin === par.b);
+        // se lo está llevando una nave, o lo sacó el dedo del baile).
+        const ocupada =
+          llevadoPorNave(par.a) || llevadoPorNave(par.b) || par.a.fuera.estado !== "baila" || par.b.fuera.estado !== "baila";
         if (m.golpeAhora && !ocupada && m.reloj - par.cambioDesde > 4 && Math.random() < 0.025 * (0.5 + m.energia)) {
           par.cambioDesde = m.reloj;
           par.xa = par.a.x;
@@ -802,8 +1426,22 @@ export function crearRave(kit: Kit): Rave {
         par.a.giroExtra = par.b.giroExtra = 0;
       }
 
+      // Los que sacó el dedo (y los volteados): antes que la nave, así una devolución arranca en este cuadro.
+      for (const b of bailarines) {
+        if (b.orden >= visibles) {
+          // Se dejó de ver estando afuera (el celu se dio vuelta): vuelve a su lugar sin más.
+          if (b.fuera.estado !== "baila") volverAlBaile(b, m.reloj);
+          continue;
+        }
+        const mv = mitadVisible(b.z, m.aspecto);
+        b.mvx = mv.x;
+        b.mvy = mv.y;
+        moverFuera(b, m);
+      }
+
       if (abduccion) moverAbduccion(m, abduccion);
       const llevado = abduccion;
+      const decae = Math.exp(-m.dt / MEZCLA_POSE);
 
       bailarines.forEach((b, i) => {
         centros[i * 4 + 3] = 0;
@@ -813,14 +1451,15 @@ export function crearRave(kit: Kit): Rave {
           brazos.setMatrixAt(i * 2 + 1, oculto);
           return;
         }
+        const f = b.fuera;
+        const baila = f.estado === "baila";
         // Algún salto suelto en los bombos, sin pisar una ola que viene en camino.
-        if (m.golpeAhora && b.saltoDesde < m.reloj - 0.45 && Math.random() < 0.12) {
+        if (baila && m.golpeAhora && b.saltoDesde < m.reloj - 0.45 && Math.random() < 0.12) {
           b.saltoDesde = m.reloj;
           b.saltoAlto = azar(0.3, 0.9) * (0.6 + m.graves);
         }
         // Con quién baila: su pareja si se ve; si no, solo (0).
         const conPareja = b.pareja !== null && b.pareja.orden < visibles ? b.hacia : 0;
-        const mv = mitadVisible(b.z, m.aspecto);
         const k = (m.reloj - b.saltoDesde) / 0.45;
         const saltando = k >= 0 && k < 1;
         const salto = saltando ? Math.sin(k * Math.PI) * b.saltoAlto : 0;
@@ -833,40 +1472,89 @@ export function crearRave(kit: Kit): Rave {
         const ab = llevado !== null && llevado.bailarin === b ? llevado : null;
         const agarre = ab ? ab.agarre : 0;
         const suelto = 1 - agarre;
-        const flota = ab ? ab.alto * ab.subida + Math.sin(m.reloj * 2.3 + b.fase) * 0.05 * ab.alto : 0;
-
-        // Arriba de la barra del player, que tapa el borde de abajo en el celu.
-        raiz.position.set(
-          b.xAhora * mv.x * 0.92 + arrime * suelto + (ab ? ab.dx * ab.alto : 0),
-          -mv.y * 0.6 + (rebote + salto) * suelto + flota,
-          b.z + b.zExtra
-        );
-        // Se miran con la pareja (más cuanto más suenan los medios); con dedo o mouse, todos lo miran a él.
-        const metaMira = kit.mirada.activa
-          ? THREE.MathUtils.clamp(Math.atan2(kit.mirada.punto.x - raiz.position.x, kit.mirada.punto.z - b.z), -0.8, 0.8)
-          : conPareja * (0.35 + m.medios * 0.45);
-        b.mira += (metaMira - b.mira) * Math.min(1, m.dt * 6);
+        const flota = ab ? ab.alto * ab.subida + Math.sin(m.reloj * 2.3 + b.fase) * 0.05 * ab.alto + ab.extraY : 0;
         const v = (m.reloj - b.vueltaDesde) / VUELTA_RAVE;
         const vuelta = v >= 0 && v < 1 ? suave(v) * Math.PI * 2 : 0;
         // El vaivén es espejado entre los dos de la pareja (mismo compás, signo contrario).
         const vaiven = Math.sin(m.reloj * 2 + b.fase) * 0.06 * (conPareja || 1);
         // Colgado del rayo se mece como sin gravedad.
         const mecido = ab ? Math.sin(m.reloj * 1.7 + b.fase) * 0.2 * ab.alto : 0;
-        raiz.rotation.set(0, Math.sin(m.reloj + b.fase) * 0.12 + b.mira + vuelta + b.giroExtra + (ab ? ab.giro : 0), vaiven * suelto + mecido);
+
+        let x: number;
+        let y: number;
+        let ry: number;
+        let rz: number;
+        if (baila) {
+          // Arriba de la barra del player, que tapa el borde de abajo en el celu.
+          x = b.xAhora * b.mvx * 0.92 + arrime * suelto + (ab ? ab.dx * ab.alto : 0);
+          y = -b.mvy * 0.6 + (rebote + salto) * suelto + flota;
+          // Se miran con la pareja (más cuanto más suenan los medios); con dedo o mouse, todos lo miran a él.
+          const metaMira = kit.mirada.activa
+            ? THREE.MathUtils.clamp(Math.atan2(kit.mirada.punto.x - x, kit.mirada.punto.z - b.z), -0.8, 0.8)
+            : conPareja * (0.35 + m.medios * 0.45);
+          b.mira += (metaMira - b.mira) * Math.min(1, m.dt * 6);
+          ry = Math.sin(m.reloj + b.fase) * 0.12 + b.mira + vuelta + b.giroExtra + (ab ? ab.giro : 0);
+          rz = vaiven * suelto + mecido;
+        } else {
+          // Afuera la pose la arma moverFuera; acá se suman el meneo del pataleo y el tambaleo del mareo.
+          x = f.x;
+          y = f.y;
+          b.mira += (f.miraMeta - b.mira) * Math.min(1, m.dt * 6);
+          ry = Math.sin(m.reloj + b.fase) * 0.12 * f.baile + b.mira + Math.sin(f.faseBrazos * 0.6) * 0.18 * f.pataleo;
+          rz = f.giro + Math.sin(m.reloj * 5.5 + b.fase) * 0.14 * f.mareo;
+        }
+        // Recién cambió de estado: lo que separa la pose nueva de la última dibujada se apaga solo.
+        if (f.mezclaPendiente) {
+          f.mezclaPendiente = false;
+          f.mezclaX = f.ultX - x;
+          f.mezclaY = f.ultY - y;
+          f.mezclaRy = difAngulo(f.ultRy, ry);
+          f.mezclaRz = difAngulo(f.ultRz, rz);
+        }
+        f.mezclaX *= decae;
+        f.mezclaY *= decae;
+        f.mezclaRy *= decae;
+        f.mezclaRz *= decae;
+        x += f.mezclaX;
+        y += f.mezclaY;
+        ry += f.mezclaRy;
+        rz += f.mezclaRz;
+        f.ultX = x;
+        f.ultY = y;
+        f.ultRy = ry;
+        f.ultRz = rz;
+
+        raiz.position.set(x, y, b.z + b.zExtra);
+        raiz.rotation.set(0, ry, rz);
         raiz.scale.setScalar(b.escala);
         raiz.updateMatrix();
-        centros[i * 4] = raiz.position.x;
-        centros[i * 4 + 1] = raiz.position.y;
-        centros[i * 4 + 2] = raiz.position.z;
+        centros[i * 4] = x;
+        centros[i * 4 + 1] = y;
+        centros[i * 4 + 2] = b.z + b.zExtra;
         centros[i * 4 + 3] = b.escala * 1.4;
+        // Los pies: el giro de costado es en el plano de la pantalla, así que quedan en el mismo z.
+        const largo = -PIES_RAVE * b.escala;
+        pies[i * 3] = x + largo * Math.sin(rz);
+        pies[i * 3 + 1] = y - largo * Math.cos(rz);
+        pies[i * 3 + 2] = b.z + b.zExtra;
 
         tmpColor.copy(b.rosa ? m.colorB : m.colorA).multiplyScalar(0.55 + m.brillo * 0.12);
 
-        // Cabeceo con los graves, para adelante, con el pivote en el cuello.
-        const cabeceo = -0.06 + m.graves * 0.32 * pulso;
+        // Cabeceo con los graves, para adelante, con el pivote en el cuello. Mareado, la cabeza da vueltas.
+        const cabeceo = -0.06 + m.graves * 0.32 * pulso * f.baile;
+        const bamboleo = m.reloj * 8 + b.fase;
         cabeza
           .copy(raiz.matrix)
-          .multiply(ponerLocal(0, CUELLO_Y, 0, cabeceo, 0, Math.sin(m.reloj * 2 + b.fase) * 0.1))
+          .multiply(
+            ponerLocal(
+              0,
+              CUELLO_Y,
+              0,
+              cabeceo + Math.cos(bamboleo) * 0.25 * f.mareo,
+              0,
+              Math.sin(m.reloj * 2 + b.fase) * 0.1 + Math.sin(bamboleo) * 0.35 * f.mareo
+            )
+          )
           .multiply(ponerLocal(0, -CUELLO_Y, 0, 0, 0, 0));
         cabezas.setMatrixAt(i, cabeza);
         cabezas.setColorAt(i, tmpColor);
@@ -882,10 +1570,13 @@ export function crearRave(kit: Kit): Rave {
         cuerpos.setMatrixAt(i, matriz);
 
         // Brazos: en el drop todos arriba (y el que tocaron mientras gira, y los que hacen la ola); si
-        // no, cada uno baila a su manera.
+        // no, cada uno baila a su manera. Afuera del baile, lo que pide su estado.
         const enOla = saltando && m.reloj - olaDesde < 2.5;
-        // El que se lleva el rayo, con los brazos arriba todo el viaje.
-        const metaAlzada = Math.max(Math.min(1, m.drop * 1.6), saltando && (b.estilo === 0 || enOla) ? 1 : 0, v >= 0 && v < 1.6 ? 1 : 0, agarre);
+        // El que se lleva el rayo, con los brazos arriba todo el viaje; y el que volvió a su lugar, contento.
+        const contento = m.reloj - f.contentoDesde < 0.55 ? 1 : 0;
+        const metaAlzada = baila
+          ? Math.max(Math.min(1, m.drop * 1.6), saltando && (b.estilo === 0 || enOla) ? 1 : 0, v >= 0 && v < 1.6 ? 1 : 0, agarre, contento)
+          : f.alzadaMeta;
         const rapidez = Math.min(1, m.dt * 12);
         b.alzada += (metaAlzada - b.alzada) * rapidez;
         b.puno += (m.golpe - b.puno) * Math.min(1, m.dt * 25);
@@ -894,10 +1585,13 @@ export function crearRave(kit: Kit): Rave {
         const choque = conPareja !== 0 && a >= 0 && a < 1 ? Math.sin(a * Math.PI) : 0;
         for (const lado of [-1, 1]) {
           let angulo = 0.18 + 0.05 * Math.sin(m.reloj * 2 + b.fase);
-          if (b.estilo === 1 && lado === 1) angulo += b.puno * 2.1;
-          if (b.estilo === 2) angulo += 0.5 + Math.sin(m.reloj * 4.6 + b.fase + (lado > 0 ? 0 : Math.PI)) * 0.4 * (0.4 + m.medios);
-          if (lado === conPareja) angulo += choque * (1.9 - angulo);
+          // Su manera de bailar se apaga mientras está afuera y vuelve de a poco.
+          if (b.estilo === 1 && lado === 1) angulo += b.puno * 2.1 * f.baile;
+          if (b.estilo === 2) angulo += (0.5 + Math.sin(m.reloj * 4.6 + b.fase + (lado > 0 ? 0 : Math.PI)) * 0.4 * (0.4 + m.medios)) * f.baile;
+          if (lado === conPareja) angulo += choque * (1.9 - angulo) * f.baile;
           angulo += b.alzada * (2.5 - angulo + Math.sin(m.reloj * 7 + b.fase + lado) * 0.2);
+          // Agarrado o volando patalea rápido; mareado o caminando, los brazos se balancean.
+          angulo += Math.sin(f.faseBrazos + b.fase + lado * 1.9) * 0.45 * f.pataleo;
           matriz.copy(raiz.matrix).multiply(ponerLocal(lado * CUERPO.hombroX, CUERPO.hombroY, 0, 0, 0, lado * angulo));
           const indice = i * 2 + (lado < 0 ? 0 : 1);
           brazos.setMatrixAt(indice, matriz);

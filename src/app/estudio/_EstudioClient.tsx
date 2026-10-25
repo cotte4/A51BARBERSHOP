@@ -113,12 +113,12 @@ function mejorDeDos(a: RecordPropio | null, b: RecordPropio | null): RecordPropi
 }
 
 /** El resumen con una partida recién terminada, sin esperar a la base. */
-function conPartida(resumen: ResumenJuego, temaId: string, { puntos, modelo }: ResultadoPartida): ResumenJuego {
+function conPartida(resumen: ResumenJuego, temaId: string, { puntos, modelo, temas }: ResultadoPartida): ResumenJuego {
   const previo = resumen.records[temaId] ?? { mio: null, rival: null };
   return {
     ...resumen,
     mejorRecord: Math.max(resumen.mejorRecord, puntos),
-    records: { ...resumen.records, [temaId]: { ...previo, mio: mejorDeDos(previo.mio, { puntos, modelo }) } },
+    records: { ...resumen.records, [temaId]: { ...previo, mio: mejorDeDos(previo.mio, { puntos, modelo, temas }) } },
   };
 }
 
@@ -152,7 +152,7 @@ export default function EstudioClient({ temas, juego }: { temas: TemaEstudio[]; 
     if (resultado.puntos <= 0) return Promise.resolve(null);
     // Al toque, sin esperar a la base: "Otra vez" y el hangar ya cuentan con esta partida.
     setResumen((previo) => conPartida(previo, temaId, resultado));
-    const guardado = guardarPartidaAction({ temaId, puntos: resultado.puntos, modelo: resultado.modelo })
+    const guardado = guardarPartidaAction({ temaId, puntos: resultado.puntos, modelo: resultado.modelo, temas: resultado.temas })
       .then((r) => {
         if (!r.ok) return null;
         setResumen((previo) => ({
@@ -184,14 +184,15 @@ export default function EstudioClient({ temas, juego }: { temas: TemaEstudio[]; 
     [naveElegida]
   );
 
-  const reproductor = useReproductor(temas, { alEscuchar });
+  const [jugando, setJugando] = useState(false);
+  // Jugando, la lista vuelve a empezar al terminar: la partida sigue de tema en tema.
+  const reproductor = useReproductor(temas, { alEscuchar, repetir: jugando });
   const cola = useColaSubida();
   const [hoja, setHoja] = useState<Hoja>(null);
   const [arrastrando, setArrastrando] = useState(false);
   const [avisoArrastre, setAvisoArrastre] = useState<string | null>(null);
   const [yaSono, setYaSono] = useState(false);
   const [inmersivo, setInmersivo] = useState(false);
-  const [jugando, setJugando] = useState(false);
   const [barraFuera, setBarraFuera] = useState(true);
   const [pista, setPista] = useState(false);
   const esconderRef = useRef<number | null>(null);
@@ -538,6 +539,7 @@ export default function EstudioClient({ temas, juego }: { temas: TemaEstudio[]; 
               resumen={resumen}
               onPartida={alTerminarPartida}
               onElegirNave={elegirNave}
+              onCerrar={() => setInmersivo(false)}
             />
           </div>
         </>
@@ -546,11 +548,11 @@ export default function EstudioClient({ temas, juego }: { temas: TemaEstudio[]; 
       {inmersivo ? (
         <p
           aria-hidden={!pista}
-          className={`pointer-events-none fixed inset-x-4 top-[max(env(safe-area-inset-top),16px)] z-[31] mx-auto w-fit rounded-full bg-zinc-950/65 px-4 py-2 text-center text-sm text-zinc-200 backdrop-blur transition-opacity duration-500 ${
+          className={`pointer-events-none fixed inset-x-4 top-[calc(max(env(safe-area-inset-top),16px)+52px)] z-[31] mx-auto w-fit rounded-full bg-zinc-950/65 px-4 py-2 text-center text-sm text-zinc-200 backdrop-blur transition-opacity duration-500 ${
             pista && !jugando ? "opacity-100" : "opacity-0"
           }`}
         >
-          Tocá todo · Mantené apretada la nave para jugar
+          Tocá todo · Agarrá y tirá a los aliens
         </p>
       ) : null}
 
@@ -561,6 +563,7 @@ export default function EstudioClient({ temas, juego }: { temas: TemaEstudio[]; 
         escondida={barraEscondida}
         onMostrar={mostrarBarra}
         onSostener={sostenerBarra}
+        sinManija={jugando}
       />
 
       {arrastrando ? (

@@ -1,0 +1,2 @@
+ALTER TABLE "estudio_partidas" ADD COLUMN "temas" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE "estudio_partidas" ADD CONSTRAINT "estudio_partidas_temas_check" CHECK ("estudio_partidas"."temas" >= 1);

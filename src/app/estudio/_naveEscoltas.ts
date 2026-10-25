@@ -6,7 +6,7 @@ import type { Musica } from "./_naveShow";
 
 // Lo que acompaña a la nave en el juego:
 // - Escoltas: con racha alta se suman dos naves chicas (del mismo modelo que la tuya) a los
-//   costados. Agarran los cristales que les pasan cerca (suman para vos) y, si chocás, se van volando.
+//   costados. Agarran las estrellas que les pasan cerca (suman para vos) y, si chocás, se van volando.
 // - Drones del enjambre: dos drones fijos a los costados; cada uno se interpone en un golpe y se va.
 //
 // Las naves se arman al empezar la partida y quedan escondidas: que aparezcan no traba nada.
