@@ -14,6 +14,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import type { ModeloNave } from "@/lib/estudio-naves";
 import {
   CAPITAL_MOVIMIENTO_TYPES,
   HANGAR_ASSET_CATEGORIAS,
@@ -1882,3 +1883,36 @@ export const estudioEscuchas = pgTable(
   },
   (table) => [index("estudio_escuchas_tema_id_idx").on(table.temaId)]
 );
+
+// Una fila por partida del jueguito de la nave: quién, en qué tema, cuántos puntos y con qué nave.
+// El récord de cada tema es la mejor fila de cada uno (ver src/lib/estudio-juego.ts).
+export const estudioPartidas = pgTable(
+  "estudio_partidas",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    temaId: uuid("tema_id")
+      .notNull()
+      .references(() => estudioTemas.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    puntos: integer("puntos").notNull(),
+    // Uno de MODELOS (src/lib/estudio-naves.ts); lo valida la action, así sumar naves no pide migración.
+    modelo: text("modelo").notNull().$type<ModeloNave>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check("estudio_partidas_puntos_check", sql`${table.puntos} >= 0`),
+    index("estudio_partidas_tema_user_idx").on(table.temaId, table.userId),
+  ]
+);
+
+// La nave que eligió cada uno en el hangar: es su nodriza en el show y en el juego, en cualquier equipo.
+// Sin fila = la nave inicial.
+export const estudioHangar = pgTable("estudio_hangar", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  modelo: text("modelo").notNull().$type<ModeloNave>(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

@@ -5,9 +5,11 @@ import { asc, desc, eq, max } from "drizzle-orm";
 import { z } from "zod";
 import { del, head } from "@vercel/blob";
 import { db } from "@/db";
-import { estudioEscuchas, estudioTemas } from "@/db/schema";
+import { estudioEscuchas, estudioHangar, estudioPartidas, estudioTemas } from "@/db/schema";
 import { estudioBlobToken, getEstudioActor } from "@/lib/estudio";
+import { mejorRecordDe, recordDelTema, type RecordTema } from "@/lib/estudio-juego";
 import { ordenarRanking } from "@/lib/estudio-lista";
+import { esModeloNave, FICHAS, navesDesbloqueadas, nuevasDesbloqueadas, type ModeloNave } from "@/lib/estudio-naves";
 import {
   AUDIO_MAX_BYTES,
   AUDIO_PATHNAME,
@@ -186,4 +188,84 @@ export async function sumarEscuchaAction(temaId: string): Promise<EstudioState> 
     return { ok: false, mensaje: null };
   }
   return { ok: true, mensaje: null };
+}
+
+// ————————————————————————————— El jueguito de la nave —————————————————————————————
+// No refrescan la página: el show sigue sonando y el cliente actualiza su estado con lo que devuelven.
+
+/** Tope de cordura: una partida real no llega ni cerca. */
+const PUNTOS_MAX = 1_000_000;
+
+const partidaSchema = z.object({
+  temaId: z.uuid(),
+  puntos: z.number().int().min(0).max(PUNTOS_MAX),
+  modelo: z.custom<ModeloNave>((valor) => esModeloNave(valor)),
+});
+
+export type PartidaGuardada =
+  | {
+      ok: true;
+      /** El récord del tema ya con esta partida (el mío y el del rival). */
+      record: RecordTema;
+      /** El mejor de la persona en cualquier tema, ya con esta partida. */
+      mejorRecord: number;
+      /** Las naves que destrabó esta partida (para el cartel de "nueva nave"); casi siempre vacío. */
+      nuevas: ModeloNave[];
+    }
+  | { ok: false; mensaje: string };
+
+export async function guardarPartidaAction(input: { temaId: string; puntos: number; modelo: ModeloNave }): Promise<PartidaGuardada> {
+  const actor = await getEstudioActor();
+  if (!actor) return { ok: false, mensaje: "No tenés permiso." };
+
+  const datos = partidaSchema.safeParse(input);
+  if (!datos.success) return { ok: false, mensaje: "No se pudo guardar la partida." };
+  const { temaId, puntos, modelo } = datos.data;
+
+  // Todo lo de antes en paralelo; con eso y esta partida sale la respuesta sin volver a leer.
+  const [[tema], mejorAntes, recordAntes] = await Promise.all([
+    db.select({ id: estudioTemas.id }).from(estudioTemas).where(eq(estudioTemas.id, temaId)).limit(1),
+    mejorRecordDe(actor.userId),
+    recordDelTema(actor, temaId),
+  ]);
+  if (!tema) return { ok: false, mensaje: "Ese tema ya no existe." };
+
+  try {
+    await db.insert(estudioPartidas).values({ temaId, userId: actor.userId, puntos, modelo });
+  } catch {
+    // Lo más probable: el tema se borró justo ahora.
+    return { ok: false, mensaje: "No se pudo guardar la partida." };
+  }
+
+  // A igual puntaje queda la anterior: el récord es de quien llegó primero (igual que en la consulta).
+  const mio = recordAntes.mio && recordAntes.mio.puntos >= puntos ? recordAntes.mio : { puntos, modelo };
+  const mejorRecord = Math.max(mejorAntes, puntos);
+  return {
+    ok: true,
+    record: { mio, rival: recordAntes.rival },
+    mejorRecord,
+    nuevas: nuevasDesbloqueadas(mejorAntes, mejorRecord),
+  };
+}
+
+export type NaveElegida = { ok: true; modelo: ModeloNave } | { ok: false; mensaje: string };
+
+/** La nave del hangar. Se destraba con el mejor récord que dice la base, no el que diga el cliente. */
+export async function elegirNaveAction(modelo: ModeloNave): Promise<NaveElegida> {
+  const actor = await getEstudioActor();
+  if (!actor) return { ok: false, mensaje: "No tenés permiso." };
+  if (!esModeloNave(modelo)) return { ok: false, mensaje: "Esa nave no existe." };
+
+  const mejorRecord = await mejorRecordDe(actor.userId);
+  if (!navesDesbloqueadas(mejorRecord).includes(modelo)) {
+    const { nombre, recordParaDesbloquear } = FICHAS[modelo];
+    return { ok: false, mensaje: `El ${nombre} se destraba con un récord de ${recordParaDesbloquear}.` };
+  }
+
+  await db
+    .insert(estudioHangar)
+    .values({ userId: actor.userId, modelo })
+    .onConflictDoUpdate({ target: estudioHangar.userId, set: { modelo, updatedAt: new Date() } });
+
+  return { ok: true, modelo };
 }

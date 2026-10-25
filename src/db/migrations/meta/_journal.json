@@ -365,6 +365,13 @@
       "when": 1792710983525,
       "tag": "0051_estudio_ranking_escuchas",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1792872369189,
+      "tag": "0052_estudio_partidas_hangar",
+      "breakpoints": true
     }
   ]
 }
