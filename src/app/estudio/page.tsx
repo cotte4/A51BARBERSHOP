@@ -22,8 +22,8 @@ export default async function EstudioPage() {
     <div className="app-shell min-h-screen">
       <header className="relative z-20 border-b border-zinc-800/80 bg-zinc-950/90 px-4 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-xl items-center justify-between gap-4">
-          <BrandMark href="/negocio" subtitle="Estudio" />
-          <Link href="/negocio" className="text-sm text-zinc-400 hover:text-[#8cff59]">
+          <BrandMark href="/ocio" subtitle="Estudio" />
+          <Link href="/ocio" className="text-sm text-zinc-400 hover:text-[#8cff59]">
             Volver
           </Link>
         </div>

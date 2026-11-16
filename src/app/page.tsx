@@ -42,7 +42,7 @@ export default async function RootPage() {
   }
 
   if (session?.user && role !== "marciano") {
-    redirect("/hoy");
+    redirect(role === "admin" ? "/ocio" : "/hoy");
   }
 
   return (

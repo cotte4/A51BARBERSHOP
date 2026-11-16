@@ -53,7 +53,8 @@ export async function proxy(request: NextRequest) {
         : NextResponse.next();
     }
     if (isAsesor) return NextResponse.redirect(new URL("/dashboard", request.url));
-    if (isAdmin) return NextResponse.redirect(new URL("/hoy", request.url));
+    // Los admin arrancan siempre en Ocio (estudio, música, torneo); el trabajo está a un toque.
+    if (isAdmin) return NextResponse.redirect(new URL("/ocio", request.url));
     return NextResponse.redirect(new URL("/hoy", request.url));
   }
 
@@ -61,7 +62,7 @@ export async function proxy(request: NextRequest) {
     if (isAuthenticated) {
       if (isMarciano) return NextResponse.redirect(new URL("/marciano", request.url));
       if (isAsesor) return NextResponse.redirect(new URL("/dashboard", request.url));
-      if (isAdmin) return NextResponse.redirect(new URL("/hoy", request.url));
+      if (isAdmin) return NextResponse.redirect(new URL("/ocio", request.url));
       return NextResponse.redirect(new URL("/hoy", request.url));
     }
     return NextResponse.next();
@@ -96,7 +97,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/gastos-rapidos") ||
     pathname.startsWith("/finanzas") ||
     pathname.startsWith("/ovnis") ||
-    pathname.startsWith("/torneo-admin")
+    pathname.startsWith("/torneo-admin") ||
+    pathname.startsWith("/ocio")
   ) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login", request.url));
@@ -202,6 +204,7 @@ export const config = {
     "/finanzas/:path*",
     "/ovnis/:path*",
     "/torneo-admin/:path*",
+    "/ocio",
     "/caja/:path*",
     "/clientes/:path*",
     "/marciano/:path*",

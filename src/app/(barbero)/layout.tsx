@@ -6,6 +6,7 @@ import BrandMark from "@/components/BrandMark";
 import RoleBottomNav from "@/components/navigation/RoleBottomNav";
 import InternalSupportWidget from "@/components/support/InternalSupportWidget";
 import { auth } from "@/lib/auth";
+import { puedeEntrarAlEstudio } from "@/lib/estudio";
 
 function formatOperatingDate() {
   return new Intl.DateTimeFormat("es-AR", {
@@ -45,7 +46,7 @@ export default async function BarberoLayout({ children }: { children: React.Reac
 
       <main className="mx-auto max-w-7xl px-4 py-6 pb-28 sm:px-6 lg:px-8">{children}</main>
       <InternalSupportWidget />
-      <RoleBottomNav isAdmin={isAdmin} />
+      <RoleBottomNav isAdmin={isAdmin} conEstudio={puedeEntrarAlEstudio(session?.user?.email)} />
       <MusicHeartbeat />
     </div>
   );

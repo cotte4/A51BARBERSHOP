@@ -283,27 +283,136 @@ function getAsesorNavItems(): NavItem[] {
   ];
 }
 
-// Nav admin con dos modos: "Laboral" (operación del día) y "Gestión" (números,
-// negocio, repago, config). El modo se deduce de la ruta activa; el botón de la
-// derecha lo alterna a mano hasta la próxima navegación.
-function AdminModalNav({ pathname }: { pathname: string }) {
-  const gestionActive = ADMIN_NAV_RIGHT.some((item) => item.isActive(pathname));
-  const [override, setOverride] = useState<"laboral" | "gestion" | null>(null);
+function SparkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4" strokeLinecap="round" />
+      <path d="M12 8.5 13.2 10.8 15.5 12 13.2 13.2 12 15.5 10.8 13.2 8.5 12 10.8 10.8Z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function HeadphonesIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M4 15v-3a8 8 0 0 1 16 0v3" strokeLinecap="round" />
+      <rect x="3" y="14" width="4.5" height="7" rx="1.8" />
+      <rect x="16.5" y="14" width="4.5" height="7" rx="1.8" />
+    </svg>
+  );
+}
+
+function VinylIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M12 5.5a6.5 6.5 0 0 1 6.5 6.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function BallIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <circle cx="12" cy="12" r="9" />
+      <path d="m12 7.5 4 2.9-1.5 4.7h-5L8 10.4 12 7.5Z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function BriefcaseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <rect x="3" y="7" width="18" height="13" rx="2.5" />
+      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 12.5h18" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Ocio: lo que se usa por gusto. Es el modo con el que arrancan los admin (ver /ocio).
+function ocioNavItems(conEstudio: boolean): NavItem[] {
+  const estudio: NavItem[] = conEstudio
+    ? [
+        {
+          href: "/estudio",
+          label: "Estudio",
+          icon: <HeadphonesIcon />,
+          isActive: (pathname) => pathname.startsWith("/estudio"),
+        },
+      ]
+    : [];
+  return [
+    {
+      href: "/ocio",
+      label: "Ocio",
+      icon: <SparkIcon />,
+      isActive: (pathname) => pathname === "/ocio",
+    },
+    ...estudio,
+    {
+      href: "/musica/jukebox",
+      label: "Música",
+      icon: <VinylIcon />,
+      isActive: (pathname) => pathname.startsWith("/musica"),
+    },
+    {
+      href: "/torneo-admin",
+      label: "Torneo",
+      icon: <BallIcon />,
+      isActive: (pathname) => pathname.startsWith("/torneo-admin"),
+    },
+  ];
+}
+
+type AdminMode = "ocio" | "laboral" | "gestion";
+
+const SWAP_BUTTON_CLASS =
+  "flex min-h-[58px] min-w-0 flex-col items-center justify-center rounded-[20px] border border-[#8cff59]/25 bg-[#8cff59]/8 px-1 py-2 text-center text-[11px] font-semibold text-[#8cff59] transition hover:bg-[#8cff59]/15";
+
+// Nav admin con tres modos: "Ocio" (estudio, música, torneo; el de arranque),
+// "Laboral" (operación del día) y "Gestión" (números, negocio, repago, config).
+// El modo se deduce de la ruta activa y los botones lo cambian a mano hasta la
+// próxima navegación. En Ocio, el botón de la derecha lleva a Trabajo; en
+// Trabajo, el de la izquierda vuelve a Ocio y el de la derecha alterna
+// Laboral/Gestión.
+function AdminModalNav({ pathname, conEstudio }: { pathname: string; conEstudio: boolean }) {
+  const ocioItems = ocioNavItems(conEstudio);
+  const routeMode: AdminMode = ocioItems.some((item) => item.isActive(pathname))
+    ? "ocio"
+    : ADMIN_NAV_RIGHT.some((item) => item.isActive(pathname))
+      ? "gestion"
+      : "laboral";
+  const [override, setOverride] = useState<AdminMode | null>(null);
 
   useEffect(() => {
     setOverride(null);
   }, [pathname]);
 
-  const mode = override ?? (gestionActive ? "gestion" : "laboral");
-  const items = mode === "gestion" ? ADMIN_NAV_RIGHT : ADMIN_NAV_LEFT;
-  const targetLabel = mode === "gestion" ? "Laboral" : "Gestión";
+  const mode = override ?? routeMode;
+  const items = mode === "ocio" ? ocioItems : mode === "gestion" ? ADMIN_NAV_RIGHT : ADMIN_NAV_LEFT;
+  const targetLabel = mode === "ocio" ? "Trabajo" : mode === "gestion" ? "Laboral" : "Gestión";
 
   return (
     <nav className="fixed inset-x-0 bottom-4 z-30 px-3 pb-[env(safe-area-inset-bottom,0px)] sm:px-4">
       <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/94 px-2 py-2 shadow-[0_22px_50px_rgba(0,0,0,0.42)] backdrop-blur">
         <div className="flex items-stretch gap-1">
+          {mode !== "ocio" ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setOverride("ocio")}
+                className={`${SWAP_BUTTON_CLASS} w-12 shrink-0`}
+              >
+                <span><SparkIcon /></span>
+                <span className="mt-1 truncate leading-none">Ocio</span>
+              </button>
+              <div className="h-10 w-px shrink-0 self-center rounded-full bg-zinc-700/60" />
+            </>
+          ) : null}
+
           {/* key={mode} remonta el grupo al alternar: Gestión entra desde la
-              derecha y Laboral desde la izquierda, con stagger por tab */}
+              derecha, Laboral y Ocio desde la izquierda, con stagger por tab */}
           <div
             key={mode}
             className={`flex min-w-0 flex-[4] items-stretch gap-1 ${
@@ -334,10 +443,10 @@ function AdminModalNav({ pathname }: { pathname: string }) {
 
           <button
             type="button"
-            onClick={() => setOverride(mode === "gestion" ? "laboral" : "gestion")}
-            className="flex min-h-[58px] min-w-0 flex-1 flex-col items-center justify-center rounded-[20px] border border-[#8cff59]/25 bg-[#8cff59]/8 px-1 py-2 text-center text-[11px] font-semibold text-[#8cff59] transition hover:bg-[#8cff59]/15"
+            onClick={() => setOverride(mode === "laboral" ? "gestion" : "laboral")}
+            className={`${SWAP_BUTTON_CLASS} flex-1`}
           >
-            <span><SwapIcon /></span>
+            <span>{mode === "ocio" ? <BriefcaseIcon /> : <SwapIcon />}</span>
             <span className="mt-1 truncate leading-none">{targetLabel}</span>
           </button>
         </div>
@@ -349,9 +458,11 @@ function AdminModalNav({ pathname }: { pathname: string }) {
 export default function RoleBottomNav({
   isAdmin,
   isAsesor = false,
+  conEstudio = false,
 }: {
   isAdmin: boolean;
   isAsesor?: boolean;
+  conEstudio?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -385,7 +496,7 @@ export default function RoleBottomNav({
   }
 
   if (isAdmin) {
-    return <AdminModalNav pathname={pathname} />;
+    return <AdminModalNav pathname={pathname} conEstudio={conEstudio} />;
   }
 
   return (

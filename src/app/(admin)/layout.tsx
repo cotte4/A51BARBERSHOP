@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { puedeEntrarAlEstudio } from "@/lib/estudio";
 import { headers } from "next/headers";
 import MusicHeartbeat from "@/components/MusicHeartbeat";
 import RoleBottomNav from "@/components/navigation/RoleBottomNav";
@@ -15,7 +16,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <MusicHeartbeat />
       <div className="pb-28">{children}</div>
       <InternalSupportWidget />
-      <RoleBottomNav isAdmin={isAdmin} isAsesor={isAsesor} />
+      <RoleBottomNav isAdmin={isAdmin} isAsesor={isAsesor} conEstudio={puedeEntrarAlEstudio(session?.user?.email)} />
     </>
   );
 }

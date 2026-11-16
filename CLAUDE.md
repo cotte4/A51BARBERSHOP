@@ -319,7 +319,8 @@ import MyComponent from "@/components/feature/MyComponent";
 - Access validation for Server Actions: use `src/lib/admin-action.ts` (admin check) and `src/lib/caja-access.ts` (barber-owns-entry check) — never skip these
 
 ### Navigation
-- `src/components/navigation/RoleBottomNav.tsx` is the **only** bottom nav. It renders 5 tabs para barbero and 7 para admin (4 operación: Hoy, Caja, Clientes, Gasto + 3 gestión). Cierre no es un tab: se entra desde Caja.
+- `src/components/navigation/RoleBottomNav.tsx` is the **only** bottom nav. 5 tabs para barbero. Admin tiene **tres modos** (desde 2026-11-16): **Ocio** (Ocio, Estudio si está en `ESTUDIO_EMAILS`, Música = `/musica/jukebox`, Torneo; botón "Trabajo"), **Laboral** (Hoy, Caja, Clientes, Gasto) y **Gestión** (Números, Negocio, Repago, Config). En Laboral/Gestión hay un botón angosto "Ocio" a la izquierda. Cierre no es un tab: se entra desde Caja.
+- **Los admin arrancan siempre en Ocio**: `/` y `/login` los mandan a `/ocio` (tarjeta grande de Estudio + Música + Torneo). Motivo: Pinky no usa nada de números ni cobros, solo el Estudio, que estaba escondido en Negocio → Más. El Estudio no tiene barra abajo (choca con el player y la nave); su "Volver" lleva a `/ocio`.
 - `AdminBottomNav` was deleted. Never recreate it.
 - `/negocio` is the admin hub — all owner-only tools live there, not in the bottom nav directly.
 
