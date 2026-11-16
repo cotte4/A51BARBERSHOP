@@ -328,6 +328,7 @@ import MyComponent from "@/components/feature/MyComponent";
 - Stack: **Better Auth** (`src/lib/auth.ts`, `src/lib/auth-client.ts`)
 - No Supabase auth — any reference to it in old docs is stale.
 - Session reads happen server-side via `auth()` from `src/lib/auth.ts`.
+- **Sesión de 90 días que se estira con el uso** (desde 2026-11-16): `expiresIn` 90 días, `updateAge` 1 día, `cookieCache.maxAge` 5 min. El proxy (`src/proxy.ts`) le reenvía al navegador las cookies que devuelve `get-session`: es el único lugar por donde llega la cookie renovada (los Server Components no pueden escribir cookies). Antes el cache duraba 7 días (mientras vale, Better Auth no renueva) y el proxy tiraba las cookies: la sesión vencía a los 7 días del login aunque se usara todos los días. No subir el `cookieCache.maxAge` ni volver a ignorar las cookies del proxy. Simulación en memoria: `npx tsx scripts/local/probar-sesion.mts` (local, no versionado).
 
 ### Key Lib Files
 | File | Purpose |

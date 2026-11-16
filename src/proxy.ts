@@ -1,9 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { betterFetch } from "@better-fetch/fetch";
 import type { Session } from "@/lib/auth";
 import { isPortalClienteAbierto } from "@/lib/launch-mode";
 
+// Pide la sesión a Better Auth y devuelve también las cookies que manda: cuando la sesión
+// se renueva (una vez por día de uso), viene la cookie nueva con otros 90 días.
+async function leerSesion(request: NextRequest): Promise<{ session: Session | null; setCookies: string[] }> {
+  try {
+    const res = await fetch(new URL("/api/auth/get-session", request.nextUrl.origin), {
+      headers: { cookie: request.headers.get("cookie") || "" },
+      cache: "no-store",
+    });
+    const setCookies = res.headers.getSetCookie();
+    if (!res.ok) return { session: null, setCookies };
+    return { session: (await res.json()) as Session | null, setCookies };
+  } catch {
+    return { session: null, setCookies: [] };
+  }
+}
+
+// Antes la respuesta de get-session se tiraba, cookies incluidas: la renovación nunca
+// llegaba al celu y la sesión vencía a los 7 días del login aunque se usara todos los días.
 export async function proxy(request: NextRequest) {
+  const { session, setCookies } = await leerSesion(request);
+  const response = await decidir(request, session);
+  for (const cookie of setCookies) response.headers.append("set-cookie", cookie);
+  return response;
+}
+
+async function decidir(request: NextRequest, session: Session | null): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
   // Portal de clientes y reserva online cerrados hasta que se habiliten: solo el torneo y el teaser son públicos.
@@ -17,13 +41,6 @@ export async function proxy(request: NextRequest) {
   if (esPortalCliente && !isPortalClienteAbierto()) {
     return NextResponse.redirect(new URL("/", request.url));
   }
-
-  const { data: session } = await betterFetch<Session>("/api/auth/get-session", {
-    baseURL: request.nextUrl.origin,
-    headers: {
-      cookie: request.headers.get("cookie") || "",
-    },
-  });
 
   const isAuthenticated = !!session?.user;
   const userRole = (session?.user as { role?: string })?.role;

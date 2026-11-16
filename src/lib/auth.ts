@@ -64,9 +64,15 @@ export const auth = betterAuth({
     }),
   ],
   session: {
+    // 90 días sin abrir la app y hay que volver a entrar; cada día que se usa, se estira
+    // otros 90 (updateAge). La cookie renovada la reenvía el proxy (src/proxy.ts).
+    expiresIn: 60 * 60 * 24 * 90,
+    updateAge: 60 * 60 * 24,
     cookieCache: {
       enabled: true,
-      maxAge: 60 * 60 * 24 * 7, // 7 días
+      // Corto a propósito: mientras este cache vale, Better Auth no pasa por la renovación.
+      // Con 7 días (como estaba) la sesión nunca se estiraba y vencía a los 7 días del login.
+      maxAge: 5 * 60,
     },
   },
 });
